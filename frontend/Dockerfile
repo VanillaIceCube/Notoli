@@ -1,7 +1,7 @@
 FROM node:18
 
 # Set working directory
-WORKDIR /app
+WORKDIR /frontend
 
 # Copy package.json and package-lock.json (if present)
 COPY package*.json ./
