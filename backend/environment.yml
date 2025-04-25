@@ -1,4 +1,4 @@
-name: Notoli
+name: notoli_env
 channels:
   - defaults
 dependencies:

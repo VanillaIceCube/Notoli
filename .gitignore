@@ -1,87 +1,43 @@
-# ===============================
 # Python / Django
-# ===============================
 __pycache__/
 *.py[cod]
-*$py.class
 *.pyo
-
 *.log
 local_settings.py
 db.sqlite3
-db.sqlite3-journal
 
-# ===============================
 # Python environments / Conda
-# ===============================
 .env
-.venv
+.venv/
 env/
 venv/
-ENV/
-env.bak/
-venv.bak/
-.conda
-conda-meta/
 
-# ===============================
 # Package and build artifacts
-# ===============================
-*.egg
 *.egg-info/
 dist/
 build/
-*.whl
-*.manifest
-*.spec
 
-# ===============================
 # Test & coverage
-# ===============================
-*.cover
 *.coverage
-.coverage.*
-nosetests.xml
 coverage.xml
 htmlcov/
-.cache
-.tox/
-.nox/
-nose2-junit-reports/
 
-# ===============================
 # Node / React (frontend)
-# ===============================
 node_modules/
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 frontend/build/
-*.js.map
-*.css.map
 
-# ===============================
 # Static files (Django + React)
-# ===============================
 staticfiles/
-static/
 
-# ===============================
 # Docker
-# ===============================
 *.env.*
 docker-compose.override.yml
 
-# ===============================
 # Editor / OS-specific files
-# ===============================
 .idea/
 .vscode/
 .DS_Store
-.python-version
 
-# ===============================
 # Misc
-# ===============================
 *.lock
-*.toml

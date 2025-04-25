@@ -1,0 +1,13 @@
+# Basic Python cache files
+__pycache__/
+*.pyc
+
+# Local environment files
+.env
+
+# Database files
+db.sqlite3
+
+# Docker configuration files
+Dockerfile
+.dockerignore

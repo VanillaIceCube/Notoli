@@ -1,0 +1,7 @@
+# Node modules and build outputs
+node_modules/
+build/
+
+# Docker configuration files
+Dockerfile
+.dockerignore
