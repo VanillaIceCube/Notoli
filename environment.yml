@@ -1,0 +1,6 @@
+name: Notoli
+channels:
+  - defaults
+dependencies:
+  - python
+prefix: C:\Users\judea\anaconda3\envs\Notoli
