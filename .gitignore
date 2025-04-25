@@ -1,23 +1,19 @@
-# Byte-compiled / optimized / DLL files
+# ===============================
+# Python / Django
+# ===============================
 __pycache__/
 *.py[cod]
 *$py.class
 *.pyo
 
-# Python Packages
-*.egg
-*.egg-info/
-dist/
-build/
-*.whl
-
-# Django stuff:
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
-# Environments
+# ===============================
+# Python environments / Conda
+# ===============================
 .env
 .venv
 env/
@@ -25,61 +21,67 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.conda
+conda-meta/
 
-# Node.js (React) stuff:
+# ===============================
+# Package and build artifacts
+# ===============================
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+*.manifest
+*.spec
+
+# ===============================
+# Test & coverage
+# ===============================
+*.cover
+*.coverage
+.coverage.*
+nosetests.xml
+coverage.xml
+htmlcov/
+.cache
+.tox/
+.nox/
+nose2-junit-reports/
+
+# ===============================
+# Node / React (frontend)
+# ===============================
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Build directories
-/static/
+frontend/build/
 *.js.map
 *.css.map
-build/
 
-# Others
-*.coverage
-.coverage.*
-*.cover
-nosetests.xml
-coverage.xml
-nose2-junit-reports/
+# ===============================
+# Static files (Django + React)
+# ===============================
+staticfiles/
+static/
 
-# PyInstaller
-*.manifest
-*.spec
+# ===============================
+# Docker
+# ===============================
+*.env.*
+docker-compose.override.yml
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.cache
-
-# Translations
-*.mo
-*.pot
-
-# Sphinx documentation
-docs/_build/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Pyenv and other project environments
-.python-version
-
-# Ignore IDE settings/metadata and other common project settings
+# ===============================
+# Editor / OS-specific files
+# ===============================
 .idea/
 .vscode/
-
-# Local development configuration
 .DS_Store
+.python-version
 
-# All other configs
+# ===============================
+# Misc
+# ===============================
 *.lock
 *.toml
