@@ -9,4 +9,5 @@ It’s designed to support **multiple views** of the same list — so my wife, D
 
 **Backend:** Django  
 **Frontend:** React + Material UI  
-**Deployment:** Docker on DigitalOcean
+**Environment Management:** Conda
+**Deployment:** Docker
