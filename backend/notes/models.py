@@ -2,18 +2,18 @@ from django.contrib.auth.models import User
 from django.db import models
 
 
-# Toli: Todo List
-class Toli(models.Model):
+# Todi: Todo List (Pronounced Toe-dee)
+class Todi(models.Model):
     # Attributes
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
 
     # Ownership
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_tolis')
-    collaborators = models.ManyToManyField(User, blank=True, related_name='collaborating_tolis')
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_todis')
+    collaborators = models.ManyToManyField(User, blank=True, related_name='collaborating_todis')
 
-    # Meta Data
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_tolis')
+    # Metadata
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_todis')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -21,19 +21,19 @@ class Toli(models.Model):
         return self.name
 
 
-# Noto: Notes
-class Noto(models.Model):
+# Noti: Notes (Pronounced No-dee)
+class Noti(models.Model):
     # Attributes
     note = models.CharField(max_length=255)
-    toli = models.ForeignKey(Toli, on_delete=models.CASCADE, related_name='notes')
+    todi = models.ForeignKey(Todi, on_delete=models.CASCADE, related_name='notis')
     description = models.TextField(blank=True)
 
     # Ownership
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_notos')
-    collaborators = models.ManyToManyField(User, blank=True, related_name='collaborating_notos')
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_notis')
+    collaborators = models.ManyToManyField(User, blank=True, related_name='collaborating_notis')
 
-    # Meta Data
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_notos')
+    # Metadata
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_notis')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
