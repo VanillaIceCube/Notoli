@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ## [04-28-2025]
 ### Added
 - notes app in backend
+- users app in backend
 
 ## [04-26-2025]
 ### Added
