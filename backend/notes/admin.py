@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .models import Toli, Noto
+from .models import Todi, Noti
 
 
-admin.site.register(Toli)
-admin.site.register(Noto)
+admin.site.register(Todi)
+admin.site.register(Noti)
