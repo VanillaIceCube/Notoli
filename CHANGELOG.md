@@ -7,7 +7,8 @@ All notable changes to this project will be documented in this file.
 ## [04-28-2025]
 ### Added
 - notes app in backend
-- created preliminary notes model
+- Created preliminary Notos & Tolis
+    - name, description, owners, collaborators, & meta data
 
 ## [04-26-2025]
 ### Added
