@@ -9,6 +9,11 @@ All notable changes to this project will be documented in this file.
 - notes app in backend
 - Created preliminary Notos & Tolis
     - name, description, owners, collaborators, & meta data
+- [`conda_export.py`](https://github.com/andresberejnoi/Conda-Tools) by **Andres Berejnoi**
+
+### Changed
+- LICENSE.md to reflect [`conda_export.py`](https://github.com/andresberejnoi/Conda-Tools) by **Andres Berejnoi**
+- README.md to reflect [`conda_export.py`](https://github.com/andresberejnoi/Conda-Tools) by **Andres Berejnoi**
 
 ## [04-26-2025]
 ### Added
