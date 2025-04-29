@@ -1,3 +1,6 @@
 from django.contrib import admin
+from .models import Toli, Noto
 
-# Register your models here.
+
+admin.site.register(Toli)
+admin.site.register(Noto)
