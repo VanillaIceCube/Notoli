@@ -21,6 +21,10 @@ class TodoList(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name = "Todo List"
+        verbose_name_plural = "Todo Lists"
+
 
 # Note: The todo items underneath the TodoList
 class Note(models.Model):
@@ -42,6 +46,10 @@ class Note(models.Model):
 
     def __str__(self):
         return self.note
+
+    class Meta:
+        verbose_name = "Note"
+        verbose_name_plural = "Notes"
 
 
 # TodoListView: Saved views for the larger list
@@ -65,3 +73,7 @@ class TodoListView(models.Model):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        verbose_name = "Todo List View"
+        verbose_name_plural = "Todo List Views"
