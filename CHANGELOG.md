@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 ## [05-03-2025]
 ### Added
 - TodoListView
+- Simple JWT Authentication (my first ever implementation)
+    - Register
+    - Log in
+    - Refresh Token
 
 ### Changed
 - I removed all my "branding" renaming, due to clarity issues

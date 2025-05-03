@@ -39,8 +39,10 @@ INSTALLED_APPS = [
 
     # Other apps
     "rest_framework",
+    "rest_framework_simplejwt",
     
     # My apps
+    "authentication",
     "notes"
 ]
 
@@ -55,6 +57,11 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+}
 
 ROOT_URLCONF = "backend.urls"
 
