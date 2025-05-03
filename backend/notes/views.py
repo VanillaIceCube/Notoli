@@ -1,13 +1,18 @@
 from rest_framework import viewsets
-from .models import Todi, Noti
-from .serializers import TodiSerializer, NotiSerializer
+from .models import TodoList, Note, TodoListView
+from .serializers import TodoListSerializer, NoteSerializer, TodoListViewSerializer
 
 
-class TodiViewSet(viewsets.ModelViewSet):
-    queryset = Todi.objects.all()
-    serializer_class = TodiSerializer
+class TodoListViewSet(viewsets.ModelViewSet):
+    queryset = TodoList.objects.all()
+    serializer_class = TodoListSerializer
 
 
-class NotiViewSet(viewsets.ModelViewSet):
-    queryset = Noti.objects.all()
-    serializer_class = NotiSerializer
+class NoteViewSet(viewsets.ModelViewSet):
+    queryset = Note.objects.all()
+    serializer_class = NoteSerializer
+
+
+class TodoListViewViewSet(viewsets.ModelViewSet):
+    queryset = TodoListView.objects.all()
+    serializer_class = TodoListViewSerializer

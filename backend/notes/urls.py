@@ -4,8 +4,9 @@ from . import views
 
 
 router = DefaultRouter()
-router.register(r'todis', views.TodiViewSet)
-router.register(r'notis', views.NotiViewSet)
+router.register(r'todolists', views.TodoListViewSet)
+router.register(r'notes', views.NoteViewSet)
+router.register(r'todolistviews', views.TodoListViewViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

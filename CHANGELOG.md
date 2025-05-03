@@ -2,7 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [05-03-2025]
+### Added
+- TodoListView
+
+### Changed
+- I removed all my "branding" renaming, due to clarity issues
+    - Noti's --> Notes
+    - Todi's --> Todo Lists
 
 ## [04-28-2025]
 ### Added

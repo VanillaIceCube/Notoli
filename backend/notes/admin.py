@@ -1,6 +1,7 @@
 from django.contrib import admin
-from .models import Todi, Noti
+from .models import TodoList, Note, TodoListView
 
 
-admin.site.register(Todi)
-admin.site.register(Noti)
+admin.site.register(TodoList)
+admin.site.register(Note)
+admin.site.register(TodoListView)

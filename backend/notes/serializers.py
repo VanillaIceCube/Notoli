@@ -1,14 +1,19 @@
 from rest_framework import serializers
-from .models import Todi, Noti
+from .models import TodoList, Note, TodoListView
 
 
-class TodiSerializer(serializers.ModelSerializer):
+class TodoListSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Todi
+        model = TodoList
         fields = '__all__'
 
 
-class NotiSerializer(serializers.ModelSerializer):
+class NoteSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Noti
+        model = Note
+        fields = '__all__'
+
+class TodoListViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TodoListView
         fields = '__all__'
