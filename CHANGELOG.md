@@ -15,6 +15,9 @@ All notable changes to this project will be documented in this file.
     - Noti's --> Notes
     - Todi's --> Todo Lists
 
+### Removed
+- Default frontend files
+
 ## [04-28-2025]
 ### Added
 - notes app in backend
