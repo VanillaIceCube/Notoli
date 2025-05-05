@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [05-04-2025]
+### Added
+- Nonfunctional login.js to frontend
+
 ## [05-03-2025]
 ### Added
 - TodoListView
