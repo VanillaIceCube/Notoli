@@ -4,7 +4,9 @@ All notable changes to this project will be documented in this file.
 
 ## [05-04-2025]
 ### Added
-- Nonfunctional login.js to frontend
+- Login page
+- corsheaders + misc. cors settings to backend
+- axios to the frontend
 
 ## [05-03-2025]
 ### Added
