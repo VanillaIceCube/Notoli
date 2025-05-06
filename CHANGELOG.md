@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [05-05-2025]
+### Added
+- Blank homepage
+
 ## [05-04-2025]
 ### Added
 - Login page
