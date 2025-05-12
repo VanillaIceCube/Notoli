@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import axios from 'axios';
-import { TextField, Button, Typography, Container, Box, Paper } from '@mui/material';
+import { TextField, Button, Typography, Container, Box, Paper, Snackbar } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   const handleLogin = async () => {
     try {
@@ -20,7 +22,7 @@ export default function Login() {
       setError(null);
       alert('Login successful!');
 
-      // TODO: Redirect user or update app state
+      navigate('/');
     } catch (err) {
       console.error(err);
       setError('Invalid credentials');
@@ -28,8 +30,15 @@ export default function Login() {
   };
 
   return (
-    <Container maxWidth="sm">
-      <Paper elevation={3} sx={{ padding: 4 }}>
+    <Container maxWidth="sm" sx={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '100vh',
+      mx: 'auto', 
+      }}
+    >
+      <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
         <Typography variant="h5" component="h1" align="center" gutterBottom>
           Login
         </Typography>
@@ -70,3 +79,4 @@ export default function Login() {
     </Container>
   );
 }
+

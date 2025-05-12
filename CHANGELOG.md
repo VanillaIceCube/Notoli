@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [05-11-2025]
+### Added
+- React Routing
+- Some global styling
+
+### Changed
+
+
 ## [05-05-2025]
 ### Added
 - Blank homepage
