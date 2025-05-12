@@ -6,8 +6,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - React Routing
 - Some global styling
-
-### Changed
+- Preliminary Snackbar for logging in
 
 
 ## [05-05-2025]
