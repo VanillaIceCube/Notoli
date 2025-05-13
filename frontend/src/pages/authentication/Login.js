@@ -10,20 +10,23 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
+import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
-  // Username & pasword
+  // Username & password
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const { login } = useAuth();
 
   // Snackbar states
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [snackbarMessage, setSnackbarMessage] = useState('');
+
   const navigate = useNavigate();
 
-  // Login function
+  //Login function
   const handleLogin = async () => {
     try {
       const { data } = await axios.post('http://localhost:8000/auth/login/', {
@@ -32,10 +35,9 @@ export default function Login() {
       });
 
       // Save tokens
-      localStorage.setItem('accessToken', data.access);
-      localStorage.setItem('refreshToken', data.refresh);
+      login(data.access);
 
-      // Sucess state
+      // Success state
       setSnackbarSeverity('success');
       setSnackbarMessage('Login successful!');
       setSnackbarOpen(true);
