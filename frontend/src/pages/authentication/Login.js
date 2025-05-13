@@ -13,100 +13,76 @@ import {
 import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
+  // Username & pasword
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(null);
+
+  // Snackbar states
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+  const [snackbarMessage, setSnackbarMessage] = useState('');
   const navigate = useNavigate();
 
+  // Login function
   const handleLogin = async () => {
     try {
-      const response = await axios.post(
-        'http://localhost:8000/auth/login/',
-        {
-          username,
-          password,
-        }
-      );
+      const { data } = await axios.post('http://localhost:8000/auth/login/', {
+        username,
+        password,
+      });
 
-      const { access, refresh } = response.data;
-      localStorage.setItem('accessToken', access);
-      localStorage.setItem('refreshToken', refresh);
+      // Save tokens
+      localStorage.setItem('accessToken', data.access);
+      localStorage.setItem('refreshToken', data.refresh);
 
-      setError(null);
+      // Sucess state
+      setSnackbarSeverity('success');
+      setSnackbarMessage('Login successful!');
       setSnackbarOpen(true);
-      setTimeout(() => {
-        navigate('/');
-      }, 3000);
+
+      setTimeout(() => navigate('/'), 3000);
     } catch (err) {
       console.error(err);
-      setError('Invalid credentials');
+
+      // Failure state
+      setSnackbarSeverity('error');
+      setSnackbarMessage('Login failed :(');
+      setSnackbarOpen(true);
     }
   };
 
-  const handleSnackbarClose = ( event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
+  // Snackbar function
+  const handleSnackbarClose = (_event, reason) => {
+    if (reason === 'clickaway') return;
     setSnackbarOpen(false);
   };
 
   return (
-    <Container
-      maxWidth="sm"
-      sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        mx: 'auto',
-      }}
-    >
-      <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
-        <Typography
-          variant="h5"
-          component="h1"
-          align="center"
-          gutterBottom
-        >
+    <Container maxWidth="sm" sx={{ display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh' }}>
+      <Paper elevation={3} sx={{ p:4, width:'100%' }}>
+        <Typography variant="h5" align="center" gutterBottom>
           Login
         </Typography>
 
         <Box
           component="form"
-          noValidate
-          autoComplete="off"
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleLogin();
-          }}
-          sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+          onSubmit={e => { e.preventDefault(); handleLogin(); }}
+          sx={{ display:'flex', flexDirection:'column', gap:2 }}
         >
           <TextField
             label="Username"
-            type="text"
-            fullWidth
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={e => setUsername(e.target.value)}
+            fullWidth
           />
           <TextField
             label="Password"
             type="password"
-            fullWidth
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          {error && (
-            <Typography color="error" align="center">
-              {error}
-            </Typography>
-          )}
-          <Button
-            variant="contained"
-            color="primary"
+            onChange={e => setPassword(e.target.value)}
             fullWidth
-            type="submit"
-          >
+          />
+          <Button type="submit" variant="contained" fullWidth>
             Log In
           </Button>
         </Box>
@@ -116,14 +92,14 @@ export default function Login() {
         open={snackbarOpen}
         autoHideDuration={3000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical:'bottom', horizontal:'right' }}
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity="success"
-          sx={{ width: '100%' }}
+          severity={snackbarSeverity}
+          sx={{ width:'100%' }}
         >
-          Login successful!
+          {snackbarMessage}
         </Alert>
       </Snackbar>
     </Container>

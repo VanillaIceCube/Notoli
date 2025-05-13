@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [05-12-2025]
+### Added
+- Snackbar for failed login
+
+### Changed
+- More robust Snackbar in login.js
+
 ## [05-11-2025]
 ### Added
 - React Routing
