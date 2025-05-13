@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [05-12-2025]
 ### Added
 - Snackbar for failed login
+- Automatic redirection if not logged in
 
 ### Changed
 - More robust Snackbar in login.js
