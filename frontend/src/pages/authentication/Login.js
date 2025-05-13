@@ -40,7 +40,7 @@ export default function Login() {
       setSnackbarMessage('Login successful!');
       setSnackbarOpen(true);
 
-      setTimeout(() => navigate('/'), 3000);
+      setTimeout(() => navigate('/'), 1000);
     } catch (err) {
       console.error(err);
 
