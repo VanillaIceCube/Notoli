@@ -58,7 +58,15 @@ export default function Login() {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh' }}>
+    <Container 
+      maxWidth="sm"
+      sx={{
+        display:'flex',
+        justifyContent:'center',
+        alignItems:'center',
+        minHeight:'100vh'
+      }}
+    >
       <Paper elevation={3} sx={{ p:4, width:'100%' }}>
         <Typography variant="h5" align="center" gutterBottom>
           Login

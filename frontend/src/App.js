@@ -1,6 +1,6 @@
 import './App.css'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
-import HomePage from './pages/home/HomePage'
+import TodoLists from './pages/notes/TodoLists'
 import Login from './pages/authentication/Login'
 import AuthenticatedRoute from './components/AuthenticatedRoute'
 
@@ -13,7 +13,7 @@ function App() {
         <Route path="/" element=
           {
             <AuthenticatedRoute>
-              <HomePage />
+              <TodoLists />
             </AuthenticatedRoute>
           }
         />
