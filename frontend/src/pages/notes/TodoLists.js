@@ -9,13 +9,13 @@ export default function TodoLists() {
       sx={{
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
+        alignItems: 'top',
+        py: 2
       }}
     >
       <Paper elevation={3} sx={{ p: 2, width: '100%' }}>
         <Typography variant="h5" align="center" gutterBottom>
-          Master Lists
+          Todo Lists
         </Typography>
         <Stack spacing={2}>
           <Card
