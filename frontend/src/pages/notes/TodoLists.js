@@ -4,8 +4,9 @@ import {
   Container,
   Paper,
   Stack,
-  Card,
+  Button,
 } from '@mui/material';
+import { Add, ArrowForward } from '@mui/icons-material';
 
 export default function TodoLists() {
   const [lists, setLists] = useState([]);
@@ -57,17 +58,18 @@ export default function TodoLists() {
           <Stack spacing={2}>
             {lists.length
               ? lists.map(list => (
-                <Card
+                <Button
                   key={list.id}
-                  variant="outlined"
+                  variant="contained"
+                  startIcon={<ArrowForward/>}
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    p: 1,
+                    justifyContent: 'left'
                   }}
                 >
                   <Typography> {list.name} </Typography>
-                </Card>
+                </Button>
                 ))
               : (
                 <Typography align="center">
@@ -75,6 +77,17 @@ export default function TodoLists() {
                 </Typography>
               )
             }
+            <Button
+              variant="contained"
+              startIcon={<Add/>}
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'left',
+              }}
+            >
+              <Typography> Add New </Typography>
+            </Button>
           </Stack>
         )}
       </Paper>
