@@ -5,8 +5,11 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Refactored global CSS to use theme variables for consistent theming.
 - Updated `Login.js` styling with secondary colors and custom backgrounds.
+- ![image](https://github.com/user-attachments/assets/539fea36-6cee-4bbd-9eb6-d88f92581fba)
 - Enhanced `TodoLists` UI with dividers and improved button layouts.
+- ![image](https://github.com/user-attachments/assets/5c51836d-4297-4686-958a-684312f98db6)
 - Removed stray trailing lines in components.
+
 
 ## 2025-06-16
 ### Added
@@ -36,9 +39,11 @@ All notable changes to this project are documented in this file.
 ## 2025-05-04
 ### Added
 - Login page wired to backend authentication via Axios.
+- ![image](https://github.com/user-attachments/assets/bf9cca23-1da6-4efd-a115-5f20f675b979)
 - CORS support in the backend using `django-cors-headers`.
 ### Changed
 - Removed unused CRA boilerplate and cleaned default styles.
+
 
 ## 2025-05-03
 ### Added
