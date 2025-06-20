@@ -64,14 +64,10 @@ export default function Login() {
         display:'flex',
         justifyContent:'center',
         alignItems:'center',
-        minHeight:'100vh'
+        minHeight:'100vh',
       }}
     >
-      <Paper elevation={3} sx={{ p:4, width:'100%' }}>
-        <Typography variant="h5" align="center" gutterBottom>
-          Login
-        </Typography>
-
+      <Paper elevation={3} sx={{ p:4, width:'100%', background:'var(--secondary-background-color)'}}>
         <Box
           component="form"
           onSubmit={e => { e.preventDefault(); handleLogin(); }}
@@ -82,6 +78,7 @@ export default function Login() {
             value={username}
             onChange={e => setUsername(e.target.value)}
             fullWidth
+            sx={{background: 'white'}}
           />
           <TextField
             label="Password"
@@ -89,9 +86,19 @@ export default function Login() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             fullWidth
+            sx={{background: 'white'}}
           />
-          <Button type="submit" variant="contained" fullWidth>
-            Log In
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            sx={{
+              backgroundColor: 'var(--secondary-color)'
+            }}
+          >
+            <Typography variant="h5" align="center">
+              Login
+            </Typography>
           </Button>
         </Box>
       </Paper>
@@ -113,3 +120,4 @@ export default function Login() {
     </Container>
   );
 }
+

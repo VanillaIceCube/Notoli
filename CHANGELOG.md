@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [07-30-2025]
+### Changed
+- Refactored CSS to use variables for consistent theming
+- Updated Login.js component styling with secondary theme colors
+- Enhanced UI for TodoLists with dividers and improved button styling
+
 ## [06-16-2025]
 ### Added
 - TodoLists basic look

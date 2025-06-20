@@ -6,7 +6,8 @@ import {
   Stack,
   Button,
 } from '@mui/material';
-import { Add, ArrowForward } from '@mui/icons-material';
+import { Add } from '@mui/icons-material';
+import Divider from '@mui/material/Divider';
 
 export default function TodoLists() {
   const [lists, setLists] = useState([]);
@@ -35,9 +36,18 @@ export default function TodoLists() {
         py: 2,
       }}
     >
-      <Paper elevation={3} sx={{ p: 2, width: '100%' }}>
+      <Paper elevation={3} sx={{ px: 1.5, py: 1.5, width: '100%', background:'var(--secondary-background-color)' }}>
         {/* Header */}
-        <Typography variant="h5" align="center" gutterBottom>
+        <Typography
+          variant="h4"
+          align="center"
+          gutterBottom
+          sx={{
+            mt: 1.5,
+            fontWeight: 'bold',
+            color: 'var(--secondary-color)'
+          }}
+        >
           Todo Lists 
         </Typography>
 
@@ -54,39 +64,50 @@ export default function TodoLists() {
         )}
 
         {/* If we're done loading and there are no errors */}
+        <Divider sx={{ borderBottomWidth: 2, marginBottom: 1 }} />
         {!loading && !error && (
-          <Stack spacing={2}>
+          <Stack spacing={1}>
             {lists.length
               ? lists.map(list => (
-                <Button
-                  key={list.id}
-                  variant="contained"
-                  startIcon={<ArrowForward/>}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'left'
-                  }}
-                >
-                  <Typography> {list.name} </Typography>
-                </Button>
-                ))
+                <>
+                  <Button
+                    key={list.id}
+                    variant="text"
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'left',
+                      background:'var(--secondary-background-color)',
+                      color: 'var(--secondary-color)',
+                    }}
+                  >
+                    <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+                      {list.name}
+                    </Typography>
+                  </Button>
+                  <Divider sx={{ borderBottomWidth: 2 }} />
+                </>
+              ))
               : (
-                <Typography align="center">
+                <Typography aligh="center" variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
                   No to-do lists found.
                 </Typography>
               )
             }
             <Button
-              variant="contained"
+              variant="text"
               startIcon={<Add/>}
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'left',
+                background:'var(--secondary-background-color)',
+                color: 'var(--secondary-color)',
               }}
             >
-              <Typography> Add New </Typography>
+              <Typography aligh="center" variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+                Add New
+              </Typography>
             </Button>
           </Stack>
         )}
@@ -94,3 +115,4 @@ export default function TodoLists() {
     </Container>
   );
 }
+
