@@ -1,108 +1,80 @@
 # Changelog
-All notable changes to this project will be documented in this file.
+All notable changes to this project are documented in this file.
 
-
-## 07-30-2025
+## 2025-07-30
 ### Changed
-- Refactored CSS to use variables for consistent theming
-- Updated Login.js component styling with secondary theme colors
-- Enhanced UI for TodoLists with dividers and improved button styling
-- ![image](https://github.com/user-attachments/assets/5c51836d-4297-4686-958a-684312f98db6)
+- Refactored global CSS to use theme variables for consistent theming.
+- Updated `Login.js` styling with secondary colors and custom backgrounds.
+- Enhanced `TodoLists` UI with dividers and improved button layouts.
+- Removed stray trailing lines in components.
 
-
-## 06-16-2025
+## 2025-06-16
 ### Added
-- TodoLists basic look
-- TodoLists view lists
-- ![image](https://github.com/user-attachments/assets/8e749129-03a5-40fe-b632-25106287157d)
+- Introduced initial `TodoLists` interface using Material UI.
+- Fetches lists from the API with loading and error states.
+- Basic view to list existing todo lists.
+### Changed
+- Replaced the old Homepage route with the TodoLists page.
+- Minor layout tweaks for vertical alignment.
 
+## 2025-05-12
+### Added
+- Snackbar notifications for login success and failure states.
+- `AuthenticatedRoute` wrapper for automatic redirect when not logged in.
+### Changed
+- Reduced login redirect delay for a faster transition.
 
+## 2025-05-11
+### Added
+- React Router configuration and global styling utilities.
+- Preliminary snackbar logic for the login page.
+
+## 2025-05-05
+### Added
+- Placeholder home page component.
+
+## 2025-05-04
+### Added
+- Login page wired to backend authentication via Axios.
+- CORS support in the backend using `django-cors-headers`.
+### Changed
+- Removed unused CRA boilerplate and cleaned default styles.
+
+## 2025-05-03
+### Added
+- `TodoListView` model and REST endpoints for todo lists, notes and views.
+- Simple JWT authentication endpoints for register, login and token refresh.
+### Changed
+- Renamed models (`Todi` → `TodoList`, `Noti` → `Note`) and updated admin and serializers.
 ### Removed
-- Homepage
+- Default frontend assets and test files from CRA template.
 
-
-## 05-12-2025
+## 2025-04-28
 ### Added
-- Snackbar for failed login
-- Automatic redirection if not logged in
-
+- `notes` app with initial models and migrations.
+- Owners and collaborators fields for todo lists and notes.
+- `environment_conda_export.py` helper script.
+- REST APIs using Django REST Framework.
 ### Changed
-- More robust Snackbar in login.js
-
-
-## 05-11-2025
-### Added
-- React Routing
-- Some global styling
-- Preliminary Snackbar for logging in
-
-
-## 05-05-2025
-### Added
-- Blank homepage
-
-
-## 05-04-2025
-### Added
-- Login page
-- corsheaders + misc. cors settings to backend
-- axios to the frontend
-
-
-## 05-03-2025
-### Added
-- TodoListView
-- Simple JWT Authentication (my first ever implementation)
-    - Register
-    - Log in
-    - Refresh Token
-
-### Changed
-- I removed all my "branding" renaming, due to clarity issues
-    - Noti's --> Notes
-    - Todi's --> Todo Lists
-
+- Updated LICENSE and README to credit `conda_export.py` by Andres Berejnoi.
 ### Removed
-- Default frontend files
+- Temporary `users` app.
 
-
-## 04-28-2025
+## 2025-04-26
 ### Added
-- notes app in backend
-- Created preliminary Notis & Todis Models
-    - name, description, owners, collaborators, & meta data
-- [`conda_export.py`](https://github.com/andresberejnoi/Conda-Tools) by **Andres Berejnoi**
-- API's created for Noti's & Todis!
+- Created project changelog.
 
+## 2025-04-25
 ### Changed
-- LICENSE.md to reflect [`conda_export.py`](https://github.com/andresberejnoi/Conda-Tools) by **Andres Berejnoi**
-- README.md to reflect [`conda_export.py`](https://github.com/andresberejnoi/Conda-Tools) by **Andres Berejnoi**
+- Minor formatting tweaks across Docker and configuration files.
 
-
-## 04-26-2025
+## 2025-04-24
 ### Added
-- CHANGELOG.md
-
-
-## 04-25-2025
+- Frontend, backend and Docker scaffolding.
+- Initial `environment.yml` and docker-compose setup.
 ### Changed
-- Minor code formatting changes
+- README and `.gitignore` revisions.
 
-
-## 04-24-2025
+## 2025-04-20
 ### Added
-- Frontend scaffolding
-- Backend scaffolding
-- Docker scaffolding
-- environment.yml 
-
-### Changed
-- README.md updates
-- .gitignore updates
-
-
-## 04-20-2025
-### Added
-- Repo created
-- LICENSE.md created
-- README.md created
+- Initial repository with base README and LICENSE.
