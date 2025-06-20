@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2025-07-31
+### Changed
+- Refactored `Login.js` and `TodoLists.js` components to simplify JSX and consolidate `sx` prop configurations for improved readability.
+
 ## 2025-07-30
 ### Changed
 - Refactored global CSS to use theme variables for consistent theming.
@@ -83,3 +87,5 @@ All notable changes to this project are documented in this file.
 ## 2025-04-20
 ### Added
 - Initial repository with base README and LICENSE.
+
+
