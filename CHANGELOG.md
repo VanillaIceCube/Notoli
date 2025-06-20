@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Refactored CSS to use variables for consistent theming
 - Updated Login.js component styling with secondary theme colors
+- ![image](https://github.com/user-attachments/assets/539fea36-6cee-4bbd-9eb6-d88f92581fba)
+
 - Enhanced UI for TodoLists with dividers and improved button styling
 - ![image](https://github.com/user-attachments/assets/5c51836d-4297-4686-958a-684312f98db6)
 
