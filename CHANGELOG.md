@@ -2,11 +2,17 @@
 All notable changes to this project are documented in this file.
 
 
-## 2025-07-31
+## 2025-06-20
+### Added
+- Implemented the `handleAddNew` function to allow creating new TODO lists from the frontend.
+
 ### Changed
+- Updated "Add New" button in `TodoLists.js` to trigger the new list creation functionality.
+- Removed comment related to hardcoding of the API URL in `TodoLists.js`.
 - Refactored `Login.js` and `TodoLists.js` components to simplify JSX and consolidate `sx` prop configurations for improved readability.
 
-## 2025-07-30
+
+## 2025-06-19
 ### Changed
 - Refactored global CSS to use theme variables for consistent theming.
 - Updated `Login.js` styling with secondary colors and custom backgrounds.

@@ -14,8 +14,8 @@ export default function TodoLists() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Fetch the todolists list from the backend
   useEffect(() => {
-    // If I launch with docker containers, I think this is okay to hardcode?
     fetch('http://localhost:8000/api/todolists/')
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -25,6 +25,31 @@ export default function TodoLists() {
       .catch(err => setError(err.toString()))
       .finally(() => setLoading(false));
   }, []);
+
+  // Create a new todolist
+  const handleAddNew = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/todolists/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: 'Dianas TODO List',
+          description: 'Test Description',
+          owner: '7',
+          created_by: '7'
+        })
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const newList = await response.json();
+      setLists([...lists, newList]);
+    } catch (err) {
+      setError(err.toString());
+    }
+  };
 
   return (
     <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2 }}>
@@ -73,6 +98,7 @@ export default function TodoLists() {
             <Button sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
               variant="text"
               startIcon={<Add/>}
+              onClick={handleAddNew}
             >
               <Typography aligh="center" variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
                 Add New
