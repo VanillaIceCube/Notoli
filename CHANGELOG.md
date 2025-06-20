@@ -1,6 +1,7 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+
 ## 2025-07-31
 ### Changed
 - Refactored `Login.js` and `TodoLists.js` components to simplify JSX and consolidate `sx` prop configurations for improved readability.
@@ -24,6 +25,7 @@ All notable changes to this project are documented in this file.
 - Replaced the old Homepage route with the TodoLists page.
 - Minor layout tweaks for vertical alignment.
 
+
 ## 2025-05-12
 ### Added
 - Snackbar notifications for login success and failure states.
@@ -31,14 +33,17 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Reduced login redirect delay for a faster transition.
 
+
 ## 2025-05-11
 ### Added
 - React Router configuration and global styling utilities.
 - Preliminary snackbar logic for the login page.
 
+
 ## 2025-05-05
 ### Added
 - Placeholder home page component.
+
 
 ## 2025-05-04
 ### Added
@@ -58,6 +63,7 @@ All notable changes to this project are documented in this file.
 ### Removed
 - Default frontend assets and test files from CRA template.
 
+
 ## 2025-04-28
 ### Added
 - `notes` app with initial models and migrations.
@@ -69,13 +75,16 @@ All notable changes to this project are documented in this file.
 ### Removed
 - Temporary `users` app.
 
+
 ## 2025-04-26
 ### Added
 - Created project changelog.
 
+
 ## 2025-04-25
 ### Changed
 - Minor formatting tweaks across Docker and configuration files.
+
 
 ## 2025-04-24
 ### Added
@@ -84,8 +93,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - README and `.gitignore` revisions.
 
+
 ## 2025-04-20
 ### Added
 - Initial repository with base README and LICENSE.
-
-
