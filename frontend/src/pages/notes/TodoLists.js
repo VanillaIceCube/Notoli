@@ -27,33 +27,16 @@ export default function TodoLists() {
   }, []);
 
   return (
-    <Container
-      maxWidth="sm"
-      sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        py: 2,
-      }}
-    >
+    <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2 }}>
       <Paper elevation={3} sx={{ px: 1.5, py: 1.5, width: '100%', background:'var(--secondary-background-color)' }}>
         {/* Header */}
-        <Typography
-          variant="h4"
-          align="center"
-          gutterBottom
-          sx={{
-            mt: 1.5,
-            fontWeight: 'bold',
-            color: 'var(--secondary-color)'
-          }}
-        >
+        <Typography variant="h4" align="center" gutterBottom sx={{ mt: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)'}}>
           Todo Lists 
         </Typography>
 
         {/* This is for loading */}
         {loading && (
-          <Typography align="center">Loading…</Typography>
+          <Typography align="center"> Loading… </Typography>
         )}
         
         {/* This is for errors */}
@@ -70,16 +53,9 @@ export default function TodoLists() {
             {lists.length
               ? lists.map(list => (
                 <>
-                  <Button
+                  <Button sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
                     key={list.id}
                     variant="text"
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'left',
-                      background:'var(--secondary-background-color)',
-                      color: 'var(--secondary-color)',
-                    }}
                   >
                     <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
                       {list.name}
@@ -94,16 +70,9 @@ export default function TodoLists() {
                 </Typography>
               )
             }
-            <Button
+            <Button sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
               variant="text"
               startIcon={<Add/>}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'left',
-                background:'var(--secondary-background-color)',
-                color: 'var(--secondary-color)',
-              }}
             >
               <Typography aligh="center" variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
                 Add New

@@ -58,43 +58,25 @@ export default function Login() {
   };
 
   return (
-    <Container 
-      maxWidth="sm"
-      sx={{
-        display:'flex',
-        justifyContent:'center',
-        alignItems:'center',
-        minHeight:'100vh',
-      }}
-    >
+    <Container maxWidth="sm" sx={{ display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh' }}>
       <Paper elevation={3} sx={{ p:4, width:'100%', background:'var(--secondary-background-color)'}}>
-        <Box
-          component="form"
+        <Box component="form" sx={{ display:'flex', flexDirection:'column', gap:2 }}
           onSubmit={e => { e.preventDefault(); handleLogin(); }}
-          sx={{ display:'flex', flexDirection:'column', gap:2 }}
         >
-          <TextField
+          <TextField fullWidth sx={{background: 'white'}}
             label="Username"
             value={username}
             onChange={e => setUsername(e.target.value)}
-            fullWidth
-            sx={{background: 'white'}}
           />
-          <TextField
+          <TextField fullWidth sx={{background: 'white'}}
             label="Password"
             type="password"
             value={password}
             onChange={e => setPassword(e.target.value)}
-            fullWidth
-            sx={{background: 'white'}}
           />
-          <Button
+          <Button fullWidth sx={{ backgroundColor: 'var(--secondary-color)' }}
             type="submit"
             variant="contained"
-            fullWidth
-            sx={{
-              backgroundColor: 'var(--secondary-color)'
-            }}
           >
             <Typography variant="h5" align="center">
               Login
@@ -109,10 +91,9 @@ export default function Login() {
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical:'bottom', horizontal:'right' }}
       >
-        <Alert
+        <Alert sx={{ width:'100%' }}
           onClose={handleSnackbarClose}
           severity={snackbarSeverity}
-          sx={{ width:'100%' }}
         >
           {snackbarMessage}
         </Alert>
