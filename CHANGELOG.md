@@ -47,6 +47,7 @@ All notable changes to this project will be documented in this file.
 ## 05-04-2025
 ### Added
 - Login page
+- ![image](https://github.com/user-attachments/assets/bf9cca23-1da6-4efd-a115-5f20f675b979)
 - corsheaders + misc. cors settings to backend
 - axios to the frontend
 
