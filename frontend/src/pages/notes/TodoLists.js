@@ -53,9 +53,9 @@ export default function TodoLists() {
             {lists.length
               ? lists.map(list => (
                 <>
-                  <Button sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
+                  <Button sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', background:'var(--secondary-color)', color: 'var(--secondary-background-color)' }}
                     key={list.id}
-                    variant="text"
+                    variant="contained"
                   >
                     <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
                       {list.name}
