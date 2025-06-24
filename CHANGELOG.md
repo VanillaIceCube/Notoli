@@ -25,6 +25,8 @@ All notable changes to this project are documented in this file.
 ## 2025-06-16
 ### Added
 - Introduced initial `TodoLists` interface using Material UI.
+- ![image](https://github.com/user-attachments/assets/50279d64-9d56-41e6-b3bd-e567e1b28a4e)
+
 - Fetches lists from the API with loading and error states.
 - Basic view to list existing todo lists.
 ### Changed
