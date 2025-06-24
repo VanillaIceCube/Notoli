@@ -9,6 +9,7 @@ All notable changes to this project are documented in this file.
   - Modified relationships to reflect the new model structure.
   - Adjusted related names and verbose names accordingly.
   - Adjusted `admin`, `serializers`, `urls`, and `views` to match
+  - Nuked the database...
 
 ## 2025-06-20
 ### Added

@@ -34,7 +34,7 @@ class TodoList(models.Model):
 
     # Scope
     workspace = models.ForeignKey(Workspace, on_delete=models.CASCADE, related_name='todolists')
-    notes = models.ManyToManyField('Note', blank=True, related_name='notes')
+    notes = models.ManyToManyField('Note', blank=True, related_name='todolist_notes')
 
     # Ownership
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_todolists')
@@ -59,7 +59,7 @@ class Note(models.Model):
     description = models.TextField(blank=True)
 
     # Scope
-    todo_list = models.ForeignKey(TodoList, on_delete=models.CASCADE, related_name='notes')
+    todo_list = models.ForeignKey(TodoList, on_delete=models.CASCADE, related_name='note')
 
     # Ownership
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_notes')
