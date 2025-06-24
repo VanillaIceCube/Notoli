@@ -6,6 +6,13 @@ class WorkspaceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Workspace
         fields = '__all__'
+        # perform_create in models.py automatically sets owner & created_by upon creation
+        # this is placed here to allow you to not have to pass in woner & created_by
+        # but still requires them on the database level
+        extra_kwargs = {
+            'owner': {'required': False},
+            'created_by': {'required': False}
+        }
 
 
 class TodoListSerializer(serializers.ModelSerializer):

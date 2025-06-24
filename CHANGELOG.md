@@ -1,6 +1,17 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+
+## 2025-06-24
+### Added
+- Basenames to the URL router in `urls.py` for enhanced reverse URL lookups.
+### Changed
+- `WorkspaceSerializer` now treats `owner` and `created_by` fields as optional during creation.
+- `AuthenticatedRoute` component updated to use `sessionStorage` for token retrieval.
+- Renamed "Dianas TODO List" to "New Workspace" in `Workspaces.js`.
+- Updated `Workspaces.js` header text from "Todo Lists" to "Workspaces".
+
+
 ## 2025-06-23
 ### Changed
 - Refactored the `models.py` in the `notes` app for improved clarity and organization:

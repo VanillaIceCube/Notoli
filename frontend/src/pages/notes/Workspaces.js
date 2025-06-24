@@ -39,7 +39,7 @@ export default function Workspaces() {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
-          name: 'Dianas TODO List',
+          name: 'New Workspace',
           description: 'Test Description',
         })
       });
@@ -58,7 +58,7 @@ export default function Workspaces() {
       <Paper elevation={3} sx={{ px: 1.5, py: 1.5, width: '100%', background:'var(--secondary-background-color)' }}>
         {/* Header */}
         <Typography variant="h4" align="center" gutterBottom sx={{ mt: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)'}}>
-          Todo Lists 
+          Workspaces
         </Typography>
 
         {/* This is for loading */}
