@@ -8,6 +8,7 @@ All notable changes to this project are documented in this file.
   - Renamed `TodoListView` to `TodoList`, now representing a singular to-do list within a `Workspace`.
   - Modified relationships to reflect the new model structure.
   - Adjusted related names and verbose names accordingly.
+  - Adjusted `admin`, `serializers`, `urls`, and `views` to match
 
 ## 2025-06-20
 ### Added
