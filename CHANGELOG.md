@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2025-06-23
+### Changed
+- Refactored the `models.py` in the `notes` app for improved clarity and organization:
+  - Renamed the `TodoList` model to `Workspace`.
+  - Renamed `TodoListView` to `TodoList`, now representing a singular to-do list within a `Workspace`.
+  - Modified relationships to reflect the new model structure.
+  - Adjusted related names and verbose names accordingly.
 
 ## 2025-06-20
 ### Added
