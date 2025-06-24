@@ -13,10 +13,13 @@ export default function Workspaces() {
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const token = sessionStorage.getItem('accessToken');
 
   // Fetch the workspaces list from the backend
   useEffect(() => {
-    fetch('http://localhost:8000/api/workspaces/')
+    fetch('http://localhost:8000/api/workspaces/', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -33,12 +36,11 @@ export default function Workspaces() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({
-          name: 'Dianas TODO List',
+          name: 'New Workspace',
           description: 'Test Description',
-          owner: '2',
-          created_by: '2'
         })
       });
 
@@ -56,7 +58,7 @@ export default function Workspaces() {
       <Paper elevation={3} sx={{ px: 1.5, py: 1.5, width: '100%', background:'var(--secondary-background-color)' }}>
         {/* Header */}
         <Typography variant="h4" align="center" gutterBottom sx={{ mt: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)'}}>
-          Todo Lists 
+          Workspaces
         </Typography>
 
         {/* This is for loading */}
