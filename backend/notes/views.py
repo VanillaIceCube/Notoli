@@ -1,6 +1,11 @@
 from rest_framework import viewsets
-from .models import TodoList, Note, TodoListView
-from .serializers import TodoListSerializer, NoteSerializer, TodoListViewSerializer
+from .models import Workspace, TodoList, Note
+from .serializers import WorkspaceSerializer, TodoListSerializer, NoteSerializer
+
+
+class WorkspaceViewSet(viewsets.ModelViewSet):
+    queryset = Workspace.objects.all()
+    serializer_class = WorkspaceSerializer
 
 
 class TodoListViewSet(viewsets.ModelViewSet):
@@ -11,8 +16,3 @@ class TodoListViewSet(viewsets.ModelViewSet):
 class NoteViewSet(viewsets.ModelViewSet):
     queryset = Note.objects.all()
     serializer_class = NoteSerializer
-
-
-class TodoListViewViewSet(viewsets.ModelViewSet):
-    queryset = TodoListView.objects.all()
-    serializer_class = TodoListViewSerializer
