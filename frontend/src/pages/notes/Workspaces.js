@@ -9,14 +9,14 @@ import {
 import { Add } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 
-export default function TodoLists() {
+export default function Workspaces() {
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch the todolists list from the backend
+  // Fetch the workspaces list from the backend
   useEffect(() => {
-    fetch('http://localhost:8000/api/todolists/')
+    fetch('http://localhost:8000/api/workspaces/')
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -29,7 +29,7 @@ export default function TodoLists() {
   // Create a new todolist
   const handleAddNew = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/todolists/', {
+      const response = await fetch('http://localhost:8000/api/workspaces/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -37,8 +37,8 @@ export default function TodoLists() {
         body: JSON.stringify({
           name: 'Dianas TODO List',
           description: 'Test Description',
-          owner: '7',
-          created_by: '7'
+          owner: '2',
+          created_by: '2'
         })
       });
 
