@@ -13,11 +13,12 @@ All notable changes to this project are documented in this file.
 - Refactored frontend to match refactored backend
   - Replaced `TodoLists` with `Workspaces` in the App.js routing.
   - Removed `TodoLists.js` file and its references.
+- token changes from local to session storage
+
 
 ## 2025-06-20
 ### Added
 - Implemented the `handleAddNew` function to allow creating new TODO lists from the frontend.
-
 ### Changed
 - Updated "Add New" button in `TodoLists.js` to trigger the new list creation functionality.
 - Removed comment related to hardcoding of the API URL in `TodoLists.js`.
@@ -38,7 +39,6 @@ All notable changes to this project are documented in this file.
 ### Added
 - Introduced initial `TodoLists` interface using Material UI.
 - ![image](https://github.com/user-attachments/assets/50279d64-9d56-41e6-b3bd-e567e1b28a4e)
-
 - Fetches lists from the API with loading and error states.
 - Basic view to list existing todo lists.
 ### Changed

@@ -32,8 +32,8 @@ export default function Login() {
       });
 
       // Save tokens
-      localStorage.setItem('accessToken', data.access);
-      localStorage.setItem('refreshToken', data.refresh);
+      sessionStorage.setItem('accessToken', data.access);
+      sessionStorage.setItem('refreshToken', data.refresh);
 
       // Sucess state
       setSnackbarSeverity('success');
@@ -101,3 +101,4 @@ export default function Login() {
     </Container>
   );
 }
+
