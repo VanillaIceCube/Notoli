@@ -9,7 +9,10 @@ All notable changes to this project are documented in this file.
   - Modified relationships to reflect the new model structure.
   - Adjusted related names and verbose names accordingly.
   - Adjusted `admin`, `serializers`, `urls`, and `views` to match
-  - Nuked the database...
+- Nuked the database...
+- Refactored frontend to match refactored backend
+  - Replaced `TodoLists` with `Workspaces` in the App.js routing.
+  - Removed `TodoLists.js` file and its references.
 
 ## 2025-06-20
 ### Added
