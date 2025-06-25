@@ -11,6 +11,8 @@ All notable changes to this project are documented in this file.
 - ![image](https://github.com/user-attachments/assets/8ef1ae12-c2d9-4960-960b-ab4c4437cf34)
 - Added functionality to create new workspaces in the UI, allowing users to input workspace names directly.
 - ![image](https://github.com/user-attachments/assets/12794334-0ab8-4af9-9adf-fe3268992c30)
+- Aligned text to the left in workspace titles for improved readability.
+- Updated `TextField` styling to ensure consistent color themes, including focus and underline effects.
 ### Changed
 - `WorkspaceSerializer` now treats `owner` and `created_by` fields as optional during creation.
 - `AuthenticatedRoute` component updated to use `sessionStorage` for token retrieval.

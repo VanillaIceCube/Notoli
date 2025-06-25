@@ -117,7 +117,7 @@ export default function Workspaces() {
             {lists.length ? lists.map(list => (
               <React.Fragment key={list.id}>
                 <Button variant="text" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}>
-                  <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+                  <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem', textAlign: 'left' }}>
                     {list.name}
                   </Typography>
                   <MoreVert onClick={(event) => handleClick(event, list)} />
@@ -141,7 +141,11 @@ export default function Workspaces() {
               </Button>
             ) : (
               <Box sx={{ display:'flex', alignItems:'center', px:1, py:0.5 }}>
-                <TextField autoFocus variant="standard" size="small" sx={{ flexGrow:1, mr:1, justifyContent: 'space-between', color: 'var(--secondary-color)' }}
+                <TextField autoFocus variant="standard" size="small"
+                  sx={{ flexGrow:1, mr:1, justifyContent: 'space-between', color: 'var(--secondary-color)' }}
+                  slotProps={{ input:{ sx:{
+                    color: 'var(--secondary-color)',
+                    '&:after': {borderBottomColor: 'var(--secondary-color)' }}}}}
                   placeholder="New Workspace Name…"
                   value={newName}
                   onChange={e => setNewName(e.target.value)}
@@ -162,7 +166,7 @@ export default function Workspaces() {
         )}
 
         {/* Triple dot menu */}
-        <Menu slotProps={{ paper: { sx: { backgroundColor: 'var(--secondary-background-color)', color: 'var(--secondary-color)', boxShadow: 3, border: '2.5px solid var(--background-color)', borderRadius: 1.5, }}}}
+        <Menu slotProps={{ paper:{ sx:{ backgroundColor: 'var(--secondary-background-color)', color: 'var(--secondary-color)', boxShadow: 3, border: '2.5px solid var(--background-color)', borderRadius: 1.5 }}}}
           anchorEl={anchorEl}
           open={open}
           onClose={handleMenuClose}
