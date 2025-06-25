@@ -13,6 +13,7 @@ All notable changes to this project are documented in this file.
 - ![image](https://github.com/user-attachments/assets/12794334-0ab8-4af9-9adf-fe3268992c30)
 - Aligned text to the left in workspace titles for improved readability.
 - Updated `TextField` styling to ensure consistent color themes, including focus and underline effects.
+- ![image](https://github.com/user-attachments/assets/5d0de5ea-29c0-455a-85a7-df26b39923f7)
 ### Changed
 - `WorkspaceSerializer` now treats `owner` and `created_by` fields as optional during creation.
 - `AuthenticatedRoute` component updated to use `sessionStorage` for token retrieval.
