@@ -6,9 +6,12 @@ import {
   Stack,
   Button,
   Menu,
-  MenuItem
+  MenuItem,
+  Box,
+  TextField,
+  IconButton
 } from '@mui/material';
-import { Add, MoreVert } from '@mui/icons-material';
+import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 
 export default function Workspaces() {
@@ -19,6 +22,14 @@ export default function Workspaces() {
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // For adding a new workspace
+  const [isAdding, setIsAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const onStartAdding = () => {
+    setIsAdding(true);
+    setNewName('');
+  }
 
   // For the triple dot menu
   const [anchorEl, setAnchorEl] = useState(null);
@@ -40,29 +51,33 @@ export default function Workspaces() {
   }, []);
 
   // Create a new workspace
-  const handleAddNew = async () => {
+  const onSaveNew = async () => {
+    if (!newName.trim()) return;
     try {
       const response = await fetch('http://localhost:8000/api/workspaces/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          ...(token && { Authorization: `Bearer ${token}` })
         },
         body: JSON.stringify({
-          name: 'New Workspace',
-          description: 'Test Description',
-        })
+          name: newName,
+          description: ''
+        }),
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-      const newList = await response.json();
-      setLists([...lists, newList]);
+      const created = await response.json();
+      setLists([...lists, created]);
     } catch (err) {
       setError(err.toString());
+    } finally {
+      setIsAdding(false);
+      setNewName('');
     }
-  };
-  
+  }
+
   // Triple dot menu functions
   const handleClick = (event, list) => {
     setAnchorEl(event.currentTarget);
@@ -114,15 +129,35 @@ export default function Workspaces() {
                 No to-do lists found.
               </Typography>
             )}
-            
-            <Button variant="text" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
-              startIcon={<Add/>}
-              onClick={handleAddNew}
-            >
-              <Typography variant="body1" align="center" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
-                Add New
-              </Typography>
-            </Button>
+            {/* By default show the Add New button, otherwise show a TextField & save Workspace*/}
+            { !isAdding ? (
+              <Button variant="text" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
+                startIcon={<Add/>}
+                onClick={() => setIsAdding(true)}
+              >
+                <Typography variant="body1" align="center" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+                  Add New
+                </Typography>
+              </Button>
+            ) : (
+              <Box sx={{ display:'flex', alignItems:'center', px:1, py:0.5 }}>
+                <TextField autoFocus variant="standard" size="small" sx={{ flexGrow:1, mr:1, justifyContent: 'space-between', color: 'var(--secondary-color)' }}
+                  placeholder="New Workspace Name…"
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') onSaveNew();
+                    if (e.key === 'Escape') setIsAdding(false);
+                  }}
+                />
+                <IconButton size="small" onClick={onSaveNew}disabled={!newName.trim()}>
+                  <Add />
+                </IconButton>
+                <IconButton size="small" onClick={() => setIsAdding(false)}>
+                  <Close />
+                </IconButton>
+              </Box>
+            )}
           </Stack>
         )}
 
