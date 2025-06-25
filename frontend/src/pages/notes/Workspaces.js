@@ -96,33 +96,30 @@ export default function Workspaces() {
         )}
 
         {/* If we're done loading and there are no errors */}
-        <Divider sx={{ borderBottomWidth: 2, marginBottom: 1 }} />
+        <Divider sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }} />
         {!loading && !error && (
           <Stack spacing={1}>
             {lists.length ? lists.map(list => (
               <React.Fragment key={list.id}>
-                <Button sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
-                  variant="text"
-                >
+                <Button variant="text" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}>
                   <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
                     {list.name}
                   </Typography>
                   <MoreVert onClick={(event) => handleClick(event, list)} />
                 </Button>
-                <Divider sx={{ borderBottomWidth: 2 }} />
+                <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
               </React.Fragment>
             )) : (
-              <Typography align="center" variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+              <Typography variant="body1" align="center" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
                 No to-do lists found.
               </Typography>
             )}
             
-            <Button sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
-              variant="text"
+            <Button variant="text" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
               startIcon={<Add/>}
               onClick={handleAddNew}
             >
-              <Typography align="center" variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+              <Typography variant="body1" align="center" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
                 Add New
               </Typography>
             </Button>
@@ -130,13 +127,22 @@ export default function Workspaces() {
         )}
 
         {/* Triple dot menu */}
-        <Menu
+        <Menu slotProps={{ paper: { sx: { backgroundColor: 'var(--secondary-background-color)', color: 'var(--secondary-color)', boxShadow: 3, border: '2.5px solid var(--background-color)', borderRadius: 1.5, }}}}
           anchorEl={anchorEl}
           open={open}
           onClose={handleMenuClose}
         >
-          <MenuItem onClick={() => console.log(`Edit ${selectedList?.name}`)}> Edit </MenuItem>
-          <MenuItem onClick={() => console.log(`Delete ${selectedList?.name}`)}> Delete </MenuItem>
+          <MenuItem sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight:"bold" }}
+            onClick={() => console.log(`Edit ${selectedList?.name}`)}
+          >
+            Edit
+          </MenuItem>
+          <Divider variant="middle" sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
+          <MenuItem sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight:"bold" }}
+            onClick={() => console.log(`Delete ${selectedList?.name}`)}
+          >
+            Delete
+          </MenuItem>
         </Menu>
       </Paper>
     </Container>
