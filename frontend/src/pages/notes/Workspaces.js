@@ -5,15 +5,25 @@ import {
   Paper,
   Stack,
   Button,
+  Menu,
+  MenuItem
 } from '@mui/material';
-import { Add } from '@mui/icons-material';
+import { Add, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 
 export default function Workspaces() {
+  // For authentication
+  const token = sessionStorage.getItem('accessToken');
+
+  // For the workspace list
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const token = sessionStorage.getItem('accessToken');
+
+  // For the triple dot menu
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedList, setSelectedList] = useState(null);
+  const open = Boolean(anchorEl);
 
   // Fetch the workspaces list from the backend
   useEffect(() => {
@@ -29,7 +39,7 @@ export default function Workspaces() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Create a new todolist
+  // Create a new workspace
   const handleAddNew = async () => {
     try {
       const response = await fetch('http://localhost:8000/api/workspaces/', {
@@ -51,6 +61,18 @@ export default function Workspaces() {
     } catch (err) {
       setError(err.toString());
     }
+  };
+  
+  // Triple dot menu functions
+  const handleClick = (event, list) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedList(list);
+  };
+
+  // Reset anchor + selectedList
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedList(null);
   };
 
   return (
@@ -77,38 +99,47 @@ export default function Workspaces() {
         <Divider sx={{ borderBottomWidth: 2, marginBottom: 1 }} />
         {!loading && !error && (
           <Stack spacing={1}>
-            {lists.length
-              ? lists.map(list => (
-                <>
-                  <Button sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
-                    key={list.id}
-                    variant="text"
-                  >
-                    <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
-                      {list.name}
-                    </Typography>
-                  </Button>
-                  <Divider sx={{ borderBottomWidth: 2 }} />
-                </>
-              ))
-              : (
-                <Typography aligh="center" variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
-                  No to-do lists found.
-                </Typography>
-              )
-            }
+            {lists.length ? lists.map(list => (
+              <React.Fragment key={list.id}>
+                <Button sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
+                  variant="text"
+                >
+                  <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+                    {list.name}
+                  </Typography>
+                  <MoreVert onClick={(event) => handleClick(event, list)} />
+                </Button>
+                <Divider sx={{ borderBottomWidth: 2 }} />
+              </React.Fragment>
+            )) : (
+              <Typography align="center" variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+                No to-do lists found.
+              </Typography>
+            )}
+            
             <Button sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
               variant="text"
               startIcon={<Add/>}
               onClick={handleAddNew}
             >
-              <Typography aligh="center" variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+              <Typography align="center" variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
                 Add New
               </Typography>
             </Button>
           </Stack>
         )}
+
+        {/* Triple dot menu */}
+        <Menu
+          anchorEl={anchorEl}
+          open={open}
+          onClose={handleMenuClose}
+        >
+          <MenuItem onClick={() => console.log(`Edit ${selectedList?.name}`)}> Edit </MenuItem>
+          <MenuItem onClick={() => console.log(`Delete ${selectedList?.name}`)}> Delete </MenuItem>
+        </Menu>
       </Paper>
     </Container>
   );
 }
+

@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ## 2025-06-24
 ### Added
 - Basenames to the URL router in `urls.py` for enhanced reverse URL lookups.
+- Introduced a triple-dot menu for managing workspaces in `Workspaces.js`.
 ### Changed
 - `WorkspaceSerializer` now treats `owner` and `created_by` fields as optional during creation.
 - `AuthenticatedRoute` component updated to use `sessionStorage` for token retrieval.
