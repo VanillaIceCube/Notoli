@@ -7,6 +7,8 @@ All notable changes to this project are documented in this file.
 - Basenames to the URL router in `urls.py` for enhanced reverse URL lookups.
 - Introduced a triple-dot menu for managing workspaces in `Workspaces.js`.
 - ![image](https://github.com/user-attachments/assets/a0277a31-b8be-4a1c-a854-0c5ccad291bd)
+- Enhanced UI styling on the Workspaces page by adding background colors to `Divider` components and updating styles for `Menu` and `MenuItem` components.
+- ![image](https://github.com/user-attachments/assets/8ef1ae12-c2d9-4960-960b-ab4c4437cf34)
 ### Changed
 - `WorkspaceSerializer` now treats `owner` and `created_by` fields as optional during creation.
 - `AuthenticatedRoute` component updated to use `sessionStorage` for token retrieval.
