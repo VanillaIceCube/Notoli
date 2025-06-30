@@ -5,6 +5,10 @@ All notable changes to this project are documented in this file.
 ## 2025-06-30
 ### Changed
 - Removed the unused `onStartAdding` function from `Workspaces.js` in the frontend to clean up the codebase.
+- Refactored state management and menu handling in `Workspaces.js`:
+  - Improved clarity by replacing `anchorEl` and `selectedList` with `tripleDotAnchorElement` and `selectedWorkspace`.
+  - Enhanced function organization and naming for triple-dot menu interactions.
+  - Streamlined UI component handling for better code readability.
 
 ## 2025-06-24
 ### Added

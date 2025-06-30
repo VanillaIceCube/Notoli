@@ -15,24 +15,12 @@ import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 
 export default function Workspaces() {
-  // For authentication
+  // Pull Workspace List
   const token = sessionStorage.getItem('accessToken');
-
-  // For the workspace list
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // For adding a new workspace
-  const [isAdding, setIsAdding] = useState(false);
-  const [newName, setNewName] = useState('');
-
-  // For the triple dot menu
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [selectedList, setSelectedList] = useState(null);
-  const open = Boolean(anchorEl);
-
-  // Fetch the workspaces list from the backend
   useEffect(() => {
     fetch('http://localhost:8000/api/workspaces/', {
       headers: token ? { 'Authorization': `Bearer ${token}` } : {}
@@ -46,7 +34,25 @@ export default function Workspaces() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Create a new workspace
+  // Triple Dot Menu Functions
+  const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState(null);
+  const open = Boolean(tripleDotAnchorElement);
+  
+  const handleTripleDotClick = (event, list) => {
+    setTripleDotAnchorElement(event.currentTarget);
+    setSelectedWorkspace(list);
+  };
+
+  const handleTripleDotClose = () => {
+    setTripleDotAnchorElement(null);
+    setSelectedWorkspace(null);
+  };
+
+  // Add New Workspace
+  const [isAdding, setIsAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+
   const onSaveNew = async () => {
     if (!newName.trim()) return;
     try {
@@ -74,17 +80,9 @@ export default function Workspaces() {
     }
   }
 
-  // Triple dot menu functions
-  const handleClick = (event, list) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedList(list);
-  };
+  // Edit Workspace
 
-  // Reset anchor + selectedList
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedList(null);
-  };
+  // Delete Workspace
 
   return (
     <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2 }}>
@@ -116,7 +114,7 @@ export default function Workspaces() {
                   <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem', textAlign: 'left' }}>
                     {list.name}
                   </Typography>
-                  <MoreVert onClick={(event) => handleClick(event, list)} />
+                  <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
                 </Button>
                 <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
               </React.Fragment>
@@ -163,18 +161,18 @@ export default function Workspaces() {
 
         {/* Triple dot menu */}
         <Menu slotProps={{ paper:{ sx:{ backgroundColor: 'var(--secondary-background-color)', color: 'var(--secondary-color)', boxShadow: 3, border: '2.5px solid var(--background-color)', borderRadius: 1.5 }}}}
-          anchorEl={anchorEl}
+          anchorEl={tripleDotAnchorElement}
           open={open}
-          onClose={handleMenuClose}
+          onClose={handleTripleDotClose}
         >
           <MenuItem sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight:"bold" }}
-            onClick={() => console.log(`Edit ${selectedList?.name}`)}
+            onClick={() => console.log(`Edit ${selectedWorkspace?.name}`)}
           >
             Edit
           </MenuItem>
           <Divider variant="middle" sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
           <MenuItem sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight:"bold" }}
-            onClick={() => console.log(`Delete ${selectedList?.name}`)}
+            onClick={() => console.log(`Delete ${selectedWorkspace?.name}`)}
           >
             Delete
           </MenuItem>
