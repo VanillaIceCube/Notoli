@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
   - Enhanced function organization and naming for triple-dot menu interactions.
   - Streamlined UI component handling for better code readability.
 
+
 ## 2025-06-24
 ### Added
 - Basenames to the URL router in `urls.py` for enhanced reverse URL lookups.
