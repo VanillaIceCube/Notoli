@@ -2,6 +2,10 @@
 All notable changes to this project are documented in this file.
 
 
+## 2025-06-30
+### Changed
+- Removed the unused `onStartAdding` function from `Workspaces.js` in the frontend to clean up the codebase.
+
 ## 2025-06-24
 ### Added
 - Basenames to the URL router in `urls.py` for enhanced reverse URL lookups.

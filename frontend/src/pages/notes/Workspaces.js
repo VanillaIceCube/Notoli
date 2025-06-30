@@ -26,10 +26,6 @@ export default function Workspaces() {
   // For adding a new workspace
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
-  const onStartAdding = () => {
-    setIsAdding(true);
-    setNewName('');
-  }
 
   // For the triple dot menu
   const [anchorEl, setAnchorEl] = useState(null);
