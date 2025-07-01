@@ -77,11 +77,12 @@ export default function Workspaces() {
           description: ''
         }),
       });
-
+      
+      // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      await response.json();
+      const created = await response.json();
 
-      await fetchWorkspaces();
+      setLists(prev => [...prev, created]);
       setIsAdding(false);
       setNewName('');
     } catch (err) {

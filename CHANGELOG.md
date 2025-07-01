@@ -12,6 +12,7 @@ All notable changes to this project are documented in this file.
 - Refactored workspace fetching mechanism in `Workspaces.js` by encapsulating it into a dedicated `fetchWorkspaces` function.
 - Introduced error handling and state management improvements in `onSaveNew` function within `Workspaces.js`.
 - Added a new `onDelete` function in `Workspaces.js` for handling workspace deletions seamlessly.
+- Implemented a pessimistic local merge strategy in `Workspaces.js` to update the UI immediately after workspace creation.
 
 
 ## 2025-06-24
