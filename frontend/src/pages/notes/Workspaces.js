@@ -59,10 +59,10 @@ export default function Workspaces() {
 
   // Add New Workspace
   const [isAdding, setIsAdding] = useState(false);
-  const [newName, setNewName] = useState('');
+  const [WorkspaceName, setWorkspaceName] = useState('');
 
-  const onSaveNew = async () => {
-    if (!newName.trim()) return;
+  const onAdd = async () => {
+    if (!WorkspaceName.trim()) return;
     setError(null);
 
     try {
@@ -73,7 +73,7 @@ export default function Workspaces() {
           ...(token && { Authorization: `Bearer ${token}` })
         },
         body: JSON.stringify({
-          name: newName,
+          name: WorkspaceName,
           description: ''
         }),
       });
@@ -84,7 +84,7 @@ export default function Workspaces() {
 
       setLists(prev => [...prev, created]);
       setIsAdding(false);
-      setNewName('');
+      setWorkspaceName('');
     } catch (err) {
       setError(err.toString());
     }
@@ -171,14 +171,14 @@ export default function Workspaces() {
                     color: 'var(--secondary-color)',
                     '&:after': {borderBottomColor: 'var(--secondary-color)' }}}}}
                   placeholder="New Workspace Name…"
-                  value={newName}
-                  onChange={e => setNewName(e.target.value)}
+                  value={WorkspaceName}
+                  onChange={e => setWorkspaceName(e.target.value)}
                   onKeyDown={e => {
-                    if (e.key === 'Enter') onSaveNew();
+                    if (e.key === 'Enter') onAdd();
                     if (e.key === 'Escape') setIsAdding(false);
                   }}
                 />
-                <IconButton size="small" onClick={onSaveNew}disabled={!newName.trim()}>
+                <IconButton size="small" onClick={onAdd}disabled={!WorkspaceName.trim()}>
                   <Add />
                 </IconButton>
                 <IconButton size="small" onClick={() => setIsAdding(false)}>
