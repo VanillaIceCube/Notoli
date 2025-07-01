@@ -35,6 +35,9 @@ All notable changes to this project are documented in this file.
 - Aligned text to the left in workspace titles for improved readability.
 - Updated `TextField` styling to ensure consistent color themes, including focus and underline effects.
 - ![image](https://github.com/user-attachments/assets/5d0de5ea-29c0-455a-85a7-df26b39923f7)
+### Fixed
+- Resolved an issue preventing creation of new workspaces from the UI.
+
 ### Changed
 - `WorkspaceSerializer` now treats `owner` and `created_by` fields as optional during creation.
 - `AuthenticatedRoute` component updated to use `sessionStorage` for token retrieval.
@@ -43,6 +46,9 @@ All notable changes to this project are documented in this file.
 
 
 ## 2025-06-23
+### Fixed
+- Filtered notes by user and removed frontend owner hacks.
+
 ### Changed
 - Refactored the `models.py` in the `notes` app for improved clarity and organization:
   - Renamed the `TodoList` model to `Workspace`.
@@ -53,8 +59,9 @@ All notable changes to this project are documented in this file.
 - Nuked the database...
 - Refactored frontend to match refactored backend
   - Replaced `TodoLists` with `Workspaces` in the App.js routing.
-  - Removed `TodoLists.js` file and its references.
 - token changes from local to session storage
+### Removed
+- Removed `TodoLists.js` file and its references.
 
 
 ## 2025-06-20
@@ -73,6 +80,7 @@ All notable changes to this project are documented in this file.
 - ![image](https://github.com/user-attachments/assets/539fea36-6cee-4bbd-9eb6-d88f92581fba)
 - Enhanced `TodoLists` UI with dividers and improved button layouts.
 - ![image](https://github.com/user-attachments/assets/5c51836d-4297-4686-958a-684312f98db6)
+### Removed
 - Removed stray trailing lines in components.
 
 
@@ -104,6 +112,9 @@ All notable changes to this project are documented in this file.
 ## 2025-05-05
 ### Added
 - Placeholder home page component.
+### Fixed
+- Minor bug fixes in App.js and login page.
+
 
 
 ## 2025-05-04
@@ -131,6 +142,9 @@ All notable changes to this project are documented in this file.
 - Owners and collaborators fields for todo lists and notes.
 - `environment_conda_export.py` helper script.
 - REST APIs using Django REST Framework.
+### Fixed
+- Corrected model naming conventions in admin files.
+
 ### Changed
 - Updated LICENSE and README to credit `conda_export.py` by Andres Berejnoi.
 ### Removed
@@ -143,7 +157,7 @@ All notable changes to this project are documented in this file.
 
 
 ## 2025-04-25
-### Changed
+### Fixed
 - Minor formatting tweaks across Docker and configuration files.
 
 
