@@ -94,8 +94,10 @@ export default function Workspaces() {
 
   // Delete Workspace
   const onDelete = async (id) => {
+    setError(null);
+
     try {
-      const response = await fetch('http://localhost:8000/api/workspaces/${id}/', {
+      const response = await fetch(`http://localhost:8000/api/workspaces/${id}/`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -104,9 +106,7 @@ export default function Workspaces() {
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-      const created = await response.json();
-      setLists([...lists, created]);
+      setLists(prev => prev.filter(w => w.id !== id));
     } catch (err) {
       setError(err.toString());
     } finally {
@@ -202,7 +202,7 @@ export default function Workspaces() {
           </MenuItem>
           <Divider variant="middle" sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
           <MenuItem sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight:"bold" }}
-            onClick={() => console.log(`Delete ${selectedWorkspace?.name}`)}
+            onClick={() => onDelete(selectedWorkspace.id)}
           >
             Delete
           </MenuItem>
