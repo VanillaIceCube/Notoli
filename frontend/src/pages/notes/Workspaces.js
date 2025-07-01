@@ -21,17 +21,25 @@ export default function Workspaces() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const fetchWorkspaces = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/workspaces/', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      setLists(data);
+      setError(null);
+    } catch (err) {
+      setError(err.toString());
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetch('http://localhost:8000/api/workspaces/', {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-    })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then(data => setLists(data))
-      .catch(err => setError(err.toString()))
-      .finally(() => setLoading(false));
+    fetchWorkspaces();
   }, []);
 
   // Triple Dot Menu Functions
@@ -55,6 +63,8 @@ export default function Workspaces() {
 
   const onSaveNew = async () => {
     if (!newName.trim()) return;
+    setError(null);
+
     try {
       const response = await fetch('http://localhost:8000/api/workspaces/', {
         method: 'POST',
@@ -69,20 +79,39 @@ export default function Workspaces() {
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      await response.json();
 
-      const created = await response.json();
-      setLists([...lists, created]);
-    } catch (err) {
-      setError(err.toString());
-    } finally {
+      await fetchWorkspaces();
       setIsAdding(false);
       setNewName('');
+    } catch (err) {
+      setError(err.toString());
     }
   }
 
   // Edit Workspace
 
   // Delete Workspace
+  const onDelete = async (id) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/workspaces/${id}/', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const created = await response.json();
+      setLists([...lists, created]);
+    } catch (err) {
+      setError(err.toString());
+    } finally {
+      handleTripleDotClose();
+    }
+  }
 
   return (
     <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2 }}>

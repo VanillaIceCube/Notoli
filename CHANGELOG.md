@@ -9,6 +9,9 @@ All notable changes to this project are documented in this file.
   - Improved clarity by replacing `anchorEl` and `selectedList` with `tripleDotAnchorElement` and `selectedWorkspace`.
   - Enhanced function organization and naming for triple-dot menu interactions.
   - Streamlined UI component handling for better code readability.
+- Refactored workspace fetching mechanism in `Workspaces.js` by encapsulating it into a dedicated `fetchWorkspaces` function.
+- Introduced error handling and state management improvements in `onSaveNew` function within `Workspaces.js`.
+- Added a new `onDelete` function in `Workspaces.js` for handling workspace deletions seamlessly.
 
 
 ## 2025-06-24
