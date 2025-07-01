@@ -3,12 +3,24 @@ All notable changes to this project are documented in this file.
 
 
 ## 2025-06-30
+### Added
+- Deletion capabilities in `Workspaces.js`, allowing users to remove workspaces directly from the interface.
+
+### Fixed
+- Corrected the deletion process in `Workspaces.js` by ensuring proper API call syntax with template literals.
+- Improved UI update after deleting a workspace by modifying the state update logic.
+
 ### Changed
 - Removed the unused `onStartAdding` function from `Workspaces.js` in the frontend to clean up the codebase.
 - Refactored state management and menu handling in `Workspaces.js`:
   - Improved clarity by replacing `anchorEl` and `selectedList` with `tripleDotAnchorElement` and `selectedWorkspace`.
   - Enhanced function organization and naming for triple-dot menu interactions.
   - Streamlined UI component handling for better code readability.
+- Refactored workspace fetching mechanism in `Workspaces.js` by encapsulating it into a dedicated `fetchWorkspaces` function.
+- Introduced error handling and state management improvements in `onSaveNew` function within `Workspaces.js`.
+- Added a new `onDelete` function in `Workspaces.js` for handling workspace deletions seamlessly.
+- Implemented a pessimistic local merge strategy in `Workspaces.js` to update the UI immediately after workspace creation.
+- Updated error handling in `onDelete` function to reset errors before attempting deletion.
 
 
 ## 2025-06-24
