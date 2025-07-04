@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Typography,
   Container,
@@ -21,7 +21,7 @@ export default function Workspaces() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchWorkspaces = async () => {
+  const fetchWorkspaces = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch('http://localhost:8000/api/workspaces/', {
@@ -36,11 +36,11 @@ export default function Workspaces() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchWorkspaces();
-  }, []);
+  }, [fetchWorkspaces]);
 
   // Triple Dot Menu Functions
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);

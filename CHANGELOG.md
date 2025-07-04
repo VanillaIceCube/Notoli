@@ -2,6 +2,11 @@
 All notable changes to this project are documented in this file.
 
 
+## 2025-07-04
+### Fixed
+- Resolved an ESLint warning in `Workspaces.js` by refactoring `fetchWorkspaces` with `useCallback` to ensure dependency handling.
+
+
 ## 2025-06-30
 ### Added
 - Deletion capabilities in `Workspaces.js`, allowing users to remove workspaces directly from the interface.
