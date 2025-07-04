@@ -91,6 +91,8 @@ export default function Workspaces() {
   }
 
   // Edit Workspace
+  const [isEditing, setIsEditing] = useState(false);
+  const [editAnchorElement, setEditAnchorElement] = useState(null);
 
   // Delete Workspace
   const onDelete = async (id) => {
