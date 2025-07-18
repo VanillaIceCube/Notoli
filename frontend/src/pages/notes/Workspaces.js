@@ -105,7 +105,7 @@ export default function Workspaces() {
     setError(null);
 
     try {
-      const res = await fetch(
+      const response = await fetch(
         `http://localhost:8000/api/workspaces/${editingWorkspaceId}/`,
         {
           method: 'PATCH',
@@ -116,21 +116,19 @@ export default function Workspaces() {
           body: JSON.stringify({ name: editWorkspaceName }),
         }
       );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      // optimistic merge
-      setLists(prev =>
-        prev.map(w =>
-          w.id === editingWorkspaceId ? { ...w, name: editWorkspaceName } : w
-        )
-      );
-      cancelEdit();
+      // Pessimistic Local Merge
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const updated = await response.json();
+
+      setLists(prev => prev.map(workspace => (workspace.id === updated.id ? updated : workspace)));
+      closeEdit();
     } catch (err) {
       setError(err.toString());
     }
   };
 
-  const cancelEdit = () => {
+  const closeEdit = () => {
     setEditingWorkspaceId(null);
     setEditWorkspaceName('');
   };
@@ -149,7 +147,7 @@ export default function Workspaces() {
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      setLists(prev => prev.filter(w => w.id !== id));
+      setLists(prev => prev.filter(workspace => workspace.id !== id));
     } catch (err) {
       setError(err.toString());
     } finally {
@@ -196,13 +194,13 @@ export default function Workspaces() {
                         onChange={event => setEditWorkspaceName(event.target.value)}
                         onKeyDown={event => {
                           if (event.key === 'Enter') onEdit();
-                          if (event.key === 'Escape') cancelEdit();
+                          if (event.key === 'Escape') closeEdit();
                         }}
                       />
                       <IconButton size="small" onClick={onEdit} disabled={!editWorkspaceName.trim()}>
                         <Add/>
                       </IconButton>
-                      <IconButton size="small" onClick={cancelEdit}>
+                      <IconButton size="small" onClick={closeEdit}>
                         <Close/>
                       </IconButton>
                     </Box>
@@ -250,7 +248,7 @@ export default function Workspaces() {
                     if (event.key === 'Escape') setIsAdding(false);
                   }}
                 />
-                <IconButton size="small" onClick={onAdd}disabled={!newWorkspaceName.trim()}>
+                <IconButton size="small" onClick={onAdd} disabled={!newWorkspaceName.trim()}>
                   <Add />
                 </IconButton>
                 <IconButton size="small" onClick={() => setIsAdding(false)}>
