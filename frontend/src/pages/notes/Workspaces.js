@@ -100,6 +100,40 @@ export default function Workspaces() {
     handleTripleDotClose();
   };
 
+  const onEdit = async () => {
+    if (!editWorkspaceName.trim()) return;
+    setError(null);
+
+    try {
+      const res = await fetch(
+        `http://localhost:8000/api/workspaces/${editingWorkspaceId}/`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: JSON.stringify({ name: editWorkspaceName }),
+        }
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      // optimistic merge
+      setLists(prev =>
+        prev.map(w =>
+          w.id === editingWorkspaceId ? { ...w, name: editWorkspaceName } : w
+        )
+      );
+      cancelEdit();
+    } catch (err) {
+      setError(err.toString());
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingWorkspaceId(null);
+    setEditWorkspaceName('');
+  };
 
   // Delete Workspace
   const onDelete = async (id) => {
@@ -149,12 +183,41 @@ export default function Workspaces() {
           <Stack spacing={1}>
             {lists.length ? lists.map(list => (
               <React.Fragment key={list.id}>
-                <Button variant="text" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}>
-                  <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem', textAlign: 'left' }}>
-                    {list.name}
-                  </Typography>
-                  <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
-                </Button>
+                {editingWorkspaceId === list.id ? (
+                  <React.Fragment>
+                    {/* Editing Mode */}
+                    <Box sx={{ display:'flex', alignItems:'center', px:1, py:0.5 }}>
+                      <TextField autoFocus variant="standard" size="small"
+                        sx={{ flexGrow:1, mr:1, justifyContent: 'space-between', color: 'var(--secondary-color)' }}
+                        slotProps={{ input:{ sx:{
+                          color: 'var(--secondary-color)',
+                          '&:after': {borderBottomColor: 'var(--secondary-color)' }}}}}
+                        value={editWorkspaceName}
+                        onChange={event => setEditWorkspaceName(event.target.value)}
+                        onKeyDown={event => {
+                          if (event.key === 'Enter') onEdit();
+                          if (event.key === 'Escape') cancelEdit();
+                        }}
+                      />
+                      <IconButton size="small" onClick={onEdit} disabled={!editWorkspaceName.trim()}>
+                        <Add/>
+                      </IconButton>
+                      <IconButton size="small" onClick={cancelEdit}>
+                        <Close/>
+                      </IconButton>
+                    </Box>
+                  </React.Fragment>
+                ) : (
+                  <React.Fragment>
+                    {/* Normal Mode */}
+                    <Button variant="text" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}>
+                      <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem', textAlign: 'left' }}>
+                        {list.name}
+                      </Typography>
+                      <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
+                    </Button>
+                  </React.Fragment>
+                )}
                 <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
               </React.Fragment>
             )) : (
@@ -181,10 +244,10 @@ export default function Workspaces() {
                     '&:after': {borderBottomColor: 'var(--secondary-color)' }}}}}
                   placeholder="New Workspace Name…"
                   value={newWorkspaceName}
-                  onChange={e => setNewWorkspaceName(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') onAdd();
-                    if (e.key === 'Escape') setIsAdding(false);
+                  onChange={event => setNewWorkspaceName(event.target.value)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') onAdd();
+                    if (event.key === 'Escape') setIsAdding(false);
                   }}
                 />
                 <IconButton size="small" onClick={onAdd}disabled={!newWorkspaceName.trim()}>
@@ -205,7 +268,7 @@ export default function Workspaces() {
           onClose={handleTripleDotClose}
         >
           <MenuItem sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight:"bold" }}
-            onClick={() => console.log(`Edit ${selectedWorkspace?.name}`)}
+            onClick={startEditing}
           >
             Edit
           </MenuItem>
