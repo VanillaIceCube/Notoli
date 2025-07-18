@@ -1,8 +1,17 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2025-07-17
+### Added
+- Added editing functionality for workspaces in `Workspaces.js` component.
+### Changed
+- Refactored workspace name handling in `Workspaces.js` to improve variable naming and initialization for workspace creation and editing functions.
+- Updated `Workspaces.js` to switch from optimistic to pessimistic local merge approach.
+
 
 ## 2025-07-04
+### Added
+- Added edit useStates, `isEditing` and `editAnchorElement`.
 ### Fixed
 - Resolved an ESLint warning in `Workspaces.js` by refactoring `fetchWorkspaces` with `useCallback` to ensure dependency handling.
 
