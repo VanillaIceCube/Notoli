@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2025-07-05
+### Changed
+- Refactored workspace name handling in `Workspaces.js` to improve variable naming and initialization for workspace creation and editing functions.
+
 
 ## 2025-07-04
 ### Added

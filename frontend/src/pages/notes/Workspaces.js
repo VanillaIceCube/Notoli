@@ -59,12 +59,12 @@ export default function Workspaces() {
 
   // Add New Workspace
   const [isAdding, setIsAdding] = useState(false);
-  const [WorkspaceName, setWorkspaceName] = useState('');
-
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  
   const onAdd = async () => {
-    if (!WorkspaceName.trim()) return;
+    if (!newWorkspaceName.trim()) return;
     setError(null);
-
+    
     try {
       const response = await fetch('http://localhost:8000/api/workspaces/', {
         method: 'POST',
@@ -73,7 +73,7 @@ export default function Workspaces() {
           ...(token && { Authorization: `Bearer ${token}` })
         },
         body: JSON.stringify({
-          name: WorkspaceName,
+          name: newWorkspaceName,
           description: ''
         }),
       });
@@ -84,15 +84,22 @@ export default function Workspaces() {
 
       setLists(prev => [...prev, created]);
       setIsAdding(false);
-      setWorkspaceName('');
+      setNewWorkspaceName('');
     } catch (err) {
       setError(err.toString());
     }
   }
 
   // Edit Workspace
-  const [isEditing, setIsEditing] = useState(false);
-  const [editAnchorElement, setEditAnchorElement] = useState(null);
+  const [editingWorkspaceId, setEditingWorkspaceId] = useState(null);
+  const [editWorkspaceName, setEditWorkspaceName] = useState('');
+
+  const startEditing = () => {
+    setEditingWorkspaceId(selectedWorkspace.id);
+    setEditWorkspaceName(selectedWorkspace.name);
+    handleTripleDotClose();
+  };
+
 
   // Delete Workspace
   const onDelete = async (id) => {
@@ -173,14 +180,14 @@ export default function Workspaces() {
                     color: 'var(--secondary-color)',
                     '&:after': {borderBottomColor: 'var(--secondary-color)' }}}}}
                   placeholder="New Workspace Name…"
-                  value={WorkspaceName}
-                  onChange={e => setWorkspaceName(e.target.value)}
+                  value={newWorkspaceName}
+                  onChange={e => setNewWorkspaceName(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === 'Enter') onAdd();
                     if (e.key === 'Escape') setIsAdding(false);
                   }}
                 />
-                <IconButton size="small" onClick={onAdd}disabled={!WorkspaceName.trim()}>
+                <IconButton size="small" onClick={onAdd}disabled={!newWorkspaceName.trim()}>
                   <Add />
                 </IconButton>
                 <IconButton size="small" onClick={() => setIsAdding(false)}>
