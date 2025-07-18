@@ -4,6 +4,7 @@ All notable changes to this project are documented in this file.
 ## 2025-07-17
 ### Added
 - Added editing functionality for workspaces in `Workspaces.js` component.
+- <img width="443" height="949" alt="image" src="https://github.com/user-attachments/assets/b3c1bd23-555d-4681-b206-5af78d953213" />
 ### Changed
 - Refactored workspace name handling in `Workspaces.js` to improve variable naming and initialization for workspace creation and editing functions.
 - Updated `Workspaces.js` to switch from optimistic to pessimistic local merge approach.
