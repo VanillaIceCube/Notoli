@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+
+## 2025-07-18
+### Changed
+- Refactored `Workspaces.js`: added missing Pessimistic Local Merge comments and adjusted whitespace formatting for consistency.  
+
+
 ## 2025-07-17
 ### Added
 - Added editing functionality for workspaces in `Workspaces.js` component.

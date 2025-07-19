@@ -81,8 +81,8 @@ export default function Workspaces() {
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const created = await response.json();
-
       setLists(prev => [...prev, created]);
+
       setIsAdding(false);
       setNewWorkspaceName('');
     } catch (err) {
@@ -120,8 +120,8 @@ export default function Workspaces() {
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
-
       setLists(prev => prev.map(workspace => (workspace.id === updated.id ? updated : workspace)));
+
       closeEdit();
     } catch (err) {
       setError(err.toString());
@@ -145,7 +145,8 @@ export default function Workspaces() {
           ...(token && { Authorization: `Bearer ${token}` })
         },
       });
-
+      
+      // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       setLists(prev => prev.filter(workspace => workspace.id !== id));
     } catch (err) {
