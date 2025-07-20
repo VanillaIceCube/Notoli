@@ -11,6 +11,8 @@ All notable changes to this project are documented in this file.
 - Implemented dynamic routing in `TodoLists.js` using `useParams`
 - Added navigation improvements in `Workspaces.js` via `useNavigate`
 - Built initial fetch logic in `TodoLists.js` to load workspace-specific lists
+- Completed implementation of fully functional Notes page with CRUD operations and navigation
+- Integrated nested routes for Notes in `App.js`
 ### Fixed
 - Corrected typos and improved error handling in `views.py`
 - Resolved workspace access validation issues in `views.py`
@@ -20,6 +22,7 @@ All notable changes to this project are documented in this file.
 - Updated DRF settings to enable default filters and permissions
 - Added `django-filter` to the project dependencies
 - Updated route path in `App.js` for consistent workspace routing
+- Enhanced path parameter handling in Notes-related components for consistency
 
 
 ## 2025-07-18

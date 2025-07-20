@@ -13,11 +13,11 @@ import {
 } from '@mui/material';
 import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 export default function Notes() {
   // Pull Todolist ID
-  const { todolistId } = useParams();
+  const { todoListId } = useParams();
 
   // Pull Note List
   const token = sessionStorage.getItem('accessToken');
@@ -28,7 +28,7 @@ export default function Notes() {
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8000/api/notes/?todolist=${todolistId}`, {
+      const response = await fetch(`http://localhost:8000/api/notes/?todolist=${todoListId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -40,13 +40,13 @@ export default function Notes() {
     } finally {
       setLoading(false);
     }
-  }, [token, todolistId]);
+  }, [token, todoListId]);
 
   useEffect(() => {
-    if (todolistId) {
+    if (todoListId) {
       fetchNotes();
     }
-  }, [todolistId, fetchNotes]);
+  }, [todoListId, fetchNotes]);
 
   // Triple Dot Menu Functions
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
@@ -65,22 +65,22 @@ export default function Notes() {
 
   // Add New Note
   const [isAdding, setIsAdding] = useState(false);
-  const [newNoteName, setNewNoteName] = useState('');
+  const [newNote, setNewNote] = useState('');
   
   const onAdd = async () => {
-    if (!newNoteName.trim()) return;
+    if (!newNote.trim()) return;
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:8000/api/notes/?todolist=${todolistId}`, {
+      const response = await fetch(`http://localhost:8000/api/notes/?todolist=${todoListId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` })
         },
         body: JSON.stringify({
-          name: newNoteName,
-          todolist: todolistId,
+          note: newNote,
+          todo_list: todoListId,
           description: '',
         }),
       });
@@ -91,7 +91,7 @@ export default function Notes() {
       setLists(prev => [...prev, created]);
 
       setIsAdding(false);
-      setNewNoteName('');
+      setNewNote('');
     } catch (err) {
       setError(err.toString());
     }
@@ -99,16 +99,16 @@ export default function Notes() {
 
   // Edit Note
   const [editingNoteId, setEditingNoteId] = useState(null);
-  const [editNoteName, setEditNoteName] = useState('');
+  const [editNote, setEditNote] = useState('');
 
   const startEditing = () => {
     setEditingNoteId(selectedNote.id);
-    setEditNoteName(selectedNote.name);
+    setEditNote(selectedNote.note);
     handleTripleDotClose();
   };
 
   const onEdit = async () => {
-    if (!editNoteName.trim()) return;
+    if (!editNote.trim()) return;
     setError(null);
 
     try {
@@ -120,7 +120,7 @@ export default function Notes() {
             'Content-Type': 'application/json',
             ...(token && { Authorization: `Bearer ${token}` }),
           },
-          body: JSON.stringify({ name: editNoteName }),
+          body: JSON.stringify({ note: editNote }),
         }
       );
 
@@ -137,7 +137,7 @@ export default function Notes() {
 
   const closeEdit = () => {
     setEditingNoteId(null);
-    setEditNoteName('');
+    setEditNote('');
   };
 
   // Delete Note
@@ -198,14 +198,14 @@ export default function Notes() {
                         slotProps={{ input:{ sx:{
                           color: 'var(--secondary-color)',
                           '&:after': {borderBottomColor: 'var(--secondary-color)' }}}}}
-                        value={editNoteName}
-                        onChange={event => setEditNoteName(event.target.value)}
+                        value={editNote}
+                        onChange={event => setEditNote(event.target.value)}
                         onKeyDown={event => {
                           if (event.key === 'Enter') onEdit();
                           if (event.key === 'Escape') closeEdit();
                         }}
                       />
-                      <IconButton size="small" onClick={onEdit} disabled={!editNoteName.trim()}>
+                      <IconButton size="small" onClick={onEdit} disabled={!editNote.trim()}>
                         <Add/>
                       </IconButton>
                       <IconButton size="small" onClick={closeEdit}>
@@ -218,7 +218,7 @@ export default function Notes() {
                     {/* Normal Mode */}
                     <Button variant="text" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}>
                       <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem', textAlign: 'left' }}>
-                        {list.name}
+                        {list.note}
                       </Typography>
                       <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
                     </Button>
@@ -248,15 +248,15 @@ export default function Notes() {
                   slotProps={{ input:{ sx:{
                     color: 'var(--secondary-color)',
                     '&:after': {borderBottomColor: 'var(--secondary-color)' }}}}}
-                  placeholder="New Note Name…"
-                  value={newNoteName}
-                  onChange={event => setNewNoteName(event.target.value)}
+                  placeholder="New Note…"
+                  value={newNote}
+                  onChange={event => setNewNote(event.target.value)}
                   onKeyDown={event => {
                     if (event.key === 'Enter') onAdd();
                     if (event.key === 'Escape') setIsAdding(false);
                   }}
                 />
-                <IconButton size="small" onClick={onAdd} disabled={!newNoteName.trim()}>
+                <IconButton size="small" onClick={onAdd} disabled={!newNote.trim()}>
                   <Add />
                 </IconButton>
                 <IconButton size="small" onClick={() => setIsAdding(false)}>

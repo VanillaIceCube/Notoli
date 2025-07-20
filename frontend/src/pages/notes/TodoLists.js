@@ -14,8 +14,13 @@ import {
 import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+
 
 export default function TodoLists() {
+  // Misc
+  const navigate = useNavigate();
+
   // Pull Workspace ID
   const { workspaceId } = useParams();
 
@@ -216,7 +221,9 @@ export default function TodoLists() {
                 ) : (
                   <React.Fragment>
                     {/* Normal Mode */}
-                    <Button variant="text" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}>
+                    <Button variant="text" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
+                      onClick={() => navigate(`/workspace/${workspaceId}/todolist/${list.id}`)}
+                    >
                       <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem', textAlign: 'left' }}>
                         {list.name}
                       </Typography>
