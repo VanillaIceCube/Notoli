@@ -4,26 +4,27 @@ All notable changes to this project are documented in this file.
 
 ## 2025-07-20
 ### Added
-- Preliminary replication of Workspaces component to TodoLists with initial CRUD functionality in `TodoLists.js`.
-- Introduced `TodoLists` route for handling specific workspace todos in `App.js`.
-- Added `extra_kwargs` to `TodoListSerializer` for optional `owner` and `created_by` fields.
-- Implemented dynamic routing in `TodoLists.js` for workspace-specific todo lists.
-- Added navigation improvements in `Workspaces.js`.
-- Initial working version of the fetch functionality in `TodoLists.js`, including `useParams` from 'react-router-dom' for dynamic routing.
+- Cloned the Workspaces component into `TodoLists.js` with full CRUD functionality
+- <img width="443" height="952" alt="image" src="https://github.com/user-attachments/assets/dfd98820-40ce-487b-8037-6c156d5c2ff9" />
+- Introduced `/workspaces/:workspaceId` route in `App.js` for workspace-scoped todos
+- Extended `TodoListSerializer` with optional `owner` and `created_by` fields
+- Implemented dynamic routing in `TodoLists.js` using `useParams`
+- Added navigation improvements in `Workspaces.js` via `useNavigate`
+- Built initial fetch logic in `TodoLists.js` to load workspace-specific lists
 ### Fixed
-- Corrected typos and improved error handling in `views.py`.
-- Resolved workspace access validation and typos in `views.py`.
-- Adjusted use of `useNavigate` in `Login.js` for correct placement.
+- Corrected typos and improved error handling in `views.py`
+- Resolved workspace access validation issues in `views.py`
+- Adjusted placement of `useNavigate` in `Login.js`
 ### Changed
-- Enhanced fetch logic in `TodoLists.js` to include workspace ID.
-- Updated Django REST Framework settings to include default filters and permissions.
-- Added `django-filter` to `environment.yml` dependencies.
-- Updated route path in `App.js` for workspace-specific routing.
+- Enhanced fetch logic in `TodoLists.js` to include `?workspace=<id>`
+- Updated DRF settings to enable default filters and permissions
+- Added `django-filter` to the project dependencies
+- Updated route path in `App.js` for consistent workspace routing
 
 
 ## 2025-07-18
 ### Changed
-- Refactored `Workspaces.js`: added missing Pessimistic Local Merge comments and adjusted whitespace formatting for consistency.  
+- Refactored `Workspaces.js`: added missing Pessimistic Local Merge comments and adjusted whitespace formatting for consistency.
 
 
 ## 2025-07-17
