@@ -2,9 +2,29 @@
 All notable changes to this project are documented in this file.
 
 
+## 2025-07-20
+### Added
+- Cloned the Workspaces component into `TodoLists.js` with full CRUD functionality
+- <img width="443" height="952" alt="image" src="https://github.com/user-attachments/assets/dfd98820-40ce-487b-8037-6c156d5c2ff9" />
+- Introduced `/workspaces/:workspaceId` route in `App.js` for workspace-scoped todos
+- Extended `TodoListSerializer` with optional `owner` and `created_by` fields
+- Implemented dynamic routing in `TodoLists.js` using `useParams`
+- Added navigation improvements in `Workspaces.js` via `useNavigate`
+- Built initial fetch logic in `TodoLists.js` to load workspace-specific lists
+### Fixed
+- Corrected typos and improved error handling in `views.py`
+- Resolved workspace access validation issues in `views.py`
+- Adjusted placement of `useNavigate` in `Login.js`
+### Changed
+- Enhanced fetch logic in `TodoLists.js` to include `?workspace=<id>`
+- Updated DRF settings to enable default filters and permissions
+- Added `django-filter` to the project dependencies
+- Updated route path in `App.js` for consistent workspace routing
+
+
 ## 2025-07-18
 ### Changed
-- Refactored `Workspaces.js`: added missing Pessimistic Local Merge comments and adjusted whitespace formatting for consistency.  
+- Refactored `Workspaces.js`: added missing Pessimistic Local Merge comments and adjusted whitespace formatting for consistency.
 
 
 ## 2025-07-17
@@ -26,11 +46,6 @@ All notable changes to this project are documented in this file.
 ## 2025-06-30
 ### Added
 - Deletion capabilities in `Workspaces.js`, allowing users to remove workspaces directly from the interface.
-### Removed
-- The unused `onStartAdding` function from `Workspaces.js` in the frontend to clean up the codebase.
-### Fixed
-- Corrected the deletion process in `Workspaces.js` by ensuring proper API call syntax with template literals.  
-- Updated error handling in the `onDelete` function to reset errors before attempting deletion.
 ### Changed
 - Improved UI update after deleting a workspace by modifying the state update logic.  
 - Refactored state management and menu handling in `Workspaces.js`:  
@@ -44,6 +59,11 @@ All notable changes to this project are documented in this file.
 - Refactored 'Workspaces' component in `Workspaces.js`:
   - Renamed `onSaveNew` to `onAdd` for function clarity.
   - Renamed state variable `newName` to `WorkspaceName` for enhanced readability.
+### Fixed
+- Corrected the deletion process in `Workspaces.js` by ensuring proper API call syntax with template literals.  
+- Updated error handling in the `onDelete` function to reset errors before attempting deletion.
+### Removed
+- The unused `onStartAdding` function from `Workspaces.js` in the frontend to clean up the codebase.
 
 
 ## 2025-06-24

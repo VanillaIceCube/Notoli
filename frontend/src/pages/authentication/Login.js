@@ -17,11 +17,13 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
+  // Misc
+  const navigate = useNavigate();
+
   // Snackbar states
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const navigate = useNavigate();
 
   // Login function
   const handleLogin = async () => {
