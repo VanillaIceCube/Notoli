@@ -15,20 +15,20 @@ import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { useNavigate, useParams } from 'react-router-dom';
 
-export default function TodoLists() {
-  // Pull Workspace ID
-  const { workspaceId } = useParams();
+export default function Notes() {
+  // Pull Todolist ID
+  const { todolistId } = useParams();
 
-  // Pull TodoList List
+  // Pull Note List
   const token = sessionStorage.getItem('accessToken');
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchTodoLists = useCallback(async () => {
+  const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8000/api/todolists/?workspace=${workspaceId}`, {
+      const response = await fetch(`http://localhost:8000/api/notes/?todolist=${todolistId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -40,47 +40,47 @@ export default function TodoLists() {
     } finally {
       setLoading(false);
     }
-  }, [token, workspaceId]);
+  }, [token, todolistId]);
 
   useEffect(() => {
-    if (workspaceId) {
-      fetchTodoLists();
+    if (todolistId) {
+      fetchNotes();
     }
-  }, [workspaceId, fetchTodoLists]);
+  }, [todolistId, fetchNotes]);
 
   // Triple Dot Menu Functions
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
-  const [selectedTodoList, setSelectedTodoList] = useState(null);
+  const [selectedNote, setSelectedNote] = useState(null);
   const open = Boolean(tripleDotAnchorElement);
   
   const handleTripleDotClick = (event, list) => {
     setTripleDotAnchorElement(event.currentTarget);
-    setSelectedTodoList(list);
+    setSelectedNote(list);
   };
 
   const handleTripleDotClose = () => {
     setTripleDotAnchorElement(null);
-    setSelectedTodoList(null);
+    setSelectedNote(null);
   };
 
-  // Add New TodoList
+  // Add New Note
   const [isAdding, setIsAdding] = useState(false);
-  const [newTodoListName, setNewTodoListName] = useState('');
+  const [newNoteName, setNewNoteName] = useState('');
   
   const onAdd = async () => {
-    if (!newTodoListName.trim()) return;
+    if (!newNoteName.trim()) return;
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:8000/api/todolists/?workspace=${workspaceId}`, {
+      const response = await fetch(`http://localhost:8000/api/notes/?todolist=${todolistId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` })
         },
         body: JSON.stringify({
-          name: newTodoListName,
-          workspace: workspaceId,
+          name: newNoteName,
+          todolist: todolistId,
           description: '',
         }),
       });
@@ -91,43 +91,43 @@ export default function TodoLists() {
       setLists(prev => [...prev, created]);
 
       setIsAdding(false);
-      setNewTodoListName('');
+      setNewNoteName('');
     } catch (err) {
       setError(err.toString());
     }
   }
 
-  // Edit TodoList
-  const [editingTodoListId, setEditingTodoListId] = useState(null);
-  const [editTodoListName, setEditTodoListName] = useState('');
+  // Edit Note
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editNoteName, setEditNoteName] = useState('');
 
   const startEditing = () => {
-    setEditingTodoListId(selectedTodoList.id);
-    setEditTodoListName(selectedTodoList.name);
+    setEditingNoteId(selectedNote.id);
+    setEditNoteName(selectedNote.name);
     handleTripleDotClose();
   };
 
   const onEdit = async () => {
-    if (!editTodoListName.trim()) return;
+    if (!editNoteName.trim()) return;
     setError(null);
 
     try {
       const response = await fetch(
-        `http://localhost:8000/api/todolists/${editingTodoListId}/`,
+        `http://localhost:8000/api/notes/${editingNoteId}/`,
         {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
             ...(token && { Authorization: `Bearer ${token}` }),
           },
-          body: JSON.stringify({ name: editTodoListName }),
+          body: JSON.stringify({ name: editNoteName }),
         }
       );
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
-      setLists(prev => prev.map(todolist => (todolist.id === updated.id ? updated : todolist)));
+      setLists(prev => prev.map(note => (note.id === updated.id ? updated : note)));
 
       closeEdit();
     } catch (err) {
@@ -136,16 +136,16 @@ export default function TodoLists() {
   };
 
   const closeEdit = () => {
-    setEditingTodoListId(null);
-    setEditTodoListName('');
+    setEditingNoteId(null);
+    setEditNoteName('');
   };
 
-  // Delete TodoList
+  // Delete Note
   const onDelete = async (id) => {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/todolists/${id}/`, {
+      const response = await fetch(`http://localhost:8000/api/notes/${id}/`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -155,7 +155,7 @@ export default function TodoLists() {
       
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      setLists(prev => prev.filter(todolist => todolist.id !== id));
+      setLists(prev => prev.filter(note => note.id !== id));
     } catch (err) {
       setError(err.toString());
     } finally {
@@ -168,7 +168,7 @@ export default function TodoLists() {
       <Paper elevation={3} sx={{ px: 1.5, py: 1.5, width: '100%', background:'var(--secondary-background-color)' }}>
         {/* Header */}
         <Typography variant="h4" align="center" gutterBottom sx={{ mt: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)'}}>
-          TodoLists
+          Notes
         </Typography>
 
         {/* This is for loading */}
@@ -189,7 +189,7 @@ export default function TodoLists() {
           <Stack spacing={1}>
             {lists.length ? lists.map(list => (
               <React.Fragment key={list.id}>
-                {editingTodoListId === list.id ? (
+                {editingNoteId === list.id ? (
                   <React.Fragment>
                     {/* Editing Mode */}
                     <Box sx={{ display:'flex', alignItems:'center', px:1, py:0.5 }}>
@@ -198,14 +198,14 @@ export default function TodoLists() {
                         slotProps={{ input:{ sx:{
                           color: 'var(--secondary-color)',
                           '&:after': {borderBottomColor: 'var(--secondary-color)' }}}}}
-                        value={editTodoListName}
-                        onChange={event => setEditTodoListName(event.target.value)}
+                        value={editNoteName}
+                        onChange={event => setEditNoteName(event.target.value)}
                         onKeyDown={event => {
                           if (event.key === 'Enter') onEdit();
                           if (event.key === 'Escape') closeEdit();
                         }}
                       />
-                      <IconButton size="small" onClick={onEdit} disabled={!editTodoListName.trim()}>
+                      <IconButton size="small" onClick={onEdit} disabled={!editNoteName.trim()}>
                         <Add/>
                       </IconButton>
                       <IconButton size="small" onClick={closeEdit}>
@@ -231,7 +231,7 @@ export default function TodoLists() {
                 No to-do lists found.
               </Typography>
             )}
-            {/* By default show the Add New button, otherwise show a TextField & save TodoList*/}
+            {/* By default show the Add New button, otherwise show a TextField & save Note*/}
             { !isAdding ? (
               <Button variant="text" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'left', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
                 startIcon={<Add/>}
@@ -248,15 +248,15 @@ export default function TodoLists() {
                   slotProps={{ input:{ sx:{
                     color: 'var(--secondary-color)',
                     '&:after': {borderBottomColor: 'var(--secondary-color)' }}}}}
-                  placeholder="New TodoList Name…"
-                  value={newTodoListName}
-                  onChange={event => setNewTodoListName(event.target.value)}
+                  placeholder="New Note Name…"
+                  value={newNoteName}
+                  onChange={event => setNewNoteName(event.target.value)}
                   onKeyDown={event => {
                     if (event.key === 'Enter') onAdd();
                     if (event.key === 'Escape') setIsAdding(false);
                   }}
                 />
-                <IconButton size="small" onClick={onAdd} disabled={!newTodoListName.trim()}>
+                <IconButton size="small" onClick={onAdd} disabled={!newNoteName.trim()}>
                   <Add />
                 </IconButton>
                 <IconButton size="small" onClick={() => setIsAdding(false)}>
@@ -280,7 +280,7 @@ export default function TodoLists() {
           </MenuItem>
           <Divider variant="middle" sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
           <MenuItem sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight:"bold" }}
-            onClick={() => onDelete(selectedTodoList.id)}
+            onClick={() => onDelete(selectedNote.id)}
           >
             Delete
           </MenuItem>
