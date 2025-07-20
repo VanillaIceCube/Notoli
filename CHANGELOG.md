@@ -4,28 +4,28 @@ All notable changes to this project are documented in this file.
 
 ## 2025-07-20
 ### Added
-- Finished `TodoLists.js` with full CRUD functionality  
+- Finished `TodoLists.js` with full CRUD functionality
 - <img width="443" height="952" alt="image" src="https://github.com/user-attachments/assets/dfd98820-40ce-487b-8037-6c156d5c2ff9" />  
-- Finished `Notes.js` with full CRUD functionality  
+- Finished `Notes.js` with full CRUD functionality
 - <img width="447" height="956" alt="image" src="https://github.com/user-attachments/assets/82fa7dbd-b6a7-4adc-914c-5c91d4435d02" />
 - Introduced workspace-scoped and nested routes in `App.js`:
-  - `/workspaces/:workspaceId` for workspace-scoped TodoLists  
-  - `/workspaces/:workspaceId/todolist/:todoListId` to render Notes  
-- Extended `TodoListSerializer` and `NoteSerializer` with optional `owner` and `created_by` fields  
-- Implemented dynamic routing in `TodoLists.js` and `Notes.js` using `useParams`  
-- Added navigation improvements in `Workspaces.js`, `TodoLists.js`, and `Notes.js` via `useNavigate`  
-- Built initial fetch logic in `TodoLists.js` and `Notes.js` to load workspace-specific data  
+  - `/workspaces/:workspaceId` for workspace-scoped TodoLists
+  - `/workspaces/:workspaceId/todolist/:todoListId` to render Notes
+- Extended `TodoListSerializer` and `NoteSerializer` with optional `owner` and `created_by` fields
+- Implemented dynamic routing in `TodoLists.js` and `Notes.js` using `useParams`
+- Added navigation improvements in `Workspaces.js`, `TodoLists.js`, and `Notes.js` via `useNavigate`
+- Built initial fetch logic in `TodoLists.js` and `Notes.js` to load workspace-specific data
 ### Fixed
-- Corrected typos and improved error handling in `views.py` (todos & notes)  
-- Resolved workspace access validation issues in `views.py`  
-- Adjusted placement of `useNavigate` in `Login.js`  
-- Fixed variable naming inconsistency in `todo_list` and `note` across backend and frontend  
+- Corrected typos and improved error handling in `views.py` (todos & notes)
+- Resolved workspace access validation issues in `views.py`
+- Adjusted placement of `useNavigate` in `Login.js`
+- Fixed variable naming inconsistency in `todo_list` and `note` across backend and frontend
 ### Changed
-- Enhanced fetch logic in `TodoLists.js` and `Notes.js` to include `?workspace=<id>`  
-- Updated DRF settings to enable default filters/permissions for todos & notes  
-- Added `django-filter` to project dependencies  
-- Updated route paths in `App.js` for consistent workspace routing of todos & notes  
-- Enhanced path parameter handling in `TodoLists.js`, `Notes.js`, and related components for consistency  
+- Enhanced fetch logic in `TodoLists.js` and `Notes.js` to include `?workspace=<id>`
+- Updated DRF settings to enable default filters/permissions for todos & notes
+- Added `django-filter` to project dependencies
+- Updated route paths in `App.js` for consistent workspace routing of todos & notes
+- Enhanced path parameter handling in `TodoLists.js`, `Notes.js`, and related components for consistency
 
 
 ## 2025-07-18
