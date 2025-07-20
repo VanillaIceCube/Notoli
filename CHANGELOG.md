@@ -26,6 +26,11 @@ All notable changes to this project are documented in this file.
 - Added `django-filter` to project dependencies
 - Updated route paths in `App.js` for consistent workspace routing of todos & notes
 - Enhanced path parameter handling in `TodoLists.js`, `Notes.js`, and related components for consistency
+- I've renamed/reorganized the branches.
+  - I am abandoning qa.
+  - Dev for all changes.
+  - Prod after I've deemed Dev stable enough.
+  - Historical branches may look weird, I've swapped prod to be default as opposed to dev.
 
 
 ## 2025-07-18
