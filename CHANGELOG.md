@@ -7,7 +7,7 @@ All notable changes to this project are documented in this file.
 - Finished `TodoLists.js` with full CRUD functionality  
 - <img width="443" height="952" alt="image" src="https://github.com/user-attachments/assets/dfd98820-40ce-487b-8037-6c156d5c2ff9" />  
 - Finished `Notes.js` with full CRUD functionality  
-- 
+- <img width="447" height="956" alt="image" src="https://github.com/user-attachments/assets/82fa7dbd-b6a7-4adc-914c-5c91d4435d02" />
 - Introduced workspace-scoped and nested routes in `App.js`:
   - `/workspaces/:workspaceId` for workspace-scoped TodoLists  
   - `/workspaces/:workspaceId/todolist/:todoListId` to render Notes  
