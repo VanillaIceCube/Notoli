@@ -52,6 +52,7 @@ export default function Workspaces() {
   const open = Boolean(tripleDotAnchorElement);
   
   const handleTripleDotClick = (event, list) => {
+    event.stopPropagation();
     setTripleDotAnchorElement(event.currentTarget);
     setSelectedWorkspace(list);
   };

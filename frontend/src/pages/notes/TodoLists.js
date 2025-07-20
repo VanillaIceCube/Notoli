@@ -59,6 +59,7 @@ export default function TodoLists() {
   const open = Boolean(tripleDotAnchorElement);
   
   const handleTripleDotClick = (event, list) => {
+    event.stopPropagation();
     setTripleDotAnchorElement(event.currentTarget);
     setSelectedTodoList(list);
   };
