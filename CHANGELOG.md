@@ -8,6 +8,9 @@ All notable changes to this project are documented in this file.
 - Introduced `TodoLists` route for handling specific workspace todos in `App.js`.
 ### Changed
 - Enhanced fetch logic in `TodoLists.js` to include workspace ID.
+- Updated Django REST Framework settings to include default filters and permissions.
+- Added `django-filter` to `environment.yml` dependencies.
+- Corrected typos and improved error handling in `views.py`.
 
 
 ## 2025-07-18
