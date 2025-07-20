@@ -68,22 +68,22 @@ class NoteViewSet(viewsets.ModelViewSet):
         )
 
         # Adding additional querying capabilities by ?todolist=ID
-        todolist_id = self.request.query_params.get('todo_list')
-        if todolist_id:
-            queryset = queryset.filter(todolist_id=todolist_id)
+        todo_list_id = self.request.query_params.get('todo_list')
+        if todo_list_id:
+            queryset = queryset.filter(todo_list_id=todo_list_id)
 
         return queryset.distinct()
 
     def perform_create(self, serializer):
         # Require todolist upon creation
-        todolist_id = self.request.data.get('todo_list')
-        todolist = get_object_or_404(TodoList, pk=todolist_id)
+        todo_list_id = self.request.data.get('todo_list')
+        todo_list = get_object_or_404(TodoList, pk=todo_list_id)
 
         # Ensure user access to specified todo-list
         if not (
-            todolist.owner == self.request.user
-            or self.request.user in todolist.collaborators.all()
+            todo_list.owner == self.request.user
+            or self.request.user in todo_list.collaborators.all()
         ):
             raise PermissionDenied("You cannot add notes to this todo-list.")
         
-        serializer.save(owner=self.request.user, created_by=self.request.user, todo_list=todolist)
+        serializer.save(owner=self.request.user, created_by=self.request.user, todo_list=todo_list)

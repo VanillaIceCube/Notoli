@@ -28,7 +28,7 @@ export default function Notes() {
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8000/api/notes/?todolist=${todoListId}`, {
+      const response = await fetch(`http://localhost:8000/api/notes/?todo_list=${todoListId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -72,7 +72,7 @@ export default function Notes() {
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:8000/api/notes/?todolist=${todoListId}`, {
+      const response = await fetch(`http://localhost:8000/api/notes/?todo_list=${todoListId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
