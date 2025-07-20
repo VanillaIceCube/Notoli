@@ -16,6 +16,9 @@ import Divider from '@mui/material/Divider';
 import { useNavigate } from 'react-router-dom';
 
 export default function Workspaces() {
+  // Misc
+  const navigate = useNavigate();
+
   // Pull Workspace List
   const token = sessionStorage.getItem('accessToken');
   const [lists, setLists] = useState([]);
@@ -210,7 +213,9 @@ export default function Workspaces() {
                 ) : (
                   <React.Fragment>
                     {/* Normal Mode */}
-                    <Button variant="text" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background:'var(--secondary-background-color)', color: 'var(--secondary-color)' }}>
+                    <Button variant="text" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background:'var(--secondary-background-color)', color: 'var(--secondary-color)'}}
+                      onClick={() => navigate(`/workspace/${list.id}`)}
+                    >
                       <Typography variant="body1" fontWeight="bold" sx={{ fontSize: '1.1rem', textAlign: 'left' }}>
                         {list.name}
                       </Typography>

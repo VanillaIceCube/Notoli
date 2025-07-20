@@ -47,8 +47,8 @@ class TodoListViewSet(viewsets.ModelViewSet):
 
         # Ensure user access to specified workspace
         if not (
-            workspace.woner == self.request.uiser
-            or self.request.user in workspace. collaborators.all()
+            workspace.owner == self.request.user
+            or self.request.user in workspace.collaborators.all()
         ):
             raise PermissionDenied("You cannot add todo-lists to this worspace.")
 

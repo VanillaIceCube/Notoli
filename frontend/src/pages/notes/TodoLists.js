@@ -72,7 +72,7 @@ export default function TodoLists() {
     setError(null);
     
     try {
-      const response = await fetch('http://localhost:8000/api/todolists/', {
+      const response = await fetch(`http://localhost:8000/api/todolists/?workspace=${workspaceId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -80,7 +80,8 @@ export default function TodoLists() {
         },
         body: JSON.stringify({
           name: newTodoListName,
-          description: ''
+          workspace: workspaceId,
+          description: '',
         }),
       });
       

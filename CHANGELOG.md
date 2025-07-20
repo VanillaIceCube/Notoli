@@ -6,13 +6,19 @@ All notable changes to this project are documented in this file.
 ### Added
 - Preliminary replication of Workspaces component to TodoLists with initial CRUD functionality in `TodoLists.js`.
 - Introduced `TodoLists` route for handling specific workspace todos in `App.js`.
+- Added `extra_kwargs` to `TodoListSerializer` for optional `owner` and `created_by` fields.
+- Implemented dynamic routing in `TodoLists.js` for workspace-specific todo lists.
+- Added navigation improvements in `Workspaces.js`.
 - Initial working version of the fetch functionality in `TodoLists.js`, including `useParams` from 'react-router-dom' for dynamic routing.
 ### Fixed
 - Corrected typos and improved error handling in `views.py`.
+- Resolved workspace access validation and typos in `views.py`.
+- Adjusted use of `useNavigate` in `Login.js` for correct placement.
 ### Changed
 - Enhanced fetch logic in `TodoLists.js` to include workspace ID.
 - Updated Django REST Framework settings to include default filters and permissions.
 - Added `django-filter` to `environment.yml` dependencies.
+- Updated route path in `App.js` for workspace-specific routing.
 
 
 ## 2025-07-18

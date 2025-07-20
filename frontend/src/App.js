@@ -14,7 +14,7 @@ function App() {
         <Route path="/" element=
           {<AuthenticatedRoute><Workspaces /></AuthenticatedRoute>}
         />
-        <Route path="/workspaces/:workspaceId" element=
+        <Route path="/workspace/:workspaceId" element=
           {<AuthenticatedRoute><TodoLists /></AuthenticatedRoute>}
         />
       </Routes>
