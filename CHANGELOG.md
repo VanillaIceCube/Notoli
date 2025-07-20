@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 ### Added
 - Preliminary replication of Workspaces component to TodoLists with initial CRUD functionality in `TodoLists.js`.
 - Introduced `TodoLists` route for handling specific workspace todos in `App.js`.
+- Initial working version of the fetch functionality in `TodoLists.js`, including `useParams` from 'react-router-dom' for dynamic routing.
 ### Fixed
 - Corrected typos and improved error handling in `views.py`.
 ### Changed
