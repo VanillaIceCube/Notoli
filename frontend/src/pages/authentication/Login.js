@@ -17,11 +17,13 @@ export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
+  // Misc
+  const navigate = useNavigate();
+
   // Snackbar states
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const navigate = useNavigate();
 
   // Login function
   const handleLogin = async () => {
@@ -32,8 +34,8 @@ export default function Login() {
       });
 
       // Save tokens
-      localStorage.setItem('accessToken', data.access);
-      localStorage.setItem('refreshToken', data.refresh);
+      sessionStorage.setItem('accessToken', data.access);
+      sessionStorage.setItem('refreshToken', data.refresh);
 
       // Sucess state
       setSnackbarSeverity('success');
@@ -101,3 +103,4 @@ export default function Login() {
     </Container>
   );
 }
+
