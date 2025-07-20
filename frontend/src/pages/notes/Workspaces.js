@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
+import { useNavigate } from 'react-router-dom';
 
 export default function Workspaces() {
   // Pull Workspace List

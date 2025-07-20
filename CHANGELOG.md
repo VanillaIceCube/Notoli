@@ -4,7 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## 2025-07-20
 ### Added
-- Preliminary replication of Workspaces component to TodoLists with initial CRUD functionality in `TodoLists.js`. 
+- Preliminary replication of Workspaces component to TodoLists with initial CRUD functionality in `TodoLists.js`.
+- Introduced `TodoLists` route for handling specific workspace todos in `App.js`.
+### Changed
+- Enhanced fetch logic in `TodoLists.js` to include workspace ID.
 
 
 ## 2025-07-18

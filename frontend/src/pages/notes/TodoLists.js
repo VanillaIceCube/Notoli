@@ -13,8 +13,12 @@ import {
 } from '@mui/material';
 import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
+import { useNavigate } from 'react-router-dom';
 
 export default function TodoLists() {
+  // Pull Workspace ID
+  const { workspaceId } = useParams();
+
   // Pull TodoList List
   const token = sessionStorage.getItem('accessToken');
   const [lists, setLists] = useState([]);
@@ -24,7 +28,7 @@ export default function TodoLists() {
   const fetchTodoLists = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/todolists/', {
+      const response = await fetch(`http://localhost:8000/api/todolists/?workspace=${workspaceId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -36,11 +40,13 @@ export default function TodoLists() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, workspaceId]);
 
   useEffect(() => {
-    fetchTodoLists();
-  }, [fetchTodoLists]);
+    if (workspaceId) {
+      fetchTodoLists();
+    }
+  }, [workspaceId, fetchTodoLists]);
 
   // Triple Dot Menu Functions
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
