@@ -2,6 +2,11 @@
 All notable changes to this project are documented in this file.
 
 
+## 2025-07-20
+### Added
+- Preliminary replication of Workspaces component to TodoLists with initial CRUD functionality in `TodoLists.js`. 
+
+
 ## 2025-07-18
 ### Changed
 - Refactored `Workspaces.js`: added missing Pessimistic Local Merge comments and adjusted whitespace formatting for consistency.  
