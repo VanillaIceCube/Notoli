@@ -6,11 +6,12 @@ All notable changes to this project are documented in this file.
 ### Added
 - Preliminary replication of Workspaces component to TodoLists with initial CRUD functionality in `TodoLists.js`.
 - Introduced `TodoLists` route for handling specific workspace todos in `App.js`.
+### Fixed
+- Corrected typos and improved error handling in `views.py`.
 ### Changed
 - Enhanced fetch logic in `TodoLists.js` to include workspace ID.
 - Updated Django REST Framework settings to include default filters and permissions.
 - Added `django-filter` to `environment.yml` dependencies.
-- Corrected typos and improved error handling in `views.py`.
 
 
 ## 2025-07-18
@@ -37,11 +38,6 @@ All notable changes to this project are documented in this file.
 ## 2025-06-30
 ### Added
 - Deletion capabilities in `Workspaces.js`, allowing users to remove workspaces directly from the interface.
-### Removed
-- The unused `onStartAdding` function from `Workspaces.js` in the frontend to clean up the codebase.
-### Fixed
-- Corrected the deletion process in `Workspaces.js` by ensuring proper API call syntax with template literals.  
-- Updated error handling in the `onDelete` function to reset errors before attempting deletion.
 ### Changed
 - Improved UI update after deleting a workspace by modifying the state update logic.  
 - Refactored state management and menu handling in `Workspaces.js`:  
@@ -55,6 +51,11 @@ All notable changes to this project are documented in this file.
 - Refactored 'Workspaces' component in `Workspaces.js`:
   - Renamed `onSaveNew` to `onAdd` for function clarity.
   - Renamed state variable `newName` to `WorkspaceName` for enhanced readability.
+### Fixed
+- Corrected the deletion process in `Workspaces.js` by ensuring proper API call syntax with template literals.  
+- Updated error handling in the `onDelete` function to reset errors before attempting deletion.
+### Removed
+- The unused `onStartAdding` function from `Workspaces.js` in the frontend to clean up the codebase.
 
 
 ## 2025-06-24
