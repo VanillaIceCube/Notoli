@@ -6,9 +6,7 @@ import {
   Typography,
   Container,
   Box,
-  Paper,
-  Snackbar,
-  Alert,
+  Paper
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 

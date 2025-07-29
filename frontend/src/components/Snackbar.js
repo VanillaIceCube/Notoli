@@ -1,4 +1,9 @@
-  // Snackbar states
+import {
+  Snackbar,
+  Alert
+} from '@mui/material';
+
+// Snackbar states
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarSeverity, setSnackbarSeverity] = useState('success');
   const [snackbarMessage, setSnackbarMessage] = useState('');
