@@ -1,12 +1,12 @@
-import './App.css'
-import React, { useState } from 'react'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
-import AuthenticatedRoute from './components/AuthenticatedRoute'
-import Login from './pages/authentication/Login'
-import Workspaces from './pages/notes/Workspaces'
-import TodoLists from './pages/notes/TodoLists'
-import Notes from './pages/notes/Notes'
-import MySnackbar from './components/MySnackbar'
+import './App.css';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import AuthenticatedRoute from './components/AuthenticatedRoute';
+import Login from './pages/authentication/Login';
+import Workspaces from './pages/notes/Workspaces';
+import TodoLists from './pages/notes/TodoLists';
+import Notes from './pages/notes/Notes';
+import MySnackbar from './components/MySnackbar';
 
 function App() {
 
