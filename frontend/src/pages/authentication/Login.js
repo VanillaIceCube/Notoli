@@ -6,11 +6,10 @@ import {
   Typography,
   Container,
   Box,
-  Paper,
-  Snackbar,
-  Alert,
+  Paper
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import MySnackbar from '../../components/MySnackbar';
 
 export default function Login() {
   // Username & pasword
@@ -42,7 +41,7 @@ export default function Login() {
       setSnackbarMessage('Login successful!');
       setSnackbarOpen(true);
 
-      setTimeout(() => navigate('/'), 1000);
+      navigate('/');
     } catch (err) {
       console.error(err);
 
@@ -86,20 +85,12 @@ export default function Login() {
           </Button>
         </Box>
       </Paper>
-
-      <Snackbar
+      <MySnackbar
         open={snackbarOpen}
-        autoHideDuration={3000}
+        severity={snackbarSeverity}
+        message={snackbarMessage}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical:'bottom', horizontal:'right' }}
-      >
-        <Alert sx={{ width:'100%' }}
-          onClose={handleSnackbarClose}
-          severity={snackbarSeverity}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
+      />
     </Container>
   );
 }
