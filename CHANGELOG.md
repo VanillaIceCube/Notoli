@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2025-07-28
+### Added
+- Introduced a centralized Snackbar component in `App.js`, enabling consistent notifications across pages.
+- Enhanced `Login.js` to utilize the global Snackbar for displaying login success and error messages.
+### Changed
+- Refactored `App.js` to manage Snackbar state and provide a unified Snackbar experience.
+- Updated `Login.js` to delegate Snackbar displays to the new centralized Snackbar management in `App.js`.
 
 ## 2025-07-20
 ### Added
