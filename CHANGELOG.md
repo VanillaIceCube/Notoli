@@ -8,6 +8,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Refactored `App.js` to manage Snackbar state and provide a unified Snackbar experience.
 - Updated `Login.js` to delegate Snackbar displays to the new centralized Snackbar management in `App.js`.
+- `autoHideDuration` in `MySnackbar` shortened.
 
 ## 2025-07-20
 ### Added
