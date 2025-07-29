@@ -6,24 +6,16 @@ import {
   Typography,
   Container,
   Box,
-  Paper,
-  Snackbar,
-  Alert,
+  Paper
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
-export default function Login() {
-  // Username & pasword
+export default function Login({ showSnackbar }) {
+  // Basics
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  // Misc
   const navigate = useNavigate();
-
-  // Snackbar states
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
-  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   // Login function
   const handleLogin = async () => {
@@ -37,26 +29,16 @@ export default function Login() {
       sessionStorage.setItem('accessToken', data.access);
       sessionStorage.setItem('refreshToken', data.refresh);
 
-      // Sucess state
-      setSnackbarSeverity('success');
-      setSnackbarMessage('Login successful!');
-      setSnackbarOpen(true);
+      // Update Snackbar
+      showSnackbar('success', 'Login successful!');
 
-      setTimeout(() => navigate('/'), 1000);
+      navigate('/')
     } catch (err) {
+
+      // Update Snackbar
+      showSnackbar('error', 'Login failed :(');
       console.error(err);
-
-      // Failure state
-      setSnackbarSeverity('error');
-      setSnackbarMessage('Login failed :(');
-      setSnackbarOpen(true);
     }
-  };
-
-  // Snackbar function
-  const handleSnackbarClose = (_event, reason) => {
-    if (reason === 'clickaway') return;
-    setSnackbarOpen(false);
   };
 
   return (
@@ -86,20 +68,6 @@ export default function Login() {
           </Button>
         </Box>
       </Paper>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical:'bottom', horizontal:'right' }}
-      >
-        <Alert sx={{ width:'100%' }}
-          onClose={handleSnackbarClose}
-          severity={snackbarSeverity}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </Container>
   );
 }
