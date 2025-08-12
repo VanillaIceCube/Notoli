@@ -29,22 +29,24 @@ function App() {
 
   return (
     <React.Fragment>
-      <MyAppBar />
       <Router>
+        <MyAppBar />
         <Routes>
           <Route path="/login" element={<Login showSnackbar={showSnackbar} />}/>
           
-          <Route path="/" element=
-            {<AuthenticatedRoute><Workspaces /></AuthenticatedRoute>}
-          />
+          <React.Fragment>
+            <Route path="/" element=
+              {<AuthenticatedRoute><Workspaces /></AuthenticatedRoute>}
+            />
 
-          <Route path="/workspace/:workspaceId" element=
-            {<AuthenticatedRoute><TodoLists /></AuthenticatedRoute>}
-          />
+            <Route path="/workspace/:workspaceId" element=
+              {<AuthenticatedRoute><TodoLists /></AuthenticatedRoute>}
+            />
 
-          <Route path="/workspace/:workspaceId/todolist/:todoListId" element=
-            {<AuthenticatedRoute><Notes /></AuthenticatedRoute>}
-          />
+            <Route path="/workspace/:workspaceId/todolist/:todoListId" element=
+              {<AuthenticatedRoute><Notes /></AuthenticatedRoute>}
+            />
+          </React.Fragment>
 
         </Routes>
       </Router>
