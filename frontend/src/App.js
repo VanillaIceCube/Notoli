@@ -6,9 +6,12 @@ import Login from './pages/authentication/Login';
 import Workspaces from './pages/notes/Workspaces';
 import TodoLists from './pages/notes/TodoLists';
 import Notes from './pages/notes/Notes';
+import MyAppBar from './components/MyAppBar';
 import MySnackbar from './components/MySnackbar';
 
 function App() {
+  // App Bar
+  const [appBarHeader, setAppBarHeader] = useState('')
 
   // Snackbar
   const [snackbarOpen, setSnackbarOpen] = useState(false)
@@ -29,20 +32,35 @@ function App() {
   return (
     <React.Fragment>
       <Router>
+        <MyAppBar appBarHeader={appBarHeader}/>
         <Routes>
           <Route path="/login" element={<Login showSnackbar={showSnackbar} />}/>
           
-          <Route path="/" element=
-            {<AuthenticatedRoute><Workspaces /></AuthenticatedRoute>}
-          />
+          <React.Fragment>
+            <Route path="/" element=
+              {
+                <AuthenticatedRoute>
+                  <Workspaces setAppBarHeader={setAppBarHeader} />
+                </AuthenticatedRoute>
+              }
+            />
 
-          <Route path="/workspace/:workspaceId" element=
-            {<AuthenticatedRoute><TodoLists /></AuthenticatedRoute>}
-          />
+            <Route path="/workspace/:workspaceId" element=
+              {
+                <AuthenticatedRoute>
+                  <TodoLists setAppBarHeader={setAppBarHeader} />
+                </AuthenticatedRoute>
+              }
+            />
 
-          <Route path="/workspace/:workspaceId/todolist/:todoListId" element=
-            {<AuthenticatedRoute><Notes /></AuthenticatedRoute>}
-          />
+            <Route path="/workspace/:workspaceId/todolist/:todoListId" element=
+              {
+                <AuthenticatedRoute>
+                  <Notes setAppBarHeader={setAppBarHeader} />
+                </AuthenticatedRoute>
+              }
+            />
+          </React.Fragment>
 
         </Routes>
       </Router>

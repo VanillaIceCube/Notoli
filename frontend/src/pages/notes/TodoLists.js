@@ -17,7 +17,7 @@ import { useParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 
 
-export default function TodoLists() {
+export default function TodoLists({ setAppBarHeader }) {
   // Misc
   const navigate = useNavigate();
 
@@ -47,11 +47,27 @@ export default function TodoLists() {
     }
   }, [token, workspaceId]);
 
+  // Fetch Workspace required for Title Header
+  const fetchWorkspaceName  = useCallback(async () => {
+    if (!workspaceId) return;
+    try {
+      const response = await fetch(`http://localhost:8000/api/workspaces/${workspaceId}/`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const workspaceData = await response.json();
+      setAppBarHeader(workspaceData?.name ?? '');
+    } catch (err) {
+      setError(err.toString());
+    }
+  }, [workspaceId, token, setAppBarHeader]);
+
   useEffect(() => {
     if (workspaceId) {
       fetchTodoLists();
+      fetchWorkspaceName();
     }
-  }, [workspaceId, fetchTodoLists]);
+  }, [workspaceId, fetchTodoLists, fetchWorkspaceName]);
 
   // Triple Dot Menu Functions
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);

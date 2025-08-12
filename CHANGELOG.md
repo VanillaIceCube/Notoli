@@ -3,8 +3,15 @@ All notable changes to this project are documented in this file.
 
 
 ## 2025-08-11
+### Added
+- App Bar Added
+  - Dynamics App Bar yext for Workspace, Todo Lists, and Notes page
+  - Preliminary styling
+  - Non-functional icons added 
+- <img width="447" height="954" alt="image" src="https://github.com/user-attachments/assets/f7fd5187-9347-4b0a-8d99-4a31d3ac12bb" />
 ### Fixed
 - Filled in contact info placeholder in the `LICENSE.md`
+- Fixed UI Messages in `Notes.js`
 
 ## 2025-07-28
 ### Added

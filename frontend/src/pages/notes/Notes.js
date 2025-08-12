@@ -15,7 +15,7 @@ import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
 
-export default function Notes() {
+export default function Notes({ setAppBarHeader }) {
   // Pull Todolist ID
   const { todoListId } = useParams();
 
@@ -42,11 +42,27 @@ export default function Notes() {
     }
   }, [token, todoListId]);
 
+  // Fetch Todo List required for Title Header
+    const fetchTodoListName  = useCallback(async () => {
+      if (!todoListId) return;
+      try {
+        const response = await fetch(`http://localhost:8000/api/todolists/${todoListId}/`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const todoListData = await response.json();
+        setAppBarHeader(todoListData?.name ?? '');
+      } catch (err) {
+        setError(err.toString());
+      }
+    }, [todoListId, token, setAppBarHeader]);
+
   useEffect(() => {
     if (todoListId) {
       fetchNotes();
+      fetchTodoListName();
     }
-  }, [todoListId, fetchNotes]);
+  }, [todoListId, fetchNotes, fetchTodoListName]);
 
   // Triple Dot Menu Functions
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
@@ -228,7 +244,7 @@ export default function Notes() {
               </React.Fragment>
             )) : (
               <Typography variant="body1" align="center" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
-                No to-do lists found.
+                No notes found.
               </Typography>
             )}
             {/* By default show the Add New button, otherwise show a TextField & save Note*/}
