@@ -2,7 +2,7 @@
 All notable changes to this project are documented in this file.
 
 
-## 2025-07-28
+## 2025-08-11
 ### Fixed
 - Filled in contact info placeholder in the `LICENSE.md`
 
