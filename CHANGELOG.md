@@ -3,6 +3,8 @@ All notable changes to this project are documented in this file.
 
 
 ## 2025-08-11
+### Added
+- Preliminary App Bar
 ### Fixed
 - Filled in contact info placeholder in the `LICENSE.md`
 

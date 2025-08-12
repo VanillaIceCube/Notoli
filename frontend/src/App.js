@@ -6,6 +6,7 @@ import Login from './pages/authentication/Login';
 import Workspaces from './pages/notes/Workspaces';
 import TodoLists from './pages/notes/TodoLists';
 import Notes from './pages/notes/Notes';
+import MyAppBar from './components/MyAppBar';
 import MySnackbar from './components/MySnackbar';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
 
   return (
     <React.Fragment>
+      <MyAppBar />
       <Router>
         <Routes>
           <Route path="/login" element={<Login showSnackbar={showSnackbar} />}/>
