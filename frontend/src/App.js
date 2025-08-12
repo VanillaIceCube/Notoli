@@ -10,6 +10,8 @@ import MyAppBar from './components/MyAppBar';
 import MySnackbar from './components/MySnackbar';
 
 function App() {
+  // App Bar
+  const [appBarHeader, setAppBarHeader] = useState('')
 
   // Snackbar
   const [snackbarOpen, setSnackbarOpen] = useState(false)
@@ -30,21 +32,33 @@ function App() {
   return (
     <React.Fragment>
       <Router>
-        <MyAppBar />
+        <MyAppBar appBarHeader={appBarHeader}/>
         <Routes>
           <Route path="/login" element={<Login showSnackbar={showSnackbar} />}/>
           
           <React.Fragment>
             <Route path="/" element=
-              {<AuthenticatedRoute><Workspaces /></AuthenticatedRoute>}
+              {
+                <AuthenticatedRoute>
+                  <Workspaces setAppBarHeader={setAppBarHeader} />
+                </AuthenticatedRoute>
+              }
             />
 
             <Route path="/workspace/:workspaceId" element=
-              {<AuthenticatedRoute><TodoLists /></AuthenticatedRoute>}
+              {
+                <AuthenticatedRoute>
+                  <TodoLists setAppBarHeader={setAppBarHeader} />
+                </AuthenticatedRoute>
+              }
             />
 
             <Route path="/workspace/:workspaceId/todolist/:todoListId" element=
-              {<AuthenticatedRoute><Notes /></AuthenticatedRoute>}
+              {
+                <AuthenticatedRoute>
+                  <Notes setAppBarHeader={setAppBarHeader} />
+                </AuthenticatedRoute>
+              }
             />
           </React.Fragment>
 

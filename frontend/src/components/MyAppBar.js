@@ -9,7 +9,7 @@ import {
 import { Menu as MenuIcon, AccountCircle, Notifications } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
 
-export default function MyAppBar() {
+export default function MyAppBar({ appBarHeader }) {
   // Don't render in login page
   const location = useLocation();
   if (location.pathname === '/login') return null;
@@ -22,7 +22,7 @@ export default function MyAppBar() {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            MyAppBar
+            {appBarHeader}
           </Typography>
           <IconButton size="large" color="inherit" aria-label="notifications">
             <Notifications />
@@ -35,4 +35,3 @@ export default function MyAppBar() {
     </Box>
   );
 }
-
