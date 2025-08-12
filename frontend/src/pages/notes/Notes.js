@@ -244,7 +244,7 @@ export default function Notes({ setAppBarHeader }) {
               </React.Fragment>
             )) : (
               <Typography variant="body1" align="center" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
-                No to-do lists found.
+                No notes found.
               </Typography>
             )}
             {/* By default show the Add New button, otherwise show a TextField & save Note*/}

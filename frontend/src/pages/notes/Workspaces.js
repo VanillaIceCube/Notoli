@@ -43,7 +43,7 @@ export default function Workspaces({ setAppBarHeader }) {
   }, [token]);
 
   useEffect(() => {
-    setAppBarHeader('Workspaces');
+    setAppBarHeader('');
     fetchWorkspaces();
   }, [fetchWorkspaces, setAppBarHeader]);
 
@@ -165,6 +165,11 @@ export default function Workspaces({ setAppBarHeader }) {
   return (
     <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2 }}>
       <Paper elevation={3} sx={{ px: 1.5, py: 1.5, width: '100%', background:'var(--secondary-background-color)' }}>
+        {/* Header */}
+        <Typography variant="h4" align="center" gutterBottom sx={{ mt: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)'}}>
+          Workspaces
+        </Typography>
+
         {/* This is for loading */}
         {loading && (
           <Typography align="center"> Loading… </Typography>
@@ -178,6 +183,7 @@ export default function Workspaces({ setAppBarHeader }) {
         )}
 
         {/* If we're done loading and there are no errors */}
+        <Divider sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }} />
         {!loading && !error && (
           <Stack spacing={1}>
             {lists.length ? lists.map(list => (

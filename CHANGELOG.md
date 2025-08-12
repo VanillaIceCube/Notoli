@@ -8,6 +8,7 @@ All notable changes to this project are documented in this file.
 - Add dynamic appBarHeader updates across Workspaces, TodoLists, and Notes components
 ### Fixed
 - Filled in contact info placeholder in the `LICENSE.md`
+- Fixed UI Messages in `Notes.js`
 
 ## 2025-07-28
 ### Added
