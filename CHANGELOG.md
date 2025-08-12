@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+
+## 2025-07-28
+### Fixed
+- Filled in contact info placeholder in the `LICENSE.md`
+
 ## 2025-07-28
 ### Added
 - Introduced a centralized Snackbar component in `App.js`, enabling consistent notifications across pages.
@@ -10,6 +15,7 @@ All notable changes to this project are documented in this file.
 - Updated `Login.js` to delegate Snackbar displays to the new centralized Snackbar management in `App.js`.
 - `autoHideDuration` in `MySnackbar` shortened.
 - Updated import formatting in `App.js` to improve consistency.
+
 
 ## 2025-07-20
 ### Added
