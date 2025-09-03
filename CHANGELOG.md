@@ -1,12 +1,14 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+
 ## 2025-09-02
 ### Added
 - Non-functional back button
 ### Changed
 - Shifted the appbar components around
 - Back button no longer renders on the `workspaces.js`
+
 
 ## 2025-08-11
 ### Added
@@ -18,6 +20,7 @@ All notable changes to this project are documented in this file.
 ### Fixed
 - Filled in contact info placeholder in the `LICENSE.md`
 - Fixed UI Messages in `Notes.js`
+
 
 ## 2025-07-28
 ### Added
