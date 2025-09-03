@@ -5,7 +5,9 @@ All notable changes to this project are documented in this file.
 ## 2025-09-02
 ### Added
 - Back button.
+- <img width="450" height="953" alt="image" src="https://github.com/user-attachments/assets/c95f7a88-6c38-4aa3-98c8-9e6a74b192de" />
 - Drawer.
+- <img width="445" height="955" alt="image" src="https://github.com/user-attachments/assets/e57e42de-9964-464f-b559-1c27575735f1" />
 ### Changed
 - Shifted the appbar components around.
 - Back button no longer renders on the `workspaces.js`.
