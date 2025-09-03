@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 - Non-functional back button
 ### Changed
 - Shifted the appbar components around
-- Back button no longer renders on the `workspaces.js` 
+- Back button no longer renders on the `workspaces.js`
 
 ## 2025-08-11
 ### Added
