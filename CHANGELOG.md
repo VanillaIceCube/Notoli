@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2025-09-02
+### Added
+- Non-functional back button
+### Changed
+- Shifted the appbar components around
 
 ## 2025-08-11
 ### Added
