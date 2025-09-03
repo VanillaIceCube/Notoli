@@ -8,7 +8,7 @@ import {
 import { Menu as MenuIcon, AccountCircle, Notifications, ChevronLeft } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-export default function MyAppBar({ appBarHeader }) {
+export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -62,7 +62,9 @@ export default function MyAppBar({ appBarHeader }) {
           <IconButton size="large" color="inherit" aria-label="user profile">
             <AccountCircle />
           </IconButton>
-          <IconButton size="large" edge="end" color="inherit" aria-label="menu">
+          <IconButton size="large" edge="end" color="inherit" aria-label="menu"
+            onClick={() => setDrawerOpen(previous => !previous)}
+          >
             <MenuIcon />
           </IconButton>
         </Toolbar>

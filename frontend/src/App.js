@@ -8,10 +8,14 @@ import TodoLists from './pages/notes/TodoLists';
 import Notes from './pages/notes/Notes';
 import MyAppBar from './components/MyAppBar';
 import MySnackbar from './components/MySnackbar';
+import MyDrawer from './components/MyDrawer';
 
 function App() {
   // App Bar
   const [appBarHeader, setAppBarHeader] = useState('')
+
+  // Drawer
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   // Snackbar
   const [snackbarOpen, setSnackbarOpen] = useState(false)
@@ -32,7 +36,14 @@ function App() {
   return (
     <React.Fragment>
       <Router>
-        <MyAppBar appBarHeader={appBarHeader}/>
+        <MyAppBar
+          appBarHeader={appBarHeader}
+          setDrawerOpen={setDrawerOpen}
+        />
+        <MyDrawer
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+        />
         <Routes>
           <Route path="/login" element={<Login showSnackbar={showSnackbar} />}/>
           
