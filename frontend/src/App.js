@@ -42,7 +42,7 @@ function App() {
         />
         <MyDrawer
           open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
+          setDrawerOpen={setDrawerOpen}
         />
         <Routes>
           <Route path="/login" element={<Login showSnackbar={showSnackbar} />}/>

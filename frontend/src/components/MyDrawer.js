@@ -7,11 +7,11 @@ import {
   ListItemText
 } from '@mui/material';
 
-export default function MyDrawer({ open, onClose }) {
+export default function MyDrawer({ open, setDrawerOpen }) {
   return (
     <Drawer
       open={open}
-      onClose={onClose}
+      onClose={() => setDrawerOpen(false)}
       anchor="right"
     >
       <Toolbar /> {/* pushes content below AppBar */}

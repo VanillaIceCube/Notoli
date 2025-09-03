@@ -12,23 +12,16 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const getParentPath = (pathname) => {
-    // Normalize (strip trailing slash except root)
-    const path = pathname !== '/' && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
-
+  const getParentPath = (path) => {
     //  todolist <-- notes
-    //  /workspace/:wid/todolist/:tlid(/anything-else)*
-    const todolistPath = path.match(/^\/workspace\/([^/]+)\/todolist\/([^/]+)/);
-    if (todolistPath) return `/workspace/${todolistPath[1]}`;
+    //  /workspace/:wid/todolist/:tlid*
+    const todolistPath = path.match(/^(\/workspace\/[^/]+)\/todolist\/[^/]+$/);
+    if (todolistPath) return `${todolistPath[1]}`;
 
     //  workspace <-- todolists
     //  /workspace/:wid
-    const workspacePath = path.match(/^\/workspace\/([^/]+)$/);
+    const workspacePath = path.match(/^\/workspace\/[^/]+$/);
     if (workspacePath) return '/';
-
-    //  root <-- workspace
-    //  /* (This is all other paths)
-    return '/';
   };
 
   const goBackToParent = () => {
