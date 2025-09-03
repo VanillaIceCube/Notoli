@@ -11,6 +11,8 @@ All notable changes to this project are documented in this file.
 - Changing my branching strategy again.
   - No more dev, just main now.
   - When I deploy, I'll create a prod.
+### Removed
+- Unnecessary `React` import from `MyAppBar.js`
 
 
 ## 2025-08-11
