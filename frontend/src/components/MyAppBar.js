@@ -18,9 +18,14 @@ export default function MyAppBar({ appBarHeader }) {
     <Box sx={{ flexGrow: 1 }}>
       <AppBar position="static" sx={{ color: 'var(--secondary-background-color)', background: 'var(--background-color)', boxShadow: 'none' }}>
         <Toolbar>
-          <IconButton size="large" edge="start" color="inherit" aria-label="menu">
-            <ChevronLeft />
-          </IconButton>
+          {
+            // Don't render back button on the base page
+            location.pathname !== '/' && (
+              <IconButton size="large" edge="start" color="inherit" aria-label="back button">
+                <ChevronLeft />
+              </IconButton>
+            )
+          }
           <Typography variant="h6" edge="start" component="div" noWrap sx={{ flexGrow: 1 }}>
             {appBarHeader}
           </Typography>
