@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2025-09-08
+### Changed
+- Drawer styling.
+
 
 ## 2025-09-02
 ### Added
