@@ -4,6 +4,7 @@ All notable changes to this project are documented in this file.
 ## 2025-09-08
 ### Changed
 - Drawer styling.
+- <img width="449" height="953" alt="image" src="https://github.com/user-attachments/assets/86207c4d-ffa2-4e70-b6a1-58b6b5252287" />
 
 
 ## 2025-09-02
