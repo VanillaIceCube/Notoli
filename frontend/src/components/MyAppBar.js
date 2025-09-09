@@ -7,30 +7,19 @@ import {
 } from '@mui/material';
 import { Menu as MenuIcon, AccountCircle, Notifications, ChevronLeft } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { goBackToParent } from "../utils/Navigation";
 
 export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const getParentPath = (path) => {
-    //  todolist <-- notes
-    //  /workspace/:wid/todolist/:tlid*
-    const todolistPath = path.match(/^(\/workspace\/[^/]+)\/todolist\/[^/]+$/);
-    if (todolistPath) return `${todolistPath[1]}`;
-
-    //  workspace <-- todolists
-    //  /workspace/:wid
-    const workspacePath = path.match(/^\/workspace\/[^/]+$/);
-    if (workspacePath) return '/';
-  };
-
-  const goBackToParent = () => {
-    const target = getParentPath(location.pathname);
-    navigate(target, { replace: true }); // replace prevents stacking history
-  };
-
   // Don't render in login page
   if (location.pathname === '/login') return null;
+
+  // Navigate backwards function
+  const handleBack = () => {
+    goBackToParent(location.pathname, navigate);
+  };
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -40,7 +29,7 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
             // Don't render back button on the base page
             location.pathname !== '/' && (
               <IconButton size="large" edge="start" color="inherit" aria-label="back button"
-                onClick={goBackToParent}
+                onClick={handleBack}
               >
                 <ChevronLeft />
               </IconButton>
