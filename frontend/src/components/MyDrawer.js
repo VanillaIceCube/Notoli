@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import {
   Drawer,
   Toolbar,
@@ -8,8 +9,21 @@ import {
   Typography
 } from '@mui/material';
 import Divider from '@mui/material/Divider';
+import { useLocation } from 'react-router-dom';
+import { getParentPath } from "../utils/Navigation";
 
 export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, setDrawerWorkspacesLabel }) {
+  const location = useLocation();
+
+  // Get Parent Path
+  const fetchWorkspace = () => {
+    return getParentPath(location.pathname);
+  };
+
+  useEffect(() => {
+    setDrawerWorkspacesLabel(fetchWorkspace)
+  }, [fetchWorkspace, setDrawerWorkspacesLabel]);
+
   return (
     <Drawer
       open={open}
