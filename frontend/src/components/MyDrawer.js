@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 import Divider from '@mui/material/Divider';
 
-export default function MyDrawer({ open, setDrawerOpen }) {
+export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, setDrawerWorkspacesLabel }) {
   return (
     <Drawer
       open={open}
@@ -19,6 +19,7 @@ export default function MyDrawer({ open, setDrawerOpen }) {
         '& .MuiDrawer-paper': {
           bgcolor: 'var(--secondary-background-color)',
           color: 'var(--secondary-color)',
+          width: 180,
           borderTopLeftRadius: 15,
           borderBottomLeftRadius: 15
         },
@@ -35,7 +36,7 @@ export default function MyDrawer({ open, setDrawerOpen }) {
         {/* disablePadding + my: 0 is helping reduce the padding, but not making it smaller like I want */}
         <List disablePadding sx={{ my: 0 }}>
           <ListItemButton>
-            <ListItemText primary="Workspace" secondary="This is a Workspace"/> 
+            <ListItemText primary="Workspace" secondary={ drawerWorkspacesLabel }/> 
           </ListItemButton>
         </List>
         <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />

@@ -16,6 +16,7 @@ function App() {
 
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerWorkspacesLabel, setDrawerWorkspacesLabel] = useState('Workspace Name')
 
   // Snackbar
   const [snackbarOpen, setSnackbarOpen] = useState(false)
@@ -43,6 +44,8 @@ function App() {
         <MyDrawer
           open={drawerOpen}
           setDrawerOpen={setDrawerOpen}
+          drawerWorkspacesLabel={drawerWorkspacesLabel}
+          setDrawerWorkspacesLabel = {setDrawerWorkspacesLabel}
         />
         <Routes>
           <Route path="/login" element={<Login showSnackbar={showSnackbar} />}/>
