@@ -1,6 +1,6 @@
+import React, { useEffect, useCallback } from 'react';
 import {
   Drawer,
-  Toolbar,
   Box,
   List,
   ListItemButton,
@@ -8,8 +8,39 @@ import {
   Typography
 } from '@mui/material';
 import Divider from '@mui/material/Divider';
+import { getWorkspaceId } from '../utils/Navigation';
+import { useLocation } from 'react-router-dom';
 
 export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, setDrawerWorkspacesLabel }) {
+  // Fetch Workspace Name
+  const location = useLocation();
+  const workspaceId = getWorkspaceId(location.pathname);
+  const token = sessionStorage.getItem('accessToken');
+
+  // Fetch Workspace Name
+  const fetchWorkspaceName  = useCallback(async () => {
+    console.log(workspaceId);
+    if (!workspaceId) {
+      setDrawerWorkspacesLabel('');
+      return;
+    };
+
+    try {
+      const response = await fetch(`http://localhost:8000/api/workspaces/${workspaceId}/`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const workspaceData = await response.json();
+      setDrawerWorkspacesLabel(workspaceData?.name ?? '');
+    } catch (error) {
+      setDrawerWorkspacesLabel(error.toString() ?? '');
+    }
+  }, [workspaceId, token, setDrawerWorkspacesLabel]);
+
+  useEffect(() => {
+    fetchWorkspaceName()
+  }, [fetchWorkspaceName, setDrawerWorkspacesLabel]);
+
   return (
     <Drawer
       open={open}

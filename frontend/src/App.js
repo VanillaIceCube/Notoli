@@ -16,7 +16,7 @@ function App() {
 
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [drawerWorkspacesLabel, setDrawerWorkspacesLabel] = useState('Workspace Name')
+  const [drawerWorkspacesLabel, setDrawerWorkspacesLabel] = useState('')
 
   // Snackbar
   const [snackbarOpen, setSnackbarOpen] = useState(false)

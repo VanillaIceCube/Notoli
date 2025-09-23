@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2025-09-02
+### Added
+- `MyDrawer` now fetches workspace name.
+- `getWorkspaceId` in utils.
+
+
 ## 2025-09-08
 ### Changed
 - Drawer styling.
