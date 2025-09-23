@@ -1,6 +1,57 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2025-09-02
+### Added
+- `MyDrawer` now fetches workspace name.
+- `getWorkspaceId` in utils.
+
+
+## 2025-09-08
+### Changed
+- Drawer styling.
+- <img width="449" height="953" alt="image" src="https://github.com/user-attachments/assets/86207c4d-ffa2-4e70-b6a1-58b6b5252287" />
+- modularized `getParentPath` & `goBackToParent` into `Navigation.js`
+
+
+## 2025-09-02
+### Added
+- Back button.
+- <img width="450" height="953" alt="image" src="https://github.com/user-attachments/assets/c95f7a88-6c38-4aa3-98c8-9e6a74b192de" />
+- Drawer.
+- <img width="445" height="955" alt="image" src="https://github.com/user-attachments/assets/e57e42de-9964-464f-b559-1c27575735f1" />
+### Changed
+- Shifted the appbar components around.
+- Back button no longer renders on the `workspaces.js`.
+- Changing my branching strategy again.
+  - No more dev, just main now.
+  - When I deploy, I'll create a prod.
+### Removed
+- Unnecessary `React` import from `MyAppBar.js`
+
+
+## 2025-08-11
+### Added
+- App Bar Added
+  - Dynamics App Bar yext for Workspace, Todo Lists, and Notes page.
+  - Preliminary styling.
+  - Non-functional icons added.
+- <img width="447" height="954" alt="image" src="https://github.com/user-attachments/assets/f7fd5187-9347-4b0a-8d99-4a31d3ac12bb" />
+### Fixed
+- Filled in contact info placeholder in the `LICENSE.md`.
+- Fixed UI Messages in `Notes.js`.
+
+
+## 2025-07-28
+### Added
+- Introduced a centralized Snackbar component in `App.js`, enabling consistent notifications across pages.
+- Enhanced `Login.js` to utilize the global Snackbar for displaying login success and error messages.
+### Changed
+- Refactored `App.js` to manage Snackbar state and provide a unified Snackbar experience.
+- Updated `Login.js` to delegate Snackbar displays to the new centralized Snackbar management in `App.js`.
+- `autoHideDuration` in `MySnackbar` shortened.
+- Updated import formatting in `App.js` to improve consistency.
+
 
 ## 2025-07-20
 ### Added
@@ -26,6 +77,11 @@ All notable changes to this project are documented in this file.
 - Added `django-filter` to project dependencies
 - Updated route paths in `App.js` for consistent workspace routing of todos & notes
 - Enhanced path parameter handling in `TodoLists.js`, `Notes.js`, and related components for consistency
+- I've renamed/reorganized the branches.
+  - I am abandoning qa.
+  - Dev for all changes.
+  - Prod after I've deemed Dev stable enough.
+  - Historical branches may look weird, I've swapped prod to be default as opposed to dev.
 
 
 ## 2025-07-18

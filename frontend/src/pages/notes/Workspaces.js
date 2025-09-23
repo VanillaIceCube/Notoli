@@ -15,7 +15,7 @@ import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { useNavigate } from 'react-router-dom';
 
-export default function Workspaces() {
+export default function Workspaces({ setAppBarHeader }) {
   // Misc
   const navigate = useNavigate();
 
@@ -43,8 +43,9 @@ export default function Workspaces() {
   }, [token]);
 
   useEffect(() => {
+    setAppBarHeader('');
     fetchWorkspaces();
-  }, [fetchWorkspaces]);
+  }, [fetchWorkspaces, setAppBarHeader]);
 
   // Triple Dot Menu Functions
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
@@ -162,7 +163,7 @@ export default function Workspaces() {
   }
 
   return (
-    <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2 }}>
+    <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2, pt: .5 }}>
       <Paper elevation={3} sx={{ px: 1.5, py: 1.5, width: '100%', background:'var(--secondary-background-color)' }}>
         {/* Header */}
         <Typography variant="h4" align="center" gutterBottom sx={{ mt: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)'}}>
