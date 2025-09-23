@@ -5,6 +5,8 @@ All notable changes to this project are documented in this file.
 ### Added
 - `MyDrawer` now fetches workspace name.
 - `getWorkspaceId` in utils.
+### Changed
+- Added notoli typography to `Login.js`
 
 
 ## 2025-09-08
