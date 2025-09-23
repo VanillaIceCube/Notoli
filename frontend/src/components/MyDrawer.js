@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Drawer,
   Box,
@@ -17,9 +17,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
   const workspaceId = getWorkspaceId(location.pathname);
   const token = sessionStorage.getItem('accessToken');
 
-  // Fetch Workspace Name
   const fetchWorkspaceName  = useCallback(async () => {
-    console.log(workspaceId);
     if (!workspaceId) {
       setDrawerWorkspacesLabel('');
       return;
@@ -31,15 +29,44 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const workspaceData = await response.json();
-      setDrawerWorkspacesLabel(workspaceData?.name ?? '');
+      return workspaceData?.name ?? ''
     } catch (error) {
-      setDrawerWorkspacesLabel(error.toString() ?? '');
+      return error.toString() ?? ''
     }
   }, [workspaceId, token, setDrawerWorkspacesLabel]);
 
+
+  // Fetch Workspace List
+  const [lists, setLists] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchWorkspaces = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/workspaces/', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      setLists(data);
+      setError(null);
+    } catch (err) {
+      setError(err.toString());
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+
   useEffect(() => {
-    fetchWorkspaceName()
+    setDrawerWorkspacesLabel(
+      fetchWorkspaceName()
+    );
+    
+    fetchWorkspaces()
   }, [fetchWorkspaceName, setDrawerWorkspacesLabel]);
+
 
   return (
     <Drawer
