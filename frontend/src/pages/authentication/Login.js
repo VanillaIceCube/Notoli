@@ -6,7 +6,8 @@ import {
   Typography,
   Container,
   Box,
-  Paper
+  Paper,
+  Stack
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
@@ -42,7 +43,10 @@ export default function Login({ showSnackbar }) {
   };
 
   return (
-    <Container maxWidth="sm" sx={{ display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh' }}>
+    <Stack spacing={2} alignItems="center" maxWidth="sm" sx={{ p:5.5, mx:'auto', display:'flex', justifyContent:'center', alignItems:'center', minHeight:'85vh' }}>
+      <Typography variant="h3" sx={{ mt: 2, fontWeight: 'bold', color: 'white'}}>
+        notoli 
+      </Typography>
       <Paper elevation={3} sx={{ p:4, width:'100%', background:'var(--secondary-background-color)'}}>
         <Box component="form" sx={{ display:'flex', flexDirection:'column', gap:2 }}
           onSubmit={e => { e.preventDefault(); handleLogin(); }}
@@ -68,6 +72,6 @@ export default function Login({ showSnackbar }) {
           </Button>
         </Box>
       </Paper>
-    </Container>
+    </Stack>
   );
 }
