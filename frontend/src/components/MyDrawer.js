@@ -63,9 +63,8 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
     setDrawerWorkspacesLabel(
       fetchWorkspaceName()
     );
-    
     fetchWorkspaces()
-  }, [fetchWorkspaceName, setDrawerWorkspacesLabel]);
+  }, [setDrawerWorkspacesLabel, fetchWorkspaces, fetchWorkspaceName]);
 
 
   return (
