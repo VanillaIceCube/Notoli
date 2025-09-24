@@ -101,12 +101,12 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
         notoli 
       </Typography>
       <Box role="navigation">
-        <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+        <Divider sx={{ borderBottomWidth: 2.5, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
         {/* disablePadding + my: 0 is helping reduce the padding, but not making it smaller like I want */}
-        <List disablePadding sx={{ my: 0 }}>
+        <List disablePadding sx={{ my: 0, py: 0 }}>
 
           {/* Header row that toggles the nested content */}
-          <ListItemButton onClick={toggleWorkspaceDrawer} aria-expanded={workspaceDrawerOpen} sx={{ py: 0 }}>
+          <ListItemButton onClick={toggleWorkspaceDrawer} aria-expanded={workspaceDrawerOpen}>
             <ListItemText primary="Workspace" secondary={drawerWorkspacesLabel} />
             {workspaceDrawerOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItemButton>
@@ -114,15 +114,21 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
           {/* Nested content that opens/closes */}
           <Collapse in={workspaceDrawerOpen} timeout="auto" unmountOnExit>
             <List>
-              {lists.map(workspace => (
-                <ListItemButton key={workspace.id} dense sx={{ py: 0, pl: 3 }}>
-                  <ListItemText primary={workspace.name} />
-                </ListItemButton>
+              <Divider sx={{ borderBottomWidth: 1, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+              {lists.map((workspace, i) => (
+                <React.Fragment key={workspace.id}>
+                  {i !== 0 && (
+                    <Divider sx={{ borderBottomWidth: 1, mx: 2, my: .5, bgcolor: 'var(--secondary-color)' }} />
+                  )}
+                  <ListItemButton  dense sx={{ py: 0, pl: 3 }}>
+                    <ListItemText primary={workspace.name} slotProps={{ primary: { sx: { lineHeight: 1.5 } } }}/>
+                  </ListItemButton>
+                </React.Fragment>
               ))}
             </List>
           </Collapse>
         </List>
-        <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+        <Divider sx={{ borderBottomWidth: 2.5, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
       </Box>
     </Drawer>
   );
