@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+
+## 2025-09-02
+### Added
+- Workspaces are now in the drawer.
+ - Can't navigate with them yet tho.
+
+
 ## 2025-09-02
 ### Added
 - `MyDrawer` now fetches workspace name.
@@ -9,7 +16,6 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Added notoli typography to `Login.js`
 - <img width="451" height="956" alt="image" src="https://github.com/user-attachments/assets/bcd079b1-beb5-4078-99a1-650beeb8d58a" />
-
 
 
 ## 2025-09-08

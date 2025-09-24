@@ -10,6 +10,13 @@ import {
 import Divider from '@mui/material/Divider';
 import { getWorkspaceId } from '../utils/Navigation';
 import { useLocation } from 'react-router-dom';
+import Collapse from '@mui/material/Collapse';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import StarBorder from '@mui/icons-material/StarBorder';
+import ListItemIcon from '@mui/material/ListItemIcon';
+
+
 
 export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, setDrawerWorkspacesLabel }) {
   // Fetch Workspace Name
@@ -18,11 +25,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
   const token = sessionStorage.getItem('accessToken');
 
   const fetchWorkspaceName  = useCallback(async () => {
-    if (!workspaceId) {
-      setDrawerWorkspacesLabel('');
-      return;
-    };
-
+    if (!workspaceId) return '';
     try {
       const response = await fetch(`http://localhost:8000/api/workspaces/${workspaceId}/`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -33,7 +36,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
     } catch (error) {
       return error.toString() ?? ''
     }
-  }, [workspaceId, token, setDrawerWorkspacesLabel]);
+  }, [workspaceId, token]);
 
 
   // Fetch Workspace List
@@ -58,11 +61,20 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
     }
   }, [token]);
 
+  // Manage Drawer
+  const [workspaceDrawerOpen, setWorkspaceDrawerOpen] = useState(false);
+  const toggleWorkspaceDrawer = () => setWorkspaceDrawerOpen(prev => !prev);
 
   useEffect(() => {
-    setDrawerWorkspacesLabel(
-      fetchWorkspaceName()
-    );
+    (async () => {
+      try {
+        const name = await fetchWorkspaceName();
+        setDrawerWorkspacesLabel(name);
+      } catch {
+        setDrawerWorkspacesLabel('');
+      }
+    })();
+
     fetchWorkspaces();
   }, [setDrawerWorkspacesLabel, fetchWorkspaces, fetchWorkspaceName]);
 
@@ -92,9 +104,23 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
         <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
         {/* disablePadding + my: 0 is helping reduce the padding, but not making it smaller like I want */}
         <List disablePadding sx={{ my: 0 }}>
-          <ListItemButton>
-            <ListItemText primary="Workspace" secondary={ drawerWorkspacesLabel }/> 
+
+          {/* Header row that toggles the nested content */}
+          <ListItemButton onClick={toggleWorkspaceDrawer} aria-expanded={workspaceDrawerOpen} sx={{ py: 0 }}>
+            <ListItemText primary="Workspace" secondary={drawerWorkspacesLabel} />
+            {workspaceDrawerOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItemButton>
+
+          {/* Nested content that opens/closes */}
+          <Collapse in={workspaceDrawerOpen} timeout="auto" unmountOnExit>
+            <List>
+              {lists.map(workspace => (
+                <ListItemButton key={workspace.id} dense sx={{ py: 0, pl: 3 }}>
+                  <ListItemText primary={workspace.name} />
+                </ListItemButton>
+              ))}
+            </List>
+          </Collapse>
         </List>
         <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
       </Box>
