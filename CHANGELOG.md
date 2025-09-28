@@ -4,7 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## 2025-09-28
 ### Changed
-- aestetic changes to workspace selector in `MyDrawer.js`
+- Aestetic changes to workspace selector in `MyDrawer.js`
+- Added error and loading messages in `MyDrawer.js`
 
 
 ## 2025-09-23
@@ -27,7 +28,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Drawer styling.
 - <img width="449" height="953" alt="image" src="https://github.com/user-attachments/assets/86207c4d-ffa2-4e70-b6a1-58b6b5252287" />
-- modularized `getParentPath` & `goBackToParent` into `Navigation.js`
+- Modularized `getParentPath` & `goBackToParent` into `Navigation.js`
 
 
 ## 2025-09-02

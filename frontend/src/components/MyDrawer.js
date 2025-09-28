@@ -13,9 +13,6 @@ import { useLocation } from 'react-router-dom';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
-import StarBorder from '@mui/icons-material/StarBorder';
-import ListItemIcon from '@mui/material/ListItemIcon';
-
 
 
 export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, setDrawerWorkspacesLabel }) {
@@ -60,6 +57,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
       setLoading(false);
     }
   }, [token]);
+
 
   // Manage Drawer
   const [workspaceDrawerOpen, setWorkspaceDrawerOpen] = useState(false);
@@ -115,6 +113,20 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
           <Collapse in={workspaceDrawerOpen} timeout="auto" unmountOnExit>
             <List sx={{ pb: 0 }}>
               <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+
+              {/* This is for loading */}
+              {loading && (
+                <Typography align="left" sx={{ pl: 3, py: 1 }}>
+                  Loading…
+                </Typography>
+              )}
+              
+              {/* This is for errors */}
+              {error && (
+                <Typography color="error" align="left" sx={{ pl: 3, py: 1 }}>
+                  Error: {error}
+                </Typography>
+              )}
               {lists.map((workspace, i) => (
                 <React.Fragment key={workspace.id}>
                   {i !== 0 && (
