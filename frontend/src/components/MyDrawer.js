@@ -120,7 +120,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
                   {i !== 0 && (
                     <Divider sx={{ borderBottomWidth: 1, mr: 2, ml:2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
                   )}
-                  <ListItemButton  sx={{ pl: 3 }}>
+                  <ListItemButton dense sx={{ pl: 3, py: .5 }}>
                     <ListItemText primary={workspace.name} />
                   </ListItemButton>
                 </React.Fragment>

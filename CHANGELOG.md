@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 
 ## 2025-09-28
 ### Changed
-aestetic changes to workspace selector in `MyDrawer.js`
+- aestetic changes to workspace selector in `MyDrawer.js`
 
 
 ## 2025-09-23
