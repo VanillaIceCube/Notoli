@@ -101,7 +101,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
         notoli 
       </Typography>
       <Box role="navigation">
-        <Divider sx={{ borderBottomWidth: 3, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+        <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
         {/* disablePadding + my: 0 is helping reduce the padding, but not making it smaller like I want */}
         <List disablePadding sx={{ mt: 1, mb: 1 }}>
 
@@ -113,14 +113,14 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
 
           {/* Nested content that opens/closes */}
           <Collapse in={workspaceDrawerOpen} timeout="auto" unmountOnExit>
-            <List>
+            <List sx={{ pb: 0 }}>
               <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
               {lists.map((workspace, i) => (
                 <React.Fragment key={workspace.id}>
                   {i !== 0 && (
-                    <Divider sx={{ borderBottomWidth: 2, ml:2, mr:1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+                    <Divider sx={{ borderBottomWidth: 1, mr: 2, ml:2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
                   )}
-                  <ListItemButton  sx={{ py: 0, pl: 3 }}>
+                  <ListItemButton  sx={{ pl: 3 }}>
                     <ListItemText primary={workspace.name} />
                   </ListItemButton>
                 </React.Fragment>
@@ -128,7 +128,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
             </List>
           </Collapse>
         </List>
-        <Divider sx={{ borderBottomWidth: 3, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+        <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
       </Box>
     </Drawer>
   );

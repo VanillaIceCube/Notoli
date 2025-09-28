@@ -2,13 +2,18 @@
 All notable changes to this project are documented in this file.
 
 
-## 2025-09-02
+## 2025-09-28
+### Changed
+aestetic changes to workspace selector in `MyDrawer.js`
+
+
+## 2025-09-23
 ### Added
 - Workspaces are now in the drawer.
  - Can't navigate with them yet tho.
 
 
-## 2025-09-02
+## 2025-09-22
 ### Added
 - `MyDrawer` now fetches workspace name.
 - <img width="452" height="953" alt="image" src="https://github.com/user-attachments/assets/b581481c-bc33-4c10-808f-01aefc8ff11c" />
