@@ -133,20 +133,22 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
               )}
 
               {/* If we're done loading and there are no errors */}
-              {list.map((workspace, i) => (
-                <React.Fragment key={workspace.id}>
-                  {i !== 0 && (
-                    <Divider sx={{ borderBottomWidth: 2, mr: 2, ml:2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
-                  )}
-                  <ListItemButton dense sx={{ pl: 3, py: .75 }}
-                    onClick={() => {
-                      navigate(`/workspace/${workspace.id}`);
-                    }}
-                  >
-                    <ListItemText primary={workspace.name} />
-                  </ListItemButton>
-                </React.Fragment>
-              ))}
+              {!error && !loading && (
+                list.map((workspace, i) => (
+                  <React.Fragment key={workspace.id}>
+                    {i !== 0 && (
+                      <Divider sx={{ borderBottomWidth: 2, mr: 2, ml:2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
+                    )}
+                    <ListItemButton dense sx={{ pl: 3, py: .75 }}
+                      onClick={() => {
+                        navigate(`/workspace/${workspace.id}`);
+                      }}
+                    >
+                      <ListItemText primary={workspace.name} />
+                    </ListItemButton>
+                  </React.Fragment>
+                ))
+              )}
             </List>
           </Collapse>
         </List>
