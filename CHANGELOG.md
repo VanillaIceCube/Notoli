@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ## 2025-09-28
 ### Added
 - Navigation via `MyDrawer.js`
+- Basic add functionality in `MyDrawer.js`
 ### Changed
 - Aestetic changes to workspace selector in `MyDrawer.js`
 - Added error and loading messages in `MyDrawer.js`

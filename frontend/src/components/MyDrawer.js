@@ -6,9 +6,11 @@ import {
   ListItemButton,
   ListItemText,
   Typography,
-  Button
+  Button,
+  TextField,
+  IconButton
 } from '@mui/material';
-import { Add } from '@mui/icons-material';
+import { Add, Close } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { getWorkspaceId } from '../utils/Navigation';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -186,12 +188,38 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
               )}
             </List>
             <Divider sx={{ borderBottomWidth: 2, mr: 2, ml:2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
-            <Button dense sx={{ pl: 3, pt: 1.5, pb: .75, fontWeight: 'bold', background:'var(--secondary-background-color)', color: 'var(--secondary-color)'}}
-              startIcon={<Add sx={{ fontSize: 20 }} />}
-              onClick={() => setIsAdding(true)}
-            >
-              Add New
-            </Button>
+
+            {/* By default show the Add New button, otherwise show a TextField & save Workspace*/}
+            { !isAdding ? (
+              <Button dense sx={{ pl: 3, pt: 1.5, pb: .75, fontWeight: 'bold', background:'var(--secondary-background-color)', color: 'var(--secondary-color)'}}
+                startIcon={<Add sx={{ fontSize: 20 }} />}
+                onClick={() => setIsAdding(true)}
+              >
+                Add New
+              </Button>
+            ) : (
+              <Box sx={{ display:'flex', alignItems:'center', px:1, py:0.5 }}>
+                <TextField autoFocus variant="standard" size="small"
+                  sx={{ pl: 2, flexGrow:1, mr:1, justifyContent: 'space-between', color: 'var(--secondary-color)' }}
+                  slotProps={{ input:{ sx:{
+                    color: 'var(--secondary-color)',
+                    '&:after': {borderBottomColor: 'var(--secondary-color)' }}}}}
+                  placeholder="New Workspace Name…"
+                  value={newWorkspaceName}
+                  onChange={event => setNewWorkspaceName(event.target.value)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') onAdd();
+                    if (event.key === 'Escape') setIsAdding(false);
+                  }}
+                />
+                <IconButton size="small" onClick={onAdd} disabled={!newWorkspaceName.trim()}>
+                  <Add />
+                </IconButton>
+                <IconButton size="small" onClick={() => setIsAdding(false)}>
+                  <Close />
+                </IconButton>
+              </Box>
+            )}
           </Collapse>
         </List>
         <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
