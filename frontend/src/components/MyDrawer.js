@@ -120,15 +120,15 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
 
               {/* This is for loading */}
               {loading && (
-                <Typography align="left" sx={{ pl: 3, py: 1 }}>
+                <Typography align="left" sx={{ pl: 3, py: 1, pt: 2 }}>
                   Loading…
                 </Typography>
               )}
               
               {/* This is for errors */}
               {error && (
-                <Typography color="error" align="left" sx={{ pl: 3, py: 1 }}>
-                  Error: {error}
+                <Typography color="error" align="left" sx={{ pl: 3, py: 1, pt: 2 }}>
+                  {error}
                 </Typography>
               )}
 
