@@ -118,9 +118,9 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
               {lists.map((workspace, i) => (
                 <React.Fragment key={workspace.id}>
                   {i !== 0 && (
-                    <Divider sx={{ borderBottomWidth: 1, mr: 2, ml:2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
+                    <Divider sx={{ borderBottomWidth: 2, mr: 2, ml:2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
                   )}
-                  <ListItemButton dense sx={{ pl: 3, py: .5 }}>
+                  <ListItemButton dense sx={{ pl: 3, py: .75 }}>
                     <ListItemText primary={workspace.name} />
                   </ListItemButton>
                 </React.Fragment>
