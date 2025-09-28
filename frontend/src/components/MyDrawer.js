@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 import Divider from '@mui/material/Divider';
 import { getWorkspaceId } from '../utils/Navigation';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
@@ -37,7 +37,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
 
 
   // Fetch Workspace List
-  const [lists, setLists] = useState([]);
+  const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -49,7 +49,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-      setLists(data);
+      setList(data);
       setError(null);
     } catch (err) {
       setError(err.toString());
@@ -57,6 +57,10 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
       setLoading(false);
     }
   }, [token]);
+
+
+  // Navigate using Drawer
+  const navigate = useNavigate();
 
 
   // Manage Drawer
@@ -129,12 +133,16 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
               )}
 
               {/* If we're done loading and there are no errors */}
-              {lists.map((workspace, i) => (
+              {list.map((workspace, i) => (
                 <React.Fragment key={workspace.id}>
                   {i !== 0 && (
                     <Divider sx={{ borderBottomWidth: 2, mr: 2, ml:2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
                   )}
-                  <ListItemButton dense sx={{ pl: 3, py: .75 }}>
+                  <ListItemButton dense sx={{ pl: 3, py: .75 }}
+                    onClick={() => {
+                      navigate(`/workspace/${workspace.id}`);
+                    }}
+                  >
                     <ListItemText primary={workspace.name} />
                   </ListItemButton>
                 </React.Fragment>
