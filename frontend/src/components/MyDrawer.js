@@ -5,8 +5,10 @@ import {
   List,
   ListItemButton,
   ListItemText,
-  Typography
+  Typography,
+  Button
 } from '@mui/material';
+import { Add } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { getWorkspaceId } from '../utils/Navigation';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -183,6 +185,13 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
                 ))
               )}
             </List>
+            <Divider sx={{ borderBottomWidth: 2, mr: 2, ml:2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
+            <Button dense sx={{ pl: 3, pt: 1.5, pb: .75, fontWeight: 'bold', background:'var(--secondary-background-color)', color: 'var(--secondary-color)'}}
+              startIcon={<Add sx={{ fontSize: 20 }} />}
+              onClick={() => setIsAdding(true)}
+            >
+              Add New
+            </Button>
           </Collapse>
         </List>
         <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
