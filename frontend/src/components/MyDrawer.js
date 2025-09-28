@@ -16,6 +16,10 @@ import ExpandMore from '@mui/icons-material/ExpandMore';
 
 
 export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, setDrawerWorkspacesLabel }) {
+  // Navigate using Drawer
+  const navigate = useNavigate();
+
+
   // Fetch Workspace Name
   const location = useLocation();
   const workspaceId = getWorkspaceId(location.pathname);
@@ -59,9 +63,38 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
   }, [token]);
 
 
-  // Navigate using Drawer
-  const navigate = useNavigate();
+  // Add New Workspace
+  const [isAdding, setIsAdding] = useState(false);
+  const [newWorkspaceName, setNewWorkspaceName] = useState('');
 
+  const onAdd = async () => {
+    if (!newWorkspaceName.trim()) return;
+    setError(null);
+    
+    try {
+      const response = await fetch('http://localhost:8000/api/workspaces/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({
+          name: newWorkspaceName,
+          description: ''
+        }),
+      });
+      
+      // Pessimistic Local Merge
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const created = await response.json();
+      setList(prev => [...prev, created]);
+
+      setIsAdding(false);
+      setNewWorkspaceName('');
+    } catch (err) {
+      setError(err.toString());
+    }
+  }
 
   // Manage Drawer
   const [workspaceDrawerOpen, setWorkspaceDrawerOpen] = useState(false);
