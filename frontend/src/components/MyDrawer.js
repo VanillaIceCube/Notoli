@@ -103,8 +103,10 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
   // Manage Drawer
   const [workspaceDrawerOpen, setWorkspaceDrawerOpen] = useState(false);
   const toggleWorkspaceDrawer = () => setWorkspaceDrawerOpen(prev => !prev);
+  const [drawerWidth, setDrawerWidth] = useState(180)
 
   useEffect(() => {
+    setDrawerWidth(isAdding ? 300 : 180);
     (async () => {
       try {
         const name = await fetchWorkspaceName();
@@ -115,7 +117,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
     })();
 
     fetchWorkspaces();
-  }, [setDrawerWorkspacesLabel, fetchWorkspaces, fetchWorkspaceName]);
+  }, [isAdding, setDrawerWorkspacesLabel, fetchWorkspaces, fetchWorkspaceName]);
 
 
   return (
@@ -127,7 +129,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
         '& .MuiDrawer-paper': {
           bgcolor: 'var(--secondary-background-color)',
           color: 'var(--secondary-color)',
-          width: 180,
+          width: drawerWidth,
           borderTopLeftRadius: 15,
           borderBottomLeftRadius: 15
         },
