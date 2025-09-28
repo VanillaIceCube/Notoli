@@ -127,6 +127,8 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
                   Error: {error}
                 </Typography>
               )}
+
+              {/* If we're done loading and there are no errors */}
               {lists.map((workspace, i) => (
                 <React.Fragment key={workspace.id}>
                   {i !== 0 && (
