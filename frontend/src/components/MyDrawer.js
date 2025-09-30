@@ -74,7 +74,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
   const onAdd = async () => {
     if (!newWorkspaceName.trim()) return;
     setError(null);
-    
+
     try {
       const response = await fetch('http://localhost:8000/api/workspaces/', {
         method: 'POST',
@@ -87,7 +87,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
           description: ''
         }),
       });
-      
+
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const created = await response.json();
@@ -99,6 +99,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
       setError(err.toString());
     }
   }
+
 
   // Manage Drawer
   const [workspaceDrawerOpen, setWorkspaceDrawerOpen] = useState(false);
@@ -163,7 +164,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
                   Loading…
                 </Typography>
               )}
-              
+
               {/* This is for errors */}
               {error && (
                 <Typography color="error" align="left" sx={{ pl: 3, py: 1, pt: 2 }}>
