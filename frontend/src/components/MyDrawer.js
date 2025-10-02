@@ -18,11 +18,9 @@ import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 
-
 export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, setDrawerWorkspacesLabel }) {
   // Navigate using Drawer
   const navigate = useNavigate();
-
 
   // Fetch Workspace Name
   const location = useLocation();
@@ -37,12 +35,11 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const workspaceData = await response.json();
-      return workspaceData?.name ?? ''
+      return workspaceData?.name ?? '';
     } catch (error) {
-      return error.toString() ?? ''
+      return error.toString() ?? '';
     }
   }, [workspaceId, token]);
-
 
   // Fetch Workspace List
   const [list, setList] = useState([]);
@@ -66,7 +63,6 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
     }
   }, [token]);
 
-
   // Add New Workspace
   const [isAdding, setIsAdding] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
@@ -88,7 +84,6 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
         }),
       });
 
-      // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const created = await response.json();
       setList(prev => [...prev, created]);
@@ -98,16 +93,20 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
     } catch (err) {
       setError(err.toString());
     }
-  }
-
+  };
 
   // Manage Drawer
   const [workspaceDrawerOpen, setWorkspaceDrawerOpen] = useState(false);
   const toggleWorkspaceDrawer = () => setWorkspaceDrawerOpen(prev => !prev);
-  const [drawerWidth, setDrawerWidth] = useState(180)
 
+  // Animate width (only responds to isAdding)
+  const [drawerWidth, setDrawerWidth] = useState(180);
   useEffect(() => {
     setDrawerWidth(isAdding ? 300 : 180);
+  }, [isAdding]);
+
+  // Fetch name + list (mount / workspace change)
+  useEffect(() => {
     (async () => {
       try {
         const name = await fetchWorkspaceName();
@@ -116,116 +115,153 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
         setDrawerWorkspacesLabel('');
       }
     })();
-
     fetchWorkspaces();
-  }, [isAdding, setDrawerWorkspacesLabel, fetchWorkspaces, fetchWorkspaceName]);
-
+  }, [fetchWorkspaceName, setDrawerWorkspacesLabel, fetchWorkspaces]);
 
   return (
     <Drawer
       open={open}
       onClose={() => setDrawerOpen(false)}
       anchor="right"
+      ModalProps={{ keepMounted: true }} // keeps DOM for smoother animation
       sx={{
         '& .MuiDrawer-paper': {
           bgcolor: 'var(--secondary-background-color)',
           color: 'var(--secondary-color)',
-          width: drawerWidth,
+          boxSizing: 'border-box',
           borderTopLeftRadius: 15,
-          borderBottomLeftRadius: 15
+          borderBottomLeftRadius: 15,
+          p: 0,                  // remove padding to let inner Box own the width
+          overflow: 'visible',   // allow rounded corners to show cleanly
         },
-        '& .MuiListItemText-primary': {
-          fontWeight: 'bold'
-        },
+        '& .MuiListItemText-primary': { fontWeight: 'bold' },
       }}
     >
-      <Typography variant="h4" align="center" gutterBottom sx={{ mt: 2, mx: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)'}}>
-        notoli 
-      </Typography>
-      <Box role="navigation">
-        <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
-        {/* disablePadding + my: 0 is helping reduce the padding, but not making it smaller like I want */}
-        <List disablePadding sx={{ mt: 1, mb: 1 }}>
+      {/* Width-animated container */}
+      <Box
+        sx={{
+          width: drawerWidth,
+          transition: (theme) =>
+            theme.transitions.create('width', {
+              duration: theme.transitions.duration.standard,
+              easing: theme.transitions.easing.easeInOut,
+            }),
+          willChange: 'width',
+          overflow: 'hidden', // tidy while animating
+          height: '100%',
+          bgcolor: 'var(--secondary-background-color)',
+          color: 'var(--secondary-color)',
+          borderTopLeftRadius: 15,
+          borderBottomLeftRadius: 15,
+        }}
+      >
+        <Typography variant="h4" align="center" gutterBottom sx={{ mt: 2, mx: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)'}}>
+          notoli
+        </Typography>
 
-          {/* Header row that toggles the nested content */}
-          <ListItemButton onClick={toggleWorkspaceDrawer} aria-expanded={workspaceDrawerOpen} sx={{ py: 0 }}>
-            <ListItemText primary="Workspace" secondary={drawerWorkspacesLabel} />
-            {workspaceDrawerOpen ? <ExpandLess /> : <ExpandMore />}
-          </ListItemButton>
+        <Box role="navigation">
+          <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+          <List disablePadding sx={{ mt: 1, mb: 1 }}>
+            {/* Header row that toggles the nested content */}
+            <ListItemButton onClick={toggleWorkspaceDrawer} aria-expanded={workspaceDrawerOpen} sx={{ py: 0 }}>
+              <ListItemText primary="Workspace" secondary={drawerWorkspacesLabel} />
+              {workspaceDrawerOpen ? <ExpandLess /> : <ExpandMore />}
+            </ListItemButton>
 
-          {/* Nested content that opens/closes */}
-          <Collapse in={workspaceDrawerOpen} timeout="auto" unmountOnExit>
-            <List sx={{ pb: 0 }}>
-              <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+            {/* Nested content that opens/closes */}
+            <Collapse in={workspaceDrawerOpen} timeout="auto" unmountOnExit>
+              <List sx={{ pb: 0 }}>
+                <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
 
-              {/* This is for loading */}
-              {loading && (
-                <Typography align="left" sx={{ pl: 3, py: 1, pt: 2 }}>
-                  Loading…
-                </Typography>
-              )}
+                {/* Loading */}
+                {loading && (
+                  <Typography align="left" sx={{ pl: 3, py: 1, pt: 2 }}>
+                    Loading…
+                  </Typography>
+                )}
 
-              {/* This is for errors */}
-              {error && (
-                <Typography color="error" align="left" sx={{ pl: 3, py: 1, pt: 2 }}>
-                  {error}
-                </Typography>
-              )}
+                {/* Error */}
+                {error && (
+                  <Typography color="error" align="left" sx={{ pl: 3, py: 1, pt: 2 }}>
+                    {error}
+                  </Typography>
+                )}
 
-              {/* If we're done loading and there are no errors */}
-              {!error && !loading && (
-                list.map((workspace, i) => (
-                  <React.Fragment key={workspace.id}>
-                    {i !== 0 && (
-                      <Divider sx={{ borderBottomWidth: 2, mr: 2, ml:2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
-                    )}
-                    <ListItemButton dense sx={{ pl: 3, py: .75 }}
-                      onClick={() => {
-                        navigate(`/workspace/${workspace.id}`);
-                      }}
-                    >
-                      <ListItemText primary={workspace.name} />
-                    </ListItemButton>
-                  </React.Fragment>
-                ))
-              )}
-            </List>
-            <Divider sx={{ borderBottomWidth: 2, mr: 2, ml:2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
+                {/* Data */}
+                {!error && !loading && (
+                  list.map((workspace, i) => (
+                    <React.Fragment key={workspace.id}>
+                      {i !== 0 && (
+                        <Divider sx={{ borderBottomWidth: 2, mr: 2, ml: 2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
+                      )}
+                      <ListItemButton
+                        dense
+                        sx={{ pl: 3, py: 0.75 }}
+                        onClick={() => {
+                          navigate(`/workspace/${workspace.id}`);
+                        }}
+                      >
+                        <ListItemText primary={workspace.name} />
+                      </ListItemButton>
+                    </React.Fragment>
+                  ))
+                )}
+              </List>
 
-            {/* By default show the Add New button, otherwise show a TextField & save Workspace*/}
-            { !isAdding ? (
-              <Button dense sx={{ pl: 3, pt: 1.5, pb: .75, fontWeight: 'bold', background:'var(--secondary-background-color)', color: 'var(--secondary-color)'}}
-                startIcon={<Add sx={{ fontSize: 20 }} />}
-                onClick={() => setIsAdding(true)}
-              >
-                Add New
-              </Button>
-            ) : (
-              <Box sx={{ display:'flex', alignItems:'center', px:1, py:0.5 }}>
-                <TextField autoFocus variant="standard" size="small"
-                  sx={{ pl: 2, flexGrow:1, mr:1, justifyContent: 'space-between', color: 'var(--secondary-color)' }}
-                  slotProps={{ input:{ sx:{
-                    color: 'var(--secondary-color)',
-                    '&:after': {borderBottomColor: 'var(--secondary-color)' }}}}}
-                  placeholder="New Workspace Name…"
-                  value={newWorkspaceName}
-                  onChange={event => setNewWorkspaceName(event.target.value)}
-                  onKeyDown={event => {
-                    if (event.key === 'Enter') onAdd();
-                    if (event.key === 'Escape') setIsAdding(false);
+              <Divider sx={{ borderBottomWidth: 2, mr: 2, ml: 2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
+
+              {/* Add New */}
+              {!isAdding ? (
+                <Button
+                  dense
+                  sx={{
+                    pl: 3,
+                    pt: 1.5,
+                    pb: 0.75,
+                    fontWeight: 'bold',
+                    background: 'var(--secondary-background-color)',
+                    color: 'var(--secondary-color)'
                   }}
-                />
-                <IconButton size="small" onClick={onAdd} disabled={!newWorkspaceName.trim()}>
-                  <Add />
-                </IconButton>
-                <IconButton size="small" onClick={() => setIsAdding(false)}>
-                  <Close />
-                </IconButton>
-              </Box>
-            )}
-          </Collapse>
-        </List>
-        <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+                  startIcon={<Add sx={{ fontSize: 20 }} />}
+                  onClick={() => setIsAdding(true)}
+                >
+                  Add New
+                </Button>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
+                  <TextField
+                    autoFocus
+                    variant="standard"
+                    size="small"
+                    sx={{ pl: 2, flexGrow: 1, mr: 1, justifyContent: 'space-between', color: 'var(--secondary-color)' }}
+                    slotProps={{
+                      input: {
+                        sx: {
+                          color: 'var(--secondary-color)',
+                          '&:after': { borderBottomColor: 'var(--secondary-color)' }
+                        }
+                      }
+                    }}
+                    placeholder="New Workspace Name…"
+                    value={newWorkspaceName}
+                    onChange={event => setNewWorkspaceName(event.target.value)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter') onAdd();
+                      if (event.key === 'Escape') setIsAdding(false);
+                    }}
+                  />
+                  <IconButton size="small" onClick={onAdd} disabled={!newWorkspaceName.trim()}>
+                    <Add />
+                  </IconButton>
+                  <IconButton size="small" onClick={() => setIsAdding(false)}>
+                    <Close />
+                  </IconButton>
+                </Box>
+              )}
+            </Collapse>
+          </List>
+          <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+        </Box>
       </Box>
     </Drawer>
   );
