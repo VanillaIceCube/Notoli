@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## 2025-09-28
 ### Added
+- Drawer now dynamically expands when adding a new workspace
+
+## 2025-09-28
+### Added
 - Navigation via `MyDrawer.js`
 - Basic add functionality in `MyDrawer.js`
 ### Changed
