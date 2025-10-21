@@ -4,7 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## 2025-10-13
 ### Added
-- Non-functional triple dot in `MyDrawer.js`
+- Functional delete triple dot option in `MyDrawer.js`
+- Non-Functional edit triple dot option in `MyDrawer.js`
 
 
 ## 2025-10-13

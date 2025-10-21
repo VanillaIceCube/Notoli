@@ -58,7 +58,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
 
 
   // Fetch Workspace List
-  const [list, setList] = useState([]);
+  const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -70,7 +70,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-      setList(data);
+      setWorkspaces(data);
       setError(null);
     } catch (err) {
       setError(err.toString());
@@ -108,7 +108,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const created = await response.json();
-      setList(prev => [...prev, created]);
+      setWorkspaces(prev => [...prev, created]);
 
       setIsAdding(false);
       setNewWorkspaceName('');
@@ -123,10 +123,10 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
   const [selectedWorkspace, setSelectedWorkspace] = useState(null);
   const tripleDotOpen = Boolean(tripleDotAnchorElement);
   
-  const handleTripleDotClick = (event, list) => {
+  const handleTripleDotClick = (event, workspaces) => {
     event.stopPropagation();
     setTripleDotAnchorElement(event.currentTarget);
-    setSelectedWorkspace(list);
+    setSelectedWorkspace(workspaces);
   };
 
   const handleTripleDotClose = () => {
@@ -165,7 +165,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
-      setList(prev => prev.map(workspace => (workspace.id === updated.id ? updated : workspace)));
+      setWorkspaces(prev => prev.map(workspace => (workspace.id === updated.id ? updated : workspace)));
 
       closeEdit();
     } catch (err) {
@@ -194,7 +194,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
       
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      setList(prev => prev.filter(workspace => workspace.id !== id));
+      setWorkspaces(prev => prev.filter(workspace => workspace.id !== id));
     } catch (err) {
       setError(err.toString());
     } finally {
@@ -282,7 +282,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
 
                 {/* Data */}
                 {!error && !loading && (
-                  list.map((workspace, i) => (
+                  workspaces.map((workspace, i) => (
                     <React.Fragment key={workspace.id}>
                       {i !== 0 && (
                         <Divider sx={{ borderBottomWidth: 2, mr: 2, ml: 2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
@@ -295,7 +295,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
                           }}
                         >
                           <ListItemText primary={workspace.name} />
-                          <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
+                          <MoreVert onClick={(event) => handleTripleDotClick(event, workspace)} />
                         </ListItemButton>
                       </React.Fragment>
                     </React.Fragment>
