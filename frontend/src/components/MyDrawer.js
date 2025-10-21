@@ -8,9 +8,11 @@ import {
   Typography,
   Button,
   TextField,
-  IconButton
+  IconButton,
+  Menu,
+  MenuItem
 } from '@mui/material';
-import { Add, Close } from '@mui/icons-material';
+import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { getWorkspaceId } from '../utils/Navigation';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -116,13 +118,98 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
   };
 
 
+  // Triple Dot Menu Functions
+  const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState(null);
+  const tripleDotOpen = Boolean(tripleDotAnchorElement);
+  
+  const handleTripleDotClick = (event, list) => {
+    event.stopPropagation();
+    setTripleDotAnchorElement(event.currentTarget);
+    setSelectedWorkspace(list);
+  };
+
+  const handleTripleDotClose = () => {
+    setTripleDotAnchorElement(null);
+    setSelectedWorkspace(null);
+  };
+
+
+  // Edit Workspace
+  const [editingWorkspaceId, setEditingWorkspaceId] = useState(null);
+  const [editWorkspaceName, setEditWorkspaceName] = useState('');
+
+  const startEditing = () => {
+    setEditingWorkspaceId(selectedWorkspace.id);
+    setEditWorkspaceName(selectedWorkspace.name);
+    handleTripleDotClose();
+  };
+
+  const onEdit = async () => {
+    if (!editWorkspaceName.trim()) return;
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/workspaces/${editingWorkspaceId}/`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: JSON.stringify({ name: editWorkspaceName }),
+        }
+      );
+
+      // Pessimistic Local Merge
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const updated = await response.json();
+      setList(prev => prev.map(workspace => (workspace.id === updated.id ? updated : workspace)));
+
+      closeEdit();
+    } catch (err) {
+      setError(err.toString());
+    }
+  };
+
+  const closeEdit = () => {
+    setEditingWorkspaceId(null);
+    setEditWorkspaceName('');
+  };
+
+
+  // Delete Workspace
+  const onDelete = async (id) => {
+    setError(null);
+
+    try {
+      const response = await fetch(`http://localhost:8000/api/workspaces/${id}/`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+      });
+      
+      // Pessimistic Local Merge
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      setList(prev => prev.filter(workspace => workspace.id !== id));
+    } catch (err) {
+      setError(err.toString());
+    } finally {
+      handleTripleDotClose();
+    }
+  }
+
+
   // Manage Drawer
   const [workspaceDrawerOpen, setWorkspaceDrawerOpen] = useState(false);
   const toggleWorkspaceDrawer = () => setWorkspaceDrawerOpen(prev => !prev);
   const [drawerWidth, setDrawerWidth] = useState(180);
 
   useEffect(() => {
-    setDrawerWidth(isAdding ? 300 : 180);
+    setDrawerWidth(isAdding ? 300 : 200);
   }, [isAdding]);
 
 
@@ -200,13 +287,17 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
                       {i !== 0 && (
                         <Divider sx={{ borderBottomWidth: 2, mr: 2, ml: 2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
                       )}
-                      <ListItemButton dense sx={{ pl: 3, py: 0.75 }}
-                        onClick={() => {
-                          navigate(`/workspace/${workspace.id}`);
-                        }}
-                      >
-                        <ListItemText primary={workspace.name} />
-                      </ListItemButton>
+                      <React.Fragment>
+                        {/* Normal Mode */}
+                        <ListItemButton dense sx={{ pl: 3, py: 0.75 }}
+                          onClick={() => {
+                            navigate(`/workspace/${workspace.id}`);
+                          }}
+                        >
+                          <ListItemText primary={workspace.name} />
+                          <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
+                        </ListItemButton>
+                      </React.Fragment>
                     </React.Fragment>
                   ))
                 )}
@@ -249,6 +340,24 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
           <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
         </Box>
       </Box>
+      {/* Triple dot menu */}
+      <Menu slotProps={{ paper:{ sx:{ backgroundColor: 'var(--secondary-background-color)', color: 'var(--secondary-color)', boxShadow: 3, border: '2.5px solid var(--background-color)', borderRadius: 1.5 }}}}
+        anchorEl={tripleDotAnchorElement}
+        open={tripleDotOpen}
+        onClose={handleTripleDotClose}
+      >
+        <MenuItem sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight:"bold" }}
+          onClick={startEditing}
+        >
+          Edit
+        </MenuItem>
+        <Divider variant="middle" sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
+        <MenuItem sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight:"bold" }}
+          onClick={() => onDelete(selectedWorkspace.id)}
+        >
+          Delete
+        </MenuItem>
+      </Menu>
     </Drawer>
   );
 }

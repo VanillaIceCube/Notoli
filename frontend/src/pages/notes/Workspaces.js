@@ -51,7 +51,7 @@ export default function Workspaces({ setAppBarHeader }) {
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
   const [selectedWorkspace, setSelectedWorkspace] = useState(null);
   const open = Boolean(tripleDotAnchorElement);
-  
+
   const handleTripleDotClick = (event, list) => {
     event.stopPropagation();
     setTripleDotAnchorElement(event.currentTarget);

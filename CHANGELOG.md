@@ -2,7 +2,12 @@
 All notable changes to this project are documented in this file.
 
 
-## 2025-09-28
+## 2025-10-13
+### Added
+- Non-functional triple dot in `MyDrawer.js`
+
+
+## 2025-10-13
 ### Added
 - Drawer now dynamically expands when adding a new workspace
 - <img width="452" height="960" alt="image" src="https://github.com/user-attachments/assets/74875f73-cc5c-4538-a85b-4fe4acd53dd6" />
