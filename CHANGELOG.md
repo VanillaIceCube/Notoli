@@ -1,7 +1,35 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
-## 2025-09-02
+
+## 2025-10-13
+### Added
+- Functional edit and delete triple dot options in `MyDrawer.js`
+- <img width="447" height="953" alt="image" src="https://github.com/user-attachments/assets/288c6c69-9568-4c9b-9df7-d4a29946ab2c" />
+
+
+## 2025-10-13
+### Added
+- Drawer now dynamically expands when adding a new workspace
+- <img width="452" height="960" alt="image" src="https://github.com/user-attachments/assets/74875f73-cc5c-4538-a85b-4fe4acd53dd6" />
+
+
+## 2025-09-28
+### Added
+- Navigation via `MyDrawer.js`
+- Basic add functionality in `MyDrawer.js`
+### Changed
+- Aestetic changes to workspace selector in `MyDrawer.js`
+- Added error and loading messages in `MyDrawer.js`
+
+
+## 2025-09-23
+### Added
+- Workspaces are now in the drawer.
+ - Can't navigate with them yet tho.
+
+
+## 2025-09-22
 ### Added
 - `MyDrawer` now fetches workspace name.
 - <img width="452" height="953" alt="image" src="https://github.com/user-attachments/assets/b581481c-bc33-4c10-808f-01aefc8ff11c" />
@@ -11,12 +39,11 @@ All notable changes to this project are documented in this file.
 - <img width="451" height="956" alt="image" src="https://github.com/user-attachments/assets/bcd079b1-beb5-4078-99a1-650beeb8d58a" />
 
 
-
 ## 2025-09-08
 ### Changed
 - Drawer styling.
 - <img width="449" height="953" alt="image" src="https://github.com/user-attachments/assets/86207c4d-ffa2-4e70-b6a1-58b6b5252287" />
-- modularized `getParentPath` & `goBackToParent` into `Navigation.js`
+- Modularized `getParentPath` & `goBackToParent` into `Navigation.js`
 
 
 ## 2025-09-02
