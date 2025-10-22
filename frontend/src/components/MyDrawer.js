@@ -136,10 +136,12 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
 
 
   // Edit Workspace
+  const [isEditing, setIsEditing] = useState(false);
   const [editingWorkspaceId, setEditingWorkspaceId] = useState(null);
   const [editWorkspaceName, setEditWorkspaceName] = useState('');
 
   const startEditing = () => {
+    setIsEditing(true);
     setEditingWorkspaceId(selectedWorkspace.id);
     setEditWorkspaceName(selectedWorkspace.name);
     handleTripleDotClose();
@@ -174,6 +176,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
   };
 
   const closeEdit = () => {
+    setIsEditing(false);
     setEditingWorkspaceId(null);
     setEditWorkspaceName('');
   };
@@ -209,8 +212,8 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
   const [drawerWidth, setDrawerWidth] = useState(180);
 
   useEffect(() => {
-    setDrawerWidth(isAdding ? 300 : 200);
-  }, [isAdding]);
+    setDrawerWidth(isAdding || isEditing ? 300 : 200);
+  }, [isAdding, isEditing]);
 
 
   return (
@@ -287,17 +290,45 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
                       {i !== 0 && (
                         <Divider sx={{ borderBottomWidth: 2, mr: 2, ml: 2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
                       )}
-                      <React.Fragment>
+                      {editingWorkspaceId === workspace.id ? (
+                        <React.Fragment>
+
+                        {/* Editing  Mode */}
+                          <Box sx={{ display:'flex', alignItems:'center', pl: 3, pt: 1.5, pb: 0.75, mr: 1 }}>
+                            <TextField autoFocus variant="standard" size="small"
+                              sx={{ flexGrow:1, mr:1, justifyContent: 'space-between', color: 'var(--secondary-color)' }}
+                              slotProps={{ input:{ sx:{
+                                color: 'var(--secondary-color)',
+                                '&:after': {borderBottomColor: 'var(--secondary-color)' }}}}}
+                              value={editWorkspaceName}
+                              onChange={event => setEditWorkspaceName(event.target.value)}
+                              onKeyDown={event => {
+                                if (event.key === 'Enter') onEdit();
+                                if (event.key === 'Escape') closeEdit();
+                              }}
+                            />
+                            <IconButton size="small" onClick={onEdit} disabled={!editWorkspaceName.trim()}>
+                              <Add/>
+                            </IconButton>
+                            <IconButton size="small" onClick={closeEdit}>
+                              <Close/>
+                            </IconButton>
+                          </Box>
+                        </React.Fragment>
+                      ) : (
+                        <React.Fragment>
+
                         {/* Normal Mode */}
-                        <ListItemButton dense sx={{ pl: 3, py: 0.75 }}
-                          onClick={() => {
-                            navigate(`/workspace/${workspace.id}`);
-                          }}
-                        >
-                          <ListItemText primary={workspace.name} />
-                          <MoreVert onClick={(event) => handleTripleDotClick(event, workspace)} />
-                        </ListItemButton>
-                      </React.Fragment>
+                          <ListItemButton dense sx={{ pl: 3, py: 0.75 }}
+                            onClick={() => {
+                              navigate(`/workspace/${workspace.id}`);
+                            }}
+                          >
+                            <ListItemText primary={workspace.name} />
+                            <MoreVert onClick={(event) => handleTripleDotClick(event, workspace)} />
+                          </ListItemButton>
+                        </React.Fragment>
+                      )}
                     </React.Fragment>
                   ))
                 )}
