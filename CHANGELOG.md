@@ -5,6 +5,8 @@ All notable changes to this project are documented in this file.
 ## 2025-10-13
 ### Added
 - Functional edit and delete triple dot options in `MyDrawer.js`
+- <img width="447" height="953" alt="image" src="https://github.com/user-attachments/assets/288c6c69-9568-4c9b-9df7-d4a29946ab2c" />
+
 
 
 ## 2025-10-13
