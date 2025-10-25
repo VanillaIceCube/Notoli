@@ -15,32 +15,21 @@ export default function Login({ showSnackbar }) {
   // Basics
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [token, setToken] = useState(() => sessionStorage.getItem('accessToken'));
 
   const navigate = useNavigate();
 
 
   // Pull Workspace List
-  const [workspaces, setWorkspaces] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
   const fetchWorkspaces = useCallback(async (token) => {
-    setLoading(true);
     try {
       const response = await fetch('http://localhost:8000/api/workspaces/', {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-      setWorkspaces(data);
-      setError(null);
       return data;
     } catch (err) {
-      setError(err.toString());
       return []
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -65,9 +54,9 @@ export default function Login({ showSnackbar }) {
       showSnackbar('success', 'Login successful!');
 
       // Navigate to first Workspace, if empty, navigate to root
-      const ws = await fetchWorkspaces(data.access)
-      if (ws.length > 0) {
-        navigate(`/workspace/${Math.min(...ws.map(w => w.id))}`)
+      const workspaces = await fetchWorkspaces(data.access)
+      if (workspaces.length > 0) {
+        navigate(`/workspace/${Math.min(...workspaces.map(ws => ws.id))}`)
       } else {
         navigate('/')
       }
