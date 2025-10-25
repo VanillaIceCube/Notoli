@@ -1,15 +1,15 @@
-import { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
   TextField,
   Button,
   Typography,
-  Container,
   Box,
   Paper,
   Stack
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+
 
 export default function Login({ showSnackbar }) {
   // Basics
@@ -17,6 +17,35 @@ export default function Login({ showSnackbar }) {
   const [password, setPassword] = useState('');
 
   const navigate = useNavigate();
+
+
+  // Pull Workspace List
+  const token = sessionStorage.getItem('accessToken');
+  const [workspaces, setWorkspaces] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchWorkspaces = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/workspaces/', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      setWorkspaces(data);
+      setError(null);
+    } catch (err) {
+      setError(err.toString());
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchWorkspaces();
+  }, [fetchWorkspaces]);
+
 
   // Login function
   const handleLogin = async () => {
@@ -33,7 +62,13 @@ export default function Login({ showSnackbar }) {
       // Update Snackbar
       showSnackbar('success', 'Login successful!');
 
-      navigate('/')
+
+      // Navigate to first Workspace, if empty, navigate to root
+      if (workspaces.length > 0) {
+        navigate(`/workspace/${Math.min(...workspaces.map(ws => ws.id))}`)
+      } else {
+        navigate('/')
+      }
     } catch (err) {
 
       // Update Snackbar
@@ -41,6 +76,7 @@ export default function Login({ showSnackbar }) {
       console.error(err);
     }
   };
+
 
   return (
     <Stack spacing={2} alignItems="center" maxWidth="sm" sx={{ p:5.5, mx:'auto', display:'flex', justifyContent:'center', alignItems:'center', minHeight:'85vh' }}>
