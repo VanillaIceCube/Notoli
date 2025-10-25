@@ -2,6 +2,11 @@
 All notable changes to this project are documented in this file.
 
 
+## 2025-10-25
+### Removed
+- Ability to navigate backwards from TodoLists page
+
+
 ## 2025-10-13
 ### Added
 - Functional edit and delete triple dot options in `MyDrawer.js`

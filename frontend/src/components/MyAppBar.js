@@ -27,7 +27,7 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
         <Toolbar>
           {
             // Don't render back button on the base page
-            location.pathname !== '/' && (
+            location.pathname.includes ('/todolist') && (
               <IconButton size="large" edge="start" color="inherit" aria-label="back button"
                 onClick={handleBack}
               >
