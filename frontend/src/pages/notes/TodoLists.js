@@ -16,7 +16,7 @@ import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 
-export default function TodoLists({ setAppBarHeader }) {
+export default function TodoLists() {
   // Misc
   const navigate = useNavigate();
 
@@ -55,11 +55,10 @@ export default function TodoLists({ setAppBarHeader }) {
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const workspaceData = await response.json();
-      setAppBarHeader(workspaceData?.name ?? '');
     } catch (err) {
       setError(err.toString());
     }
-  }, [workspaceId, token, setAppBarHeader]);
+  }, [workspaceId, token]);
 
   useEffect(() => {
     if (workspaceId) {

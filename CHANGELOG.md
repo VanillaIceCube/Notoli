@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file.
 - Login now directs to first Workspace 
 ### Removed
 - Ability to navigate backwards from TodoLists page
+- Header in Todolists page
 
 
 ## 2025-10-13
