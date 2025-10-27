@@ -16,9 +16,14 @@ import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 
-export default function TodoLists() {
+export default function TodoLists({ setAppBarHeader }) {
   // Misc
   const navigate = useNavigate();
+
+  // Clear Appbar Header when landing on page (and a bunch of other times too)
+  useEffect(() => {
+    setAppBarHeader('');
+  }, [setAppBarHeader]);
 
   // Pull Workspace ID
   const { workspaceId } = useParams();
