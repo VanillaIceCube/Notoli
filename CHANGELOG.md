@@ -3,6 +3,9 @@ All notable changes to this project are documented in this file.
 
 
 ## 2025-10-25
+### Added
+- frontend linting
+- parts of backend linting
 ### Fixed
 - Appbar Header now removes Header within TodoLists page
 
