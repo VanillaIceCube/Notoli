@@ -2,6 +2,19 @@
 All notable changes to this project are documented in this file.
 
 
+## 2025-10-25
+### Fixed
+- Appbar Header now removes Header within TodoLists page
+
+
+## 2025-10-25
+### Changes
+- Login now directs to first Workspace 
+### Removed
+- Ability to navigate backwards from TodoLists page
+- Header in Todolists page
+
+
 ## 2025-10-13
 ### Added
 - Functional edit and delete triple dot options in `MyDrawer.js`

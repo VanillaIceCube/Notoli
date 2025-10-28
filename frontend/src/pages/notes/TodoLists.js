@@ -20,6 +20,11 @@ export default function TodoLists({ setAppBarHeader }) {
   // Misc
   const navigate = useNavigate();
 
+  // Clear Appbar Header when landing on page (and a bunch of other times too)
+  useEffect(() => {
+    setAppBarHeader('');
+  }, [setAppBarHeader]);
+
   // Pull Workspace ID
   const { workspaceId } = useParams();
 
@@ -55,11 +60,10 @@ export default function TodoLists({ setAppBarHeader }) {
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const workspaceData = await response.json();
-      setAppBarHeader(workspaceData?.name ?? '');
     } catch (err) {
       setError(err.toString());
     }
-  }, [workspaceId, token, setAppBarHeader]);
+  }, [workspaceId, token]);
 
   useEffect(() => {
     if (workspaceId) {
