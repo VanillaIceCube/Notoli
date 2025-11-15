@@ -2,6 +2,10 @@
 All notable changes to this project are documented in this file.
 
 
+## 11-15-2025
+### Added
+- Added instructions to the `environment.yml`
+
 ## 2025-10-25
 ### Fixed
 - Appbar Header now removes Header within TodoLists page
