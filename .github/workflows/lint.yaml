@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   changes:
@@ -53,6 +53,12 @@ jobs:
 
       - name: Install dependancies
         run: npm ci
+
+      - name: Prettier (auto-fix)
+        run: npm run format
+
+      - name: ESLint (auto-fix)
+        run: npm run lint -- --fix
 
       - name: Prettier (check only)
         run: npm run format:check

@@ -1,10 +1,13 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2025-11-15
+### Added
+- Frontend Auto-Fix Linting
 
 ## 2025-10-25
 ### Added
-- frontend linting tests
+- Frontend linting tests
 ### Fixed
 - Appbar Header now removes Header within TodoLists page
 
