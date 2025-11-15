@@ -51,26 +51,11 @@ export default function TodoLists({ setAppBarHeader }) {
     }
   }, [token, workspaceId]);
 
-  // Fetch Workspace required for Title Header
-  const fetchWorkspaceName  = useCallback(async () => {
-    if (!workspaceId) return;
-    try {
-      const response = await fetch(`http://localhost:8000/api/workspaces/${workspaceId}/`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const workspaceData = await response.json();
-    } catch (err) {
-      setError(err.toString());
-    }
-  }, [workspaceId, token]);
-
   useEffect(() => {
     if (workspaceId) {
       fetchTodoLists();
-      fetchWorkspaceName();
     }
-  }, [workspaceId, fetchTodoLists, fetchWorkspaceName]);
+  }, [workspaceId, fetchTodoLists]);
 
   // Triple Dot Menu Functions
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
