@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 ### Added
 - Frontend Auto-Fix Linting
 ### Removed
-- `fetchWorkspaceName` & `workspaceData` as they're no longer used.
+- `fetchWorkspaceName` & `workspaceData` as they're no longer used
 
 ## 2025-10-25
 ### Added
