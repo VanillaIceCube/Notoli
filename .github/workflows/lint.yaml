@@ -91,6 +91,9 @@ jobs:
           cache: 'pip'
           cache-dependency-path: backend/environment.yml
 
+      - name: Install deps
+        run: pip install ruff
+
       - name: Ruff (auto-fix)
         run: ruff check . --fix
 
