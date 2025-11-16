@@ -63,7 +63,7 @@ jobs:
       - name: Commit auto-fixes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore: apply Prettier & ESLint automatic lint fixes"
+          commit_message: "Github Actions: Prettier & ESLint automatic lint fixes"
           branch: ${{ github.head_ref }}
           file_pattern: |
             frontend/**/*
