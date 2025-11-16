@@ -47,23 +47,32 @@ jobs:
         id: openai
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
         run: |
           if [ -z "$OPENAI_API_KEY" ]; then
-            echo "OPENAI_API_KEY is not set. Add it as a repository secret."
-            echo "review=OpenAI API key is missing. Set the OPENAI_API_KEY secret in your repo settings." >> "$GITHUB_OUTPUT"
+            echo "review=Missing OPENAI_API_KEY secret." >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Flatten the diff into a single line (avoid giant newlines, tokens)
+          if [ -z "$OPENAI_PROJECT_ID" ]; then
+            echo "review=Missing OPENAI_PROJECT_ID secret." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Flatten the diff (avoid breaking JSON)
           DIFF_CONTENT=$(tr '\n' ' ' < pr.diff)
 
-          # Build prompt as a normal shell string (no JSON yet)
+          # Build prompt
           PROMPT="You are a senior engineer reviewing a pull request for the Notoli project. The stack is: Backend: Django; Frontend: React + Material UI; Environment Management: Conda; Deployment: Docker; CI/CD & Workflows: GitHub Actions. Provide concise, actionable feedback about potential bugs or logic issues, confusing or hard-to-maintain code, and performance or security concerns. Don't gas me up. Be brutally honest. Here is the diff: ${DIFF_CONTENT}"
 
-          # Use jq to build a valid JSON body so we don't have to manually escape anything
-          jq -n --arg prompt "$PROMPT" '
+          # Build JSON body with jq (safe escaping)
+          jq -n \
+            --arg prompt "$PROMPT" \
+            --arg project "$OPENAI_PROJECT_ID" \
+            '
             {
               model: "gpt-4.1-mini",
+              project: $project,
               temperature: 0.3,
               messages: [
                 {
@@ -76,26 +85,29 @@ jobs:
                 }
               ]
             }
-          ' > body.json
+            ' > body.json
 
+          # Make API request
           RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/chat/completions" \
             -H "Content-Type: application/json" \
-            -H "Authorization: Bearer '"$OPENAI_API_KEY"'" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
             --data @body.json)
 
           echo "Raw response:"
           echo "$RESPONSE"
 
+          # Extract review text or error
           REVIEW=$(echo "$RESPONSE" | jq -r '
             if .choices and .choices[0].message and .choices[0].message.content then
               .choices[0].message.content
             elif .error and .error.message then
               "OpenAI API error: " + .error.message
             else
-              "OpenAI did not return a review. Check the workflow logs for details."
+              "OpenAI did not return a review."
             end
           ')
 
+          # Escape for GitHub output
           REVIEW_ESCAPED=$(printf '%s\n' "$REVIEW" | sed 's/%/%25/g; s/\n/%0A/g; s/\r/%0D/g')
           echo "review=$REVIEW_ESCAPED" >> "$GITHUB_OUTPUT"
 
