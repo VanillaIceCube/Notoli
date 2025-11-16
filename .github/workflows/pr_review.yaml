@@ -63,7 +63,7 @@ jobs:
           DIFF_CONTENT=$(cat pr.diff)
 
           # Build prompt
-          PROMPT="You are a senior engineer reviewing a pull request for the Notoli project. The stack is: Backend: Django; Frontend: React + Material UI; Environment Management: Conda; Deployment: Docker; CI/CD & Workflows: GitHub Actions. Provide concise, actionable feedback about potential bugs or logic issues, confusing or hard-to-maintain code, and performance or security concerns. Don't gas me up. Be brutally honest. Here is the diff: ${DIFF_CONTENT}"
+          PROMPT="You are a senior engineer reviewing a pull request for the Notoli project. The tech stack is: Backend: Django; Frontend: React + Material UI; Environment: Conda; Deployment: Docker; CI/CD: GitHub Actions. Review the diff and give concise, brutally honest, actionable feedback. Your response MUST use the following exact sections, in order, each containing bullet points (or '(none)' if empty): ## 🔴 Critical Issues (must fix before merge): ... ## 🟠 Major Issues (should fix): ... ## 🟡 Minor Issues (nice to fix): ... ## 🔵 Suggestions & Improvements (optional): ... ## 🟣 Observations (non-actionable): ... Do NOT include anything outside these sections and do NOT restate the diff. Here is the diff: ${DIFF_CONTENT}"
 
           # Build JSON safely
           jq -n \
