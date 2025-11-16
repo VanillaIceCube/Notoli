@@ -1,13 +1,7 @@
-import {
-  AppBar,
-  Box,
-  Toolbar,
-  Typography,
-  IconButton
-} from '@mui/material';
+import { AppBar, Box, Toolbar, Typography, IconButton } from '@mui/material';
 import { Menu as MenuIcon, AccountCircle, Notifications, ChevronLeft } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { goBackToParent } from "../utils/Navigation";
+import { goBackToParent } from '../utils/Navigation';
 
 export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
   const location = useLocation();
@@ -23,12 +17,23 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static" sx={{ color: 'var(--secondary-background-color)', background: 'var(--background-color)', boxShadow: 'none' }}>
+      <AppBar
+        position="static"
+        sx={{
+          color: 'var(--secondary-background-color)',
+          background: 'var(--background-color)',
+          boxShadow: 'none',
+        }}
+      >
         <Toolbar>
           {
             // Don't render back button on the base page
-            location.pathname.includes ('/todolist') && (
-              <IconButton size="large" edge="start" color="inherit" aria-label="back button"
+            location.pathname.includes('/todolist') && (
+              <IconButton
+                size="large"
+                edge="start"
+                color="inherit"
+                aria-label="back button"
                 onClick={handleBack}
               >
                 <ChevronLeft />
@@ -44,8 +49,12 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
           <IconButton size="large" color="inherit" aria-label="user profile">
             <AccountCircle />
           </IconButton>
-          <IconButton size="large" edge="end" color="inherit" aria-label="menu"
-            onClick={() => setDrawerOpen(previous => !previous)}
+          <IconButton
+            size="large"
+            edge="end"
+            color="inherit"
+            aria-label="menu"
+            onClick={() => setDrawerOpen((previous) => !previous)}
           >
             <MenuIcon />
           </IconButton>

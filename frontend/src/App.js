@@ -12,70 +12,69 @@ import MyDrawer from './components/MyDrawer';
 
 function App() {
   // App Bar
-  const [appBarHeader, setAppBarHeader] = useState('')
+  const [appBarHeader, setAppBarHeader] = useState('');
 
   // Drawer
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [drawerWorkspacesLabel, setDrawerWorkspacesLabel] = useState('')
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerWorkspacesLabel, setDrawerWorkspacesLabel] = useState('');
 
   // Snackbar
-  const [snackbarOpen, setSnackbarOpen] = useState(false)
-  const [snackbarSeverity, setSnackbarSeverity] = useState('')
-  const [snackbarMessage, setSnackbarMessage] = useState('')
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarSeverity, setSnackbarSeverity] = useState('');
+  const [snackbarMessage, setSnackbarMessage] = useState('');
 
   const showSnackbar = (severity, message) => {
-    setSnackbarSeverity(severity)
-    setSnackbarMessage(message)
-    setSnackbarOpen(true)
-  }
+    setSnackbarSeverity(severity);
+    setSnackbarMessage(message);
+    setSnackbarOpen(true);
+  };
 
   const handleSnackbarClose = (_event, reason) => {
-    if (reason === 'clickaway') return
-    setSnackbarOpen(false)
-  }
+    if (reason === 'clickaway') return;
+    setSnackbarOpen(false);
+  };
 
   return (
     <React.Fragment>
       <Router>
-        <MyAppBar
-          appBarHeader={appBarHeader}
-          setDrawerOpen={setDrawerOpen}
-        />
+        <MyAppBar appBarHeader={appBarHeader} setDrawerOpen={setDrawerOpen} />
         <MyDrawer
           open={drawerOpen}
           setDrawerOpen={setDrawerOpen}
           drawerWorkspacesLabel={drawerWorkspacesLabel}
-          setDrawerWorkspacesLabel = {setDrawerWorkspacesLabel}
+          setDrawerWorkspacesLabel={setDrawerWorkspacesLabel}
         />
         <Routes>
-          <Route path="/login" element={<Login showSnackbar={showSnackbar} />}/>
-          
+          <Route path="/login" element={<Login showSnackbar={showSnackbar} />} />
+
           <React.Fragment>
-            <Route path="/" element=
-              {
+            <Route
+              path="/"
+              element={
                 <AuthenticatedRoute>
                   <Workspaces setAppBarHeader={setAppBarHeader} />
                 </AuthenticatedRoute>
               }
             />
 
-            <Route path="/workspace/:workspaceId" element=
-              {
+            <Route
+              path="/workspace/:workspaceId"
+              element={
                 <AuthenticatedRoute>
                   <TodoLists setAppBarHeader={setAppBarHeader} />
                 </AuthenticatedRoute>
               }
             />
 
-            <Route path="/workspace/:workspaceId/todolist/:todoListId" element=
-              {
+            <Route
+              path="/workspace/:workspaceId/todolist/:todoListId"
+              element={
                 <AuthenticatedRoute>
                   <Notes setAppBarHeader={setAppBarHeader} />
                 </AuthenticatedRoute>
               }
             />
           </React.Fragment>
-
         </Routes>
       </Router>
       <MySnackbar
@@ -85,7 +84,7 @@ function App() {
         onClose={handleSnackbarClose}
       />
     </React.Fragment>
-  )
+  );
 }
 
-export default App
+export default App;

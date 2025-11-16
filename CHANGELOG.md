@@ -2,11 +2,17 @@
 All notable changes to this project are documented in this file.
 
 
-## 11-15-2025
+## 2025-11-15
 ### Added
+- Frontend Auto-Fix Linting
 - Added instructions to the `environment.yml`
+### Removed
+- `fetchWorkspaceName` & `workspaceData` as they're no longer used
+
 
 ## 2025-10-25
+### Added
+- Frontend linting tests
 ### Fixed
 - Appbar Header now removes Header within TodoLists page
 

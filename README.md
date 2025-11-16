@@ -7,14 +7,15 @@ It’s designed to support **multiple views** of the same list — so my wife, D
 
 ## 🚀 Tech Stack
 
-**Backend:** Django  
-**Frontend:** React + Material UI  
-**Environment Management:** Conda  
+**Backend:** Django
+**Frontend:** React + Material UI
+**Environment Management:** Conda
 **Deployment:** Docker
+**CI/CD & Workflows:** Github Actions
 
 ## 📜 License
 
-This project is licensed under a **Modified MIT License (Non-Commercial Use Only)**.  
+This project is licensed under a **Modified MIT License (Non-Commercial Use Only)**.
 See the [LICENSE](./LICENSE) file for full details.
 
 ## 🙏 Acknowledgments

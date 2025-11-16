@@ -1,15 +1,14 @@
 export const getWorkspaceId = (path) => {
   // /workspace/:wid/todolist/:tlid
   const todolistMatch = path.match(/^\/workspace\/([^/]+)\/todolist\/[^/]+$/);
-  if (todolistMatch) return todolistMatch[1];  // just workspaceId
+  if (todolistMatch) return todolistMatch[1]; // just workspaceId
 
   // /workspace/:wid
   const workspaceMatch = path.match(/^\/workspace\/([^/]+)$/);
-  if (workspaceMatch) return workspaceMatch[1];  // just workspaceId
+  if (workspaceMatch) return workspaceMatch[1]; // just workspaceId
 
   return null;
 };
-
 
 export const getParentPath = (path) => {
   //  todolist <-- notes
@@ -22,7 +21,6 @@ export const getParentPath = (path) => {
   const workspacePath = path.match(/^\/workspace\/[^/]+$/);
   if (workspacePath) return '/';
 };
-
 
 export const goBackToParent = (path, navigate) => {
   const target = getParentPath(path);
