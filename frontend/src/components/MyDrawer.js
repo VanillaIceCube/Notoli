@@ -10,7 +10,7 @@ import {
   TextField,
   IconButton,
   Menu,
-  MenuItem,
+  MenuItem
 } from '@mui/material';
 import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
@@ -24,7 +24,7 @@ export default function MyDrawer({
   open,
   setDrawerOpen,
   drawerWorkspacesLabel,
-  setDrawerWorkspacesLabel,
+  setDrawerWorkspacesLabel
 }) {
   // Navigate using Drawer
   const navigate = useNavigate();
@@ -38,7 +38,7 @@ export default function MyDrawer({
     if (!workspaceId) return '';
     try {
       const response = await fetch(`http://localhost:8000/api/workspaces/${workspaceId}/`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const workspaceData = await response.json();
@@ -68,7 +68,7 @@ export default function MyDrawer({
     setLoading(true);
     try {
       const response = await fetch('http://localhost:8000/api/workspaces/', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
@@ -98,12 +98,12 @@ export default function MyDrawer({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
+          ...(token && { Authorization: `Bearer ${token}` })
         },
         body: JSON.stringify({
           name: newWorkspaceName,
-          description: '',
-        }),
+          description: ''
+        })
       });
 
       // Pessimistic Local Merge
@@ -155,16 +155,16 @@ export default function MyDrawer({
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
+          ...(token && { Authorization: `Bearer ${token}` })
         },
-        body: JSON.stringify({ name: editWorkspaceName }),
+        body: JSON.stringify({ name: editWorkspaceName })
       });
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
       setWorkspaces((prev) =>
-        prev.map((workspace) => (workspace.id === updated.id ? updated : workspace)),
+        prev.map((workspace) => (workspace.id === updated.id ? updated : workspace))
       );
 
       closeEdit();
@@ -188,8 +188,8 @@ export default function MyDrawer({
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
+          ...(token && { Authorization: `Bearer ${token}` })
+        }
       });
 
       // Pessimistic Local Merge
@@ -222,9 +222,9 @@ export default function MyDrawer({
           bgcolor: 'var(--secondary-background-color)',
           color: 'var(--secondary-color)',
           borderTopLeftRadius: 15,
-          borderBottomLeftRadius: 15,
+          borderBottomLeftRadius: 15
         },
-        '& .MuiListItemText-primary': { fontWeight: 'bold' },
+        '& .MuiListItemText-primary': { fontWeight: 'bold' }
       }}
     >
       {/* Width-animated container */}
@@ -233,7 +233,7 @@ export default function MyDrawer({
           width: drawerWidth,
           transition: theme.transitions.create('width', {
             duration: theme.transitions.duration.standard,
-            easing: theme.transitions.easing.easeInOut,
+            easing: theme.transitions.easing.easeInOut
           }),
           willChange: 'width',
           overflow: 'hidden',
@@ -241,7 +241,7 @@ export default function MyDrawer({
           bgcolor: 'var(--secondary-background-color)',
           color: 'var(--secondary-color)',
           borderTopLeftRadius: 15,
-          borderBottomLeftRadius: 15,
+          borderBottomLeftRadius: 15
         })}
       >
         <Typography
@@ -303,7 +303,7 @@ export default function MyDrawer({
                             ml: 2,
                             my: 0.1,
                             px: 0,
-                            bgcolor: 'var(--secondary-color)',
+                            bgcolor: 'var(--secondary-color)'
                           }}
                         />
                       )}
@@ -317,7 +317,7 @@ export default function MyDrawer({
                               pl: 3,
                               pt: 1.5,
                               pb: 0.75,
-                              mr: 1,
+                              mr: 1
                             }}
                           >
                             <TextField
@@ -328,15 +328,15 @@ export default function MyDrawer({
                                 flexGrow: 1,
                                 mr: 1,
                                 justifyContent: 'space-between',
-                                color: 'var(--secondary-color)',
+                                color: 'var(--secondary-color)'
                               }}
                               slotProps={{
                                 input: {
                                   sx: {
                                     color: 'var(--secondary-color)',
-                                    '&:after': { borderBottomColor: 'var(--secondary-color)' },
-                                  },
-                                },
+                                    '&:after': { borderBottomColor: 'var(--secondary-color)' }
+                                  }
+                                }
                               }}
                               value={editWorkspaceName}
                               onChange={(event) => setEditWorkspaceName(event.target.value)}
@@ -383,7 +383,7 @@ export default function MyDrawer({
                   ml: 2,
                   my: 0.1,
                   px: 0,
-                  bgcolor: 'var(--secondary-color)',
+                  bgcolor: 'var(--secondary-color)'
                 }}
               />
 
@@ -397,7 +397,7 @@ export default function MyDrawer({
                     pb: 0.75,
                     fontWeight: 'bold',
                     background: 'var(--secondary-background-color)',
-                    color: 'var(--secondary-color)',
+                    color: 'var(--secondary-color)'
                   }}
                   startIcon={<Add sx={{ fontSize: 20 }} />}
                   onClick={() => setIsAdding(true)}
@@ -415,15 +415,15 @@ export default function MyDrawer({
                       flexGrow: 1,
                       mr: 1,
                       justifyContent: 'space-between',
-                      color: 'var(--secondary-color)',
+                      color: 'var(--secondary-color)'
                     }}
                     slotProps={{
                       input: {
                         sx: {
                           color: 'var(--secondary-color)',
-                          '&:after': { borderBottomColor: 'var(--secondary-color)' },
-                        },
-                      },
+                          '&:after': { borderBottomColor: 'var(--secondary-color)' }
+                        }
+                      }
                     }}
                     placeholder="New Workspace Name..."
                     value={newWorkspaceName}
@@ -457,9 +457,9 @@ export default function MyDrawer({
               color: 'var(--secondary-color)',
               boxShadow: 3,
               border: '2.5px solid var(--background-color)',
-              borderRadius: 1.5,
-            },
-          },
+              borderRadius: 1.5
+            }
+          }
         }}
         anchorEl={tripleDotAnchorElement}
         open={tripleDotOpen}
