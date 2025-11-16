@@ -14,7 +14,7 @@ export default function Login({ showSnackbar }) {
   const fetchWorkspaces = useCallback(async (token) => {
     try {
       const response = await fetch('http://localhost:8000/api/workspaces/', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
@@ -33,7 +33,7 @@ export default function Login({ showSnackbar }) {
     try {
       const { data } = await axios.post('http://localhost:8000/auth/login/', {
         username,
-        password
+        password,
       });
 
       // Save tokens
@@ -68,7 +68,7 @@ export default function Login({ showSnackbar }) {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        minHeight: '85vh'
+        minHeight: '85vh',
       }}
     >
       <Typography variant="h3" sx={{ mt: 2, fontWeight: 'bold', color: 'white' }}>

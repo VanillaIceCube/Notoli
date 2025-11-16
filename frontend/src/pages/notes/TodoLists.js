@@ -9,7 +9,7 @@ import {
   MenuItem,
   Box,
   TextField,
-  IconButton
+  IconButton,
 } from '@mui/material';
 import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
@@ -40,8 +40,8 @@ export default function TodoLists({ setAppBarHeader }) {
       const response = await fetch(
         `http://localhost:8000/api/todolists/?workspace=${workspaceId}`,
         {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        }
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
       );
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
@@ -91,14 +91,14 @@ export default function TodoLists({ setAppBarHeader }) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` })
+            ...(token && { Authorization: `Bearer ${token}` }),
           },
           body: JSON.stringify({
             name: newTodoListName,
             workspace: workspaceId,
-            description: ''
-          })
-        }
+            description: '',
+          }),
+        },
       );
 
       // Pessimistic Local Merge
@@ -132,9 +132,9 @@ export default function TodoLists({ setAppBarHeader }) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` })
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
-        body: JSON.stringify({ name: editTodoListName })
+        body: JSON.stringify({ name: editTodoListName }),
       });
 
       // Pessimistic Local Merge
@@ -162,8 +162,8 @@ export default function TodoLists({ setAppBarHeader }) {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` })
-        }
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
       });
 
       // Pessimistic Local Merge
@@ -226,15 +226,15 @@ export default function TodoLists({ setAppBarHeader }) {
                             flexGrow: 1,
                             mr: 1,
                             justifyContent: 'space-between',
-                            color: 'var(--secondary-color)'
+                            color: 'var(--secondary-color)',
                           }}
                           slotProps={{
                             input: {
                               sx: {
                                 color: 'var(--secondary-color)',
-                                '&:after': { borderBottomColor: 'var(--secondary-color)' }
-                              }
-                            }
+                                '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                              },
+                            },
                           }}
                           value={editTodoListName}
                           onChange={(event) => setEditTodoListName(event.target.value)}
@@ -265,7 +265,7 @@ export default function TodoLists({ setAppBarHeader }) {
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           background: 'var(--secondary-background-color)',
-                          color: 'var(--secondary-color)'
+                          color: 'var(--secondary-color)',
                         }}
                         onClick={() => navigate(`/workspace/${workspaceId}/todolist/${list.id}`)}
                       >
@@ -302,7 +302,7 @@ export default function TodoLists({ setAppBarHeader }) {
                   alignItems: 'center',
                   justifyContent: 'left',
                   background: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)'
+                  color: 'var(--secondary-color)',
                 }}
                 startIcon={<Add />}
                 onClick={() => setIsAdding(true)}
@@ -326,15 +326,15 @@ export default function TodoLists({ setAppBarHeader }) {
                     flexGrow: 1,
                     mr: 1,
                     justifyContent: 'space-between',
-                    color: 'var(--secondary-color)'
+                    color: 'var(--secondary-color)',
                   }}
                   slotProps={{
                     input: {
                       sx: {
                         color: 'var(--secondary-color)',
-                        '&:after': { borderBottomColor: 'var(--secondary-color)' }
-                      }
-                    }
+                        '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                      },
+                    },
                   }}
                   placeholder="New TodoList Name…"
                   value={newTodoListName}
@@ -364,9 +364,9 @@ export default function TodoLists({ setAppBarHeader }) {
                 color: 'var(--secondary-color)',
                 boxShadow: 3,
                 border: '2.5px solid var(--background-color)',
-                borderRadius: 1.5
-              }
-            }
+                borderRadius: 1.5,
+              },
+            },
           }}
           anchorEl={tripleDotAnchorElement}
           open={open}
