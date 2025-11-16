@@ -9,7 +9,7 @@ import {
   MenuItem,
   Box,
   TextField,
-  IconButton
+  IconButton,
 } from '@mui/material';
 import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
@@ -29,7 +29,7 @@ export default function Workspaces({ setAppBarHeader }) {
     setLoading(true);
     try {
       const response = await fetch('http://localhost:8000/api/workspaces/', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
@@ -76,12 +76,12 @@ export default function Workspaces({ setAppBarHeader }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` })
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify({
           name: newWorkspaceName,
-          description: ''
-        })
+          description: '',
+        }),
       });
 
       // Pessimistic Local Merge
@@ -115,16 +115,16 @@ export default function Workspaces({ setAppBarHeader }) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` })
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
-        body: JSON.stringify({ name: editWorkspaceName })
+        body: JSON.stringify({ name: editWorkspaceName }),
       });
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
       setLists((prev) =>
-        prev.map((workspace) => (workspace.id === updated.id ? updated : workspace))
+        prev.map((workspace) => (workspace.id === updated.id ? updated : workspace)),
       );
 
       closeEdit();
@@ -147,8 +147,8 @@ export default function Workspaces({ setAppBarHeader }) {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` })
-        }
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
       });
 
       // Pessimistic Local Merge
@@ -211,15 +211,15 @@ export default function Workspaces({ setAppBarHeader }) {
                             flexGrow: 1,
                             mr: 1,
                             justifyContent: 'space-between',
-                            color: 'var(--secondary-color)'
+                            color: 'var(--secondary-color)',
                           }}
                           slotProps={{
                             input: {
                               sx: {
                                 color: 'var(--secondary-color)',
-                                '&:after': { borderBottomColor: 'var(--secondary-color)' }
-                              }
-                            }
+                                '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                              },
+                            },
                           }}
                           value={editWorkspaceName}
                           onChange={(event) => setEditWorkspaceName(event.target.value)}
@@ -250,7 +250,7 @@ export default function Workspaces({ setAppBarHeader }) {
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           background: 'var(--secondary-background-color)',
-                          color: 'var(--secondary-color)'
+                          color: 'var(--secondary-color)',
                         }}
                         onClick={() => navigate(`/workspace/${list.id}`)}
                       >
@@ -287,7 +287,7 @@ export default function Workspaces({ setAppBarHeader }) {
                   alignItems: 'center',
                   justifyContent: 'left',
                   background: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)'
+                  color: 'var(--secondary-color)',
                 }}
                 startIcon={<Add />}
                 onClick={() => setIsAdding(true)}
@@ -311,15 +311,15 @@ export default function Workspaces({ setAppBarHeader }) {
                     flexGrow: 1,
                     mr: 1,
                     justifyContent: 'space-between',
-                    color: 'var(--secondary-color)'
+                    color: 'var(--secondary-color)',
                   }}
                   slotProps={{
                     input: {
                       sx: {
                         color: 'var(--secondary-color)',
-                        '&:after': { borderBottomColor: 'var(--secondary-color)' }
-                      }
-                    }
+                        '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                      },
+                    },
                   }}
                   placeholder="New Workspace Name…"
                   value={newWorkspaceName}
@@ -349,9 +349,9 @@ export default function Workspaces({ setAppBarHeader }) {
                 color: 'var(--secondary-color)',
                 boxShadow: 3,
                 border: '2.5px solid var(--background-color)',
-                borderRadius: 1.5
-              }
-            }
+                borderRadius: 1.5,
+              },
+            },
           }}
           anchorEl={tripleDotAnchorElement}
           open={open}
