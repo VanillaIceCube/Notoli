@@ -59,38 +59,31 @@ jobs:
             exit 0
           fi
 
-          # Flatten the diff (avoid breaking JSON)
+          # Flatten the diff
           DIFF_CONTENT=$(tr '\n' ' ' < pr.diff)
 
           # Build prompt
           PROMPT="You are a senior engineer reviewing a pull request for the Notoli project. The stack is: Backend: Django; Frontend: React + Material UI; Environment Management: Conda; Deployment: Docker; CI/CD & Workflows: GitHub Actions. Provide concise, actionable feedback about potential bugs or logic issues, confusing or hard-to-maintain code, and performance or security concerns. Don't gas me up. Be brutally honest. Here is the diff: ${DIFF_CONTENT}"
 
-          # Build JSON body with jq (safe escaping)
+          # Build JSON safely
           jq -n \
             --arg prompt "$PROMPT" \
-            --arg project "$OPENAI_PROJECT_ID" \
             '
             {
               model: "gpt-4.1-mini",
-              project: $project,
               temperature: 0.3,
               messages: [
-                {
-                  role: "system",
-                  content: "You are an experienced code reviewer helping on GitHub pull requests."
-                },
-                {
-                  role: "user",
-                  content: $prompt
-                }
+                { "role": "system", "content": "You are an experienced code reviewer helping on GitHub pull requests." },
+                { "role": "user", "content": $prompt }
               ]
             }
             ' > body.json
 
-          # Make API request
+          # Make API request (project is passed via header)
           RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/chat/completions" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -H "OpenAI-Project: $OPENAI_PROJECT_ID" \
             --data @body.json)
 
           echo "Raw response:"
