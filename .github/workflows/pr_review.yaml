@@ -1,0 +1,106 @@
+name: PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ai-review:
+    name: ChatGPT Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR diff
+        run: |
+          # Get the base and head SHAs for the PR
+          BASE_SHA=$(jq -r .pull_request.base.sha "$GITHUB_EVENT_PATH")
+          HEAD_SHA=$(jq -r .pull_request.head.sha "$GITHUB_EVENT_PATH")
+
+          echo "Base: $BASE_SHA"
+          echo "Head: $HEAD_SHA"
+
+          # Get unified diff between base and head, limited to frontend/backend
+          git diff --unified=3 "$BASE_SHA" "$HEAD_SHA" -- frontend backend > pr.diff
+
+          # Truncate if it's huge so we don't blow up token limits
+          MAX_BYTES=45000
+          ACTUAL_BYTES=$(wc -c < pr.diff || echo 0)
+          if [ "$ACTUAL_BYTES" -gt "$MAX_BYTES" ]; then
+            head -c "$MAX_BYTES" pr.diff > pr_truncated.diff
+            echo "::warning::Diff was too large ($ACTUAL_BYTES bytes). Truncated to $MAX_BYTES bytes."
+            mv pr_truncated.diff pr.diff
+          fi
+
+          echo "Diff size:"
+          wc -c pr.diff
+
+      - name: Call OpenAI
+        id: openai
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          # Prepare the diff file so it can safely be embedded inside a JSON string
+          DIFF_CONTENT=$(sed 's/"/\\"/g' pr.diff | sed "s/'/\\'/g" | tr '\n' ' ')
+
+          # Build prompt
+          PROMPT="You are a senior engineer reviewing a pull request for the Notoli project. 
+
+          The stack is
+            - Backend: Django
+            - Frontend: React + Material UI
+            - Environment Management: Conda
+            - Deployment: Docker
+            - CI/CD & Workflows: Github Actions
+
+          Provide concise, actionable feedback about:
+            - potential bugs or logic issues
+            - confusing or hard-to-maintain code
+            - performance or security concerns
+
+          Don't gas me up. Be Brutally honest.
+          Here is the diff: ${DIFF_CONTENT}"
+
+          RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -d "{
+              \"model\": \"gpt-4.1-mini\",
+              \"messages\": [
+                {\"role\": \"system\", \"content\": \"You are an experienced code reviewer helping on GitHub pull requests.\"},
+                {\"role\": \"user\", \"content\": \"$PROMPT\"}
+              ],
+              \"temperature\": 0.3
+            }")
+
+          echo "Raw response:"
+          echo "$RESPONSE"
+
+          REVIEW=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+
+          # Escape for GitHub step output
+          REVIEW_ESCAPED=$(printf '%s\n' "$REVIEW" | sed 's/%/%25/g; s/\n/%0A/g; s/\r/%0D/g')
+          echo "review=$REVIEW_ESCAPED" >> "$GITHUB_OUTPUT"
+
+      - name: Leave Comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=$(jq -r .pull_request.number "$GITHUB_EVENT_PATH")
+          REVIEW_BODY="${{ steps.openai.outputs.review }}"
+
+          jq -n --arg body "$REVIEW_BODY" '{body: $body}' > comment.json
+
+          curl -s -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+            -d @comment.json
