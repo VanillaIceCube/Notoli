@@ -59,8 +59,8 @@ jobs:
             exit 0
           fi
 
-          # Flatten the diff
-          DIFF_CONTENT=$(tr '\n' ' ' < pr.diff)
+          # Keep diff formatting (no flattening)
+          DIFF_CONTENT=$(cat pr.diff)
 
           # Build prompt
           PROMPT="You are a senior engineer reviewing a pull request for the Notoli project. The stack is: Backend: Django; Frontend: React + Material UI; Environment Management: Conda; Deployment: Docker; CI/CD & Workflows: GitHub Actions. Provide concise, actionable feedback about potential bugs or logic issues, confusing or hard-to-maintain code, and performance or security concerns. Don't gas me up. Be brutally honest. Here is the diff: ${DIFF_CONTENT}"
@@ -100,9 +100,15 @@ jobs:
             end
           ')
 
-          # Escape for GitHub output
-          REVIEW_ESCAPED=$(printf '%s\n' "$REVIEW" | sed 's/%/%25/g; s/\n/%0A/g; s/\r/%0D/g')
-          echo "review=$REVIEW_ESCAPED" >> "$GITHUB_OUTPUT"
+          echo "Review content:"
+          echo "$REVIEW"
+
+          # Write multi-line output for GitHub Actions
+          {
+            echo 'review<<EOF'
+            printf '%s\n' "$REVIEW"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Leave Comment
         env:
