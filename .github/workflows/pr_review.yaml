@@ -113,10 +113,11 @@ jobs:
       - name: Leave Comment
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVIEW_BODY: ${{ steps.openai.outputs.review }}
         run: |
           PR_NUMBER=$(jq -r .pull_request.number "$GITHUB_EVENT_PATH")
-          REVIEW_BODY="${{ steps.openai.outputs.review }}"
 
+          # Build the comment JSON safely with jq
           jq -n --arg body "$REVIEW_BODY" '{body: $body}' > comment.json
 
           curl -s -X POST \
