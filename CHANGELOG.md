@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ## 2025-11-15
 ### Added
 - Frontend Auto-Fix Linting
+- Added instructions to the `environment.yml`
 ### Removed
 - `fetchWorkspaceName` & `workspaceData` as they're no longer used
 
