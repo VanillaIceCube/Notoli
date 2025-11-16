@@ -10,7 +10,7 @@ import {
   TextField,
   IconButton,
   Menu,
-  MenuItem
+  MenuItem,
 } from '@mui/material';
 import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
@@ -20,22 +20,25 @@ import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 
-
-export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, setDrawerWorkspacesLabel }) {
+export default function MyDrawer({
+  open,
+  setDrawerOpen,
+  drawerWorkspacesLabel,
+  setDrawerWorkspacesLabel,
+}) {
   // Navigate using Drawer
   const navigate = useNavigate();
-
 
   // Fetch Workspace Name
   const location = useLocation();
   const workspaceId = getWorkspaceId(location.pathname);
   const token = sessionStorage.getItem('accessToken');
 
-  const fetchWorkspaceName  = useCallback(async () => {
+  const fetchWorkspaceName = useCallback(async () => {
     if (!workspaceId) return '';
     try {
       const response = await fetch(`http://localhost:8000/api/workspaces/${workspaceId}/`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const workspaceData = await response.json();
@@ -56,7 +59,6 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
     })();
   }, [fetchWorkspaceName, setDrawerWorkspacesLabel]);
 
-
   // Fetch Workspace List
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +68,7 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
     setLoading(true);
     try {
       const response = await fetch('http://localhost:8000/api/workspaces/', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
@@ -83,7 +85,6 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
     fetchWorkspaces();
   }, [fetchWorkspaces]);
 
-
   // Add New Workspace
   const [isAdding, setIsAdding] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
@@ -97,18 +98,18 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` })
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify({
           name: newWorkspaceName,
-          description: ''
+          description: '',
         }),
       });
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const created = await response.json();
-      setWorkspaces(prev => [...prev, created]);
+      setWorkspaces((prev) => [...prev, created]);
 
       setIsAdding(false);
       setNewWorkspaceName('');
@@ -117,12 +118,11 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
     }
   };
 
-
   // Triple Dot Menu Functions
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
   const [selectedWorkspace, setSelectedWorkspace] = useState(null);
   const tripleDotOpen = Boolean(tripleDotAnchorElement);
-  
+
   const handleTripleDotClick = (event, workspaces) => {
     event.stopPropagation();
     setTripleDotAnchorElement(event.currentTarget);
@@ -133,7 +133,6 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
     setTripleDotAnchorElement(null);
     setSelectedWorkspace(null);
   };
-
 
   // Edit Workspace
   const [isEditing, setIsEditing] = useState(false);
@@ -152,22 +151,21 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
     setError(null);
 
     try {
-      const response = await fetch(
-        `http://localhost:8000/api/workspaces/${editingWorkspaceId}/`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
-          body: JSON.stringify({ name: editWorkspaceName }),
-        }
-      );
+      const response = await fetch(`http://localhost:8000/api/workspaces/${editingWorkspaceId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify({ name: editWorkspaceName }),
+      });
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
-      setWorkspaces(prev => prev.map(workspace => (workspace.id === updated.id ? updated : workspace)));
+      setWorkspaces((prev) =>
+        prev.map((workspace) => (workspace.id === updated.id ? updated : workspace)),
+      );
 
       closeEdit();
     } catch (err) {
@@ -181,7 +179,6 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
     setEditWorkspaceName('');
   };
 
-
   // Delete Workspace
   const onDelete = async (id) => {
     setError(null);
@@ -191,30 +188,28 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` })
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
       });
-      
+
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      setWorkspaces(prev => prev.filter(workspace => workspace.id !== id));
+      setWorkspaces((prev) => prev.filter((workspace) => workspace.id !== id));
     } catch (err) {
       setError(err.toString());
     } finally {
       handleTripleDotClose();
     }
-  }
-
+  };
 
   // Manage Drawer
   const [workspaceDrawerOpen, setWorkspaceDrawerOpen] = useState(false);
-  const toggleWorkspaceDrawer = () => setWorkspaceDrawerOpen(prev => !prev);
+  const toggleWorkspaceDrawer = () => setWorkspaceDrawerOpen((prev) => !prev);
   const [drawerWidth, setDrawerWidth] = useState(180);
 
   useEffect(() => {
     setDrawerWidth(isAdding || isEditing ? 300 : 200);
   }, [isAdding, isEditing]);
-
 
   return (
     <Drawer
@@ -249,17 +244,27 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
           borderBottomLeftRadius: 15,
         })}
       >
-
-        <Typography variant="h4" align="center" gutterBottom sx={{ mt: 2, mx: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)'}}>
+        <Typography
+          variant="h4"
+          align="center"
+          gutterBottom
+          sx={{ mt: 2, mx: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)' }}
+        >
           notoli
         </Typography>
 
         <Box role="navigation">
-          <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+          <Divider
+            sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }}
+          />
 
           <List disablePadding sx={{ mt: 1, mb: 1 }}>
             {/* Header row that toggles the nested content */}
-            <ListItemButton onClick={toggleWorkspaceDrawer} aria-expanded={workspaceDrawerOpen} sx={{ py: 0 }}>
+            <ListItemButton
+              onClick={toggleWorkspaceDrawer}
+              aria-expanded={workspaceDrawerOpen}
+              sx={{ py: 0 }}
+            >
               <ListItemText primary="Workspace" secondary={drawerWorkspacesLabel} />
               {workspaceDrawerOpen ? <ExpandLess /> : <ExpandMore />}
             </ListItemButton>
@@ -267,7 +272,9 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
             {/* Nested content that opens/closes */}
             <Collapse in={workspaceDrawerOpen} timeout="auto" unmountOnExit>
               <List sx={{ pb: 0 }}>
-                <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+                <Divider
+                  sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }}
+                />
 
                 {/* Loading */}
                 {loading && (
@@ -284,42 +291,78 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
                 )}
 
                 {/* Data */}
-                {!error && !loading && (
+                {!error &&
+                  !loading &&
                   workspaces.map((workspace, i) => (
                     <React.Fragment key={workspace.id}>
                       {i !== 0 && (
-                        <Divider sx={{ borderBottomWidth: 2, mr: 2, ml: 2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
+                        <Divider
+                          sx={{
+                            borderBottomWidth: 2,
+                            mr: 2,
+                            ml: 2,
+                            my: 0.1,
+                            px: 0,
+                            bgcolor: 'var(--secondary-color)',
+                          }}
+                        />
                       )}
                       {editingWorkspaceId === workspace.id ? (
                         <React.Fragment>
-
-                        {/* Editing  Mode */}
-                          <Box sx={{ display:'flex', alignItems:'center', pl: 3, pt: 1.5, pb: 0.75, mr: 1 }}>
-                            <TextField autoFocus variant="standard" size="small"
-                              sx={{ flexGrow:1, mr:1, justifyContent: 'space-between', color: 'var(--secondary-color)' }}
-                              slotProps={{ input:{ sx:{
+                          {/* Editing  Mode */}
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              pl: 3,
+                              pt: 1.5,
+                              pb: 0.75,
+                              mr: 1,
+                            }}
+                          >
+                            <TextField
+                              autoFocus
+                              variant="standard"
+                              size="small"
+                              sx={{
+                                flexGrow: 1,
+                                mr: 1,
+                                justifyContent: 'space-between',
                                 color: 'var(--secondary-color)',
-                                '&:after': {borderBottomColor: 'var(--secondary-color)' }}}}}
+                              }}
+                              slotProps={{
+                                input: {
+                                  sx: {
+                                    color: 'var(--secondary-color)',
+                                    '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                                  },
+                                },
+                              }}
                               value={editWorkspaceName}
-                              onChange={event => setEditWorkspaceName(event.target.value)}
-                              onKeyDown={event => {
+                              onChange={(event) => setEditWorkspaceName(event.target.value)}
+                              onKeyDown={(event) => {
                                 if (event.key === 'Enter') onEdit();
                                 if (event.key === 'Escape') closeEdit();
                               }}
                             />
-                            <IconButton size="small" onClick={onEdit} disabled={!editWorkspaceName.trim()}>
-                              <Add/>
+                            <IconButton
+                              size="small"
+                              onClick={onEdit}
+                              disabled={!editWorkspaceName.trim()}
+                            >
+                              <Add />
                             </IconButton>
                             <IconButton size="small" onClick={closeEdit}>
-                              <Close/>
+                              <Close />
                             </IconButton>
                           </Box>
                         </React.Fragment>
                       ) : (
                         <React.Fragment>
-
-                        {/* Normal Mode */}
-                          <ListItemButton dense sx={{ pl: 3, py: 0.75 }}
+                          {/* Normal Mode */}
+                          <ListItemButton
+                            dense
+                            sx={{ pl: 3, py: 0.75 }}
                             onClick={() => {
                               navigate(`/workspace/${workspace.id}`);
                             }}
@@ -330,15 +373,32 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
                         </React.Fragment>
                       )}
                     </React.Fragment>
-                  ))
-                )}
+                  ))}
               </List>
 
-              <Divider sx={{ borderBottomWidth: 2, mr: 2, ml: 2, my: 0.1, px: 0, bgcolor: 'var(--secondary-color)' }} />
+              <Divider
+                sx={{
+                  borderBottomWidth: 2,
+                  mr: 2,
+                  ml: 2,
+                  my: 0.1,
+                  px: 0,
+                  bgcolor: 'var(--secondary-color)',
+                }}
+              />
 
               {/* Add New */}
               {!isAdding ? (
-                <Button dense sx={{ pl: 3, pt: 1.5, pb: 0.75, fontWeight: 'bold', background: 'var(--secondary-background-color)', color: 'var(--secondary-color)' }}
+                <Button
+                  dense
+                  sx={{
+                    pl: 3,
+                    pt: 1.5,
+                    pb: 0.75,
+                    fontWeight: 'bold',
+                    background: 'var(--secondary-background-color)',
+                    color: 'var(--secondary-color)',
+                  }}
                   startIcon={<Add sx={{ fontSize: 20 }} />}
                   onClick={() => setIsAdding(true)}
                 >
@@ -346,14 +406,29 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
                 </Button>
               ) : (
                 <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
-                  <TextField autoFocus variant="standard" size="small"
-                    sx={{ pl: 2, flexGrow: 1, mr: 1, justifyContent: 'space-between', color: 'var(--secondary-color)' }}
-                    slotProps={{ input: { sx: {
-                      color: 'var(--secondary-color)', '&:after': { borderBottomColor: 'var(--secondary-color)' }}}}}
+                  <TextField
+                    autoFocus
+                    variant="standard"
+                    size="small"
+                    sx={{
+                      pl: 2,
+                      flexGrow: 1,
+                      mr: 1,
+                      justifyContent: 'space-between',
+                      color: 'var(--secondary-color)',
+                    }}
+                    slotProps={{
+                      input: {
+                        sx: {
+                          color: 'var(--secondary-color)',
+                          '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                        },
+                      },
+                    }}
                     placeholder="New Workspace Name..."
                     value={newWorkspaceName}
-                    onChange={event => setNewWorkspaceName(event.target.value)}
-                    onKeyDown={event => {
+                    onChange={(event) => setNewWorkspaceName(event.target.value)}
+                    onKeyDown={(event) => {
                       if (event.key === 'Enter') onAdd();
                       if (event.key === 'Escape') setIsAdding(false);
                     }}
@@ -368,22 +443,40 @@ export default function MyDrawer({ open, setDrawerOpen, drawerWorkspacesLabel, s
               )}
             </Collapse>
           </List>
-          <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }} />
+          <Divider
+            sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }}
+          />
         </Box>
       </Box>
       {/* Triple dot menu */}
-      <Menu slotProps={{ paper:{ sx:{ backgroundColor: 'var(--secondary-background-color)', color: 'var(--secondary-color)', boxShadow: 3, border: '2.5px solid var(--background-color)', borderRadius: 1.5 }}}}
+      <Menu
+        slotProps={{
+          paper: {
+            sx: {
+              backgroundColor: 'var(--secondary-background-color)',
+              color: 'var(--secondary-color)',
+              boxShadow: 3,
+              border: '2.5px solid var(--background-color)',
+              borderRadius: 1.5,
+            },
+          },
+        }}
         anchorEl={tripleDotAnchorElement}
         open={tripleDotOpen}
         onClose={handleTripleDotClose}
       >
-        <MenuItem sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight:"bold" }}
+        <MenuItem
+          sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
           onClick={startEditing}
         >
           Edit
         </MenuItem>
-        <Divider variant="middle" sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
-        <MenuItem sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight:"bold" }}
+        <Divider
+          variant="middle"
+          sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+        />
+        <MenuItem
+          sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
           onClick={() => onDelete(selectedWorkspace.id)}
         >
           Delete
