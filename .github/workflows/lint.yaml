@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: [ main ]
+    paths:
+      - "frontend/**"
+      - "backend/**"
+      - ".github/workflows/lint.yml"
 
 concurrency:
   group: lint-${{ github.ref }}
