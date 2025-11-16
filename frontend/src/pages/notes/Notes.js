@@ -9,7 +9,7 @@ import {
   MenuItem,
   Box,
   TextField,
-  IconButton,
+  IconButton
 } from '@mui/material';
 import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
@@ -29,7 +29,7 @@ export default function Notes({ setAppBarHeader }) {
     setLoading(true);
     try {
       const response = await fetch(`http://localhost:8000/api/notes/?todo_list=${todoListId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
@@ -47,7 +47,7 @@ export default function Notes({ setAppBarHeader }) {
     if (!todoListId) return;
     try {
       const response = await fetch(`http://localhost:8000/api/todolists/${todoListId}/`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const todoListData = await response.json();
@@ -92,13 +92,13 @@ export default function Notes({ setAppBarHeader }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
+          ...(token && { Authorization: `Bearer ${token}` })
         },
         body: JSON.stringify({
           note: newNote,
           todo_list: todoListId,
-          description: '',
-        }),
+          description: ''
+        })
       });
 
       // Pessimistic Local Merge
@@ -132,9 +132,9 @@ export default function Notes({ setAppBarHeader }) {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
+          ...(token && { Authorization: `Bearer ${token}` })
         },
-        body: JSON.stringify({ note: editNote }),
+        body: JSON.stringify({ note: editNote })
       });
 
       // Pessimistic Local Merge
@@ -162,8 +162,8 @@ export default function Notes({ setAppBarHeader }) {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
+          ...(token && { Authorization: `Bearer ${token}` })
+        }
       });
 
       // Pessimistic Local Merge
@@ -226,15 +226,15 @@ export default function Notes({ setAppBarHeader }) {
                             flexGrow: 1,
                             mr: 1,
                             justifyContent: 'space-between',
-                            color: 'var(--secondary-color)',
+                            color: 'var(--secondary-color)'
                           }}
                           slotProps={{
                             input: {
                               sx: {
                                 color: 'var(--secondary-color)',
-                                '&:after': { borderBottomColor: 'var(--secondary-color)' },
-                              },
-                            },
+                                '&:after': { borderBottomColor: 'var(--secondary-color)' }
+                              }
+                            }
                           }}
                           value={editNote}
                           onChange={(event) => setEditNote(event.target.value)}
@@ -261,7 +261,7 @@ export default function Notes({ setAppBarHeader }) {
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           background: 'var(--secondary-background-color)',
-                          color: 'var(--secondary-color)',
+                          color: 'var(--secondary-color)'
                         }}
                       >
                         <Typography
@@ -297,7 +297,7 @@ export default function Notes({ setAppBarHeader }) {
                   alignItems: 'center',
                   justifyContent: 'left',
                   background: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)',
+                  color: 'var(--secondary-color)'
                 }}
                 startIcon={<Add />}
                 onClick={() => setIsAdding(true)}
@@ -321,15 +321,15 @@ export default function Notes({ setAppBarHeader }) {
                     flexGrow: 1,
                     mr: 1,
                     justifyContent: 'space-between',
-                    color: 'var(--secondary-color)',
+                    color: 'var(--secondary-color)'
                   }}
                   slotProps={{
                     input: {
                       sx: {
                         color: 'var(--secondary-color)',
-                        '&:after': { borderBottomColor: 'var(--secondary-color)' },
-                      },
-                    },
+                        '&:after': { borderBottomColor: 'var(--secondary-color)' }
+                      }
+                    }
                   }}
                   placeholder="New Note…"
                   value={newNote}
@@ -359,9 +359,9 @@ export default function Notes({ setAppBarHeader }) {
                 color: 'var(--secondary-color)',
                 boxShadow: 3,
                 border: '2.5px solid var(--background-color)',
-                borderRadius: 1.5,
-              },
-            },
+                borderRadius: 1.5
+              }
+            }
           }}
           anchorEl={tripleDotAnchorElement}
           open={open}

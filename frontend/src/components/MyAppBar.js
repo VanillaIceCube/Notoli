@@ -22,7 +22,7 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
         sx={{
           color: 'var(--secondary-background-color)',
           background: 'var(--background-color)',
-          boxShadow: 'none',
+          boxShadow: 'none'
         }}
       >
         <Toolbar>
