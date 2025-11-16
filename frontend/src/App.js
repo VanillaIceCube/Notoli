@@ -1,27 +1,27 @@
-import './App.css';
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import AuthenticatedRoute from './components/AuthenticatedRoute';
-import Login from './pages/authentication/Login';
-import Workspaces from './pages/notes/Workspaces';
-import TodoLists from './pages/notes/TodoLists';
-import Notes from './pages/notes/Notes';
-import MyAppBar from './components/MyAppBar';
-import MySnackbar from './components/MySnackbar';
-import MyDrawer from './components/MyDrawer';
+import "./App.css";
+import React, { useState } from "react";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import AuthenticatedRoute from "./components/AuthenticatedRoute";
+import Login from "./pages/authentication/Login";
+import Workspaces from "./pages/notes/Workspaces";
+import TodoLists from "./pages/notes/TodoLists";
+import Notes from "./pages/notes/Notes";
+import MyAppBar from "./components/MyAppBar";
+import MySnackbar from "./components/MySnackbar";
+import MyDrawer from "./components/MyDrawer";
 
 function App() {
   // App Bar
-  const [appBarHeader, setAppBarHeader] = useState('');
+  const [appBarHeader, setAppBarHeader] = useState("");
 
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerWorkspacesLabel, setDrawerWorkspacesLabel] = useState('');
+  const [drawerWorkspacesLabel, setDrawerWorkspacesLabel] = useState("");
 
   // Snackbar
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarSeverity, setSnackbarSeverity] = useState('');
-  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState("");
+  const [snackbarMessage, setSnackbarMessage] = useState("");
 
   const showSnackbar = (severity, message) => {
     setSnackbarSeverity(severity);
@@ -30,7 +30,7 @@ function App() {
   };
 
   const handleSnackbarClose = (_event, reason) => {
-    if (reason === 'clickaway') return;
+    if (reason === "clickaway") return;
     setSnackbarOpen(false);
   };
 
@@ -45,7 +45,10 @@ function App() {
           setDrawerWorkspacesLabel={setDrawerWorkspacesLabel}
         />
         <Routes>
-          <Route path="/login" element={<Login showSnackbar={showSnackbar} />} />
+          <Route
+            path="/login"
+            element={<Login showSnackbar={showSnackbar} />}
+          />
 
           <React.Fragment>
             <Route

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Typography,
   Container,
@@ -10,17 +10,17 @@ import {
   Box,
   TextField,
   IconButton,
-} from '@mui/material';
-import { Add, Close, MoreVert } from '@mui/icons-material';
-import Divider from '@mui/material/Divider';
-import { useParams } from 'react-router-dom';
+} from "@mui/material";
+import { Add, Close, MoreVert } from "@mui/icons-material";
+import Divider from "@mui/material/Divider";
+import { useParams } from "react-router-dom";
 
 export default function Notes({ setAppBarHeader }) {
   // Pull Todolist ID
   const { todoListId } = useParams();
 
   // Pull Note List
-  const token = sessionStorage.getItem('accessToken');
+  const token = sessionStorage.getItem("accessToken");
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,9 +28,12 @@ export default function Notes({ setAppBarHeader }) {
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8000/api/notes/?todo_list=${todoListId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const response = await fetch(
+        `http://localhost:8000/api/notes/?todo_list=${todoListId}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setLists(data);
@@ -46,12 +49,15 @@ export default function Notes({ setAppBarHeader }) {
   const fetchTodoListName = useCallback(async () => {
     if (!todoListId) return;
     try {
-      const response = await fetch(`http://localhost:8000/api/todolists/${todoListId}/`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const response = await fetch(
+        `http://localhost:8000/api/todolists/${todoListId}/`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const todoListData = await response.json();
-      setAppBarHeader(todoListData?.name ?? '');
+      setAppBarHeader(todoListData?.name ?? "");
     } catch (err) {
       setError(err.toString());
     }
@@ -81,25 +87,28 @@ export default function Notes({ setAppBarHeader }) {
 
   // Add New Note
   const [isAdding, setIsAdding] = useState(false);
-  const [newNote, setNewNote] = useState('');
+  const [newNote, setNewNote] = useState("");
 
   const onAdd = async () => {
     if (!newNote.trim()) return;
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/notes/?todo_list=${todoListId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
+      const response = await fetch(
+        `http://localhost:8000/api/notes/?todo_list=${todoListId}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: JSON.stringify({
+            note: newNote,
+            todo_list: todoListId,
+            description: "",
+          }),
         },
-        body: JSON.stringify({
-          note: newNote,
-          todo_list: todoListId,
-          description: '',
-        }),
-      });
+      );
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -107,7 +116,7 @@ export default function Notes({ setAppBarHeader }) {
       setLists((prev) => [...prev, created]);
 
       setIsAdding(false);
-      setNewNote('');
+      setNewNote("");
     } catch (err) {
       setError(err.toString());
     }
@@ -115,7 +124,7 @@ export default function Notes({ setAppBarHeader }) {
 
   // Edit Note
   const [editingNoteId, setEditingNoteId] = useState(null);
-  const [editNote, setEditNote] = useState('');
+  const [editNote, setEditNote] = useState("");
 
   const startEditing = () => {
     setEditingNoteId(selectedNote.id);
@@ -128,19 +137,24 @@ export default function Notes({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/notes/${editingNoteId}/`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
+      const response = await fetch(
+        `http://localhost:8000/api/notes/${editingNoteId}/`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: JSON.stringify({ note: editNote }),
         },
-        body: JSON.stringify({ note: editNote }),
-      });
+      );
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
-      setLists((prev) => prev.map((note) => (note.id === updated.id ? updated : note)));
+      setLists((prev) =>
+        prev.map((note) => (note.id === updated.id ? updated : note)),
+      );
 
       closeEdit();
     } catch (err) {
@@ -150,7 +164,7 @@ export default function Notes({ setAppBarHeader }) {
 
   const closeEdit = () => {
     setEditingNoteId(null);
-    setEditNote('');
+    setEditNote("");
   };
 
   // Delete Note
@@ -159,9 +173,9 @@ export default function Notes({ setAppBarHeader }) {
 
     try {
       const response = await fetch(`http://localhost:8000/api/notes/${id}/`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...(token && { Authorization: `Bearer ${token}` }),
         },
       });
@@ -179,18 +193,29 @@ export default function Notes({ setAppBarHeader }) {
   return (
     <Container
       maxWidth="sm"
-      sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2, pt: 0.5 }}
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "flex-start",
+        py: 2,
+        pt: 0.5,
+      }}
     >
       <Paper
         elevation={3}
-        sx={{ px: 1.5, py: 1.5, width: '100%', background: 'var(--secondary-background-color)' }}
+        sx={{
+          px: 1.5,
+          py: 1.5,
+          width: "100%",
+          background: "var(--secondary-background-color)",
+        }}
       >
         {/* Header */}
         <Typography
           variant="h4"
           align="center"
           gutterBottom
-          sx={{ mt: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)' }}
+          sx={{ mt: 1.5, fontWeight: "bold", color: "var(--secondary-color)" }}
         >
           Notes
         </Typography>
@@ -207,7 +232,11 @@ export default function Notes({ setAppBarHeader }) {
 
         {/* If we're done loading and there are no errors */}
         <Divider
-          sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }}
+          sx={{
+            borderBottomWidth: 2,
+            marginBottom: 1,
+            bgcolor: "var(--secondary-color)",
+          }}
         />
         {!loading && !error && (
           <Stack spacing={1}>
@@ -217,7 +246,14 @@ export default function Notes({ setAppBarHeader }) {
                   {editingNoteId === list.id ? (
                     <React.Fragment>
                       {/* Editing Mode */}
-                      <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          px: 1,
+                          py: 0.5,
+                        }}
+                      >
                         <TextField
                           autoFocus
                           variant="standard"
@@ -225,25 +261,31 @@ export default function Notes({ setAppBarHeader }) {
                           sx={{
                             flexGrow: 1,
                             mr: 1,
-                            justifyContent: 'space-between',
-                            color: 'var(--secondary-color)',
+                            justifyContent: "space-between",
+                            color: "var(--secondary-color)",
                           }}
                           slotProps={{
                             input: {
                               sx: {
-                                color: 'var(--secondary-color)',
-                                '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                                color: "var(--secondary-color)",
+                                "&:after": {
+                                  borderBottomColor: "var(--secondary-color)",
+                                },
                               },
                             },
                           }}
                           value={editNote}
                           onChange={(event) => setEditNote(event.target.value)}
                           onKeyDown={(event) => {
-                            if (event.key === 'Enter') onEdit();
-                            if (event.key === 'Escape') closeEdit();
+                            if (event.key === "Enter") onEdit();
+                            if (event.key === "Escape") closeEdit();
                           }}
                         />
-                        <IconButton size="small" onClick={onEdit} disabled={!editNote.trim()}>
+                        <IconButton
+                          size="small"
+                          onClick={onEdit}
+                          disabled={!editNote.trim()}
+                        >
                           <Add />
                         </IconButton>
                         <IconButton size="small" onClick={closeEdit}>
@@ -257,25 +299,32 @@ export default function Notes({ setAppBarHeader }) {
                       <Button
                         variant="text"
                         sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          background: 'var(--secondary-background-color)',
-                          color: 'var(--secondary-color)',
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          background: "var(--secondary-background-color)",
+                          color: "var(--secondary-color)",
                         }}
                       >
                         <Typography
                           variant="body1"
                           fontWeight="bold"
-                          sx={{ fontSize: '1.1rem', textAlign: 'left' }}
+                          sx={{ fontSize: "1.1rem", textAlign: "left" }}
                         >
                           {list.note}
                         </Typography>
-                        <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
+                        <MoreVert
+                          onClick={(event) => handleTripleDotClick(event, list)}
+                        />
                       </Button>
                     </React.Fragment>
                   )}
-                  <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
+                  <Divider
+                    sx={{
+                      borderBottomWidth: 2,
+                      bgcolor: "var(--secondary-color)",
+                    }}
+                  />
                 </React.Fragment>
               ))
             ) : (
@@ -283,7 +332,7 @@ export default function Notes({ setAppBarHeader }) {
                 variant="body1"
                 align="center"
                 fontWeight="bold"
-                sx={{ fontSize: '1.1rem' }}
+                sx={{ fontSize: "1.1rem" }}
               >
                 No notes found.
               </Typography>
@@ -293,11 +342,11 @@ export default function Notes({ setAppBarHeader }) {
               <Button
                 variant="text"
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'left',
-                  background: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)',
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "left",
+                  background: "var(--secondary-background-color)",
+                  color: "var(--secondary-color)",
                 }}
                 startIcon={<Add />}
                 onClick={() => setIsAdding(true)}
@@ -306,13 +355,15 @@ export default function Notes({ setAppBarHeader }) {
                   variant="body1"
                   align="center"
                   fontWeight="bold"
-                  sx={{ fontSize: '1.1rem' }}
+                  sx={{ fontSize: "1.1rem" }}
                 >
                   Add New
                 </Typography>
               </Button>
             ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
+              <Box
+                sx={{ display: "flex", alignItems: "center", px: 1, py: 0.5 }}
+              >
                 <TextField
                   autoFocus
                   variant="standard"
@@ -320,14 +371,16 @@ export default function Notes({ setAppBarHeader }) {
                   sx={{
                     flexGrow: 1,
                     mr: 1,
-                    justifyContent: 'space-between',
-                    color: 'var(--secondary-color)',
+                    justifyContent: "space-between",
+                    color: "var(--secondary-color)",
                   }}
                   slotProps={{
                     input: {
                       sx: {
-                        color: 'var(--secondary-color)',
-                        '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                        color: "var(--secondary-color)",
+                        "&:after": {
+                          borderBottomColor: "var(--secondary-color)",
+                        },
                       },
                     },
                   }}
@@ -335,11 +388,15 @@ export default function Notes({ setAppBarHeader }) {
                   value={newNote}
                   onChange={(event) => setNewNote(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.key === 'Enter') onAdd();
-                    if (event.key === 'Escape') setIsAdding(false);
+                    if (event.key === "Enter") onAdd();
+                    if (event.key === "Escape") setIsAdding(false);
                   }}
                 />
-                <IconButton size="small" onClick={onAdd} disabled={!newNote.trim()}>
+                <IconButton
+                  size="small"
+                  onClick={onAdd}
+                  disabled={!newNote.trim()}
+                >
                   <Add />
                 </IconButton>
                 <IconButton size="small" onClick={() => setIsAdding(false)}>
@@ -355,10 +412,10 @@ export default function Notes({ setAppBarHeader }) {
           slotProps={{
             paper: {
               sx: {
-                backgroundColor: 'var(--secondary-background-color)',
-                color: 'var(--secondary-color)',
+                backgroundColor: "var(--secondary-background-color)",
+                color: "var(--secondary-color)",
                 boxShadow: 3,
-                border: '2.5px solid var(--background-color)',
+                border: "2.5px solid var(--background-color)",
                 borderRadius: 1.5,
               },
             },
@@ -368,17 +425,22 @@ export default function Notes({ setAppBarHeader }) {
           onClose={handleTripleDotClose}
         >
           <MenuItem
-            sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+            sx={{ py: 0.1, px: 1.5, minHeight: "auto", fontWeight: "bold" }}
             onClick={startEditing}
           >
             Edit
           </MenuItem>
           <Divider
             variant="middle"
-            sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+            sx={{
+              my: 0,
+              mx: 1,
+              borderBottomWidth: 2,
+              bgcolor: "var(--secondary-color)",
+            }}
           />
           <MenuItem
-            sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+            sx={{ py: 0.1, px: 1.5, minHeight: "auto", fontWeight: "bold" }}
             onClick={() => onDelete(selectedNote.id)}
           >
             Delete

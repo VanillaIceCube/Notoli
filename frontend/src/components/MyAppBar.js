@@ -1,14 +1,19 @@
-import { AppBar, Box, Toolbar, Typography, IconButton } from '@mui/material';
-import { Menu as MenuIcon, AccountCircle, Notifications, ChevronLeft } from '@mui/icons-material';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { goBackToParent } from '../utils/Navigation';
+import { AppBar, Box, Toolbar, Typography, IconButton } from "@mui/material";
+import {
+  Menu as MenuIcon,
+  AccountCircle,
+  Notifications,
+  ChevronLeft,
+} from "@mui/icons-material";
+import { useLocation, useNavigate } from "react-router-dom";
+import { goBackToParent } from "../utils/Navigation";
 
 export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
   const location = useLocation();
   const navigate = useNavigate();
 
   // Don't render in login page
-  if (location.pathname === '/login') return null;
+  if (location.pathname === "/login") return null;
 
   // Navigate backwards function
   const handleBack = () => {
@@ -20,15 +25,15 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
       <AppBar
         position="static"
         sx={{
-          color: 'var(--secondary-background-color)',
-          background: 'var(--background-color)',
-          boxShadow: 'none',
+          color: "var(--secondary-background-color)",
+          background: "var(--background-color)",
+          boxShadow: "none",
         }}
       >
         <Toolbar>
           {
             // Don't render back button on the base page
-            location.pathname.includes('/todolist') && (
+            location.pathname.includes("/todolist") && (
               <IconButton
                 size="large"
                 edge="start"
@@ -40,7 +45,13 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
               </IconButton>
             )
           }
-          <Typography variant="h6" edge="start" component="div" noWrap sx={{ flexGrow: 1 }}>
+          <Typography
+            variant="h6"
+            edge="start"
+            component="div"
+            noWrap
+            sx={{ flexGrow: 1 }}
+          >
             {appBarHeader}
           </Typography>
           <IconButton size="large" color="inherit" aria-label="notifications">

@@ -19,7 +19,7 @@ export const getParentPath = (path) => {
   //  workspace <-- todolists
   //  /workspace/:wid
   const workspacePath = path.match(/^\/workspace\/[^/]+$/);
-  if (workspacePath) return '/';
+  if (workspacePath) return "/";
 };
 
 export const goBackToParent = (path, navigate) => {

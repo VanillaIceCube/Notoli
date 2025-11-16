@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Typography,
   Container,
@@ -10,11 +10,11 @@ import {
   Box,
   TextField,
   IconButton,
-} from '@mui/material';
-import { Add, Close, MoreVert } from '@mui/icons-material';
-import Divider from '@mui/material/Divider';
-import { useParams } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+} from "@mui/material";
+import { Add, Close, MoreVert } from "@mui/icons-material";
+import Divider from "@mui/material/Divider";
+import { useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function TodoLists({ setAppBarHeader }) {
   // Misc
@@ -22,14 +22,14 @@ export default function TodoLists({ setAppBarHeader }) {
 
   // Clear Appbar Header when landing on page (and a bunch of other times too)
   useEffect(() => {
-    setAppBarHeader('');
+    setAppBarHeader("");
   }, [setAppBarHeader]);
 
   // Pull Workspace ID
   const { workspaceId } = useParams();
 
   // Pull TodoList List
-  const token = sessionStorage.getItem('accessToken');
+  const token = sessionStorage.getItem("accessToken");
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -78,7 +78,7 @@ export default function TodoLists({ setAppBarHeader }) {
 
   // Add New TodoList
   const [isAdding, setIsAdding] = useState(false);
-  const [newTodoListName, setNewTodoListName] = useState('');
+  const [newTodoListName, setNewTodoListName] = useState("");
 
   const onAdd = async () => {
     if (!newTodoListName.trim()) return;
@@ -88,15 +88,15 @@ export default function TodoLists({ setAppBarHeader }) {
       const response = await fetch(
         `http://localhost:8000/api/todolists/?workspace=${workspaceId}`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             ...(token && { Authorization: `Bearer ${token}` }),
           },
           body: JSON.stringify({
             name: newTodoListName,
             workspace: workspaceId,
-            description: '',
+            description: "",
           }),
         },
       );
@@ -107,7 +107,7 @@ export default function TodoLists({ setAppBarHeader }) {
       setLists((prev) => [...prev, created]);
 
       setIsAdding(false);
-      setNewTodoListName('');
+      setNewTodoListName("");
     } catch (err) {
       setError(err.toString());
     }
@@ -115,7 +115,7 @@ export default function TodoLists({ setAppBarHeader }) {
 
   // Edit TodoList
   const [editingTodoListId, setEditingTodoListId] = useState(null);
-  const [editTodoListName, setEditTodoListName] = useState('');
+  const [editTodoListName, setEditTodoListName] = useState("");
 
   const startEditing = () => {
     setEditingTodoListId(selectedTodoList.id);
@@ -128,19 +128,26 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/todolists/${editingTodoListId}/`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
+      const response = await fetch(
+        `http://localhost:8000/api/todolists/${editingTodoListId}/`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: JSON.stringify({ name: editTodoListName }),
         },
-        body: JSON.stringify({ name: editTodoListName }),
-      });
+      );
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
-      setLists((prev) => prev.map((todolist) => (todolist.id === updated.id ? updated : todolist)));
+      setLists((prev) =>
+        prev.map((todolist) =>
+          todolist.id === updated.id ? updated : todolist,
+        ),
+      );
 
       closeEdit();
     } catch (err) {
@@ -150,7 +157,7 @@ export default function TodoLists({ setAppBarHeader }) {
 
   const closeEdit = () => {
     setEditingTodoListId(null);
-    setEditTodoListName('');
+    setEditTodoListName("");
   };
 
   // Delete TodoList
@@ -158,13 +165,16 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/todolists/${id}/`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
+      const response = await fetch(
+        `http://localhost:8000/api/todolists/${id}/`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
         },
-      });
+      );
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -179,18 +189,29 @@ export default function TodoLists({ setAppBarHeader }) {
   return (
     <Container
       maxWidth="sm"
-      sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2, pt: 0.5 }}
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "flex-start",
+        py: 2,
+        pt: 0.5,
+      }}
     >
       <Paper
         elevation={3}
-        sx={{ px: 1.5, py: 1.5, width: '100%', background: 'var(--secondary-background-color)' }}
+        sx={{
+          px: 1.5,
+          py: 1.5,
+          width: "100%",
+          background: "var(--secondary-background-color)",
+        }}
       >
         {/* Header */}
         <Typography
           variant="h4"
           align="center"
           gutterBottom
-          sx={{ mt: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)' }}
+          sx={{ mt: 1.5, fontWeight: "bold", color: "var(--secondary-color)" }}
         >
           TodoLists
         </Typography>
@@ -207,7 +228,11 @@ export default function TodoLists({ setAppBarHeader }) {
 
         {/* If we're done loading and there are no errors */}
         <Divider
-          sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }}
+          sx={{
+            borderBottomWidth: 2,
+            marginBottom: 1,
+            bgcolor: "var(--secondary-color)",
+          }}
         />
         {!loading && !error && (
           <Stack spacing={1}>
@@ -217,7 +242,14 @@ export default function TodoLists({ setAppBarHeader }) {
                   {editingTodoListId === list.id ? (
                     <React.Fragment>
                       {/* Editing Mode */}
-                      <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          px: 1,
+                          py: 0.5,
+                        }}
+                      >
                         <TextField
                           autoFocus
                           variant="standard"
@@ -225,22 +257,26 @@ export default function TodoLists({ setAppBarHeader }) {
                           sx={{
                             flexGrow: 1,
                             mr: 1,
-                            justifyContent: 'space-between',
-                            color: 'var(--secondary-color)',
+                            justifyContent: "space-between",
+                            color: "var(--secondary-color)",
                           }}
                           slotProps={{
                             input: {
                               sx: {
-                                color: 'var(--secondary-color)',
-                                '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                                color: "var(--secondary-color)",
+                                "&:after": {
+                                  borderBottomColor: "var(--secondary-color)",
+                                },
                               },
                             },
                           }}
                           value={editTodoListName}
-                          onChange={(event) => setEditTodoListName(event.target.value)}
+                          onChange={(event) =>
+                            setEditTodoListName(event.target.value)
+                          }
                           onKeyDown={(event) => {
-                            if (event.key === 'Enter') onEdit();
-                            if (event.key === 'Escape') closeEdit();
+                            if (event.key === "Enter") onEdit();
+                            if (event.key === "Escape") closeEdit();
                           }}
                         />
                         <IconButton
@@ -261,26 +297,37 @@ export default function TodoLists({ setAppBarHeader }) {
                       <Button
                         variant="text"
                         sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          background: 'var(--secondary-background-color)',
-                          color: 'var(--secondary-color)',
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          background: "var(--secondary-background-color)",
+                          color: "var(--secondary-color)",
                         }}
-                        onClick={() => navigate(`/workspace/${workspaceId}/todolist/${list.id}`)}
+                        onClick={() =>
+                          navigate(
+                            `/workspace/${workspaceId}/todolist/${list.id}`,
+                          )
+                        }
                       >
                         <Typography
                           variant="body1"
                           fontWeight="bold"
-                          sx={{ fontSize: '1.1rem', textAlign: 'left' }}
+                          sx={{ fontSize: "1.1rem", textAlign: "left" }}
                         >
                           {list.name}
                         </Typography>
-                        <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
+                        <MoreVert
+                          onClick={(event) => handleTripleDotClick(event, list)}
+                        />
                       </Button>
                     </React.Fragment>
                   )}
-                  <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
+                  <Divider
+                    sx={{
+                      borderBottomWidth: 2,
+                      bgcolor: "var(--secondary-color)",
+                    }}
+                  />
                 </React.Fragment>
               ))
             ) : (
@@ -288,7 +335,7 @@ export default function TodoLists({ setAppBarHeader }) {
                 variant="body1"
                 align="center"
                 fontWeight="bold"
-                sx={{ fontSize: '1.1rem' }}
+                sx={{ fontSize: "1.1rem" }}
               >
                 No to-do lists found.
               </Typography>
@@ -298,11 +345,11 @@ export default function TodoLists({ setAppBarHeader }) {
               <Button
                 variant="text"
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'left',
-                  background: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)',
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "left",
+                  background: "var(--secondary-background-color)",
+                  color: "var(--secondary-color)",
                 }}
                 startIcon={<Add />}
                 onClick={() => setIsAdding(true)}
@@ -311,13 +358,15 @@ export default function TodoLists({ setAppBarHeader }) {
                   variant="body1"
                   align="center"
                   fontWeight="bold"
-                  sx={{ fontSize: '1.1rem' }}
+                  sx={{ fontSize: "1.1rem" }}
                 >
                   Add New
                 </Typography>
               </Button>
             ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
+              <Box
+                sx={{ display: "flex", alignItems: "center", px: 1, py: 0.5 }}
+              >
                 <TextField
                   autoFocus
                   variant="standard"
@@ -325,14 +374,16 @@ export default function TodoLists({ setAppBarHeader }) {
                   sx={{
                     flexGrow: 1,
                     mr: 1,
-                    justifyContent: 'space-between',
-                    color: 'var(--secondary-color)',
+                    justifyContent: "space-between",
+                    color: "var(--secondary-color)",
                   }}
                   slotProps={{
                     input: {
                       sx: {
-                        color: 'var(--secondary-color)',
-                        '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                        color: "var(--secondary-color)",
+                        "&:after": {
+                          borderBottomColor: "var(--secondary-color)",
+                        },
                       },
                     },
                   }}
@@ -340,11 +391,15 @@ export default function TodoLists({ setAppBarHeader }) {
                   value={newTodoListName}
                   onChange={(event) => setNewTodoListName(event.target.value)}
                   onKeyDown={(event) => {
-                    if (event.key === 'Enter') onAdd();
-                    if (event.key === 'Escape') setIsAdding(false);
+                    if (event.key === "Enter") onAdd();
+                    if (event.key === "Escape") setIsAdding(false);
                   }}
                 />
-                <IconButton size="small" onClick={onAdd} disabled={!newTodoListName.trim()}>
+                <IconButton
+                  size="small"
+                  onClick={onAdd}
+                  disabled={!newTodoListName.trim()}
+                >
                   <Add />
                 </IconButton>
                 <IconButton size="small" onClick={() => setIsAdding(false)}>
@@ -360,10 +415,10 @@ export default function TodoLists({ setAppBarHeader }) {
           slotProps={{
             paper: {
               sx: {
-                backgroundColor: 'var(--secondary-background-color)',
-                color: 'var(--secondary-color)',
+                backgroundColor: "var(--secondary-background-color)",
+                color: "var(--secondary-color)",
                 boxShadow: 3,
-                border: '2.5px solid var(--background-color)',
+                border: "2.5px solid var(--background-color)",
                 borderRadius: 1.5,
               },
             },
@@ -373,17 +428,22 @@ export default function TodoLists({ setAppBarHeader }) {
           onClose={handleTripleDotClose}
         >
           <MenuItem
-            sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+            sx={{ py: 0.1, px: 1.5, minHeight: "auto", fontWeight: "bold" }}
             onClick={startEditing}
           >
             Edit
           </MenuItem>
           <Divider
             variant="middle"
-            sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+            sx={{
+              my: 0,
+              mx: 1,
+              borderBottomWidth: 2,
+              bgcolor: "var(--secondary-color)",
+            }}
           />
           <MenuItem
-            sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+            sx={{ py: 0.1, px: 1.5, minHeight: "auto", fontWeight: "bold" }}
             onClick={() => onDelete(selectedTodoList.id)}
           >
             Delete
