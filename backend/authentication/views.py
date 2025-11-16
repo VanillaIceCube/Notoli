@@ -20,6 +20,6 @@ class RegisterView(APIView):
             return Response({"error": "Username already exists."},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        user = User.objects.create_user(username=username, password=password)
+        User.objects.create_user(username=username, password=password)
         return Response({"message": "User created successfully."},
                         status=status.HTTP_201_CREATED)
