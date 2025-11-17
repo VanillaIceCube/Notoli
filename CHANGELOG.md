@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2025-11-16
+### Changed
+- Enviroment file items
+
 
 ## 2025-11-15
 ### Added
