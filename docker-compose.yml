@@ -18,5 +18,3 @@ services:
       - ./frontend:/frontend
     ports:
       - "3000:3000"
-
-# Update the yaml file with "python environment_conda_export.py --from-history --use-versions -o environment.yml"

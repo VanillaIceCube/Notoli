@@ -2,13 +2,12 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- python=3.12.12
 - django=5.2
 - django-cors-headers=4.7.0
 - django-filter=25.1
 - djangorestframework=3.16.0
 - djangorestframework_simplejwt=5.5.0
-- python=3.13.2
+- python=3.12.12
 - pyyaml=6.0.2
 name: notoli_env
 
