@@ -2,6 +2,7 @@ channels:
 - conda-forge
 - defaults
 dependencies:
+- python=3.13.2
 - django=5.2
 - django-cors-headers=4.7.0
 - django-filter=25.1
