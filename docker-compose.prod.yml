@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  backend:
+    image: ghcr.io/vanillaicecube/notoli-backend:latest
+    container_name: notoli-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DJANGO_SETTINGS_MODULE=backend.settings
+
+  frontend:
+    image: ghcr.io/vanillaicecube/notoli-frontend:latest
+    container_name: notoli-frontend
+    restart: always
+    ports:
+      - "3000:3000"
