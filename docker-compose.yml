@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+    image: ghcr.io/vanillaicecube/notoli-backend:latest
     volumes:
       - ./backend:/backend
     ports:
@@ -13,7 +15,9 @@ services:
       - frontend
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+    image: ghcr.io/vanillaicecube/notoli-frontend:latest
     volumes:
       - ./frontend:/frontend
     ports:
