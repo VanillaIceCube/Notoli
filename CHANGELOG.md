@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+
+## 2025-11-23
+### Changed
+- A lot of deployment related changes
+
+
 ## 2025-11-16
 ### Changed
 - Enviroment file items

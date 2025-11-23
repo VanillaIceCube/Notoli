@@ -2,13 +2,14 @@ channels:
 - conda-forge
 - defaults
 dependencies:
-- django=5.2
+- django=5.2.8
 - django-cors-headers=4.7.0
 - django-filter=25.1
 - djangorestframework=3.16.0
 - djangorestframework_simplejwt=5.5.0
-- python=3.12
+- python=3.12.11
 - pyyaml=6.0.2
+- whitenoise=6.11.0
 name: notoli_env
 
 # Update the yaml file with `python environment_conda_export.py --from-history --use-versions -o environment.yml`
