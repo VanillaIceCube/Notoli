@@ -16,6 +16,6 @@ services:
     container_name: notoli-frontend
     restart: always
     ports:
-      - "3000:3000"   # host:container
+      - "3000:3000"
     depends_on:
       - backend
