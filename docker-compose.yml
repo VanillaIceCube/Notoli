@@ -2,23 +2,20 @@ version: '3.8'
 
 services:
   backend:
-    build:
-      context: ./backend
     image: ghcr.io/vanillaicecube/notoli-backend:latest
-    volumes:
-      - ./backend:/backend
+    container_name: notoli-backend
+    restart: always
     ports:
       - "8000:8000"
     environment:
       - DJANGO_SETTINGS_MODULE=backend.settings
-    depends_on:
-      - frontend
+      - DEBUG=0
 
   frontend:
-    build:
-      context: ./frontend
     image: ghcr.io/vanillaicecube/notoli-frontend:latest
-    volumes:
-      - ./frontend:/frontend
+    container_name: notoli-frontend
+    restart: always
     ports:
-      - "3000:3000"
+      - "3000:3000"   # host:container
+    depends_on:
+      - backend

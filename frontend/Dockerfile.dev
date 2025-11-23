@@ -1,0 +1,17 @@
+FROM node:18
+
+# Set working directory
+WORKDIR /frontend
+
+# Copy package.json and package-lock.json and install Node.js dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy your React project code
+COPY . .
+
+# Document dev server port
+EXPOSE 3000
+
+# Run React server
+CMD ["npm", "start"]
