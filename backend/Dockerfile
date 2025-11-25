@@ -12,8 +12,8 @@ ENV PATH="/opt/conda/envs/notoli_env/bin:$PATH" \
     DJANGO_SETTINGS_MODULE=backend.settings \
     PYTHONUNBUFFERED=1
 
-# Use bash for RUN commands
-SHELL ["bash", "-lc"]
+# all commands below now use the conda env
+SHELL ["conda", "run", "-n", "notoli_env", "/bin/bash", "-c"]
 
 # Copy your Django project code
 COPY . .
