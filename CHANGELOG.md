@@ -3,6 +3,11 @@ All notable changes to this project are documented in this file.
 
 
 ## 2025-11-23
+### Removed
+- Dev docker files
+
+
+## 2025-11-23
 ### Changed
 - A lot of deployment related changes
 
