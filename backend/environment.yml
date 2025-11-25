@@ -7,14 +7,10 @@ dependencies:
 - django-filter=25.1
 - djangorestframework=3.16.0
 - djangorestframework_simplejwt=5.5.0
+- gunicorn
 - python=3.12.11
 - pyyaml=6.0.2
 - whitenoise=6.11.0
-- pip
-
-- pip:
-  - gunicorn
-
 name: notoli_env
 
 # Update the yaml file with `python environment_conda_export.py --from-history --use-versions -o environment.yml`
