@@ -7,10 +7,10 @@ local_settings.py
 db.sqlite3
 
 # Python environments / Conda
-.env
-.venv/
-env/
-venv/
+# .env
+# .venv/
+# env/
+# venv/
 
 # Package and build artifacts
 *.egg-info/
