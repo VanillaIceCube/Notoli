@@ -3,13 +3,13 @@ version: '3.8'
 services:
   backend:
     image: ghcr.io/vanillaicecube/notoli-backend:latest
+    env_file: .env
+    volumes:
+      - ./db.sqlite3:/backend/db.sqlite3
     container_name: notoli-backend
     restart: always
     ports:
       - "8000:8000"
-    environment:
-      - DJANGO_SETTINGS_MODULE=backend.settings
-      - DEBUG=0
 
   frontend:
     image: ghcr.io/vanillaicecube/notoli-frontend:latest
