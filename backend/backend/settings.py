@@ -67,6 +67,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
 
+extra_origins = os.getenv("CORS_ALLOWED_ORIGINS")
+if extra_origins:
+    CORS_ALLOWED_ORIGINS.extend(extra_origins.split(","))
+
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
