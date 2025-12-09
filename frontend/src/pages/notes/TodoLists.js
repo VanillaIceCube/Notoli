@@ -38,12 +38,9 @@ export default function TodoLists({ setAppBarHeader }) {
   const fetchTodoLists = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await apiFetch(
-        `/api/todolists/?workspace=${workspaceId}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        },
-      );
+      const response = await apiFetch(`/api/todolists/?workspace=${workspaceId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setLists(data);
@@ -86,21 +83,18 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await apiFetch(
-        `/api/todolists/?workspace=${workspaceId}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
-          body: JSON.stringify({
-            name: newTodoListName,
-            workspace: workspaceId,
-            description: '',
-          }),
+      const response = await apiFetch(`/api/todolists/?workspace=${workspaceId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
-      );
+        body: JSON.stringify({
+          name: newTodoListName,
+          workspace: workspaceId,
+          description: '',
+        }),
+      });
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
