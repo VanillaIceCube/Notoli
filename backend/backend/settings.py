@@ -64,7 +64,7 @@ MIDDLEWARE = [
 
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost",
+    "http://localhost:3000",
 ]
 
 extra_origins = os.getenv("CORS_ALLOWED_ORIGINS")

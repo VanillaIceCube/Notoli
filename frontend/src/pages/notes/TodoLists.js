@@ -38,8 +38,8 @@ export default function TodoLists({ setAppBarHeader }) {
   const fetchTodoLists = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `http://localhost:8000/api/todolists/?workspace=${workspaceId}`,
+      const response = await apiFetch(
+        `/api/todolists/?workspace=${workspaceId}`,
         {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         },
@@ -86,8 +86,8 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(
-        `http://localhost:8000/api/todolists/?workspace=${workspaceId}`,
+      const response = await apiFetch(
+        `/api/todolists/?workspace=${workspaceId}`,
         {
           method: 'POST',
           headers: {
