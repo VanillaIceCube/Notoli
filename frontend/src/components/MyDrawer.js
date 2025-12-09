@@ -19,6 +19,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+import { apiFetch } from '../services/client';
 
 export default function MyDrawer({
   open,
@@ -37,7 +38,7 @@ export default function MyDrawer({
   const fetchWorkspaceName = useCallback(async () => {
     if (!workspaceId) return '';
     try {
-      const response = await fetch(`http://localhost:8000/api/workspaces/${workspaceId}/`, {
+      const response = await apiFetch(`/api/workspaces/${workspaceId}/`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -67,7 +68,7 @@ export default function MyDrawer({
   const fetchWorkspaces = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/workspaces/', {
+      const response = await apiFetch('/api/workspaces/', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -94,7 +95,7 @@ export default function MyDrawer({
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/workspaces/', {
+      const response = await apiFetch('/api/workspaces/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -151,7 +152,7 @@ export default function MyDrawer({
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/workspaces/${editingWorkspaceId}/`, {
+      const response = await apiFetch(`/api/workspaces/${editingWorkspaceId}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -184,7 +185,7 @@ export default function MyDrawer({
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/workspaces/${id}/`, {
+      const response = await apiFetch(`/api/workspaces/${id}/`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

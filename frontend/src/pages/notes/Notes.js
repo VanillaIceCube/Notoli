@@ -14,6 +14,7 @@ import {
 import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
+import { apiFetch } from '../../services/client';
 
 export default function Notes({ setAppBarHeader }) {
   // Pull Todolist ID
@@ -28,7 +29,7 @@ export default function Notes({ setAppBarHeader }) {
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8000/api/notes/?todo_list=${todoListId}`, {
+      const response = await apiFetch(`/api/notes/?todo_list=${todoListId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -46,7 +47,7 @@ export default function Notes({ setAppBarHeader }) {
   const fetchTodoListName = useCallback(async () => {
     if (!todoListId) return;
     try {
-      const response = await fetch(`http://localhost:8000/api/todolists/${todoListId}/`, {
+      const response = await apiFetch(`/api/todolists/${todoListId}/`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -88,7 +89,7 @@ export default function Notes({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/notes/?todo_list=${todoListId}`, {
+      const response = await apiFetch(`/api/notes/?todo_list=${todoListId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -128,7 +129,7 @@ export default function Notes({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/notes/${editingNoteId}/`, {
+      const response = await apiFetch(`/api/notes/${editingNoteId}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -158,7 +159,7 @@ export default function Notes({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/notes/${id}/`, {
+      const response = await apiFetch(`/api/notes/${id}/`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

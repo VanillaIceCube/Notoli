@@ -14,6 +14,7 @@ import {
 import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../services/client';
 
 export default function Workspaces({ setAppBarHeader }) {
   // Misc
@@ -28,7 +29,7 @@ export default function Workspaces({ setAppBarHeader }) {
   const fetchWorkspaces = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/workspaces/', {
+      const response = await apiFetch('/api/workspaces/', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -72,7 +73,7 @@ export default function Workspaces({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/workspaces/', {
+      const response = await apiFetch('/api/workspaces/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -111,7 +112,7 @@ export default function Workspaces({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/workspaces/${editingWorkspaceId}/`, {
+      const response = await apiFetch(`/api/workspaces/${editingWorkspaceId}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +144,7 @@ export default function Workspaces({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/workspaces/${id}/`, {
+      const response = await apiFetch(`/api/workspaces/${id}/`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

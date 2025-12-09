@@ -15,6 +15,7 @@ import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../services/client';
 
 export default function TodoLists({ setAppBarHeader }) {
   // Misc
@@ -128,7 +129,7 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/todolists/${editingTodoListId}/`, {
+      const response = await apiFetch(`/api/todolists/${editingTodoListId}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -158,7 +159,7 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/todolists/${id}/`, {
+      const response = await apiFetch(`/api/todolists/${id}/`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

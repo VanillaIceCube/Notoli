@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../services/client';
 
 export default function Login({ showSnackbar }) {
   // Basics
@@ -13,7 +13,7 @@ export default function Login({ showSnackbar }) {
   // Pull Workspace List
   const fetchWorkspaces = useCallback(async (token) => {
     try {
-      const response = await fetch('http://localhost:8000/api/workspaces/', {
+      const response = await apiFetch('/api/workspaces/', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -31,10 +31,19 @@ export default function Login({ showSnackbar }) {
   // Login function
   const handleLogin = async () => {
     try {
-      const { data } = await axios.post('http://localhost:8000/auth/login/', {
-        username,
-        password,
+      const response = await apiFetch('/auth/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
 
       // Save tokens
       sessionStorage.setItem('accessToken', data.access);
