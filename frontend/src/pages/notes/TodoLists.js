@@ -15,6 +15,7 @@ import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../../services/client';
 
 export default function TodoLists({ setAppBarHeader }) {
   // Misc
@@ -37,12 +38,9 @@ export default function TodoLists({ setAppBarHeader }) {
   const fetchTodoLists = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `http://localhost:8000/api/todolists/?workspace=${workspaceId}`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        },
-      );
+      const response = await apiFetch(`/api/todolists/?workspace=${workspaceId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setLists(data);
@@ -85,21 +83,18 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(
-        `http://localhost:8000/api/todolists/?workspace=${workspaceId}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token && { Authorization: `Bearer ${token}` }),
-          },
-          body: JSON.stringify({
-            name: newTodoListName,
-            workspace: workspaceId,
-            description: '',
-          }),
+      const response = await apiFetch(`/api/todolists/?workspace=${workspaceId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
-      );
+        body: JSON.stringify({
+          name: newTodoListName,
+          workspace: workspaceId,
+          description: '',
+        }),
+      });
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -128,7 +123,7 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/todolists/${editingTodoListId}/`, {
+      const response = await apiFetch(`/api/todolists/${editingTodoListId}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -158,7 +153,7 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/todolists/${id}/`, {
+      const response = await apiFetch(`/api/todolists/${id}/`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

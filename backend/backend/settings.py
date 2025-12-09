@@ -23,11 +23,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "default-key")
 DEBUG = os.environ.get("DEBUG", "1") == "1"
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-    "64.23.173.170",
-]
+
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+
+extra_hosts = os.getenv("ALLOWED_HOSTS")
+if extra_hosts:
+    ALLOWED_HOSTS.extend(extra_hosts.split(","))
 
 
 # Application definition
@@ -65,6 +66,10 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
+
+extra_origins = os.getenv("CORS_ALLOWED_ORIGINS")
+if extra_origins:
+    CORS_ALLOWED_ORIGINS.extend(extra_origins.split(","))
 
 
 REST_FRAMEWORK = {
