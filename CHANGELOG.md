@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ## 2026-01-12
 ### Added
 - Codex auto PR Review
+- `AGENTS.md`
 ### Changed
 - `pr_review` to `pr_summary` to summarize instead of having a 2nd PR reviewer
 
