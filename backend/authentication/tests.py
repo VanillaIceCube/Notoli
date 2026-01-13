@@ -116,6 +116,7 @@ class RegistrationTests(APITestCase):
             f"Unexpected error body for duplicate username: {response.data}",
         )
 
+
 class LoginTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
