@@ -9,6 +9,8 @@ All notable changes to this project are documented in this file.
 - Authentication Tests
   - `RegistrationTests`
   - `LoginTests`
+  - `RefreshTokenTests`
+  - `AuthMethodTests`
 ### Changed
 - `pr_review` to `pr_summary` to summarize instead of having a 2nd PR reviewer
 
