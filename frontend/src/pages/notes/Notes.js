@@ -12,19 +12,7 @@ import {
   IconButton,
 } from '@mui/material';
 import { Add, Close, MoreVert } from '@mui/icons-material';
-import Divider from '@mui/material/Divider';
-import { useParams } from 'react-router-dom';
-import { apiFetch } from '../../services/client';
-
-export default function Notes({ setAppBarHeader }) {
-  // Pull Todolist ID
-  const { todoListId } = useParams();
-
-  // Pull Note List
-  const token = sessionStorage.getItem('accessToken');
-  const [lists, setLists] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+import
 
   const fetchNotes = useCallback(async () => {
     setLoading(true);

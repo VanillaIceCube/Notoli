@@ -4,20 +4,7 @@ import {
   Container,
   Paper,
   Stack,
-  Button,
-  Menu,
-  MenuItem,
-  Box,
-  TextField,
-  IconButton,
-} from '@mui/material';
-import { Add, Close, MoreVert } from '@mui/icons-material';
-import Divider from '@mui/material/Divider';
-import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../../services/client';
-
-export default function Workspaces({ setAppBarHeader }) {
-  // Misc
+  But
   const navigate = useNavigate();
 
   // Pull Workspace List

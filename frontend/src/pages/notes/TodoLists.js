@@ -41,25 +41,7 @@ export default function TodoLists({ setAppBarHeader }) {
       const response = await apiFetch(`/api/todolists/?workspace=${workspaceId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      setLists(data);
-      setError(null);
-    } catch (err) {
-      setError(err.toString());
-    } finally {
-      setLoading(false);
-    }
-  }, [token, workspaceId]);
-
-  useEffect(() => {
-    if (workspaceId) {
-      fetchTodoLists();
-    }
-  }, [workspaceId, fetchTodoLists]);
-
-  // Triple Dot Menu Functions
-  const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
+      if (!respon
   const [selectedTodoList, setSelectedTodoList] = useState(null);
   const open = Boolean(tripleDotAnchorElement);
 
