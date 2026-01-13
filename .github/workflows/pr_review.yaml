@@ -63,7 +63,7 @@ jobs:
           DIFF_CONTENT=$(cat pr.diff)
 
           # Build prompt
-          PROMPT="You are a senior engineer reviewing a pull request for the Notoli project. The tech stack is: Backend: Django; Frontend: React + Material UI; Environment: Conda; Deployment: Docker; CI/CD: GitHub Actions. Review the diff and give concise, brutally honest, actionable feedback. Your response MUST use the following exact sections, in order, each containing bullet points (or '(none)' if empty): ## 🔴 Critical Issues (must fix before merge): ... ## 🟠 Major Issues (should fix): ... ## 🟡 Minor Issues (nice to fix): ... ## 🔵 Suggestions & Improvements (optional): ... ## 🟣 Observations (non-actionable): ... Do NOT include anything outside these sections and do NOT restate the diff. Here is the diff: ${DIFF_CONTENT}"
+          PROMPT="You are a PR summarizer for the Notoli project (Backend: Django; Frontend: React + MUI; Docker; GitHub Actions). Produce a high-level, human-readable digest of what changed and why it matters. Focus on intent, scope, behavior changes, and impact. Do NOT do a code review. Do NOT list line-by-line or file-by-file changes. Do NOT restate the diff. Be concise. If the diff is truncated, explicitly note that the summary may be incomplete. Your response MUST use the following exact sections, in order, each containing bullet points (or '(none)' if empty): ## Summary (what & why): ## Scope (what areas are affected): ## Behavior Changes (user-visible or API-visible): ## Risk & Impact (what could break / who is affected): ## Suggested Verification (quick checks): ## Follow-ups (nice-to-do, not required for merge): Here is the diff: ${DIFF_CONTENT}"
 
           # Build JSON safely
           jq -n \
