@@ -6,6 +6,9 @@ All notable changes to this project are documented in this file.
 ### Added
 - Codex auto PR Review
 - `AGENTS.md`
+- Authentication Tests
+  - `RegistrationTests`
+  - `LoginTests`
 ### Changed
 - `pr_review` to `pr_summary` to summarize instead of having a 2nd PR reviewer
 
