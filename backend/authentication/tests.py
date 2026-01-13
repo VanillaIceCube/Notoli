@@ -361,9 +361,9 @@ class RefreshTokenTests(APITestCase):
             f"Expected 401 for invalid refresh token, got {response.status_code}: {response.data}",
         )
         self.assertEqual(
-            response.data.get("detail"),
-            "Token is invalid",
-            f"Unexpected error body for invalid refresh token: {response.data}",
+            response.data.get("code"),
+            "token_not_valid",
+            f"Unexpected error code for invalid refresh token: {response.data}",
         )
         
     def test_refresh_non_json_request(self):
