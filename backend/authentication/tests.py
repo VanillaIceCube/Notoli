@@ -88,12 +88,12 @@ class RegistrationTests(APITestCase):
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_400_BAD_REQUEST,
-            f"Expected 400 for non-JSON payload, got {response.status_code}: {response.data}",
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            f"Expected 415 for non-JSON payload, got {response.status_code}: {response.data}",
         )
         self.assertEqual(
-            response.data.get("error"),
-            "Username and password required.",
+            response.data.get("detail"),
+            'Unsupported media type "text/plain" in request.',
             f"Unexpected error body for non-JSON payload: {response.data}",
         )
 
