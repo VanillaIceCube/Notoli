@@ -365,7 +365,7 @@ class RefreshTokenTests(APITestCase):
             "token_not_valid",
             f"Unexpected error code for invalid refresh token: {response.data}",
         )
-        
+
     def test_refresh_non_json_request(self):
         r = self.client.post("/auth/refresh/", "refresh=abc", content_type="text/plain")
         self.assertEqual(r.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
