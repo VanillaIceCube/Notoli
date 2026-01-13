@@ -28,7 +28,6 @@ class RegistrationTests(APITestCase):
             f"Unexpected response body: {response.data}",
         )
 
-
     def test_register_missing_username(self):
         response = self.client.post(
             "/auth/register/",
@@ -96,7 +95,6 @@ class RegistrationTests(APITestCase):
             'Unsupported media type "text/plain" in request.',
             f"Unexpected error body for non-JSON payload: {response.data}",
         )
-
 
     def test_register_duplicate_username(self):
         User.objects.create_user(username="dup_user", password="password123")
