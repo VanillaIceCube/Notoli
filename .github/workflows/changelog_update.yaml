@@ -14,7 +14,7 @@ permissions:
 jobs:
   update-changelog:
     name: Update CHANGELOG.md
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
