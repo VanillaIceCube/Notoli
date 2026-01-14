@@ -95,7 +95,10 @@ class WorkspaceApiTests(APITestCase):
         self.client.force_authenticate(user=self.collaborator)
         response = self.client.post(
             "/api/workspaces/",
-            {"name": "Collaborator Workspace", "description": "Collaborator Description"},
+            {
+                "name": "Collaborator Workspace",
+                "description": "Collaborator Description",
+            },
             format="json",
         )
 
@@ -296,7 +299,11 @@ class TodoListApiTests(APITestCase):
         self.client.force_authenticate(user=self.outsider)
         response = self.client.post(
             "/api/todolists/",
-            {"name": "Bad List", "description": "No Access", "workspace": self.workspace.id},
+            {
+                "name": "Bad List",
+                "description": "No Access",
+                "workspace": self.workspace.id,
+            },
             format="json",
         )
 
