@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## 2026-01-14
 ### Added
+- Concurrency control for the changelog update workflow to cancel in-progress runs per ref
+- Trimming of leading and trailing newlines from generated PR summaries
 - Concurrency control for the PR summary workflow to cancel in-progress runs per ref
 - GitHub Actions workflow to generate PR summaries after successful changelog updates
 - GitHub Actions workflow to auto-update CHANGELOG.md from PR diffs using OpenAI
@@ -12,6 +14,7 @@ All notable changes to this project are documented in this file.
 - Authentication test suite for registration, login, and refresh token endpoints
 
 ### Changed
+- PR summary workflow now skips runs for PRs from forks and GitHub Actions bot
 - PR summary workflow now ignores changes to CHANGELOG.md
 - PR summary workflow now ignores CHANGELOG-only changes
 - PR summary workflow now runs after the Changelog Update workflow completes and only on successful runs
