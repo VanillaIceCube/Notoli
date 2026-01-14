@@ -117,7 +117,7 @@ jobs:
         run: |
           PR_NUMBER=$(jq -r .pull_request.number "$GITHUB_EVENT_PATH")
 
-          NEW_BODY="<!-- pr-summary:start -->\n${SUMMARY_BODY}\n<!-- pr-summary:end -->"
+          NEW_BODY="${SUMMARY_BODY}"
 
           # Build the update JSON safely with jq
           jq -n --arg body "$NEW_BODY" '{body: $body}' > update.json
