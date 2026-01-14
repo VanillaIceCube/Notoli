@@ -7,7 +7,7 @@ All notable changes to this project are documented in this file.
 - Note API tests for M2M behavior (multi-list membership and removal filtering).
 ### Changed
 - Notes API handling to support M2M `TodoList.notes` on create and filtering.
-- PR summary workflow now appends summary to PR description instead of commenting.
+- PR summary workflow now overwrotes summary to PR description instead of commenting.
 
 
 ## 2026-01-12
