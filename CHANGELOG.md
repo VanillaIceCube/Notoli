@@ -6,6 +6,9 @@ All notable changes to this project are documented in this file.
 ### Added
 - GitHub Actions workflow to auto-update CHANGELOG.md from PR diffs using OpenAI
 
+### Removed
+- Authentication test suite for registration, login, and refresh token endpoints
+
 ## 2026-01-13
 ### Added
 - Note API tests for M2M behavior (multi-list membership and removal filtering).
