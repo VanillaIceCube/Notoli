@@ -4,6 +4,7 @@ All notable changes to this project are documented in this file.
 
 ## 2026-01-14
 ### Added
+- Concurrency control for the PR summary workflow to cancel in-progress runs per ref
 - GitHub Actions workflow to generate PR summaries after successful changelog updates
 - GitHub Actions workflow to auto-update CHANGELOG.md from PR diffs using OpenAI
 
