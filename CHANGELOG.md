@@ -2,6 +2,13 @@
 All notable changes to this project are documented in this file.
 
 
+## 2026-01-13
+### Added
+- Note API tests for M2M behavior (multi-list membership and removal filtering).
+### Changed
+- Notes API handling to support M2M `TodoList.notes` on create and filtering.
+
+
 ## 2026-01-12
 ### Added
 - Codex auto PR Review

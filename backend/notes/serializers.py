@@ -26,6 +26,12 @@ class TodoListSerializer(serializers.ModelSerializer):
 
 
 class NoteSerializer(serializers.ModelSerializer):
+    todo_list = serializers.PrimaryKeyRelatedField(
+        queryset=TodoList.objects.all(),
+        write_only=True,
+        required=True,
+    )
+
     class Meta:
         model = Note
         fields = "__all__"
@@ -36,3 +42,9 @@ class NoteSerializer(serializers.ModelSerializer):
             "owner": {"required": False},
             "created_by": {"required": False},
         }
+
+    def create(self, validated_data):
+        todo_list = validated_data.pop("todo_list")
+        note = super().create(validated_data)
+        todo_list.notes.add(note)
+        return note
