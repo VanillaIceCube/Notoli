@@ -4,10 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## 2026-01-14
 ### Added
+- GitHub Actions workflow to generate PR summaries after successful changelog updates
 - GitHub Actions workflow to auto-update CHANGELOG.md from PR diffs using OpenAI
 
 ### Removed
 - Authentication test suite for registration, login, and refresh token endpoints
+
+### Changed
+- PR summary workflow now runs after the Changelog Update workflow completes and only on successful runs
+- PR summary workflow now derives PR number and base SHA from the workflow_run event and GitHub API instead of pull_request payload
 
 ## 2026-01-13
 ### Added
