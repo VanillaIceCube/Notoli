@@ -1,0 +1,216 @@
+name: Changelog Update
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write
+
+jobs:
+  update-changelog:
+    name: Update CHANGELOG.md
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Get PR diff
+        run: |
+          BASE_SHA=$(jq -r .pull_request.base.sha "$GITHUB_EVENT_PATH")
+          HEAD_SHA=$(jq -r .pull_request.head.sha "$GITHUB_EVENT_PATH")
+
+          git diff --unified=3 "$BASE_SHA" "$HEAD_SHA" > pr.diff
+
+          MAX_BYTES=45000
+          ACTUAL_BYTES=$(wc -c < pr.diff || echo 0)
+          if [ "$ACTUAL_BYTES" -gt "$MAX_BYTES" ]; then
+            head -c "$MAX_BYTES" pr.diff > pr_truncated.diff
+            echo "::warning::Diff was too large ($ACTUAL_BYTES bytes). Truncated to $MAX_BYTES bytes."
+            mv pr_truncated.diff pr.diff
+          fi
+
+      - name: Call OpenAI
+        id: openai
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "changelog=Missing OPENAI_API_KEY secret." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -z "$OPENAI_PROJECT_ID" ]; then
+            echo "changelog=Missing OPENAI_PROJECT_ID secret." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CHANGELOG_CONTEXT=$(python - <<'PY'
+from pathlib import Path
+
+text = Path("CHANGELOG.md").read_text(encoding="utf-8")
+lines = text.splitlines()
+print("\n".join(lines[:120]))
+PY
+)
+
+          DIFF_CONTENT=$(cat pr.diff)
+
+          PROMPT="You are updating a changelog. Use the existing CHANGELOG format for Notoli. Given the changelog context and a git diff, produce concise changelog items grouped by section. Output JSON ONLY with keys: added, changed, fixed, removed. Each value is an array of strings (bullet texts without leading '-'). Use sentence case, keep it short, and do not include dates or section headers. If a section has no items, use an empty array.\n\nCHANGELOG CONTEXT:\n${CHANGELOG_CONTEXT}\n\nDIFF:\n${DIFF_CONTENT}\n"
+
+          jq -n \
+            --arg prompt "$PROMPT" \
+            '
+            {
+              model: "gpt-5.1",
+              temperature: 0.2,
+              messages: [
+                { "role": "system", "content": "You write changelog entries matching the existing format." },
+                { "role": "user", "content": $prompt }
+              ]
+            }
+            ' > body.json
+
+          RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -H "OpenAI-Project: $OPENAI_PROJECT_ID" \
+            --data @body.json)
+
+          CHANGELOG_JSON=$(echo "$RESPONSE" | jq -r '
+            if .choices and .choices[0].message and .choices[0].message.content then
+              .choices[0].message.content
+            elif .error and .error.message then
+              "{\"added\":[],\"changed\":[],\"fixed\":[],\"removed\":[],\"error\":\"" + .error.message + "\"}"
+            else
+              "{\"added\":[],\"changed\":[],\"fixed\":[],\"removed\":[]}"
+            end
+          ')
+
+          {
+            echo 'changelog<<EOF'
+            printf '%s\n' "$CHANGELOG_JSON"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update CHANGELOG.md
+        env:
+          CHANGELOG_JSON: ${{ steps.openai.outputs.changelog }}
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          export DATE
+
+          python - <<'PY'
+import json
+import os
+from pathlib import Path
+
+date = os.environ["DATE"]
+payload = os.environ.get("CHANGELOG_JSON", "").strip()
+
+try:
+    data = json.loads(payload)
+except json.JSONDecodeError as exc:
+    raise SystemExit(f"Invalid changelog JSON: {exc}")
+
+sections = {
+    "Added": data.get("added", []),
+    "Changed": data.get("changed", []),
+    "Fixed": data.get("fixed", []),
+    "Removed": data.get("removed", []),
+}
+
+if not any(sections.values()):
+    raise SystemExit("No changelog entries to add.")
+
+path = Path("CHANGELOG.md")
+lines = path.read_text(encoding="utf-8").splitlines()
+
+date_header = f"## {date}"
+
+def find_line_index(prefix):
+    for idx, line in enumerate(lines):
+        if line == prefix:
+            return idx
+    return -1
+
+def section_bounds(start_idx):
+    end_idx = len(lines)
+    for idx in range(start_idx + 1, len(lines)):
+        if lines[idx].startswith("### ") or lines[idx].startswith("## "):
+            end_idx = idx
+            break
+    return start_idx, end_idx
+
+def insert_new_date_block():
+    block = [date_header]
+    for section, items in sections.items():
+        if items:
+            block.append(f"### {section}")
+            block.extend(f"- {item}" for item in items)
+    block.append("")
+    insert_at = 0
+    for idx, line in enumerate(lines):
+        if line.startswith("## "):
+            insert_at = idx
+            break
+    else:
+        insert_at = len(lines)
+    lines[insert_at:insert_at] = block
+
+date_idx = find_line_index(date_header)
+if date_idx == -1:
+    insert_new_date_block()
+else:
+    date_end = len(lines)
+    for idx in range(date_idx + 1, len(lines)):
+        if lines[idx].startswith("## "):
+            date_end = idx
+            break
+    for section, items in sections.items():
+        if not items:
+            continue
+        section_header = f"### {section}"
+        section_idx = -1
+        for idx in range(date_idx + 1, date_end):
+            if lines[idx] == section_header:
+                section_idx = idx
+                break
+        if section_idx == -1:
+            insert_at = date_idx + 1
+            while insert_at < date_end and lines[insert_at].startswith("### "):
+                _, end = section_bounds(insert_at)
+                insert_at = end
+            lines[insert_at:insert_at] = [section_header] + [f"- {item}" for item in items]
+            date_end += 1 + len(items)
+        else:
+            _, end = section_bounds(section_idx)
+            existing = set(lines[section_idx:end])
+            for item in items:
+                line = f"- {item}"
+                if line not in existing:
+                    lines.insert(end, line)
+                    end += 1
+                    date_end += 1
+
+path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+PY
+
+      - name: Commit changelog
+        run: |
+          if git diff --quiet; then
+            echo "No changelog changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "Update changelog"
+          git push
