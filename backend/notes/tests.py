@@ -91,6 +91,50 @@ class WorkspaceApiTests(APITestCase):
             f"Workspace creator was not set to request user: {workspace.created_by_id}",
         )
 
+    def test_create_workspace_as_collaborator(self):
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.post(
+            "/api/workspaces/",
+            {"name": "Collaborator Workspace", "description": "Collaborator Description"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+            f"Expected 201 on workspace create, got {response.status_code}: {response.data}",
+        )
+        workspace = Workspace.objects.get(id=response.data.get("id"))
+        self.assertEqual(
+            workspace.owner,
+            self.collaborator,
+            f"Workspace owner was not set to collaborator: {workspace.owner_id}",
+        )
+        self.assertEqual(
+            workspace.created_by,
+            self.collaborator,
+            f"Workspace creator was not set to collaborator: {workspace.created_by_id}",
+        )
+
+    def test_create_workspace_missing_name(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(
+            "/api/workspaces/",
+            {"description": "No Name Supplied"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            f"Expected 400 when name is missing, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("name"),
+            ["This field is required."],
+            f"Unexpected error body when name is missing: {response.data}",
+        )
+
     def test_list_workspaces_limited_to_access(self):
         Workspace.objects.create(
             name="Outsider Workspace",
@@ -130,6 +174,30 @@ class WorkspaceApiTests(APITestCase):
             f"Expected 404 for outsider workspace access, got {response.status_code}: {response.data}",
         )
 
+    def test_update_workspace_denied_for_outsider(self):
+        self.client.force_authenticate(user=self.outsider)
+        response = self.client.patch(
+            f"/api/workspaces/{self.workspace.id}/",
+            {"name": "No Access"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+            f"Expected 404 when outsider updates workspace, got {response.status_code}: {response.data}",
+        )
+
+    def test_delete_workspace_denied_for_outsider(self):
+        self.client.force_authenticate(user=self.outsider)
+        response = self.client.delete(f"/api/workspaces/{self.workspace.id}/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+            f"Expected 404 when outsider deletes workspace, got {response.status_code}: {response.data}",
+        )
+
 
 class TodoListApiTests(APITestCase):
     def setUp(self):
@@ -155,44 +223,6 @@ class TodoListApiTests(APITestCase):
             workspace=self.workspace,
             owner=self.owner,
             created_by=self.owner,
-        )
-
-    def test_create_todolist_requires_workspace_access(self):
-        self.client.force_authenticate(user=self.outsider)
-        response = self.client.post(
-            "/api/todolists/",
-            {"name": "Bad List", "description": "No Access", "workspace": self.workspace.id},
-            format="json",
-        )
-
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_403_FORBIDDEN,
-            f"Expected 403 when creating todolist without access, got {response.status_code}: {response.data}",
-        )
-        self.assertEqual(
-            response.data.get("detail"),
-            "You cannot add todo-lists to this workspace.",
-            f"Unexpected error detail when access denied: {response.data}",
-        )
-
-    def test_create_todolist_missing_workspace(self):
-        self.client.force_authenticate(user=self.owner)
-        response = self.client.post(
-            "/api/todolists/",
-            {"name": "Missing Workspace", "description": "No Workspace Supplied"},
-            format="json",
-        )
-
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_400_BAD_REQUEST,
-            f"Expected 400 when workspace is missing, got {response.status_code}: {response.data}",
-        )
-        self.assertEqual(
-            response.data.get("workspace"),
-            ["This field is required."],
-            f"Unexpected error body when workspace is missing: {response.data}",
         )
 
     def test_create_todolist_as_collaborator(self):
@@ -222,6 +252,63 @@ class TodoListApiTests(APITestCase):
             todo_list.created_by,
             self.collaborator,
             f"Expected collaborator to be creator, got {todo_list.created_by_id}",
+        )
+
+    def test_create_todolist_missing_name(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(
+            "/api/todolists/",
+            {"description": "No Name Supplied", "workspace": self.workspace.id},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            f"Expected 400 when name is missing, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("name"),
+            ["This field is required."],
+            f"Unexpected error body when name is missing: {response.data}",
+        )
+
+    def test_create_todolist_missing_workspace(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(
+            "/api/todolists/",
+            {"name": "Missing Workspace", "description": "No Workspace Supplied"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            f"Expected 400 when workspace is missing, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("workspace"),
+            ["This field is required."],
+            f"Unexpected error body when workspace is missing: {response.data}",
+        )
+
+    def test_create_todolist_requires_workspace_access(self):
+        self.client.force_authenticate(user=self.outsider)
+        response = self.client.post(
+            "/api/todolists/",
+            {"name": "Bad List", "description": "No Access", "workspace": self.workspace.id},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+            f"Expected 403 when creating todolist without access, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("detail"),
+            "You cannot add todo-lists to this workspace.",
+            f"Unexpected error detail when access denied: {response.data}",
         )
 
     def test_list_todolists_filters_by_workspace(self):
@@ -259,6 +346,16 @@ class TodoListApiTests(APITestCase):
             f"Expected only one todolist in filtered response, got {response.data}",
         )
 
+    def test_retrieve_todolist_denied_for_outsider(self):
+        self.client.force_authenticate(user=self.outsider)
+        response = self.client.get(f"/api/todolists/{self.todo_list.id}/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+            f"Expected 404 for outsider todolist access, got {response.status_code}: {response.data}",
+        )
+
     def test_update_todolist_denied_for_outsider(self):
         self.client.force_authenticate(user=self.outsider)
         response = self.client.patch(
@@ -271,6 +368,16 @@ class TodoListApiTests(APITestCase):
             response.status_code,
             status.HTTP_404_NOT_FOUND,
             f"Expected 404 when outsider updates todolist, got {response.status_code}: {response.data}",
+        )
+
+    def test_delete_todolist_denied_for_outsider(self):
+        self.client.force_authenticate(user=self.outsider)
+        response = self.client.delete(f"/api/todolists/{self.todo_list.id}/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+            f"Expected 404 when outsider deletes todolist, got {response.status_code}: {response.data}",
         )
 
 
@@ -307,48 +414,6 @@ class NoteApiTests(APITestCase):
         )
         self.todo_list.notes.add(self.note)
 
-    def test_create_note_requires_todolist_access(self):
-        self.client.force_authenticate(user=self.outsider)
-        response = self.client.post(
-            "/api/notes/",
-            {
-                "note": "Outsider Note",
-                "description": "No Access",
-                "todo_list": self.todo_list.id,
-            },
-            format="json",
-        )
-
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_403_FORBIDDEN,
-            f"Expected 403 when creating note without access, got {response.status_code}: {response.data}",
-        )
-        self.assertEqual(
-            response.data.get("detail"),
-            "You cannot add notes to this todo-list.",
-            f"Unexpected error detail for note access denial: {response.data}",
-        )
-
-    def test_create_note_missing_todolist(self):
-        self.client.force_authenticate(user=self.owner)
-        response = self.client.post(
-            "/api/notes/",
-            {"note": "Missing List", "description": "No List Supplied"},
-            format="json",
-        )
-
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_400_BAD_REQUEST,
-            f"Expected 400 when todo_list is missing, got {response.status_code}: {response.data}",
-        )
-        self.assertEqual(
-            response.data.get("todo_list"),
-            ["This field is required."],
-            f"Unexpected error body when todo_list is missing: {response.data}",
-        )
-
     def test_create_note_as_collaborator(self):
         self.client.force_authenticate(user=self.collaborator)
         response = self.client.post(
@@ -376,6 +441,67 @@ class NoteApiTests(APITestCase):
             note.created_by,
             self.collaborator,
             f"Expected collaborator to be creator, got {note.created_by_id}",
+        )
+
+    def test_create_note_missing_note(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(
+            "/api/notes/",
+            {"description": "No Note Supplied", "todo_list": self.todo_list.id},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            f"Expected 400 when note is missing, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("note"),
+            ["This field is required."],
+            f"Unexpected error body when note is missing: {response.data}",
+        )
+
+    def test_create_note_missing_todolist(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(
+            "/api/notes/",
+            {"note": "Missing List", "description": "No List Supplied"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            f"Expected 400 when todo_list is missing, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("todo_list"),
+            ["This field is required."],
+            f"Unexpected error body when todo_list is missing: {response.data}",
+        )
+
+    def test_create_note_requires_todolist_access(self):
+        self.client.force_authenticate(user=self.outsider)
+        response = self.client.post(
+            "/api/notes/",
+            {
+                "note": "Outsider Note",
+                "description": "No Access",
+                "todo_list": self.todo_list.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+            f"Expected 403 when creating note without access, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("detail"),
+            "You cannot add notes to this todo-list.",
+            f"Unexpected error detail for note access denial: {response.data}",
         )
 
     def test_list_notes_filters_by_todolist(self):
@@ -463,6 +589,30 @@ class NoteApiTests(APITestCase):
             self.note.id,
             response_ids,
             f"Expected note to be absent after removal: {response.data}",
+        )
+
+    def test_retrieve_note_denied_for_outsider(self):
+        self.client.force_authenticate(user=self.outsider)
+        response = self.client.get(f"/api/notes/{self.note.id}/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+            f"Expected 404 for outsider note access, got {response.status_code}: {response.data}",
+        )
+
+    def test_update_note_denied_for_outsider(self):
+        self.client.force_authenticate(user=self.outsider)
+        response = self.client.patch(
+            f"/api/notes/{self.note.id}/",
+            {"note": "No Access"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+            f"Expected 404 when outsider updates note, got {response.status_code}: {response.data}",
         )
 
     def test_delete_note_denied_for_outsider(self):
