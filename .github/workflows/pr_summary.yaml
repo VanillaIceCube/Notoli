@@ -1,9 +1,12 @@
 name: PR Summary
 
 on:
-  workflow_run:
-    workflows: ["Changelog Update"]
-    types: [completed]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: pr-summary-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -13,7 +16,6 @@ jobs:
   ai-review:
     name: ChatGPT Summary
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout PR
@@ -24,25 +26,8 @@ jobs:
       - name: Get PR diff
         run: |
           # Get the base and head SHAs for the PR
-          HEAD_SHA=$(jq -r .workflow_run.head_sha "$GITHUB_EVENT_PATH")
-
-          PR_NUMBER=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            -H "Accept: application/vnd.github.groot-preview+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/pulls" \
-            | jq -r '.[0].number // empty')
-
-          if [ -z "$PR_NUMBER" ]; then
-            echo "No PR found for commit ${HEAD_SHA}."
-            exit 0
-          fi
-
-          BASE_SHA=$(curl -s \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
-            | jq -r '.base.sha')
+          BASE_SHA=$(jq -r .pull_request.base.sha "$GITHUB_EVENT_PATH")
+          HEAD_SHA=$(jq -r .pull_request.head.sha "$GITHUB_EVENT_PATH")
 
           echo "Base: $BASE_SHA"
           echo "Head: $HEAD_SHA"
@@ -134,19 +119,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SUMMARY_BODY: ${{ steps.openai.outputs.summary }}
         run: |
-          HEAD_SHA=$(jq -r .workflow_run.head_sha "$GITHUB_EVENT_PATH")
-
-          PR_NUMBER=$(curl -s \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            -H "Accept: application/vnd.github.groot-preview+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/pulls" \
-            | jq -r '.[0].number // empty')
-
-          if [ -z "$PR_NUMBER" ]; then
-            echo "No PR found for commit ${HEAD_SHA}."
-            exit 0
-          fi
+          PR_NUMBER=$(jq -r .pull_request.number "$GITHUB_EVENT_PATH")
 
           NEW_BODY="${SUMMARY_BODY}"
 
