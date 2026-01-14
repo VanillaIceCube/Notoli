@@ -51,14 +51,7 @@ jobs:
             exit 0
           fi
 
-          CHANGELOG_CONTEXT=$(python - <<'PY'
-from pathlib import Path
-
-text = Path("CHANGELOG.md").read_text(encoding="utf-8")
-lines = text.splitlines()
-print("\n".join(lines[:120]))
-PY
-)
+          CHANGELOG_CONTEXT=$(head -n 120 CHANGELOG.md)
 
           DIFF_CONTENT=$(cat pr.diff)
 
@@ -105,102 +98,158 @@ PY
         run: |
           DATE=$(date -u +%Y-%m-%d)
           export DATE
+          ADDED_FILE=$(mktemp)
+          CHANGED_FILE=$(mktemp)
+          FIXED_FILE=$(mktemp)
+          REMOVED_FILE=$(mktemp)
 
-          python - <<'PY'
-import json
-import os
-from pathlib import Path
+          echo "$CHANGELOG_JSON" | jq -r '.added[]' | sed 's/^/- /' > "$ADDED_FILE" || true
+          echo "$CHANGELOG_JSON" | jq -r '.changed[]' | sed 's/^/- /' > "$CHANGED_FILE" || true
+          echo "$CHANGELOG_JSON" | jq -r '.fixed[]' | sed 's/^/- /' > "$FIXED_FILE" || true
+          echo "$CHANGELOG_JSON" | jq -r '.removed[]' | sed 's/^/- /' > "$REMOVED_FILE" || true
 
-date = os.environ["DATE"]
-payload = os.environ.get("CHANGELOG_JSON", "").strip()
+          filter_existing() {
+            local file="$1"
+            if [ ! -s "$file" ]; then
+              return 0
+            fi
+            grep -Fvx -f CHANGELOG.md "$file" > "${file}.tmp" || true
+            mv "${file}.tmp" "$file"
+          }
 
-try:
-    data = json.loads(payload)
-except json.JSONDecodeError as exc:
-    raise SystemExit(f"Invalid changelog JSON: {exc}")
+          filter_existing "$ADDED_FILE"
+          filter_existing "$CHANGED_FILE"
+          filter_existing "$FIXED_FILE"
+          filter_existing "$REMOVED_FILE"
 
-sections = {
-    "Added": data.get("added", []),
-    "Changed": data.get("changed", []),
-    "Fixed": data.get("fixed", []),
-    "Removed": data.get("removed", []),
-}
+          if [ ! -s "$ADDED_FILE" ] && [ ! -s "$CHANGED_FILE" ] && [ ! -s "$FIXED_FILE" ] && [ ! -s "$REMOVED_FILE" ]; then
+            echo "No changelog entries to add."
+            exit 0
+          fi
 
-if not any(sections.values()):
-    raise SystemExit("No changelog entries to add.")
+          if ! grep -q "^## ${DATE}$" CHANGELOG.md; then
+            BLOCK_FILE=$(mktemp)
+            {
+              echo "## ${DATE}"
+              if [ -s "$ADDED_FILE" ]; then
+                echo "### Added"
+                cat "$ADDED_FILE"
+              fi
+              if [ -s "$CHANGED_FILE" ]; then
+                echo "### Changed"
+                cat "$CHANGED_FILE"
+              fi
+              if [ -s "$FIXED_FILE" ]; then
+                echo "### Fixed"
+                cat "$FIXED_FILE"
+              fi
+              if [ -s "$REMOVED_FILE" ]; then
+                echo "### Removed"
+                cat "$REMOVED_FILE"
+              fi
+              echo ""
+            } > "$BLOCK_FILE"
 
-path = Path("CHANGELOG.md")
-lines = path.read_text(encoding="utf-8").splitlines()
+            awk -v blockfile="$BLOCK_FILE" '
+              BEGIN { inserted = 0; while ((getline line < blockfile) > 0) { block = block line "\n" } }
+              /^## / && !inserted { printf "%s", block; inserted = 1 }
+              { print }
+              END { if (!inserted) printf "%s", block }
+            ' CHANGELOG.md > CHANGELOG.md.tmp
+            mv CHANGELOG.md.tmp CHANGELOG.md
+            exit 0
+          fi
 
-date_header = f"## {date}"
+          export DATE
+          export ADDED_FILE
+          export CHANGED_FILE
+          export FIXED_FILE
+          export REMOVED_FILE
 
-def find_line_index(prefix):
-    for idx, line in enumerate(lines):
-        if line == prefix:
-            return idx
-    return -1
+          awk '
+            BEGIN {
+              date = ENVIRON["DATE"]
+              added_file = ENVIRON["ADDED_FILE"]
+              changed_file = ENVIRON["CHANGED_FILE"]
+              fixed_file = ENVIRON["FIXED_FILE"]
+              removed_file = ENVIRON["REMOVED_FILE"]
+              added_n = load_lines(added_file, added)
+              changed_n = load_lines(changed_file, changed)
+              fixed_n = load_lines(fixed_file, fixed)
+              removed_n = load_lines(removed_file, removed)
+            }
 
-def section_bounds(start_idx):
-    end_idx = len(lines)
-    for idx in range(start_idx + 1, len(lines)):
-        if lines[idx].startswith("### ") or lines[idx].startswith("## "):
-            end_idx = idx
-            break
-    return start_idx, end_idx
+            function load_lines(path, arr,   i, line) {
+              i = 0
+              while ((getline line < path) > 0) {
+                i++
+                arr[i] = line
+              }
+              close(path)
+              return i
+            }
 
-def insert_new_date_block():
-    block = [date_header]
-    for section, items in sections.items():
-        if items:
-            block.append(f"### {section}")
-            block.extend(f"- {item}" for item in items)
-    block.append("")
-    insert_at = 0
-    for idx, line in enumerate(lines):
-        if line.startswith("## "):
-            insert_at = idx
-            break
-    else:
-        insert_at = len(lines)
-    lines[insert_at:insert_at] = block
+            function emit_section(name, arr, n,   i) {
+              if (n == 0) return
+              print "### " name
+              for (i = 1; i <= n; i++) {
+                print arr[i]
+              }
+              print ""
+            }
 
-date_idx = find_line_index(date_header)
-if date_idx == -1:
-    insert_new_date_block()
-else:
-    date_end = len(lines)
-    for idx in range(date_idx + 1, len(lines)):
-        if lines[idx].startswith("## "):
-            date_end = idx
-            break
-    for section, items in sections.items():
-        if not items:
-            continue
-        section_header = f"### {section}"
-        section_idx = -1
-        for idx in range(date_idx + 1, date_end):
-            if lines[idx] == section_header:
-                section_idx = idx
-                break
-        if section_idx == -1:
-            insert_at = date_idx + 1
-            while insert_at < date_end and lines[insert_at].startswith("### "):
-                _, end = section_bounds(insert_at)
-                insert_at = end
-            lines[insert_at:insert_at] = [section_header] + [f"- {item}" for item in items]
-            date_end += 1 + len(items)
-        else:
-            _, end = section_bounds(section_idx)
-            existing = set(lines[section_idx:end])
-            for item in items:
-                line = f"- {item}"
-                if line not in existing:
-                    lines.insert(end, line)
-                    end += 1
-                    date_end += 1
+            function emit_missing_sections(   i) {
+              if (!seen_added) emit_section("Added", added, added_n)
+              if (!seen_changed) emit_section("Changed", changed, changed_n)
+              if (!seen_fixed) emit_section("Fixed", fixed, fixed_n)
+              if (!seen_removed) emit_section("Removed", removed, removed_n)
+            }
 
-path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
-PY
+            /^## / {
+              if (in_date) {
+                emit_missing_sections()
+              }
+              in_date = ($0 == "## " date)
+            }
+
+            in_date && $0 == "### Added" {
+              seen_added = 1
+              print $0
+              for (i = 1; i <= added_n; i++) print added[i]
+              added_n = 0
+              next
+            }
+            in_date && $0 == "### Changed" {
+              seen_changed = 1
+              print $0
+              for (i = 1; i <= changed_n; i++) print changed[i]
+              changed_n = 0
+              next
+            }
+            in_date && $0 == "### Fixed" {
+              seen_fixed = 1
+              print $0
+              for (i = 1; i <= fixed_n; i++) print fixed[i]
+              fixed_n = 0
+              next
+            }
+            in_date && $0 == "### Removed" {
+              seen_removed = 1
+              print $0
+              for (i = 1; i <= removed_n; i++) print removed[i]
+              removed_n = 0
+              next
+            }
+
+            { print }
+
+            END {
+              if (in_date) {
+                emit_missing_sections()
+              }
+            }
+          ' CHANGELOG.md > CHANGELOG.md.tmp
+          mv CHANGELOG.md.tmp CHANGELOG.md
 
       - name: Commit changelog
         run: |
