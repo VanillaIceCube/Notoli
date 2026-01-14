@@ -123,7 +123,25 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" \
             | jq -r '.body // ""')
 
-          NEW_BODY="${PR_BODY} ${SUMMARY_BODY}"
+          NEW_BODY=$(python - <<'PY'
+import os
+import re
+
+body = os.environ.get("PR_BODY", "")
+summary = os.environ.get("SUMMARY_BODY", "")
+start = "<!-- pr-summary:start -->"
+end = "<!-- pr-summary:end -->"
+block = f"{start}\n{summary}\n{end}"
+
+pattern = re.compile(rf"{re.escape(start)}.*?{re.escape(end)}", re.S)
+if pattern.search(body):
+    body = pattern.sub(block, body)
+else:
+    body = f"{body}\n\n{block}" if body else block
+
+print(body)
+PY
+)
 
           # Build the update JSON safely with jq
           jq -n --arg body "$NEW_BODY" '{body: $body}' > update.json
