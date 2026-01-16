@@ -16,11 +16,7 @@ jest.mock('../../services/client', () => ({
 test('renders username/password fields and login button', () => {
   render(
     <MemoryRouter>
-
-
       <Login showSnackbar={jest.fn()} />
-
-      
     </MemoryRouter>,
   );
 
