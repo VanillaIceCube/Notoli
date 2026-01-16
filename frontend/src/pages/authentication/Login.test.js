@@ -9,7 +9,7 @@ jest.mock('../../services/client', () => ({
     Promise.resolve({
       ok: true,
       json: async () => [],
-    })
+    }),
   ),
 }));
 
@@ -17,7 +17,7 @@ test('renders username/password fields and login button', () => {
   render(
     <MemoryRouter>
       <Login showSnackbar={jest.fn()} />
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 
   expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
