@@ -44,6 +44,21 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Check PR fork
+        id: forkcheck
+        shell: bash
+        run: |
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo "allow_autofix=false" >> "$GITHUB_OUTPUT"
+            echo "Fork PR detected; auto-fix disabled."
+          else
+            echo "allow_autofix=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: actions/setup-node@v4
         with:
@@ -56,16 +71,16 @@ jobs:
 
       # Fix phase (only on non-bot-triggered runs)
       - name: Prettier (auto-fix)
-        if: github.actor != 'github-actions[bot]'
+        if: github.actor != 'github-actions[bot]' && steps.forkcheck.outputs.allow_autofix == 'true'
         run: npm run format
 
       - name: ESLint (auto-fix)
-        if: github.actor != 'github-actions[bot]'
+        if: github.actor != 'github-actions[bot]' && steps.forkcheck.outputs.allow_autofix == 'true'
         run: npm run lint -- --fix
 
       - name: Commit auto-fixes
         id: autofix_commit
-        if: github.actor != 'github-actions[bot]'
+        if: github.actor != 'github-actions[bot]' && steps.forkcheck.outputs.allow_autofix == 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "lintbot: frontend autofix"
@@ -77,7 +92,7 @@ jobs:
 
       # If we pushed a fix commit, stop. The next run on the new SHA will do the checks.
       - name: Stop if we pushed fixes
-        if: github.actor != 'github-actions[bot]' && steps.autofix_commit.outputs.changes_detected == 'true'
+        if: steps.autofix_commit.outputs.changes_detected == 'true'
         run: |
           echo "Auto-fixes committed. A new run will validate the updated PR head."
           exit 0
@@ -99,6 +114,21 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Check PR fork
+        id: forkcheck
+        shell: bash
+        run: |
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo "allow_autofix=false" >> "$GITHUB_OUTPUT"
+            echo "Fork PR detected; auto-fix disabled."
+          else
+            echo "allow_autofix=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: actions/setup-python@v5
         with:
@@ -110,16 +140,16 @@ jobs:
 
       # Fix phase (only on non-bot-triggered runs)
       - name: Ruff (auto-fix)
-        if: github.actor != 'github-actions[bot]'
+        if: github.actor != 'github-actions[bot]' && steps.forkcheck.outputs.allow_autofix == 'true'
         run: ruff check . --fix
 
       - name: Ruff format (auto-fix)
-        if: github.actor != 'github-actions[bot]'
+        if: github.actor != 'github-actions[bot]' && steps.forkcheck.outputs.allow_autofix == 'true'
         run: ruff format .
 
       - name: Commit auto-fixes
         id: autofix_commit
-        if: github.actor != 'github-actions[bot]'
+        if: github.actor != 'github-actions[bot]' && steps.forkcheck.outputs.allow_autofix == 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "lintbot: backend autofix"
@@ -130,7 +160,7 @@ jobs:
           commit_user_email: "lint-bot@users.noreply.github.com"
 
       - name: Stop if we pushed fixes
-        if: github.actor != 'github-actions[bot]' && steps.autofix_commit.outputs.changes_detected == 'true'
+        if: steps.autofix_commit.outputs.changes_detected == 'true'
         run: |
           echo "Auto-fixes committed. A new run will validate the updated PR head."
           exit 0

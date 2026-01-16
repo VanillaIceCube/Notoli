@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 - PR summary workflow now runs on successful Lint workflow completion and targets the PR head SHA.
 - PR summary now validates the workflow run head against the current PR head to avoid stale summaries.
 - Lint workflow path filter corrected to match the `lint.yaml` filename.
+- Lint workflow now checks out the PR head ref for auto-fix commits and skips auto-fix for forked PRs.
 
 ## 2026-01-13
 ### Added
