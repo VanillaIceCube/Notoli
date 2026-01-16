@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-01-15
+### Added
+- Frontend Login smoke test (`Login.test.js`).
+- Frontend Jest DOM setup for testing (`src/setupTests.js`).
 
 ## 2026-01-13
 ### Added
