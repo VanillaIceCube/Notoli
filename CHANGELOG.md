@@ -5,6 +5,9 @@ All notable changes to this project are documented in this file.
 ### Added
 - Frontend Login smoke test (`Login.test.js`).
 - Frontend Jest DOM setup for testing (`src/setupTests.js`).
+### Changed
+- Lint workflow now scopes concurrency per PR and skips lintbot self-triggering.
+- Lint workflow uses shallow checkout, standardized cache config, and updated lintbot commit messages.
 
 ## 2026-01-13
 ### Added
