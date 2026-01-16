@@ -3,7 +3,7 @@ name: Lint
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    branches: [main]
+    branches: [ main ]
     paths:
       - "frontend/**"
       - "backend/**"
@@ -22,12 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
-      backend: ${{ steps.filter.outputs.backend }}
+      backend:  ${{ steps.filter.outputs.backend }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -37,29 +34,10 @@ jobs:
             backend:
               - 'backend/**'
 
-  head:
-    name: Read Head Commit
-    runs-on: ubuntu-latest
-    outputs:
-      message: ${{ steps.headmsg.outputs.message }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - id: headmsg
-        shell: bash
-        run: |
-          echo "message<<EOF" >> "$GITHUB_OUTPUT"
-          git log -1 --pretty=%B >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
-
   lint-frontend:
     name: Lint Frontend (ESLint + Prettier)
-    needs: [changes, head]
-    if: |
-      needs.changes.outputs.frontend == 'true' &&
-      !contains(needs.head.outputs.message, 'lintbot:')
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -69,11 +47,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "18.20.8"
-          cache: "npm"
-          cache-dependency-path: "frontend/package-lock.json"
+          node-version: '18.20.8'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
 
-      - name: Install dependencies
+      - name: Install dependancies
         run: npm ci
 
       - name: Prettier (auto-fix)
@@ -85,7 +63,7 @@ jobs:
       - name: Commit auto-fixes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "lintbot: frontend autofix"
+          commit_message: "Github Actions: Prettier & ESLint automatic lint fixes"
           branch: ${{ github.head_ref }}
           file_pattern: |
             frontend/**/*
@@ -100,10 +78,8 @@ jobs:
 
   lint-backend:
     name: Lint Backend (Ruff)
-    needs: [changes, head]
-    if: |
-      needs.changes.outputs.backend == 'true' &&
-      !contains(needs.head.outputs.message, 'lintbot:')
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -113,8 +89,9 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-          cache: "pip"
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/environment.yml
 
       - name: Install deps
         run: pip install ruff
@@ -128,7 +105,7 @@ jobs:
       - name: Commit auto-fixes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "lintbot: backend autofix"
+          commit_message: "Github Actions: Ruff automatic lint fixes"
           branch: ${{ github.head_ref }}
           file_pattern: |
             backend/**/*
