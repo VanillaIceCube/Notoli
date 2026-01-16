@@ -3,100 +3,113 @@ All notable changes to this project are documented in this file.
 
 ## 2026-01-15
 ### Added
-- Frontend Login smoke test (`Login.test.js`).
-- Frontend Jest DOM setup for testing (`src/setupTests.js`).
+- Added frontend login smoke test (`Login.test.js`).
+- Added Jest DOM setup for frontend tests (`src/setupTests.js`).
 
 ## 2026-01-13
 ### Added
-- Note API tests for M2M behavior (multi-list membership and removal filtering).
+- Added Notes API tests covering many-to-many membership and removal filtering.
 ### Changed
-- Notes API handling to support M2M `TodoList.notes` on create and filtering.
-- PR summary workflow now overwrotes summary to PR description instead of commenting.
-
+- Updated Notes API handling to support many-to-many `TodoList.notes` on create and filtering.
+- Iterated PR summary workflow behavior to overwrite the PR description summary.
 
 ## 2026-01-12
 ### Added
-- Codex auto PR Review
-- `AGENTS.md`
-- Authentication Tests
+- Added Codex-based PR summary automation.
+- Added `AGENTS.md`.
+- Added authentication tests:
   - `RegistrationTests`
   - `LoginTests`
   - `RefreshTokenTests`
   - `AuthMethodTests`
 ### Changed
-- `pr_review` to `pr_summary` to summarize instead of having a 2nd PR reviewer
-
+- Renamed `pr_review` to `pr_summary` and refined summary formatting.
 
 ## 2025-12-08
 ### Added
-- `client.js` to allow host swapping
+- Added frontend environment defaults and API client helper (`frontend.env`, `src/services/client.js`).
+- Added CORS configuration to backend environment settings.
+### Changed
+- Updated Docker Compose ordering and environment wiring.
+- Updated frontend pages to use environment-based API base URLs.
 
+## 2025-12-07
+### Added
+- Added root environment defaults (`.env` / `default.env`) for local configuration.
+### Changed
+- Updated backend settings to support debug flags, secret keys, and SQLite persistence.
+- Updated Docker Compose to align with new environment defaults.
 
 ## 2025-11-24
+### Changed
+- Updated Dockerfiles and backend environment settings for deployment.
 ### Removed
-- Dev docker files
-
+- Removed dev Docker files.
 
 ## 2025-11-23
 ### Changed
-- A lot of deployment related changes
+- Updated deployment configuration (Dockerfiles, ports, host allowlists, and performance settings).
 
+## 2025-11-17
+### Added
+- Added production Docker Compose file (`docker-compose.prod.yml`).
+### Changed
+- Updated Docker Compose configuration for deployment needs.
 
 ## 2025-11-16
 ### Changed
-- Enviroment file items
-
+- Updated `environment.yml` and dependency configuration for Python 3.12 stability.
 
 ## 2025-11-15
 ### Added
-- Frontend Auto-Fix & Commit Linting
-- Backend Auto-Fix & Commit Linting
-- Added instructions to the `environment.yml`
+- Added frontend auto-fix and commit linting.
+- Added backend auto-fix and commit linting.
+- Added instructions to `environment.yml`.
 ### Removed
-- `fetchWorkspaceName` & `workspaceData` as they're no longer used
+- Removed `fetchWorkspaceName` and `workspaceData`.
 
-
-## 2025-10-25
+## 2025-10-27
 ### Added
-- Frontend linting tests
+- Added frontend linting tests and initial lint workflow setup.
 ### Fixed
-- Appbar Header now removes Header within TodoLists page
+- Appbar header now removes the header within the TodoLists page.
 
+## 2025-10-26
+### Removed
+- Removed the header from the TodoLists page.
 
 ## 2025-10-25
-### Changes
-- Login now directs to first Workspace 
+### Changed
+- Updated login to redirect to the first workspace.
 ### Removed
-- Ability to navigate backwards from TodoLists page
-- Header in Todolists page
+- Removed ability to navigate backwards from the TodoLists page.
 
-
-## 2025-10-13
+## 2025-10-21
 ### Added
-- Functional edit and delete triple dot options in `MyDrawer.js`
+- Added triple-dot menu support for workspace actions in `MyDrawer.js` (edit and delete).
 - <img width="447" height="953" alt="image" src="https://github.com/user-attachments/assets/288c6c69-9568-4c9b-9df7-d4a29946ab2c" />
 
-
 ## 2025-10-13
 ### Added
-- Drawer now dynamically expands when adding a new workspace
+- Drawer now dynamically expands when adding a new workspace.
 - <img width="452" height="960" alt="image" src="https://github.com/user-attachments/assets/74875f73-cc5c-4538-a85b-4fe4acd53dd6" />
 
+## 2025-09-29
+### Changed
+- Minor formatting updates in drawer-related components.
 
 ## 2025-09-28
 ### Added
-- Navigation via `MyDrawer.js`
-- Basic add functionality in `MyDrawer.js`
+- Navigation via `MyDrawer.js`.
+- Basic add functionality in `MyDrawer.js`.
+- Added error and loading messages in `MyDrawer.js`.
 ### Changed
-- Aestetic changes to workspace selector in `MyDrawer.js`
-- Added error and loading messages in `MyDrawer.js`
-
+- Aesthetic changes to workspace selector in `MyDrawer.js`.
 
 ## 2025-09-23
 ### Added
 - Workspaces are now in the drawer.
  - Can't navigate with them yet tho.
-
 
 ## 2025-09-22
 ### Added
@@ -104,16 +117,14 @@ All notable changes to this project are documented in this file.
 - <img width="452" height="953" alt="image" src="https://github.com/user-attachments/assets/b581481c-bc33-4c10-808f-01aefc8ff11c" />
 - `getWorkspaceId` in utils.
 ### Changed
-- Added notoli typography to `Login.js`
+- Added notoli typography to `Login.js`.
 - <img width="451" height="956" alt="image" src="https://github.com/user-attachments/assets/bcd079b1-beb5-4078-99a1-650beeb8d58a" />
-
 
 ## 2025-09-08
 ### Changed
 - Drawer styling.
 - <img width="449" height="953" alt="image" src="https://github.com/user-attachments/assets/86207c4d-ffa2-4e70-b6a1-58b6b5252287" />
-- Modularized `getParentPath` & `goBackToParent` into `Navigation.js`
-
+- Modularized `getParentPath` and `goBackToParent` into `Navigation.js`.
 
 ## 2025-09-02
 ### Added
@@ -128,20 +139,15 @@ All notable changes to this project are documented in this file.
   - No more dev, just main now.
   - When I deploy, I'll create a prod.
 ### Removed
-- Unnecessary `React` import from `MyAppBar.js`
-
+- Unnecessary `React` import from `MyAppBar.js`.
 
 ## 2025-08-11
 ### Added
-- App Bar Added
-  - Dynamics App Bar yext for Workspace, Todo Lists, and Notes page.
-  - Preliminary styling.
-  - Non-functional icons added.
+- App Bar added with dynamic header text for Workspace, Todo Lists, and Notes pages.
 - <img width="447" height="954" alt="image" src="https://github.com/user-attachments/assets/f7fd5187-9347-4b0a-8d99-4a31d3ac12bb" />
 ### Fixed
 - Filled in contact info placeholder in the `LICENSE.md`.
-- Fixed UI Messages in `Notes.js`.
-
+- Fixed UI messages in `Notes.js`.
 
 ## 2025-07-28
 ### Added
@@ -153,58 +159,49 @@ All notable changes to this project are documented in this file.
 - `autoHideDuration` in `MySnackbar` shortened.
 - Updated import formatting in `App.js` to improve consistency.
 
-
 ## 2025-07-20
 ### Added
-- Finished `TodoLists.js` with full CRUD functionality
+- Finished `TodoLists.js` with full CRUD functionality.
 - <img width="443" height="952" alt="image" src="https://github.com/user-attachments/assets/dfd98820-40ce-487b-8037-6c156d5c2ff9" />  
-- Finished `Notes.js` with full CRUD functionality
+- Finished `Notes.js` with full CRUD functionality.
 - <img width="447" height="956" alt="image" src="https://github.com/user-attachments/assets/82fa7dbd-b6a7-4adc-914c-5c91d4435d02" />
 - Introduced workspace-scoped and nested routes in `App.js`:
   - `/workspaces/:workspaceId` for workspace-scoped TodoLists
   - `/workspaces/:workspaceId/todolist/:todoListId` to render Notes
-- Extended `TodoListSerializer` and `NoteSerializer` with optional `owner` and `created_by` fields
-- Implemented dynamic routing in `TodoLists.js` and `Notes.js` using `useParams`
-- Added navigation improvements in `Workspaces.js`, `TodoLists.js`, and `Notes.js` via `useNavigate`
-- Built initial fetch logic in `TodoLists.js` and `Notes.js` to load workspace-specific data
+- Extended `TodoListSerializer` and `NoteSerializer` with optional `owner` and `created_by` fields.
+- Implemented dynamic routing in `TodoLists.js` and `Notes.js` using `useParams`.
+- Added navigation improvements in `Workspaces.js`, `TodoLists.js`, and `Notes.js` via `useNavigate`.
+- Built initial fetch logic in `TodoLists.js` and `Notes.js` to load workspace-specific data.
 ### Fixed
-- Corrected typos and improved error handling in `views.py` (todos & notes)
-- Resolved workspace access validation issues in `views.py`
-- Adjusted placement of `useNavigate` in `Login.js`
-- Fixed variable naming inconsistency in `todo_list` and `note` across backend and frontend
+- Corrected typos and improved error handling in `views.py` (todos and notes).
+- Resolved workspace access validation issues in `views.py`.
+- Adjusted placement of `useNavigate` in `Login.js`.
+- Fixed variable naming inconsistency in `todo_list` and `note` across backend and frontend.
 ### Changed
-- Enhanced fetch logic in `TodoLists.js` and `Notes.js` to include `?workspace=<id>`
-- Updated DRF settings to enable default filters/permissions for todos & notes
-- Added `django-filter` to project dependencies
-- Updated route paths in `App.js` for consistent workspace routing of todos & notes
-- Enhanced path parameter handling in `TodoLists.js`, `Notes.js`, and related components for consistency
-- I've renamed/reorganized the branches.
-  - I am abandoning qa.
-  - Dev for all changes.
-  - Prod after I've deemed Dev stable enough.
-  - Historical branches may look weird, I've swapped prod to be default as opposed to dev.
-
+- Enhanced fetch logic in `TodoLists.js` and `Notes.js` to include `?workspace=<id>`.
+- Updated DRF settings to enable default filters and permissions for todos and notes.
+- Added `django-filter` to project dependencies.
+- Updated route paths in `App.js` for consistent workspace routing of todos and notes.
+- Enhanced path parameter handling in `TodoLists.js`, `Notes.js`, and related components for consistency.
+- Renamed and reorganized branches for dev/prod workflow.
 
 ## 2025-07-18
 ### Changed
-- Refactored `Workspaces.js`: added missing Pessimistic Local Merge comments and adjusted whitespace formatting for consistency.
-
+- Refactored `Workspaces.js` to add missing Pessimistic Local Merge comments and adjust whitespace.
 
 ## 2025-07-17
 ### Added
-- Added editing functionality for workspaces in `Workspaces.js` component.
+- Added editing functionality for workspaces in `Workspaces.js`.
 - <img width="443" height="949" alt="image" src="https://github.com/user-attachments/assets/b3c1bd23-555d-4681-b206-5af78d953213" />
 ### Changed
-- Refactored workspace name handling in `Workspaces.js` to improve variable naming and initialization for workspace creation and editing functions.
-- Updated `Workspaces.js` to switch from optimistic to pessimistic local merge approach.
-
+- Refactored workspace name handling in `Workspaces.js` for create and edit flows.
+- Switched `Workspaces.js` to a pessimistic local merge approach.
 
 ## 2025-07-04
 ### Added
-- Added edit useStates, `isEditing` and `editAnchorElement`.
+- Added edit useStates, `isEditing`, and `editAnchorElement`.
 ### Fixed
-- Resolved an ESLint warning in `Workspaces.js` by refactoring `fetchWorkspaces` with `useCallback` to ensure dependency handling.
-
+- Resolved an ESLint warning in `Workspaces.js` by refactoring `fetchWorkspaces` with `useCallback`.
 
 ## 2025-06-30
 ### Added
@@ -219,15 +216,14 @@ All notable changes to this project are documented in this file.
 - Introduced error handling and state management improvements in the `onSaveNew` function within `Workspaces.js`.  
 - Added a new `onDelete` function in `Workspaces.js` for handling workspace deletions seamlessly.  
 - Implemented a pessimistic local-merge strategy in `Workspaces.js` to update the UI immediately after workspace creation.
-- Refactored 'Workspaces' component in `Workspaces.js`:
+- Refactored `Workspaces` component in `Workspaces.js`:
   - Renamed `onSaveNew` to `onAdd` for function clarity.
   - Renamed state variable `newName` to `WorkspaceName` for enhanced readability.
 ### Fixed
 - Corrected the deletion process in `Workspaces.js` by ensuring proper API call syntax with template literals.  
 - Updated error handling in the `onDelete` function to reset errors before attempting deletion.
 ### Removed
-- The unused `onStartAdding` function from `Workspaces.js` in the frontend to clean up the codebase.
-
+- Removed the unused `onStartAdding` function from `Workspaces.js` in the frontend to clean up the codebase.
 
 ## 2025-06-24
 ### Added
@@ -250,7 +246,6 @@ All notable changes to this project are documented in this file.
 - Renamed "Dianas TODO List" to "New Workspace" in `Workspaces.js`.
 - Updated `Workspaces.js` header text from "Todo Lists" to "Workspaces".
 
-
 ## 2025-06-23
 ### Fixed
 - Filtered notes by user and removed frontend owner hacks.
@@ -261,14 +256,13 @@ All notable changes to this project are documented in this file.
   - Renamed `TodoListView` to `TodoList`, now representing a singular to-do list within a `Workspace`.
   - Modified relationships to reflect the new model structure.
   - Adjusted related names and verbose names accordingly.
-  - Adjusted `admin`, `serializers`, `urls`, and `views` to match
-- Nuked the database...
-- Refactored frontend to match refactored backend
+  - Adjusted `admin`, `serializers`, `urls`, and `views` to match.
+- Reset the database to align with the refactor.
+- Refactored frontend to match refactored backend:
   - Replaced `TodoLists` with `Workspaces` in the App.js routing.
-- token changes from local to session storage
+- Token changes from local to session storage.
 ### Removed
 - Removed `TodoLists.js` file and its references.
-
 
 ## 2025-06-20
 ### Added
@@ -277,7 +271,6 @@ All notable changes to this project are documented in this file.
 - Updated "Add New" button in `TodoLists.js` to trigger the new list creation functionality.
 - Removed comment related to hardcoding of the API URL in `TodoLists.js`.
 - Refactored `Login.js` and `TodoLists.js` components to simplify JSX and consolidate `sx` prop configurations for improved readability.
-
 
 ## 2025-06-19
 ### Changed
@@ -289,7 +282,6 @@ All notable changes to this project are documented in this file.
 ### Removed
 - Removed stray trailing lines in components.
 
-
 ## 2025-06-16
 ### Added
 - Introduced initial `TodoLists` interface using Material UI.
@@ -300,7 +292,6 @@ All notable changes to this project are documented in this file.
 - Replaced the old Homepage route with the TodoLists page.
 - Minor layout tweaks for vertical alignment.
 
-
 ## 2025-05-12
 ### Added
 - Snackbar notifications for login success and failure states.
@@ -308,20 +299,16 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Reduced login redirect delay for a faster transition.
 
-
 ## 2025-05-11
 ### Added
 - React Router configuration and global styling utilities.
 - Preliminary snackbar logic for the login page.
-
 
 ## 2025-05-05
 ### Added
 - Placeholder home page component.
 ### Fixed
 - Minor bug fixes in App.js and login page.
-
-
 
 ## 2025-05-04
 ### Added
@@ -331,49 +318,42 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Removed unused CRA boilerplate and cleaned default styles.
 
-
 ## 2025-05-03
 ### Added
-- `TodoListView` model and REST endpoints for todo lists, notes and views.
-- Simple JWT authentication endpoints for register, login and token refresh.
+- `TodoListView` model and REST endpoints for todo lists, notes, and views.
+- Simple JWT authentication endpoints for register, login, and token refresh.
 ### Changed
-- Renamed models (`Todi` → `TodoList`, `Noti` → `Note`) and updated admin and serializers.
+- Renamed models (`Todi` -> `TodoList`, `Noti` -> `Note`) and updated admin and serializers.
 ### Removed
 - Default frontend assets and test files from CRA template.
 
-
 ## 2025-04-28
 ### Added
-- `notes` app with initial models and migrations.
+- `notes` app with initial models, migrations, and API endpoints.
 - Owners and collaborators fields for todo lists and notes.
 - `environment_conda_export.py` helper script.
 - REST APIs using Django REST Framework.
 ### Fixed
 - Corrected model naming conventions in admin files.
-
 ### Changed
 - Updated LICENSE and README to credit `conda_export.py` by Andres Berejnoi.
 ### Removed
 - Temporary `users` app.
 
-
 ## 2025-04-26
 ### Added
 - Created project changelog.
-
 
 ## 2025-04-25
 ### Fixed
 - Minor formatting tweaks across Docker and configuration files.
 
-
 ## 2025-04-24
 ### Added
-- Frontend, backend and Docker scaffolding.
-- Initial `environment.yml` and docker-compose setup.
+- Frontend, backend, and Docker scaffolding.
+- Initial `environment.yml` and Docker Compose setup.
 ### Changed
 - README and `.gitignore` revisions.
-
 
 ## 2025-04-20
 ### Added
