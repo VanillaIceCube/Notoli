@@ -22,36 +22,74 @@ jobs:
         run: |
           # workflow_run payload includes PRs only when the triggering workflow was on pull_request
           PR_COUNT=$(jq '.workflow_run.pull_requests | length' "$GITHUB_EVENT_PATH")
-          echo "pr_count=$PR_COUNT" >> "$GITHUB_OUTPUT"
           if [ "$PR_COUNT" -eq 0 ]; then
+            echo "pr_count=$PR_COUNT" >> "$GITHUB_OUTPUT"
+            echo "has_pr=false" >> "$GITHUB_OUTPUT"
             echo "No PR associated with this run; exiting."
             exit 0
           fi
-
-      - name: Checkout PR head SHA
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.workflow_run.head_sha }}
+          echo "pr_count=$PR_COUNT" >> "$GITHUB_OUTPUT"
+          echo "has_pr=true" >> "$GITHUB_OUTPUT"
 
       - name: Get PR metadata
         id: prmeta
+        if: steps.prcheck.outputs.has_pr == 'true'
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER=$(jq -r '.workflow_run.pull_requests[0].number' "$GITHUB_EVENT_PATH")
           echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
 
-          BASE_SHA=$(jq -r '.workflow_run.pull_requests[0].base.sha' "$GITHUB_EVENT_PATH")
-          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          EVENT_HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          echo "event_head_sha=$EVENT_HEAD_SHA" >> "$GITHUB_OUTPUT"
 
+          PR_JSON=$(curl -s \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" || echo '{}')
+
+          LIVE_HEAD_SHA=$(echo "$PR_JSON" | jq -r '.head.sha')
+          BASE_SHA=$(echo "$PR_JSON" | jq -r '.base.sha')
+
+          echo "live_head_sha=$LIVE_HEAD_SHA" >> "$GITHUB_OUTPUT"
           echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
-          echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure workflow run matches current PR head
+        id: headcheck
+        if: steps.prcheck.outputs.has_pr == 'true'
+        shell: bash
+        run: |
+          EVENT_HEAD_SHA="${{ steps.prmeta.outputs.event_head_sha }}"
+          LIVE_HEAD_SHA="${{ steps.prmeta.outputs.live_head_sha }}"
+
+          if [ -z "$LIVE_HEAD_SHA" ] || [ "$LIVE_HEAD_SHA" = "null" ]; then
+            echo "Unable to resolve current PR head; skipping."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$EVENT_HEAD_SHA" != "$LIVE_HEAD_SHA" ]; then
+            echo "PR head moved from $EVENT_HEAD_SHA to $LIVE_HEAD_SHA; skipping."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout PR head SHA
+        if: steps.headcheck.outputs.should_run == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.prmeta.outputs.live_head_sha }}
 
       - name: Get PR diff
+        if: steps.headcheck.outputs.should_run == 'true'
         shell: bash
         run: |
           BASE_SHA="${{ steps.prmeta.outputs.base_sha }}"
-          HEAD_SHA="${{ steps.prmeta.outputs.head_sha }}"
+          HEAD_SHA="${{ steps.prmeta.outputs.live_head_sha }}"
 
           echo "Base: $BASE_SHA"
           echo "Head: $HEAD_SHA"
@@ -71,6 +109,7 @@ jobs:
 
       - name: Call OpenAI
         id: openai
+        if: steps.headcheck.outputs.should_run == 'true'
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
@@ -126,6 +165,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Update PR Description
+        if: steps.headcheck.outputs.should_run == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SUMMARY_BODY: ${{ steps.openai.outputs.summary }}

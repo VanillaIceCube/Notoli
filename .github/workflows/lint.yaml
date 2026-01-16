@@ -7,7 +7,7 @@ on:
     paths:
       - "frontend/**"
       - "backend/**"
-      - ".github/workflows/lint.yml"
+      - ".github/workflows/lint.yaml"
 
 concurrency:
   group: lint-${{ github.event.pull_request.number }}
