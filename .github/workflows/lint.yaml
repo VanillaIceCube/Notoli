@@ -25,9 +25,6 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -37,29 +34,10 @@ jobs:
             backend:
               - 'backend/**'
 
-  head:
-    name: Read Head Commit
-    runs-on: ubuntu-latest
-    outputs:
-      message: ${{ steps.headmsg.outputs.message }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - id: headmsg
-        shell: bash
-        run: |
-          echo "message<<EOF" >> "$GITHUB_OUTPUT"
-          git log -1 --pretty=%B >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
-
   lint-frontend:
     name: Lint Frontend (ESLint + Prettier)
-    needs: [changes, head]
-    if: |
-      needs.changes.outputs.frontend == 'true' &&
-      !contains(needs.head.outputs.message, 'lintbot:')
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -76,13 +54,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Fix phase (only on non-bot-triggered runs)
       - name: Prettier (auto-fix)
+        if: github.actor != 'github-actions[bot]'
         run: npm run format
 
       - name: ESLint (auto-fix)
+        if: github.actor != 'github-actions[bot]'
         run: npm run lint -- --fix
 
       - name: Commit auto-fixes
+        id: autofix_commit
+        if: github.actor != 'github-actions[bot]'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "lintbot: frontend autofix"
@@ -92,6 +75,14 @@ jobs:
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
 
+      # If we pushed a fix commit, stop. The next run on the new SHA will do the checks.
+      - name: Stop if we pushed fixes
+        if: github.actor != 'github-actions[bot]' && steps.autofix_commit.outputs.changes_detected == 'true'
+        run: |
+          echo "Auto-fixes committed. A new run will validate the updated PR head."
+          exit 0
+
+      # Check phase (always runs when we didn't push fixes; also runs on lintbot commits)
       - name: Prettier (check only)
         run: npm run format:check
 
@@ -100,10 +91,8 @@ jobs:
 
   lint-backend:
     name: Lint Backend (Ruff)
-    needs: [changes, head]
-    if: |
-      needs.changes.outputs.backend == 'true' &&
-      !contains(needs.head.outputs.message, 'lintbot:')
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -119,13 +108,18 @@ jobs:
       - name: Install deps
         run: pip install ruff
 
+      # Fix phase (only on non-bot-triggered runs)
       - name: Ruff (auto-fix)
+        if: github.actor != 'github-actions[bot]'
         run: ruff check . --fix
 
       - name: Ruff format (auto-fix)
+        if: github.actor != 'github-actions[bot]'
         run: ruff format .
 
       - name: Commit auto-fixes
+        id: autofix_commit
+        if: github.actor != 'github-actions[bot]'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "lintbot: backend autofix"
@@ -135,6 +129,13 @@ jobs:
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
 
+      - name: Stop if we pushed fixes
+        if: github.actor != 'github-actions[bot]' && steps.autofix_commit.outputs.changes_detected == 'true'
+        run: |
+          echo "Auto-fixes committed. A new run will validate the updated PR head."
+          exit 0
+
+      # Check phase (always runs when we didn't push fixes; also runs on lintbot commits)
       - name: Ruff (check only)
         run: ruff check .
 
