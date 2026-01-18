@@ -11,18 +11,25 @@ export default function Login({ showSnackbar }) {
   const navigate = useNavigate();
 
   // Pull Workspace List
-  const fetchWorkspaces = useCallback(async (token) => {
-    try {
-      const response = await apiFetch('/api/workspaces/', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      return data;
-    } catch (err) {
-      return [];
-    }
-  }, []);
+  const fetchWorkspaces = useCallback(
+    async (token, showError) => {
+      try {
+        const response = await apiFetch('/api/workspaces/', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data;
+      } catch (err) {
+        if (showError) {
+          const isHttpError = typeof err?.message === 'string' && err.message.startsWith('HTTP ');
+          showSnackbar('error', isHttpError ? 'Workspace load failed :(' : 'Network error :(');
+        }
+        return [];
+      }
+    },
+    [showSnackbar],
+  );
 
   useEffect(() => {
     fetchWorkspaces();
@@ -53,7 +60,7 @@ export default function Login({ showSnackbar }) {
       showSnackbar('success', 'Login successful!');
 
       // Navigate to first Workspace, if empty, navigate to root
-      const workspaces = await fetchWorkspaces(data.access);
+      const workspaces = await fetchWorkspaces(data.access, true);
       if (workspaces.length > 0) {
         navigate(`/workspace/${Math.min(...workspaces.map((ws) => ws.id))}`);
       } else {
@@ -61,7 +68,10 @@ export default function Login({ showSnackbar }) {
       }
     } catch (err) {
       // Update Snackbar
-      showSnackbar('error', 'Login failed :(');
+      const isNetworkError =
+        err instanceof TypeError ||
+        (typeof err?.message === 'string' && err.message.toLowerCase().includes('network'));
+      showSnackbar('error', isNetworkError ? 'Network error :(' : 'Login failed :(');
       console.error(err);
     }
   };

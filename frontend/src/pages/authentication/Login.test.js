@@ -1,9 +1,14 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { MemoryRouter } from 'react-router-dom';
+import { renderWithProviders } from '../../test-utils';
 import Login from './Login';
 import { apiFetch } from '../../services/client';
+import { useNavigate } from 'react-router-dom';
+
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: jest.fn(),
+}));
 
 jest.mock('../../services/client', () => ({
   apiFetch: jest.fn(() =>
@@ -14,38 +19,52 @@ jest.mock('../../services/client', () => ({
   ),
 }));
 
-// Disable MUI button ripples in tests to avoid act() warnings from async ripple updates.
-const testTheme = createTheme({
-  components: {
-    MuiButtonBase: {
-      defaultProps: {
-        disableRipple: true,
-      },
-    },
-  },
-});
-
 describe('Login', () => {
+  const mockNavigate = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
+    sessionStorage.clear();
+    useNavigate.mockReturnValue(mockNavigate);
   });
 
-  test('renders username/password fields and login button', () => {
-    render(
-      <ThemeProvider theme={testTheme}>
-        {/* React Router future flags silence v7 deprecation warnings in tests. */}
-        <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <Login showSnackbar={jest.fn()} />
-        </MemoryRouter>
-      </ThemeProvider>,
-    );
+  test('when rendered, it shows username/password inputs and submit button', () => {
+    renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
   });
 
-  test('can successfully login', async () => {
+  test('when login succeeds and workspaces exist, it navigates to the first workspace', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [{ id: 7 }, { id: 3 }, { id: 12 }],
+        });
+      }
+      if (url === '/auth/login/') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
+        });
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+    await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/workspace/3');
+    });
+  });
+
+  test('when login succeeds and no workspaces exist, it navigates home', async () => {
     // Component calls /api/workspaces/ on mount, so we must handle it.
     // Then when we login, /auth/login/ should succeed.
     apiFetch.mockImplementation((url) => {
@@ -61,16 +80,7 @@ describe('Login', () => {
       throw new Error(`Unhandled apiFetch call: ${url}`);
     });
 
-    const showSnackbar = jest.fn();
-
-    render(
-      <ThemeProvider theme={testTheme}>
-        {/* React Router future flags silence v7 deprecation warnings in tests. */}
-        <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <Login showSnackbar={showSnackbar} />
-        </MemoryRouter>
-      </ThemeProvider>,
-    );
+    renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
     // Type credentials
     await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
@@ -90,13 +100,131 @@ describe('Login', () => {
       );
     });
 
-    // Confirm we treated it as a successful login
+    // Confirm we navigated to the main page when no workspaces are returned
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/');
+    });
+  });
+
+  test('when login succeeds, it stores access/refresh tokens', async () => {
+    // Component calls /api/workspaces/ on mount, so we must handle it.
+    // Then when we login, /auth/login/ should succeed.
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      if (url === '/auth/login/') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ access: 'test_access_token', refresh: 'test_refresh_token' }),
+        });
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+    try {
+      renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+      // Type credentials
+      await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+      await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+
+      // Click login
+      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+      // Assert tokens were saved
+      await waitFor(() => {
+        expect(setItemSpy).toHaveBeenCalledWith('accessToken', 'test_access_token');
+      });
+      await waitFor(() => {
+        expect(setItemSpy).toHaveBeenCalledWith('refreshToken', 'test_refresh_token');
+      });
+    } finally {
+      setItemSpy.mockRestore();
+    }
+  });
+
+  test('when login succeeds, it shows a success snackbar', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      if (url === '/auth/login/') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
+        });
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    const showSnackbar = jest.fn();
+
+    renderWithProviders(<Login showSnackbar={showSnackbar} />);
+
+    await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
     await waitFor(() => {
       expect(showSnackbar).toHaveBeenCalledWith('success', 'Login successful!');
     });
   });
 
-  test('can fail login', async () => {
+  test('when workspace fetch fails after login, it navigates home', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.resolve({ ok: false, status: 500, json: async () => [] });
+      }
+      if (url === '/auth/login/') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
+        });
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+    await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/');
+    });
+  });
+
+  test('when workspace fetch fails after login, it shows an error snackbar', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.resolve({ ok: false, status: 500, json: async () => [] });
+      }
+      if (url === '/auth/login/') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
+        });
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    const showSnackbar = jest.fn();
+
+    renderWithProviders(<Login showSnackbar={showSnackbar} />);
+
+    await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith('error', 'Workspace load failed :(');
+    });
+  });
+
+  test('when login fails, it does not navigate', async () => {
     // Component calls /api/workspaces/ on mount, so we must handle it.
     // Then when we login, /auth/login/ should succeed.
     apiFetch.mockImplementation((url) => {
@@ -113,19 +241,11 @@ describe('Login', () => {
       throw new Error(`Unhandled apiFetch call: ${url}`);
     });
 
-    const showSnackbar = jest.fn();
     // Login.js logs the auth error; silence it here to avoid noisy test output.
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     try {
-      render(
-        <ThemeProvider theme={testTheme}>
-          {/* React Router future flags silence v7 deprecation warnings in tests. */}
-          <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <Login showSnackbar={showSnackbar} />
-          </MemoryRouter>
-        </ThemeProvider>,
-      );
+      renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
       // Type credentials
       await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
@@ -135,10 +255,164 @@ describe('Login', () => {
       await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
       await waitFor(() => {
-        expect(showSnackbar).toHaveBeenCalledWith('error', 'Login failed :(');
+        expect(mockNavigate).not.toHaveBeenCalled();
       });
     } finally {
       // Restore console logging for the rest of the test suite.
+      consoleError.mockRestore();
+    }
+  });
+
+  test('when login fails, it does not store tokens', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      if (url === '/auth/login/') {
+        return Promise.resolve({
+          ok: false,
+          status: 401,
+          json: async () => ({ detail: 'Invalid credentials' }),
+        });
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+      await waitFor(() => {
+        expect(setItemSpy).not.toHaveBeenCalled();
+      });
+    } finally {
+      consoleError.mockRestore();
+      setItemSpy.mockRestore();
+    }
+  });
+
+  test('when login fails, it shows an error snackbar', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      if (url === '/auth/login/') {
+        return Promise.resolve({
+          ok: false,
+          status: 401,
+          json: async () => ({ detail: 'Invalid credentials' }),
+        });
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    const showSnackbar = jest.fn();
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      renderWithProviders(<Login showSnackbar={showSnackbar} />);
+
+      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+      await waitFor(() => {
+        expect(showSnackbar).toHaveBeenCalledWith('error', 'Login failed :(');
+      });
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  test('when login fails due to a network error, it does not navigate', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      if (url === '/auth/login/') {
+        return Promise.reject(new TypeError('NetworkError when attempting to fetch resource.'));
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+      await waitFor(() => {
+        expect(mockNavigate).not.toHaveBeenCalled();
+      });
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  test('when login fails due to a network error, it does not store tokens', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      if (url === '/auth/login/') {
+        return Promise.reject(new TypeError('NetworkError when attempting to fetch resource.'));
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+      await waitFor(() => {
+        expect(setItemSpy).not.toHaveBeenCalled();
+      });
+    } finally {
+      consoleError.mockRestore();
+      setItemSpy.mockRestore();
+    }
+  });
+
+  test('when login fails due to a network error, it shows a network error snackbar', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      if (url === '/auth/login/') {
+        return Promise.reject(new TypeError('NetworkError when attempting to fetch resource.'));
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    const showSnackbar = jest.fn();
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      renderWithProviders(<Login showSnackbar={showSnackbar} />);
+
+      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+      await waitFor(() => {
+        expect(showSnackbar).toHaveBeenCalledWith('error', 'Network error :(');
+      });
+    } finally {
       consoleError.mockRestore();
     }
   });
