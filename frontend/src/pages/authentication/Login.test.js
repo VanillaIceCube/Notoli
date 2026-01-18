@@ -33,7 +33,7 @@ describe('Login', () => {
   test('renders username/password fields and login button', () => {
     render(
       <ThemeProvider theme={testTheme}>
-        // React Router future flags silence v7 deprecation warnings in tests.
+        {/* React Router future flags silence v7 deprecation warnings in tests. */}
         <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Login showSnackbar={jest.fn()} />
         </MemoryRouter>
@@ -65,7 +65,7 @@ describe('Login', () => {
 
     render(
       <ThemeProvider theme={testTheme}>
-        // React Router future flags silence v7 deprecation warnings in tests.
+        {/* React Router future flags silence v7 deprecation warnings in tests. */}
         <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Login showSnackbar={showSnackbar} />
         </MemoryRouter>
@@ -92,5 +92,52 @@ describe('Login', () => {
 
     // Confirm we treated it as a successful login
     expect(showSnackbar).toHaveBeenCalledWith('success', 'Login successful!');
+  });
+
+  test('can fail login', async () => {
+    // Component calls /api/workspaces/ on mount, so we must handle it.
+    // Then when we login, /auth/login/ should succeed.
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      if (url === '/auth/login/') {
+        return Promise.resolve({
+          ok: false,
+          status: 401,
+          json: async () => ({ detail: 'Invalid credentials' }),
+        });
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    const showSnackbar = jest.fn();
+    // Login.js logs the auth error; silence it here to avoid noisy test output.
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      render(
+        <ThemeProvider theme={testTheme}>
+          {/* React Router future flags silence v7 deprecation warnings in tests. */}
+          <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Login showSnackbar={showSnackbar} />
+          </MemoryRouter>
+        </ThemeProvider>
+      );
+
+      // Type credentials
+      userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+
+      // Click login
+      userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+      await waitFor(() => {
+        expect(showSnackbar).toHaveBeenCalledWith('error', 'Login failed :(');
+      });
+    } finally {
+      // Restore console logging for the rest of the test suite.
+      consoleError.mockRestore();
+    }
   });
 });
