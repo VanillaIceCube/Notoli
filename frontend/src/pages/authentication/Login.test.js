@@ -250,6 +250,64 @@ describe('Login', () => {
     }
   });
 
+  test('when login fails due to a network error, it does not navigate', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      if (url === '/auth/login/') {
+        return Promise.reject(new TypeError('NetworkError when attempting to fetch resource.'));
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+      await waitFor(() => {
+        expect(mockNavigate).not.toHaveBeenCalled();
+      });
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  test('when login fails due to a network error, it does not store tokens', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.resolve({ ok: true, json: async () => [] });
+      }
+      if (url === '/auth/login/') {
+        return Promise.reject(new TypeError('NetworkError when attempting to fetch resource.'));
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+      await waitFor(() => {
+        expect(setItemSpy).not.toHaveBeenCalled();
+      });
+    } finally {
+      consoleError.mockRestore();
+      setItemSpy.mockRestore();
+    }
+  });
+
   test('when login fails due to a network error, it shows a network error snackbar', async () => {
     apiFetch.mockImplementation((url) => {
       if (url === '/api/workspaces/') {

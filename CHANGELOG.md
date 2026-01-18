@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 - Added a frontend login test to confirm tokens are not stored on failure.
 - Added a frontend login test for network error snackbar behavior.
 - Updated login error handling to show a network error message when fetch fails.
+- Added frontend login tests for network error token storage and navigation behavior.
 
 ## 2026-01-17
 ### Added
