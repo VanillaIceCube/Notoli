@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-01-18
+### Added
+- Added frontend test utilities for shared theme/router setup (`frontend/src/test-utils.js`).
+### Changed
+- Refactored frontend login tests to use shared test utilities.
+
 ## 2026-01-17
 ### Added
 - Added frontend login test covering a successful login flow (`Login.test.js`).

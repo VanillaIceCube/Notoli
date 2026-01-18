@@ -1,7 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { MemoryRouter } from 'react-router-dom';
+import { renderWithProviders } from '../../test-utils';
 import Login from './Login';
 import { apiFetch } from '../../services/client';
 
@@ -14,31 +13,13 @@ jest.mock('../../services/client', () => ({
   ),
 }));
 
-// Disable MUI button ripples in tests to avoid act() warnings from async ripple updates.
-const testTheme = createTheme({
-  components: {
-    MuiButtonBase: {
-      defaultProps: {
-        disableRipple: true,
-      },
-    },
-  },
-});
-
 describe('Login', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   test('renders username/password fields and login button', () => {
-    render(
-      <ThemeProvider theme={testTheme}>
-        {/* React Router future flags silence v7 deprecation warnings in tests. */}
-        <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <Login showSnackbar={jest.fn()} />
-        </MemoryRouter>
-      </ThemeProvider>,
-    );
+    renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
@@ -63,14 +44,7 @@ describe('Login', () => {
 
     const showSnackbar = jest.fn();
 
-    render(
-      <ThemeProvider theme={testTheme}>
-        {/* React Router future flags silence v7 deprecation warnings in tests. */}
-        <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <Login showSnackbar={showSnackbar} />
-        </MemoryRouter>
-      </ThemeProvider>,
-    );
+    renderWithProviders(<Login showSnackbar={showSnackbar} />);
 
     // Type credentials
     await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
@@ -118,14 +92,7 @@ describe('Login', () => {
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
 
     try {
-      render(
-        <ThemeProvider theme={testTheme}>
-          {/* React Router future flags silence v7 deprecation warnings in tests. */}
-          <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <Login showSnackbar={showSnackbar} />
-          </MemoryRouter>
-        </ThemeProvider>,
-      );
+      renderWithProviders(<Login showSnackbar={showSnackbar} />);
 
       // Type credentials
       await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
