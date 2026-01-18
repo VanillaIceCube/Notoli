@@ -108,6 +108,8 @@ describe('Login', () => {
       // Assert tokens were saved
       await waitFor(() => {
         expect(setItemSpy).toHaveBeenCalledWith('accessToken', 'test_access_token');
+      });
+      await waitFor(() => {
         expect(setItemSpy).toHaveBeenCalledWith('refreshToken', 'test_refresh_token');
       });
     } finally {
@@ -214,7 +216,7 @@ describe('Login', () => {
       setItemSpy.mockRestore();
     }
   });
-  
+
   test('when login fails, it shows an error snackbar', async () => {
     apiFetch.mockImplementation((url) => {
       if (url === '/api/workspaces/') {
