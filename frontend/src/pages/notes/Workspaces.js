@@ -14,7 +14,12 @@ import {
 import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../../services/client';
+import {
+  createWorkspace,
+  deleteWorkspace,
+  fetchWorkspaces as fetchWorkspacesApi,
+  updateWorkspace,
+} from '../../services/BackendClient';
 
 export default function Workspaces({ setAppBarHeader }) {
   // Misc
@@ -29,9 +34,7 @@ export default function Workspaces({ setAppBarHeader }) {
   const fetchWorkspaces = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await apiFetch('/api/workspaces/', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const response = await fetchWorkspacesApi(token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setLists(data);
@@ -73,17 +76,13 @@ export default function Workspaces({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await apiFetch('/api/workspaces/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({
+      const response = await createWorkspace(
+        {
           name: newWorkspaceName,
           description: '',
-        }),
-      });
+        },
+        token,
+      );
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -112,14 +111,11 @@ export default function Workspaces({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await apiFetch(`/api/workspaces/${editingWorkspaceId}/`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({ name: editWorkspaceName }),
-      });
+      const response = await updateWorkspace(
+        editingWorkspaceId,
+        { name: editWorkspaceName },
+        token,
+      );
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -144,13 +140,7 @@ export default function Workspaces({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await apiFetch(`/api/workspaces/${id}/`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-      });
+      const response = await deleteWorkspace(id, token);
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);

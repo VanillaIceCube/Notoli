@@ -14,7 +14,13 @@ import {
 import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
-import { apiFetch } from '../../services/client';
+import {
+  createNote,
+  deleteNote,
+  fetchNotes as fetchNotesApi,
+  fetchTodoList as fetchTodoListApi,
+  updateNote,
+} from '../../services/BackendClient';
 
 export default function Notes({ setAppBarHeader }) {
   // Pull Todolist ID
@@ -29,9 +35,7 @@ export default function Notes({ setAppBarHeader }) {
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await apiFetch(`/api/notes/?todo_list=${todoListId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const response = await fetchNotesApi(todoListId, token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setLists(data);
@@ -47,9 +51,7 @@ export default function Notes({ setAppBarHeader }) {
   const fetchTodoListName = useCallback(async () => {
     if (!todoListId) return;
     try {
-      const response = await apiFetch(`/api/todolists/${todoListId}/`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const response = await fetchTodoListApi(todoListId, token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const todoListData = await response.json();
       setAppBarHeader(todoListData?.name ?? '');
@@ -89,18 +91,15 @@ export default function Notes({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await apiFetch(`/api/notes/?todo_list=${todoListId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({
+      const response = await createNote(
+        todoListId,
+        {
           note: newNote,
           todo_list: todoListId,
           description: '',
-        }),
-      });
+        },
+        token,
+      );
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -129,14 +128,7 @@ export default function Notes({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await apiFetch(`/api/notes/${editingNoteId}/`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({ note: editNote }),
-      });
+      const response = await updateNote(editingNoteId, { note: editNote }, token);
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -159,13 +151,7 @@ export default function Notes({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await apiFetch(`/api/notes/${id}/`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-      });
+      const response = await deleteNote(id, token);
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);

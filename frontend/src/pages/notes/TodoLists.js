@@ -15,7 +15,12 @@ import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../../services/client';
+import {
+  createTodoList,
+  deleteTodoList,
+  fetchTodoLists as fetchTodoListsApi,
+  updateTodoList,
+} from '../../services/BackendClient';
 
 export default function TodoLists({ setAppBarHeader }) {
   // Misc
@@ -38,9 +43,7 @@ export default function TodoLists({ setAppBarHeader }) {
   const fetchTodoLists = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await apiFetch(`/api/todolists/?workspace=${workspaceId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const response = await fetchTodoListsApi(workspaceId, token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setLists(data);
@@ -83,18 +86,15 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await apiFetch(`/api/todolists/?workspace=${workspaceId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({
+      const response = await createTodoList(
+        workspaceId,
+        {
           name: newTodoListName,
           workspace: workspaceId,
           description: '',
-        }),
-      });
+        },
+        token,
+      );
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -123,14 +123,11 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await apiFetch(`/api/todolists/${editingTodoListId}/`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({ name: editTodoListName }),
-      });
+      const response = await updateTodoList(
+        editingTodoListId,
+        { name: editTodoListName },
+        token,
+      );
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -153,13 +150,7 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await apiFetch(`/api/todolists/${id}/`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-      });
+      const response = await deleteTodoList(id, token);
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
