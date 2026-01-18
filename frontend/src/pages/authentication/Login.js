@@ -11,7 +11,7 @@ export default function Login({ showSnackbar }) {
   const navigate = useNavigate();
 
   // Pull Workspace List
-  const fetchWorkspaces = useCallback(async (token) => {
+  const fetchWorkspaces = useCallback(async (token, showError) => {
     try {
       const response = await apiFetch('/api/workspaces/', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -20,9 +20,12 @@ export default function Login({ showSnackbar }) {
       const data = await response.json();
       return data;
     } catch (err) {
+      if (showError) {
+        showSnackbar('error', 'Network error :(');
+      }
       return [];
     }
-  }, []);
+  }, [showSnackbar]);
 
   useEffect(() => {
     fetchWorkspaces();
@@ -53,7 +56,7 @@ export default function Login({ showSnackbar }) {
       showSnackbar('success', 'Login successful!');
 
       // Navigate to first Workspace, if empty, navigate to root
-      const workspaces = await fetchWorkspaces(data.access);
+      const workspaces = await fetchWorkspaces(data.access, true);
       if (workspaces.length > 0) {
         navigate(`/workspace/${Math.min(...workspaces.map((ws) => ws.id))}`);
       } else {

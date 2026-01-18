@@ -144,6 +144,58 @@ describe('Login', () => {
     });
   });
 
+  test('when workspace fetch fails after login, it shows an error snackbar', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.reject(new Error('Workspace fetch failed'));
+      }
+      if (url === '/auth/login/') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
+        });
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    const showSnackbar = jest.fn();
+
+    renderWithProviders(<Login showSnackbar={showSnackbar} />);
+
+    await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith('error', 'Network error :(');
+    });
+  });
+
+  test('when workspace fetch fails after login, it navigates home', async () => {
+    apiFetch.mockImplementation((url) => {
+      if (url === '/api/workspaces/') {
+        return Promise.reject(new Error('Workspace fetch failed'));
+      }
+      if (url === '/auth/login/') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
+        });
+      }
+      throw new Error(`Unhandled apiFetch call: ${url}`);
+    });
+
+    renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+    await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/');
+    });
+  });
+
   test('when login fails, it does not navigate', async () => {
     // Component calls /api/workspaces/ on mount, so we must handle it.
     // Then when we login, /auth/login/ should succeed.

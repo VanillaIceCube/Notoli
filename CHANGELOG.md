@@ -11,6 +11,8 @@ All notable changes to this project are documented in this file.
 - Added a frontend login test for network error snackbar behavior.
 - Updated login error handling to show a network error message when fetch fails.
 - Added frontend login tests for network error token storage and navigation behavior.
+- Added a frontend login test for workspace fetch failure snackbar and navigation.
+- Updated login workspace fetch to use the standard network error snackbar message.
 
 ## 2026-01-17
 ### Added
