@@ -61,7 +61,13 @@ export default function Login({ showSnackbar }) {
       }
     } catch (err) {
       // Update Snackbar
-      showSnackbar('error', 'Login failed :(');
+      const isNetworkError =
+        err instanceof TypeError ||
+        (typeof err?.message === 'string' && err.message.toLowerCase().includes('network'));
+      showSnackbar(
+        'error',
+        isNetworkError ? 'Network error :(' : 'Login failed :(',
+      );
       console.error(err);
     }
   };

@@ -8,6 +8,8 @@ All notable changes to this project are documented in this file.
 - Refactored frontend login tests to use shared test utilities.
 - Expanded frontend login tests to cover navigation and snackbar behavior.
 - Added a frontend login test to confirm tokens are not stored on failure.
+- Added a frontend login test for network error snackbar behavior.
+- Updated login error handling to show a network error message when fetch fails.
 
 ## 2026-01-17
 ### Added
