@@ -91,7 +91,9 @@ describe('Login', () => {
     });
 
     // Confirm we treated it as a successful login
-    expect(showSnackbar).toHaveBeenCalledWith('success', 'Login successful!');
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith('success', 'Login successful!');
+    });
   });
 
   test('can fail login', async () => {
