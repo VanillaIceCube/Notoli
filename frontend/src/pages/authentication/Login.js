@@ -64,10 +64,7 @@ export default function Login({ showSnackbar }) {
       const isNetworkError =
         err instanceof TypeError ||
         (typeof err?.message === 'string' && err.message.toLowerCase().includes('network'));
-      showSnackbar(
-        'error',
-        isNetworkError ? 'Network error :(' : 'Login failed :(',
-      );
+      showSnackbar('error', isNetworkError ? 'Network error :(' : 'Login failed :(');
       console.error(err);
     }
   };
