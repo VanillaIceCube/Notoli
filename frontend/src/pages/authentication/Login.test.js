@@ -35,8 +35,36 @@ describe('Login', () => {
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
   });
+  
+  test('when login succeeds and workspaces exist, it navigates to the first workspace', async () => {
+      apiFetch.mockImplementation((url) => {
+        if (url === '/api/workspaces/') {
+          return Promise.resolve({
+            ok: true,
+            json: async () => [{ id: 7 }, { id: 3 }, { id: 12 }],
+          });
+        }
+        if (url === '/auth/login/') {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
+          });
+        }
+        throw new Error(`Unhandled apiFetch call: ${url}`);
+      });
 
-  test('when login succeeds, it navigates to the main page', async () => {
+      renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+      await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+      await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/workspace/3');
+      });
+    });
+
+  test('when login succeeds and no workspaces exist, it navigates home', async () => {
     // Component calls /api/workspaces/ on mount, so we must handle it.
     // Then when we login, /auth/login/ should succeed.
     apiFetch.mockImplementation((url) => {
