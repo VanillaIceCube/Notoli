@@ -22,8 +22,7 @@ export default function Login({ showSnackbar }) {
         return data;
       } catch (err) {
         if (showError) {
-          const isHttpError =
-            typeof err?.message === 'string' && err.message.startsWith('HTTP ');
+          const isHttpError = typeof err?.message === 'string' && err.message.startsWith('HTTP ');
           showSnackbar('error', isHttpError ? 'Workspace load failed :(' : 'Network error :(');
         }
         return [];
