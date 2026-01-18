@@ -13,6 +13,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Refactored frontend login tests to use shared test utilities.
 - Updated login error handling to show a network error message when fetch fails.
+- Updated login UI/tests to send email instead of username.
 
 ## 2026-01-17
 ### Added

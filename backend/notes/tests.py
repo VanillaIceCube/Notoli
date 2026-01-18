@@ -1,14 +1,16 @@
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
-
 from .models import Workspace, TodoList, Note
 
+User = get_user_model()
 
 class ModelTests(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(
-            username="owner", password="owner-password"
+            username="owner",
+            email="owner@example.com",
+            password="owner-password",
         )
         self.workspace = Workspace.objects.create(
             name="Owner Workspace",
@@ -50,13 +52,19 @@ class ModelTests(APITestCase):
 class WorkspaceApiTests(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(
-            username="owner", password="owner-password"
+            username="owner",
+            email="owner@example.com",
+            password="owner-password",
         )
         self.collaborator = User.objects.create_user(
-            username="collaborator", password="collaborator-password"
+            username="collaborator",
+            email="collaborator@example.com",
+            password="collaborator-password",
         )
         self.outsider = User.objects.create_user(
-            username="outsider", password="outsider-password"
+            username="outsider",
+            email="outsider@example.com",
+            password="outsider-password",
         )
         self.workspace = Workspace.objects.create(
             name="Owner Workspace",
@@ -205,13 +213,19 @@ class WorkspaceApiTests(APITestCase):
 class TodoListApiTests(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(
-            username="owner", password="owner-password"
+            username="owner",
+            email="owner@example.com",
+            password="owner-password",
         )
         self.collaborator = User.objects.create_user(
-            username="collaborator", password="collaborator-password"
+            username="collaborator",
+            email="collaborator@example.com",
+            password="collaborator-password",
         )
         self.outsider = User.objects.create_user(
-            username="outsider", password="outsider-password"
+            username="outsider",
+            email="outsider@example.com",
+            password="outsider-password",
         )
         self.workspace = Workspace.objects.create(
             name="Owner Workspace",
@@ -391,13 +405,19 @@ class TodoListApiTests(APITestCase):
 class NoteApiTests(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(
-            username="owner", password="owner-password"
+            username="owner",
+            email="owner@example.com",
+            password="owner-password",
         )
         self.collaborator = User.objects.create_user(
-            username="collaborator", password="collaborator-password"
+            username="collaborator",
+            email="collaborator@example.com",
+            password="collaborator-password",
         )
         self.outsider = User.objects.create_user(
-            username="outsider", password="outsider-password"
+            username="outsider",
+            email="outsider@example.com",
+            password="outsider-password",
         )
         self.workspace = Workspace.objects.create(
             name="Owner Workspace",
