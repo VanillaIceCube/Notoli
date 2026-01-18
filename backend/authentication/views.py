@@ -63,7 +63,9 @@ class RegisterView(APIView):
             base_username = email.split("@", 1)[0]
             username = _build_unique_username(base_username)
 
-        user = User.objects.create_user(username=username, email=email, password=password)
+        user = User.objects.create_user(
+            username=username, email=email, password=password
+        )
         return Response(
             {"message": "User created successfully.", "username": user.username},
             status=status.HTTP_201_CREATED,

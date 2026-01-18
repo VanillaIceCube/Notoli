@@ -10,7 +10,9 @@ class Workspace(models.Model):
 
     # Ownership
     owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="owned_workspaces"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="owned_workspaces",
     )
     collaborators = models.ManyToManyField(
         settings.AUTH_USER_MODEL, blank=True, related_name="collaborating_workspaces"
@@ -18,7 +20,9 @@ class Workspace(models.Model):
 
     # Metadata
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_workspaces"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="created_workspaces",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -45,7 +49,9 @@ class TodoList(models.Model):
 
     # Ownership
     owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="owned_todolists"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="owned_todolists",
     )
     collaborators = models.ManyToManyField(
         settings.AUTH_USER_MODEL, blank=True, related_name="collaborating_todolists"
@@ -53,7 +59,9 @@ class TodoList(models.Model):
 
     # Metadata
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_todolists"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="created_todolists",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

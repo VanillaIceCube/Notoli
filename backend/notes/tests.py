@@ -5,6 +5,7 @@ from .models import Workspace, TodoList, Note
 
 User = get_user_model()
 
+
 class ModelTests(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(
