@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Refactored frontend login tests to use shared test utilities.
 - Expanded frontend login tests to cover navigation and snackbar behavior.
+- Added a frontend login test to confirm tokens are not stored on failure.
 
 ## 2026-01-17
 ### Added
