@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-01-17
+### Added
+- Added frontend login test covering a successful login flow (`Login.test.js`).
+### Changed
+- Updated frontend login test to silence React Router future-flag warnings and MUI ripple act() warnings.
+
 ## 2026-01-15
 ### Added
 - Added frontend login smoke test (`Login.test.js`).
