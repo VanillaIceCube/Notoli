@@ -69,7 +69,7 @@ describe('Login', () => {
         <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Login showSnackbar={showSnackbar} />
         </MemoryRouter>
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     // Type credentials
@@ -122,7 +122,7 @@ describe('Login', () => {
           <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Login showSnackbar={showSnackbar} />
           </MemoryRouter>
-        </ThemeProvider>
+        </ThemeProvider>,
       );
 
       // Type credentials
