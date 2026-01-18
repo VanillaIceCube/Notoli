@@ -175,7 +175,7 @@ describe('Login', () => {
   test('when workspace fetch fails after login, it navigates home', async () => {
     apiFetch.mockImplementation((url) => {
       if (url === '/api/workspaces/') {
-        return Promise.reject(new Error('Workspace fetch failed'));
+        return Promise.resolve({ ok: false, status: 500, json: async () => [] });
       }
       if (url === '/auth/login/') {
         return Promise.resolve({
@@ -200,7 +200,7 @@ describe('Login', () => {
   test('when workspace fetch fails after login, it shows an error snackbar', async () => {
     apiFetch.mockImplementation((url) => {
       if (url === '/api/workspaces/') {
-        return Promise.reject(new Error('Workspace fetch failed'));
+        return Promise.resolve({ ok: false, status: 500, json: async () => [] });
       }
       if (url === '/auth/login/') {
         return Promise.resolve({
@@ -220,7 +220,7 @@ describe('Login', () => {
     await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
     await waitFor(() => {
-      expect(showSnackbar).toHaveBeenCalledWith('error', 'Network error :(');
+      expect(showSnackbar).toHaveBeenCalledWith('error', 'Workspace load failed :(');
     });
   });
 

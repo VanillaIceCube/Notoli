@@ -22,7 +22,9 @@ export default function Login({ showSnackbar }) {
         return data;
       } catch (err) {
         if (showError) {
-          showSnackbar('error', 'Network error :(');
+          const isHttpError =
+            typeof err?.message === 'string' && err.message.startsWith('HTTP ');
+          showSnackbar('error', isHttpError ? 'Workspace load failed :(' : 'Network error :(');
         }
         return [];
       }

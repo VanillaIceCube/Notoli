@@ -4,16 +4,15 @@ All notable changes to this project are documented in this file.
 ## 2026-01-18
 ### Added
 - Added frontend test utilities for shared theme/router setup (`frontend/src/test-utils.js`).
-### Changed
-- Refactored frontend login tests to use shared test utilities.
-- Expanded frontend login tests to cover navigation and snackbar behavior.
+- Added distinct login messaging for workspace HTTP failures versus network errors.
 - Added a frontend login test to confirm tokens are not stored on failure.
 - Added a frontend login test for network error snackbar behavior.
-- Updated login error handling to show a network error message when fetch fails.
 - Added frontend login tests for network error token storage and navigation behavior.
 - Added a frontend login test for workspace fetch failure snackbar and navigation.
-- Updated login workspace fetch to use the standard network error snackbar message.
 - Added frontend login tests for navigating when workspaces exist or are empty.
+### Changed
+- Refactored frontend login tests to use shared test utilities.
+- Updated login error handling to show a network error message when fetch fails.
 
 ## 2026-01-17
 ### Added
