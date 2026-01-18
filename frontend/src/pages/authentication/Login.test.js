@@ -73,11 +73,11 @@ describe('Login', () => {
     );
 
     // Type credentials
-    userEvent.type(screen.getByLabelText(/username/i), 'test_username');
-    userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
 
     // Click login
-    userEvent.click(screen.getByRole('button', { name: /login/i }));
+    await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
     // Confirm the login request happened with the creds we typed
     await waitFor(() => {
@@ -126,11 +126,11 @@ describe('Login', () => {
       );
 
       // Type credentials
-      userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
-      userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
 
       // Click login
-      userEvent.click(screen.getByRole('button', { name: /login/i }));
+      await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
       await waitFor(() => {
         expect(showSnackbar).toHaveBeenCalledWith('error', 'Login failed :(');
