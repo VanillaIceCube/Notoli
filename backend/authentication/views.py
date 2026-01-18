@@ -5,6 +5,9 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+from .serializers import EmailTokenObtainPairSerializer
 
 
 User = get_user_model()
@@ -70,3 +73,7 @@ class RegisterView(APIView):
             {"message": "User created successfully.", "username": user.username},
             status=status.HTTP_201_CREATED,
         )
+
+
+class EmailTokenObtainPairView(TokenObtainPairView):
+    serializer_class = EmailTokenObtainPairSerializer

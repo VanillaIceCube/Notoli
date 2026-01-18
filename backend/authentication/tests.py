@@ -211,7 +211,7 @@ class LoginTests(APITestCase):
     def _login_and_get_tokens(self):
         response = self.client.post(
             "/auth/login/",
-            {"username": "test_email", "password": "test_password"},
+            {"email": "test_email@example.com", "password": "test_password"},
             format="json",
         )
         self.assertEqual(
@@ -224,7 +224,7 @@ class LoginTests(APITestCase):
     def test_login_success(self):
         response = self.client.post(
             "/auth/login/",
-            {"username": "test_email", "password": "test_password"},
+            {"email": "test_email@example.com", "password": "test_password"},
             format="json",
         )
 
@@ -245,7 +245,7 @@ class LoginTests(APITestCase):
     def test_login_invalid_password(self):
         response = self.client.post(
             "/auth/login/",
-            {"username": "test_email", "password": "wrong_password"},
+            {"email": "test_email@example.com", "password": "wrong_password"},
             format="json",
         )
 
@@ -263,7 +263,7 @@ class LoginTests(APITestCase):
     def test_login_nonexistent_user(self):
         response = self.client.post(
             "/auth/login/",
-            {"username": "missing_user", "password": "test_password"},
+            {"email": "missing_user@example.com", "password": "test_password"},
             format="json",
         )
 
@@ -278,7 +278,7 @@ class LoginTests(APITestCase):
             f"Unexpected error body for nonexistent user: {response.data}",
         )
 
-    def test_login_missing_username(self):
+    def test_login_missing_email(self):
         response = self.client.post(
             "/auth/login/",
             {"password": "test_password"},
@@ -288,18 +288,18 @@ class LoginTests(APITestCase):
         self.assertEqual(
             response.status_code,
             status.HTTP_400_BAD_REQUEST,
-            f"Expected 400 for missing username, got {response.status_code}: {response.data}",
+            f"Expected 400 for missing email, got {response.status_code}: {response.data}",
         )
         self.assertEqual(
-            response.data.get("username"),
+            response.data.get("email"),
             ["This field is required."],
-            f"Unexpected error body for missing username: {response.data}",
+            f"Unexpected error body for missing email: {response.data}",
         )
 
     def test_login_missing_password(self):
         response = self.client.post(
             "/auth/login/",
-            {"username": "test_email"},
+            {"email": "test_email@example.com"},
             format="json",
         )
 
@@ -338,7 +338,7 @@ class LoginTests(APITestCase):
 
         response = self.client.post(
             "/auth/login/",
-            {"username": "test_email", "password": "test_password"},
+            {"email": "test_email@example.com", "password": "test_password"},
             format="json",
         )
 
@@ -365,7 +365,7 @@ class RefreshTokenTests(APITestCase):
     def _get_refresh_token(self):
         response = self.client.post(
             "/auth/login/",
-            {"username": "test_email", "password": "test_password"},
+            {"email": "test_email@example.com", "password": "test_password"},
             format="json",
         )
         self.assertEqual(
