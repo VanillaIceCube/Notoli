@@ -11,21 +11,24 @@ export default function Login({ showSnackbar }) {
   const navigate = useNavigate();
 
   // Pull Workspace List
-  const fetchWorkspaces = useCallback(async (token, showError) => {
-    try {
-      const response = await apiFetch('/api/workspaces/', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      return data;
-    } catch (err) {
-      if (showError) {
-        showSnackbar('error', 'Network error :(');
+  const fetchWorkspaces = useCallback(
+    async (token, showError) => {
+      try {
+        const response = await apiFetch('/api/workspaces/', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data;
+      } catch (err) {
+        if (showError) {
+          showSnackbar('error', 'Network error :(');
+        }
+        return [];
       }
-      return [];
-    }
-  }, [showSnackbar]);
+    },
+    [showSnackbar],
+  );
 
   useEffect(() => {
     fetchWorkspaces();
