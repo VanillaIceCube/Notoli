@@ -16,9 +16,12 @@ import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { getWorkspaceId } from '../utils/Navigation';
 import { useLocation, useNavigate } from 'react-router-dom';
+
 import Collapse from '@mui/material/Collapse';
+
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+
 import {
   createWorkspace,
   deleteWorkspace,
