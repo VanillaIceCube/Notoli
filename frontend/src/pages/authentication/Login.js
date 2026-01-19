@@ -5,7 +5,7 @@ import { apiFetch } from '../../services/client';
 
 export default function Login({ showSnackbar }) {
   // Basics
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const navigate = useNavigate();
@@ -43,7 +43,7 @@ export default function Login({ showSnackbar }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
       });
 
       if (!response.ok) {
@@ -108,9 +108,10 @@ export default function Login({ showSnackbar }) {
           <TextField
             fullWidth
             sx={{ background: 'white' }}
-            label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
           <TextField
             fullWidth

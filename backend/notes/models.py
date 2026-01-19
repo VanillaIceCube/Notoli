@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.db import models
 
 
@@ -10,15 +10,19 @@ class Workspace(models.Model):
 
     # Ownership
     owner = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="owned_workspaces"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="owned_workspaces",
     )
     collaborators = models.ManyToManyField(
-        User, blank=True, related_name="collaborating_workspaces"
+        settings.AUTH_USER_MODEL, blank=True, related_name="collaborating_workspaces"
     )
 
     # Metadata
     created_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="created_workspaces"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="created_workspaces",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -45,15 +49,19 @@ class TodoList(models.Model):
 
     # Ownership
     owner = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="owned_todolists"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="owned_todolists",
     )
     collaborators = models.ManyToManyField(
-        User, blank=True, related_name="collaborating_todolists"
+        settings.AUTH_USER_MODEL, blank=True, related_name="collaborating_todolists"
     )
 
     # Metadata
     created_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="created_todolists"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="created_todolists",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -74,15 +82,15 @@ class Note(models.Model):
 
     # Ownership
     owner = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="owned_notes"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="owned_notes"
     )
     collaborators = models.ManyToManyField(
-        User, blank=True, related_name="collaborating_notes"
+        settings.AUTH_USER_MODEL, blank=True, related_name="collaborating_notes"
     )
 
     # Metadata
     created_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="created_notes"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_notes"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

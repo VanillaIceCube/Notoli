@@ -1,6 +1,8 @@
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
+
+User = get_user_model()
 
 
 class AuthMethodTests(APITestCase):
@@ -36,7 +38,7 @@ class RegistrationTests(APITestCase):
     def test_register_success(self):
         response = self.client.post(
             "/auth/register/",
-            {"username": "test_username", "password": "test_password"},
+            {"email": "test_email@example.com", "password": "test_password"},
             format="json",
         )
 
@@ -47,7 +49,7 @@ class RegistrationTests(APITestCase):
         )
 
         self.assertTrue(
-            User.objects.filter(username="test_username").exists(),
+            User.objects.filter(username="test_email").exists(),
             "User was not created in the database",
         )
 
@@ -57,7 +59,27 @@ class RegistrationTests(APITestCase):
             f"Unexpected response body: {response.data}",
         )
 
-    def test_register_missing_username(self):
+    def test_register_default_username(self):
+        response = self.client.post(
+            "/auth/register/",
+            {"email": "test_email@example.com", "password": "test_password"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+            f"Unexpected response: {response.data}",
+        )
+
+        created_user = User.objects.get(email="test_email@example.com")
+        self.assertEqual(
+            created_user.username,
+            "test_email",
+            f"Unexpected username for default email: {created_user.username}",
+        )
+
+    def test_register_missing_email(self):
         response = self.client.post(
             "/auth/register/",
             {"password": "test_password"},
@@ -67,18 +89,18 @@ class RegistrationTests(APITestCase):
         self.assertEqual(
             response.status_code,
             status.HTTP_400_BAD_REQUEST,
-            f"Expected 400 for missing username, got {response.status_code}: {response.data}",
+            f"Expected 400 for missing email, got {response.status_code}: {response.data}",
         )
         self.assertEqual(
             response.data.get("error"),
-            "Username and password required.",
-            f"Unexpected error body for missing username: {response.data}",
+            "Email and password required.",
+            f"Unexpected error body for missing email: {response.data}",
         )
 
     def test_register_missing_password(self):
         response = self.client.post(
             "/auth/register/",
-            {"username": "test_username"},
+            {"email": "test_email@example.com"},
             format="json",
         )
 
@@ -89,7 +111,7 @@ class RegistrationTests(APITestCase):
         )
         self.assertEqual(
             response.data.get("error"),
-            "Username and password required.",
+            "Email and password required.",
             f"Unexpected error body for missing password: {response.data}",
         )
 
@@ -103,14 +125,14 @@ class RegistrationTests(APITestCase):
         )
         self.assertEqual(
             response.data.get("error"),
-            "Username and password required.",
+            "Email and password required.",
             f"Unexpected error body for empty payload: {response.data}",
         )
 
     def test_register_non_json_request(self):
         response = self.client.post(
             "/auth/register/",
-            "username=test_username&password=test_password",
+            "username=test_email&password=test_password",
             content_type="text/plain",
         )
 
@@ -126,11 +148,19 @@ class RegistrationTests(APITestCase):
         )
 
     def test_register_duplicate_username(self):
-        User.objects.create_user(username="dup_user", password="password123")
+        User.objects.create_user(
+            username="duplicate_username",
+            email="duplicate_password@example.com",
+            password="duplicate_password",
+        )
 
         response = self.client.post(
             "/auth/register/",
-            {"username": "dup_user", "password": "another_password"},
+            {
+                "email": "unique_email@example.com",
+                "username": "duplicate_username",
+                "password": "unique_password",
+            },
             format="json",
         )
 
@@ -145,17 +175,43 @@ class RegistrationTests(APITestCase):
             f"Unexpected error body for duplicate username: {response.data}",
         )
 
+    def test_register_duplicate_email(self):
+        User.objects.create_user(
+            username="unique_username",
+            email="duplicate_email@example.com",
+            password="test_password",
+        )
+
+        response = self.client.post(
+            "/auth/register/",
+            {"email": "duplicate_email@example.com", "password": "duplicate_password"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            f"Expected 400 for duplicate email, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("error"),
+            "Email already exists.",
+            f"Unexpected error body for duplicate email: {response.data}",
+        )
+
 
 class LoginTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username="test_username", password="test_password"
+            username="test_email",
+            email="test_email@example.com",
+            password="test_password",
         )
 
     def _login_and_get_tokens(self):
         response = self.client.post(
             "/auth/login/",
-            {"username": "test_username", "password": "test_password"},
+            {"email": "test_email@example.com", "password": "test_password"},
             format="json",
         )
         self.assertEqual(
@@ -168,7 +224,7 @@ class LoginTests(APITestCase):
     def test_login_success(self):
         response = self.client.post(
             "/auth/login/",
-            {"username": "test_username", "password": "test_password"},
+            {"email": "test_email@example.com", "password": "test_password"},
             format="json",
         )
 
@@ -189,7 +245,7 @@ class LoginTests(APITestCase):
     def test_login_invalid_password(self):
         response = self.client.post(
             "/auth/login/",
-            {"username": "test_username", "password": "wrong_password"},
+            {"email": "test_email@example.com", "password": "wrong_password"},
             format="json",
         )
 
@@ -207,7 +263,7 @@ class LoginTests(APITestCase):
     def test_login_nonexistent_user(self):
         response = self.client.post(
             "/auth/login/",
-            {"username": "missing_user", "password": "test_password"},
+            {"email": "missing_user@example.com", "password": "test_password"},
             format="json",
         )
 
@@ -222,7 +278,7 @@ class LoginTests(APITestCase):
             f"Unexpected error body for nonexistent user: {response.data}",
         )
 
-    def test_login_missing_username(self):
+    def test_login_missing_email(self):
         response = self.client.post(
             "/auth/login/",
             {"password": "test_password"},
@@ -232,18 +288,18 @@ class LoginTests(APITestCase):
         self.assertEqual(
             response.status_code,
             status.HTTP_400_BAD_REQUEST,
-            f"Expected 400 for missing username, got {response.status_code}: {response.data}",
+            f"Expected 400 for missing email, got {response.status_code}: {response.data}",
         )
         self.assertEqual(
-            response.data.get("username"),
+            response.data.get("email"),
             ["This field is required."],
-            f"Unexpected error body for missing username: {response.data}",
+            f"Unexpected error body for missing email: {response.data}",
         )
 
     def test_login_missing_password(self):
         response = self.client.post(
             "/auth/login/",
-            {"username": "test_username"},
+            {"email": "test_email@example.com"},
             format="json",
         )
 
@@ -261,7 +317,7 @@ class LoginTests(APITestCase):
     def test_login_non_json_request(self):
         response = self.client.post(
             "/auth/login/",
-            "username=test_username&password=test_password",
+            "username=test_email&password=test_password",
             content_type="text/plain",
         )
 
@@ -282,7 +338,7 @@ class LoginTests(APITestCase):
 
         response = self.client.post(
             "/auth/login/",
-            {"username": "test_username", "password": "test_password"},
+            {"email": "test_email@example.com", "password": "test_password"},
             format="json",
         )
 
@@ -300,12 +356,16 @@ class LoginTests(APITestCase):
 
 class RefreshTokenTests(APITestCase):
     def setUp(self):
-        User.objects.create_user(username="test_username", password="test_password")
+        User.objects.create_user(
+            username="test_email",
+            email="test_email@example.com",
+            password="test_password",
+        )
 
     def _get_refresh_token(self):
         response = self.client.post(
             "/auth/login/",
-            {"username": "test_username", "password": "test_password"},
+            {"email": "test_email@example.com", "password": "test_password"},
             format="json",
         )
         self.assertEqual(
