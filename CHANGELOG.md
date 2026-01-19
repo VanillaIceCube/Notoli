@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 - Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
 - Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
 - Replaced the Dependabot auto-approval action with a GitHub API call to avoid the missing action repo.
+- Added a custom ESLint v9 flat config for the frontend and removed the deprecated `.eslintignore`.
 
 ## 2026-01-18
 ### Added
