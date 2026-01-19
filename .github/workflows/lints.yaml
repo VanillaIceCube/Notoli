@@ -9,6 +9,8 @@ on:
       - "backend/**"
       - ".github/**/*.yml"
       - ".github/**/*.yaml"
+      - ".github/*.yml"
+      - ".github/*.yaml"
 
 concurrency:
   group: lint-${{ github.ref }}
