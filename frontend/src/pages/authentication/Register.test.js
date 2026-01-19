@@ -42,7 +42,7 @@ describe('Register', () => {
     renderWithProviders(<Register showSnackbar={showSnackbar} />);
 
     await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-    await userEvent.type(screen.getByLabelText(/username/i), 'testuser');
+    await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
     await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
     await userEvent.click(screen.getByRole('button', { name: /register/i }));
 
@@ -51,13 +51,17 @@ describe('Register', () => {
         '/auth/register/',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({
-            email: 'test_email@example.com',
-            username: 'testuser',
-            password: 'test_password',
-          }),
+          headers: { 'Content-Type': 'application/json' },
+          body: expect.any(String),
         }),
       );
+    });
+
+    const [, requestOptions] = apiFetch.mock.calls[0];
+    expect(JSON.parse(requestOptions.body)).toEqual({
+      email: 'test_email@example.com',
+      username: 'test_username',
+      password: 'test_password',
     });
 
     await waitFor(() => {
