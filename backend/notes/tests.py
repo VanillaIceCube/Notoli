@@ -11,7 +11,7 @@ class ModelTests(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email="owner_email@example.com",
             password="owner-password",
         )
         self.workspace = Workspace.objects.create(
@@ -55,17 +55,17 @@ class WorkspaceApiTests(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email="owner_email@example.com",
             password="owner-password",
         )
         self.collaborator = User.objects.create_user(
             username="collaborator",
-            email="collaborator@example.com",
+            email="collaborator_email@example.com",
             password="collaborator-password",
         )
         self.outsider = User.objects.create_user(
             username="outsider",
-            email="outsider@example.com",
+            email="outsider_email@example.com",
             password="outsider-password",
         )
         self.workspace = Workspace.objects.create(
@@ -216,17 +216,17 @@ class TodoListApiTests(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email="owner_email@example.com",
             password="owner-password",
         )
         self.collaborator = User.objects.create_user(
             username="collaborator",
-            email="collaborator@example.com",
+            email="collaborator_email@example.com",
             password="collaborator-password",
         )
         self.outsider = User.objects.create_user(
             username="outsider",
-            email="outsider@example.com",
+            email="outsider_email@example.com",
             password="outsider-password",
         )
         self.workspace = Workspace.objects.create(
@@ -408,17 +408,17 @@ class NoteApiTests(APITestCase):
     def setUp(self):
         self.owner = User.objects.create_user(
             username="owner",
-            email="owner@example.com",
+            email="owner_email@example.com",
             password="owner-password",
         )
         self.collaborator = User.objects.create_user(
             username="collaborator",
-            email="collaborator@example.com",
+            email="collaborator_email@example.com",
             password="collaborator-password",
         )
         self.outsider = User.objects.create_user(
             username="outsider",
-            email="outsider@example.com",
+            email="outsider_email@example.com",
             password="outsider-password",
         )
         self.workspace = Workspace.objects.create(
