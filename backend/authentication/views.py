@@ -8,8 +8,9 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from .serializers import EmailTokenObtainPairSerializer
 from notes.models import Workspace
+
+from .serializers import EmailTokenObtainPairSerializer
 
 User = get_user_model()
 
