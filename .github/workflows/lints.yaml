@@ -4,13 +4,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: [ main ]
-    paths:
-      - "frontend/**"
-      - "backend/**"
-      - ".github/*.yml"
-      - ".github/*.yaml"
-      - ".github/**/*.yml"
-      - ".github/**/*.yaml"
 
 concurrency:
   group: lint-${{ github.ref }}
