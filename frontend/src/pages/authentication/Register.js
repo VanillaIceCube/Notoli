@@ -40,8 +40,24 @@ export default function Register({ showSnackbar }) {
         throw new Error(message);
       }
 
-      showSnackbar('success', 'Account created! Please log in.');
-      navigate('/login');
+      let data = {};
+      try {
+        data = await response.json();
+      } catch {
+        // ignore json parsing errors
+      }
+
+      if (data?.access && data?.refresh) {
+        sessionStorage.setItem('accessToken', data.access);
+        sessionStorage.setItem('refreshToken', data.refresh);
+      }
+
+      showSnackbar('success', 'Account created! Welcome to Notoli!');
+      if (data?.workspace_id) {
+        navigate(`/workspace/${data.workspace_id}`);
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       const isNetworkError =
         err instanceof TypeError ||

@@ -14,6 +14,7 @@ All notable changes to this project are documented in this file.
 - Added a custom auth user model with unique email and admin registration.
 - Added email-aware JWT login serializer and view.
 - Added backend Ruff config for import grouping rules.
+- Added default workspace creation for new users and return of registration tokens/workspace id.
 ### Changed
 - Refactored frontend login tests to use shared test utilities.
 - Updated login error handling to show a network error message when fetch fails.
@@ -24,6 +25,7 @@ All notable changes to this project are documented in this file.
 - Updated notes models/tests for custom user model compatibility.
 - Updated admin to hide Group/Permission from the admin sidebar.
 - Updated Ruff config to ignore line-length errors.
+- Updated registration flow to auto-login and redirect to the new workspace.
 
 ## 2026-01-17
 ### Added

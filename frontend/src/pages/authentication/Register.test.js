@@ -20,6 +20,7 @@ describe('Register', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useNavigate.mockReturnValue(mockNavigate);
+    sessionStorage.clear();
   });
 
   test('when rendered, it shows email/username/password inputs and submit button', () => {
@@ -31,10 +32,15 @@ describe('Register', () => {
     expect(screen.getByRole('button', { name: /register/i })).toBeInTheDocument();
   });
 
-  test('when registration succeeds, it navigates to login and shows success', async () => {
+  test('when registration succeeds, it stores tokens, navigates to workspace, and shows success', async () => {
     apiFetch.mockResolvedValue({
       ok: true,
-      json: async () => ({ message: 'User created successfully.' }),
+      json: async () => ({
+        message: 'User created successfully.',
+        access: 'access-token',
+        refresh: 'refresh-token',
+        workspace_id: 12,
+      }),
     });
 
     const showSnackbar = jest.fn();
@@ -65,12 +71,15 @@ describe('Register', () => {
     });
 
     await waitFor(() => {
-      expect(showSnackbar).toHaveBeenCalledWith('success', 'Account created! Please log in.');
+      expect(showSnackbar).toHaveBeenCalledWith('success', 'Account created! Welcome to Notoli!');
     });
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/login');
+      expect(mockNavigate).toHaveBeenCalledWith('/workspace/12');
     });
+
+    expect(sessionStorage.getItem('accessToken')).toBe('access-token');
+    expect(sessionStorage.getItem('refreshToken')).toBe('refresh-token');
   });
 
   test('when registration fails, it shows the server error', async () => {
