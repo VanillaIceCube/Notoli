@@ -17,7 +17,7 @@ def _build_unique_username(base_username):
     candidate = base_username
     counter = 1
     while User.objects.filter(username=candidate).exists():
-        suffix = str(counter)
+        suffix = f"{counter:02d}"
         trimmed_base = base_username[: 150 - len(suffix)]
         candidate = f"{trimmed_base}{suffix}"
         counter += 1
