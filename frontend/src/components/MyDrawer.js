@@ -37,14 +37,12 @@ export default function MyDrawer({
   // Navigate using Drawer
   const navigate = useNavigate();
 
-
   // Fetch Workspace Name
   const location = useLocation();
 
   const workspaceId = getWorkspaceId(location.pathname);
 
   const token = sessionStorage.getItem('accessToken');
-  
 
   const fetchWorkspaceName = useCallback(async () => {
     if (!workspaceId) return '';
