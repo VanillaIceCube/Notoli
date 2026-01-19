@@ -5,6 +5,11 @@ const reactHooksPlugin = require("eslint-plugin-react-hooks");
 const jsxA11yPlugin = require("eslint-plugin-jsx-a11y");
 const prettierConfig = require("eslint-config-prettier");
 
+const trimGlobals = (values) =>
+  Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [key.trim(), value])
+  );
+
 module.exports = [
   {
     ignores: ["build/**", "coverage/**", "node_modules/**"],
@@ -15,9 +20,15 @@ module.exports = [
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
       globals: {
-        ...globals.browser,
-        ...globals.jest,
+        ...trimGlobals(globals.browser),
+        ...trimGlobals(globals.node),
+        ...trimGlobals(globals.jest),
       },
     },
     settings: {
@@ -35,6 +46,8 @@ module.exports = [
       ...reactHooksPlugin.configs.recommended.rules,
       ...jsxA11yPlugin.configs.recommended.rules,
       "react/react-in-jsx-scope": "off",
+      "react/prop-types": "off",
+      "jsx-a11y/no-autofocus": "off",
     },
   },
   prettierConfig,
