@@ -7,6 +7,10 @@ on:
     paths:
       - "frontend/**"
       - "backend/**"
+      - ".github/*.yml"
+      - ".github/*.yaml"
+      - ".github/**/*.yml"
+      - ".github/**/*.yaml"
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -21,7 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
-      backend:  ${{ steps.filter.outputs.backend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      github: ${{ steps.filter.outputs.github }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -32,6 +37,11 @@ jobs:
               - 'frontend/**'
             backend:
               - 'backend/**'
+            github:
+              - '.github/*.yml'
+              - '.github/*.yaml'
+              - '.github/**/*.yml'
+              - '.github/**/*.yaml'
 
   lint-frontend:
     name: Lint Frontend (ESLint + Prettier)
@@ -44,7 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v4
         with:
           node-version: '18.20.8'
           cache: 'npm'
@@ -86,7 +96,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -116,3 +126,42 @@ jobs:
 
       - name: Ruff format (check only)
         run: ruff format --check .
+
+  lint-github-yaml:
+    name: Lint .github YAML
+    needs: changes
+    if: needs.changes.outputs.github == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18.20.8'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Format .github YAML (auto-fix)
+        run: npx --yes prettier@3.6.2 --write ".github/*.yml" ".github/*.yaml" ".github/**/*.yml" ".github/**/*.yaml"
+
+      - name: Commit auto-fixes
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "Github Actions: YAML auto-format"
+          branch: ${{ github.head_ref }}
+          file_pattern: |
+            .github/*.yml
+            .github/*.yaml
+            .github/**/*.yml
+            .github/**/*.yaml
+          commit_user_name: "lint-bot"
+          commit_user_email: "lint-bot@users.noreply.github.com"
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Run yamllint on .github
+        run: yamllint -d "{extends: default, rules: {line-length: disable}}" .github
