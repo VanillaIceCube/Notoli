@@ -2,12 +2,13 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-01-19
-### Changed
-- Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
-- Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
 ### Added
 - Added a GitHub Actions workflow to run frontend and backend tests (`tests.yaml`).
 - Added a Dependabot auto-merge workflow for patch/minor updates.
+- Added GitHub YAML linting with auto-formatting for `.github` YAML files in the lint workflow.
+### Changed
+- Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
+- Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
 
 ## 2026-01-18
 ### Added
