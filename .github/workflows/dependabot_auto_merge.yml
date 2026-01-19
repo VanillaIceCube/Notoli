@@ -66,10 +66,17 @@ jobs:
 
       - name: Auto-approve Dependabot PR
         if: steps.checks.outputs.all_passed == 'true'
-        uses: peter-evans/approve-pull-request@v4
+        uses: actions/github-script@v7
         with:
-          pull-request-number: ${{ github.event.pull_request.number }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const pull_number = context.payload.pull_request.number;
+            await github.rest.pulls.createReview({
+              owner,
+              repo,
+              pull_number,
+              event: 'APPROVE',
+            });
 
       - name: Enable auto-merge
         if: steps.checks.outputs.all_passed == 'true'
