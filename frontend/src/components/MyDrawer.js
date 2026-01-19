@@ -19,7 +19,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
-import { apiFetch } from '../services/client';
+import {
+  createWorkspace,
+  deleteWorkspace,
+  fetchWorkspace as fetchWorkspaceApi,
+  fetchWorkspaces as fetchWorkspacesApi,
+  updateWorkspace,
+} from '../services/BackendClient';
 
 export default function MyDrawer({
   open,
@@ -38,9 +44,7 @@ export default function MyDrawer({
   const fetchWorkspaceName = useCallback(async () => {
     if (!workspaceId) return '';
     try {
-      const response = await apiFetch(`/api/workspaces/${workspaceId}/`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const response = await fetchWorkspaceApi(workspaceId, token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const workspaceData = await response.json();
       return workspaceData?.name ?? '';
@@ -68,9 +72,7 @@ export default function MyDrawer({
   const fetchWorkspaces = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await apiFetch('/api/workspaces/', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const response = await fetchWorkspacesApi(token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setWorkspaces(data);
@@ -95,17 +97,13 @@ export default function MyDrawer({
     setError(null);
 
     try {
-      const response = await apiFetch('/api/workspaces/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({
+      const response = await createWorkspace(
+        {
           name: newWorkspaceName,
           description: '',
-        }),
-      });
+        },
+        token,
+      );
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -152,14 +150,11 @@ export default function MyDrawer({
     setError(null);
 
     try {
-      const response = await apiFetch(`/api/workspaces/${editingWorkspaceId}/`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-        body: JSON.stringify({ name: editWorkspaceName }),
-      });
+      const response = await updateWorkspace(
+        editingWorkspaceId,
+        { name: editWorkspaceName },
+        token,
+      );
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -185,13 +180,7 @@ export default function MyDrawer({
     setError(null);
 
     try {
-      const response = await apiFetch(`/api/workspaces/${id}/`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
-      });
+      const response = await deleteWorkspace(id, token);
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);

@@ -17,6 +17,8 @@ All notable changes to this project are documented in this file.
 - Added default workspace creation for new users and return of registration tokens/workspace id.
 ### Changed
 - Refactored frontend login tests to use shared test utilities.
+- Routed frontend login/register flows through `BackendClient` and added a register helper.
+- Updated login/register tests to mock `BackendClient` helpers instead of `apiFetch`.
 - Updated login error handling to show a network error message when fetch fails.
 - Updated login UI/tests to send email instead of username.
 - Updated auth page UI to support registration and inline account links.

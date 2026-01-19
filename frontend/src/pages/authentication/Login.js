@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../../services/client';
+import { fetchWorkspaces as fetchWorkspacesApi, login } from '../../services/BackendClient';
 
 export default function Login({ showSnackbar }) {
   // Basics
@@ -14,9 +14,7 @@ export default function Login({ showSnackbar }) {
   const fetchWorkspaces = useCallback(
     async (token, showError) => {
       try {
-        const response = await apiFetch('/api/workspaces/', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const response = await fetchWorkspacesApi(token);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         return data;
@@ -38,13 +36,7 @@ export default function Login({ showSnackbar }) {
   // Login function
   const handleLogin = async () => {
     try {
-      const response = await apiFetch('/auth/login/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await login({ email: email.trim(), password });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
