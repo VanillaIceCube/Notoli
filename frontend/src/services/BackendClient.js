@@ -31,12 +31,14 @@ export const register = ({ email, username, password }) => {
     payload.username = trimmedUsername;
   }
 
+
   return apiFetch('/auth/register/', {
     method: 'POST',
     headers: jsonHeaders(),
     body: JSON.stringify(payload),
   });
 };
+
 
 export const fetchWorkspaces = (token) =>
   apiFetch('/api/workspaces/', {
