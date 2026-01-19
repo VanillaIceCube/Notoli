@@ -5,7 +5,10 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+
+from notes.models import Workspace
 
 from .serializers import EmailTokenObtainPairSerializer
 
@@ -68,8 +71,16 @@ class RegisterView(APIView):
         user = User.objects.create_user(
             username=username, email=email, password=password
         )
+        refresh = RefreshToken.for_user(user)
+        workspace = Workspace.objects.filter(owner=user).order_by("id").first()
         return Response(
-            {"message": "User created successfully.", "username": user.username},
+            {
+                "message": "User created successfully.",
+                "username": user.username,
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "workspace_id": workspace.id if workspace else None,
+            },
             status=status.HTTP_201_CREATED,
         )
 

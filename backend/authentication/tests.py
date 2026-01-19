@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from notes.models import Workspace
+
 User = get_user_model()
 
 
@@ -53,10 +55,30 @@ class RegistrationTests(APITestCase):
             "User was not created in the database",
         )
 
+        user = User.objects.get(username="test_email")
+        workspace = Workspace.objects.filter(owner=user, name="My Workspace").first()
+        self.assertIsNotNone(
+            workspace,
+            "Default workspace was not created for the user.",
+        )
+
         self.assertEqual(
             response.data.get("message"),
             "User created successfully.",
             f"Unexpected response body: {response.data}",
+        )
+        self.assertTrue(
+            response.data.get("access"),
+            f"Expected access token in response: {response.data}",
+        )
+        self.assertTrue(
+            response.data.get("refresh"),
+            f"Expected refresh token in response: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("workspace_id"),
+            workspace.id,
+            f"Unexpected workspace id in response: {response.data}",
         )
 
     def test_register_default_username(self):
