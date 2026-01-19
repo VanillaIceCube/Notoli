@@ -15,6 +15,10 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
     goBackToParent(location.pathname, navigate);
   };
 
+
+
+
+  
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar
