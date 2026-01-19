@@ -37,7 +37,7 @@ jobs:
             whitenoise==6.11.0
 
       - name: Run backend tests
-        run: python manage.py test
+        run: python manage.py test --verbosity=2
 
   frontend-tests:
     name: Frontend Tests (React)
