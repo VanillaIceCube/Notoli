@@ -1,5 +1,6 @@
 [lint]
 select = ["E", "F", "I"]
+ignore = ["E501"]
 
 [lint.isort]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
