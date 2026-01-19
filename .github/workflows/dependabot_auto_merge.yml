@@ -1,0 +1,80 @@
+name: Auto Merge
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: read
+
+jobs:
+  dependabot-auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    env:
+      REQUIRED_CHECKS: |
+        Lint Backend (Ruff)
+        Lint Frontend (ESLint + Prettier)
+        Backend Tests (Django)
+        Frontend Tests (React)
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify required checks
+        id: checks
+        if: contains(fromJson('["version-update:semver-patch","version-update:semver-minor"]'), steps.metadata.outputs.update-type)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const required = process.env.REQUIRED_CHECKS
+              .split('\n')
+              .map((line) => line.trim())
+              .filter(Boolean);
+
+            const { owner, repo } = context.repo;
+            const ref = context.payload.pull_request.head.sha;
+            const response = await github.rest.checks.listForRef({
+              owner,
+              repo,
+              ref,
+              per_page: 100,
+            });
+
+            const byName = new Map(
+              response.data.check_runs.map((check) => [check.name, check.conclusion])
+            );
+            const missing = required.filter((name) => !byName.has(name));
+            const failing = required.filter(
+              (name) => byName.get(name) !== 'success'
+            );
+
+            if (missing.length) {
+              core.notice(`Missing required checks: ${missing.join(', ')}`);
+            }
+            if (failing.length) {
+              core.notice(`Non-success required checks: ${failing.join(', ')}`);
+            }
+
+            const allPassed = missing.length === 0 && failing.length === 0;
+            core.setOutput('all_passed', allPassed ? 'true' : 'false');
+
+      - name: Auto-approve Dependabot PR
+        if: steps.checks.outputs.all_passed == 'true'
+        uses: peter-evans/approve-pull-request@v4
+        with:
+          pull-request-number: ${{ github.event.pull_request.number }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge
+        if: steps.checks.outputs.all_passed == 'true'
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          merge-method: squash
+          pull-request-number: ${{ github.event.pull_request.number }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

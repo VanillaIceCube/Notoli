@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file.
 - Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
 ### Added
 - Added a GitHub Actions workflow to run frontend and backend tests (`tests.yaml`).
+- Added a Dependabot auto-merge workflow for patch/minor updates.
 
 ## 2026-01-18
 ### Added
