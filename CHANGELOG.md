@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-01-19
+### Changed
+- Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
+
 ## 2026-01-18
 ### Added
 - Added frontend test utilities for shared theme/router setup (`frontend/src/test-utils.js`).
