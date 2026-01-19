@@ -6,12 +6,20 @@ const jsonHeaders = (token) => ({
   ...authHeader(token),
 });
 
-export const login = ({ username, password }) =>
-  apiFetch('/auth/login/', {
+export const login = ({ email, username, password }) => {
+  const payload = { password };
+  if (email) {
+    payload.email = email;
+  } else if (username) {
+    payload.username = username;
+  }
+
+  return apiFetch('/auth/login/', {
     method: 'POST',
     headers: jsonHeaders(),
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify(payload),
   });
+};
 
 export const fetchWorkspaces = (token) =>
   apiFetch('/api/workspaces/', {

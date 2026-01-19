@@ -36,13 +36,7 @@ export default function Login({ showSnackbar }) {
   // Login function
   const handleLogin = async () => {
     try {
-      const response = await apiFetch('/auth/login/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await login({ email: email.trim(), password });
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);

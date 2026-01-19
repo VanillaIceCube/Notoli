@@ -91,13 +91,10 @@ describe('Login', () => {
 
     // Confirm the login request happened with the creds we typed
     await waitFor(() => {
-      expect(apiFetch).toHaveBeenCalledWith(
-        '/auth/login/',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ email: 'test_email@example.com', password: 'test_password' }),
-        }),
-      );
+      expect(login).toHaveBeenCalledWith({
+        email: 'test_email@example.com',
+        password: 'test_password',
+      });
     });
 
     // Confirm we navigated to the main page when no workspaces are returned
