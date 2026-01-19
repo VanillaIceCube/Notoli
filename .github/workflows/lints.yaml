@@ -3,11 +3,9 @@ name: Lint
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    branches: [ main ]
     paths:
       - "frontend/**"
       - "backend/**"
-      - ".github/workflows/lints.yaml"
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -45,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '18.20.8'
           cache: 'npm'
@@ -61,7 +59,7 @@ jobs:
         run: npm run lint -- --fix
 
       - name: Commit auto-fixes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "Github Actions: Prettier & ESLint automatic lint fixes"
           branch: ${{ github.head_ref }}
@@ -87,7 +85,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -103,7 +101,7 @@ jobs:
         run: ruff format .
 
       - name: Commit auto-fixes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "Github Actions: Ruff automatic lint fixes"
           branch: ${{ github.head_ref }}

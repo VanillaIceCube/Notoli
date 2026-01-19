@@ -9,6 +9,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  frontend-tests:
+    name: Frontend Tests (React)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18.20.8'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run frontend tests
+        env:
+          CI: true
+        run: npm test -- --watchAll=false --verbose --runInBand
+
   backend-tests:
     name: Backend Tests (Django)
     runs-on: ubuntu-latest
@@ -38,26 +61,3 @@ jobs:
 
       - name: Run backend tests
         run: python manage.py test --verbosity=2
-
-  frontend-tests:
-    name: Frontend Tests (React)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18.20.8'
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
-
-      - name: Install frontend dependencies
-        run: npm ci
-
-      - name: Run frontend tests
-        env:
-          CI: true
-        run: npm test -- --watchAll=false --verbose --runInBand
