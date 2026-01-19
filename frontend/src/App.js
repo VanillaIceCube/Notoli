@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import AuthenticatedRoute from './components/AuthenticatedRoute';
 import Login from './pages/authentication/Login';
+import Register from './pages/authentication/Register';
 import Workspaces from './pages/notes/Workspaces';
 import TodoLists from './pages/notes/TodoLists';
 import Notes from './pages/notes/Notes';
@@ -46,6 +47,7 @@ function App() {
         />
         <Routes>
           <Route path="/login" element={<Login showSnackbar={showSnackbar} />} />
+          <Route path="/register" element={<Register showSnackbar={showSnackbar} />} />
 
           <React.Fragment>
             <Route

@@ -10,9 +10,22 @@ All notable changes to this project are documented in this file.
 - Added frontend login tests for network error token storage and navigation behavior.
 - Added a frontend login test for workspace fetch failure snackbar and navigation.
 - Added frontend login tests for navigating when workspaces exist or are empty.
+- Added frontend registration page, routing, and tests.
+- Added a custom auth user model with unique email and admin registration.
+- Added email-aware JWT login serializer and view.
+- Added backend Ruff config for import grouping rules.
+- Added default workspace creation for new users and return of registration tokens/workspace id.
 ### Changed
 - Refactored frontend login tests to use shared test utilities.
 - Updated login error handling to show a network error message when fetch fails.
+- Updated login UI/tests to send email instead of username.
+- Updated auth page UI to support registration and inline account links.
+- Updated auth login to accept email credentials via a custom JWT serializer.
+- Updated auth registration to require email and derive usernames from email.
+- Updated notes models/tests for custom user model compatibility.
+- Updated admin to hide Group/Permission from the admin sidebar.
+- Updated Ruff config to ignore line-length errors.
+- Updated registration flow to auto-login and redirect to the new workspace.
 
 ## 2026-01-17
 ### Added

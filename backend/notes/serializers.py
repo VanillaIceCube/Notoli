@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Workspace, TodoList, Note
+
+from .models import Note, TodoList, Workspace
 
 
 class WorkspaceSerializer(serializers.ModelSerializer):

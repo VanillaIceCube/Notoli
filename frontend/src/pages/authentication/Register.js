@@ -1,75 +1,71 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { fetchWorkspaces as fetchWorkspacesApi, login } from '../../services/BackendClient';
+import { apiFetch } from '../../services/client';
 
-export default function Login({ showSnackbar }) {
-  // Basics
+export default function Register({ showSnackbar }) {
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
   const navigate = useNavigate();
 
-  // Pull Workspace List
-  const fetchWorkspaces = useCallback(
-    async (token, showError) => {
-      try {
-        const response = await fetchWorkspacesApi(token);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        return data;
-      } catch (err) {
-        if (showError) {
-          const isHttpError = typeof err?.message === 'string' && err.message.startsWith('HTTP ');
-          showSnackbar('error', isHttpError ? 'Workspace load failed :(' : 'Network error :(');
-        }
-        return [];
-      }
-    },
-    [showSnackbar],
-  );
+  const handleRegister = async () => {
+    const payload = {
+      email: email.trim(),
+      password,
+    };
+    const trimmedUsername = username.trim();
+    if (trimmedUsername) {
+      payload.username = trimmedUsername;
+    }
 
-  useEffect(() => {
-    fetchWorkspaces();
-  }, [fetchWorkspaces]);
-
-  // Login function
-  const handleLogin = async () => {
     try {
-      const response = await apiFetch('/auth/login/', {
+      const response = await apiFetch('/auth/register/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        let message = 'Registration failed :(';
+        try {
+          const data = await response.json();
+          message = data?.error || data?.detail || message;
+        } catch {
+          // ignore json parsing errors
+        }
+        throw new Error(message);
       }
 
-      const data = await response.json();
+      let data = {};
+      try {
+        data = await response.json();
+      } catch {
+        // ignore json parsing errors
+      }
 
-      // Save tokens
-      sessionStorage.setItem('accessToken', data.access);
-      sessionStorage.setItem('refreshToken', data.refresh);
+      if (data?.access && data?.refresh) {
+        sessionStorage.setItem('accessToken', data.access);
+        sessionStorage.setItem('refreshToken', data.refresh);
+      }
 
-      // Update Snackbar
-      showSnackbar('success', 'Login successful!');
-
-      // Navigate to first Workspace, if empty, navigate to root
-      const workspaces = await fetchWorkspaces(data.access, true);
-      if (workspaces.length > 0) {
-        navigate(`/workspace/${Math.min(...workspaces.map((ws) => ws.id))}`);
+      showSnackbar('success', 'Account created! Welcome to Notoli!');
+      if (data?.workspace_id) {
+        navigate(`/workspace/${data.workspace_id}`);
       } else {
         navigate('/');
       }
     } catch (err) {
-      // Update Snackbar
       const isNetworkError =
         err instanceof TypeError ||
         (typeof err?.message === 'string' && err.message.toLowerCase().includes('network'));
-      showSnackbar('error', isNetworkError ? 'Network error :(' : 'Login failed :(');
+      showSnackbar(
+        'error',
+        isNetworkError ? 'Network error :(' : err?.message || 'Registration failed :(',
+      );
       console.error(err);
     }
   };
@@ -100,7 +96,7 @@ export default function Login({ showSnackbar }) {
           sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
           onSubmit={(e) => {
             e.preventDefault();
-            handleLogin();
+            handleRegister();
           }}
         >
           <TextField
@@ -110,6 +106,13 @@ export default function Login({ showSnackbar }) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+          />
+          <TextField
+            fullWidth
+            sx={{ background: 'white' }}
+            label="Username (optional)"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
           <TextField
             fullWidth
@@ -126,20 +129,20 @@ export default function Login({ showSnackbar }) {
             variant="contained"
           >
             <Typography variant="h5" align="center">
-              Login
+              Register
             </Typography>
           </Button>
           <Typography
             variant="caption"
             sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
           >
-            Need an account?{' '}
+            Already have an account?{' '}
             <Box
               component="span"
               sx={{ textDecoration: 'underline', cursor: 'pointer' }}
-              onClick={() => navigate('/register')}
+              onClick={() => navigate('/login')}
             >
-              Register here!
+              Sign in now!
             </Box>
           </Typography>
         </Box>

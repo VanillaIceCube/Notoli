@@ -1,7 +1,7 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from . import views
 
+from . import views
 
 router = DefaultRouter()
 # To be honest, I'm still having trouble understanding what the basename does exactly other than "provide clarity"

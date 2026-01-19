@@ -34,10 +34,10 @@ describe('Login', () => {
     useNavigate.mockReturnValue(mockNavigate);
   });
 
-  test('when rendered, it shows username/password inputs and submit button', () => {
+  test('when rendered, it shows email/password inputs and submit button', () => {
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
-    expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
   });
@@ -59,7 +59,7 @@ describe('Login', () => {
 
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
-    await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
     await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
@@ -83,7 +83,7 @@ describe('Login', () => {
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
     // Type credentials
-    await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
 
     // Click login
@@ -91,10 +91,13 @@ describe('Login', () => {
 
     // Confirm the login request happened with the creds we typed
     await waitFor(() => {
-      expect(login).toHaveBeenCalledWith({
-        username: 'test_username',
-        password: 'test_password',
-      });
+      expect(apiFetch).toHaveBeenCalledWith(
+        '/auth/login/',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ email: 'test_email@example.com', password: 'test_password' }),
+        }),
+      );
     });
 
     // Confirm we navigated to the main page when no workspaces are returned
@@ -120,7 +123,7 @@ describe('Login', () => {
       renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
       // Type credentials
-      await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+      await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
 
       // Click login
@@ -152,7 +155,7 @@ describe('Login', () => {
 
     renderWithProviders(<Login showSnackbar={showSnackbar} />);
 
-    await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
     await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
@@ -175,7 +178,7 @@ describe('Login', () => {
 
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
-    await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
     await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
@@ -200,7 +203,7 @@ describe('Login', () => {
 
     renderWithProviders(<Login showSnackbar={showSnackbar} />);
 
-    await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
+    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
     await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
@@ -229,7 +232,7 @@ describe('Login', () => {
       renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
       // Type credentials
-      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
 
       // Click login
@@ -261,7 +264,7 @@ describe('Login', () => {
     try {
       renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
-      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
       await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
@@ -291,7 +294,7 @@ describe('Login', () => {
     try {
       renderWithProviders(<Login showSnackbar={showSnackbar} />);
 
-      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
       await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
@@ -315,7 +318,7 @@ describe('Login', () => {
     try {
       renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
-      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
       await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
@@ -340,7 +343,7 @@ describe('Login', () => {
     try {
       renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
-      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
       await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
@@ -366,7 +369,7 @@ describe('Login', () => {
     try {
       renderWithProviders(<Login showSnackbar={showSnackbar} />);
 
-      await userEvent.type(screen.getByLabelText(/username/i), 'bad_username');
+      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
       await userEvent.click(screen.getByRole('button', { name: /login/i }));
 

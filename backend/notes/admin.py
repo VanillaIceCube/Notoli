@@ -1,6 +1,6 @@
 from django.contrib import admin
-from .models import Workspace, TodoList, Note
 
+from .models import Note, TodoList, Workspace
 
 admin.site.register(Workspace)
 admin.site.register(TodoList)

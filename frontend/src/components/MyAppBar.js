@@ -7,8 +7,8 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Don't render in login page
-  if (location.pathname === '/login') return null;
+  // Don't render on auth pages
+  if (location.pathname === '/login' || location.pathname === '/register') return null;
 
   // Navigate backwards function
   const handleBack = () => {
