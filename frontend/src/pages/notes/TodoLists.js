@@ -123,11 +123,7 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await updateTodoList(
-        editingTodoListId,
-        { name: editTodoListName },
-        token,
-      );
+      const response = await updateTodoList(editingTodoListId, { name: editTodoListName }, token);
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
