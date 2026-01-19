@@ -16,9 +16,7 @@ import { Add, Close, MoreVert } from '@mui/icons-material';
 import Divider from '@mui/material/Divider';
 import { getWorkspaceId } from '../utils/Navigation';
 import { useLocation, useNavigate } from 'react-router-dom';
-
 import Collapse from '@mui/material/Collapse';
-
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 
@@ -39,10 +37,14 @@ export default function MyDrawer({
   // Navigate using Drawer
   const navigate = useNavigate();
 
+
   // Fetch Workspace Name
   const location = useLocation();
+
   const workspaceId = getWorkspaceId(location.pathname);
+
   const token = sessionStorage.getItem('accessToken');
+  
 
   const fetchWorkspaceName = useCallback(async () => {
     if (!workspaceId) return '';
