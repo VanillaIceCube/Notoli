@@ -1,10 +1,11 @@
-from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from .models import Workspace, TodoList, Note
-from .serializers import WorkspaceSerializer, TodoListSerializer, NoteSerializer
+from rest_framework import viewsets
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
+
+from .models import Note, TodoList, Workspace
+from .serializers import NoteSerializer, TodoListSerializer, WorkspaceSerializer
 
 
 class WorkspaceViewSet(viewsets.ModelViewSet):
