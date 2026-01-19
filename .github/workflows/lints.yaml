@@ -7,7 +7,7 @@ on:
     paths:
       - "frontend/**"
       - "backend/**"
-      - ".github/workflows/lint.yml"
+      - ".github/workflows/lints.yaml"
 
 concurrency:
   group: lint-${{ github.ref }}
