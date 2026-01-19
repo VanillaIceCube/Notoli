@@ -60,10 +60,6 @@ describe('Register', () => {
       });
     });
 
-
-
-
-    
     await waitFor(() => {
       expect(showSnackbar).toHaveBeenCalledWith('success', 'Account created! Welcome to Notoli!');
     });
