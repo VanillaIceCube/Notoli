@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
-      backend:  ${{ steps.filter.outputs.backend }}
+      backend: ${{ steps.filter.outputs.backend }}
       github: ${{ steps.filter.outputs.github }}
     steps:
       - uses: actions/checkout@v4
