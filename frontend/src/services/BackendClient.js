@@ -21,6 +21,23 @@ export const login = ({ email, username, password }) => {
   });
 };
 
+export const register = ({ email, username, password }) => {
+  const payload = {
+    email: email?.trim(),
+    password,
+  };
+  const trimmedUsername = username?.trim();
+  if (trimmedUsername) {
+    payload.username = trimmedUsername;
+  }
+
+  return apiFetch('/auth/register/', {
+    method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify(payload),
+  });
+};
+
 export const fetchWorkspaces = (token) =>
   apiFetch('/api/workspaces/', {
     headers: authHeader(token),

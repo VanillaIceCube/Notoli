@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../../services/client';
+import { register } from '../../services/BackendClient';
 
 export default function Register({ showSnackbar }) {
   const [email, setEmail] = useState('');
@@ -11,23 +11,8 @@ export default function Register({ showSnackbar }) {
   const navigate = useNavigate();
 
   const handleRegister = async () => {
-    const payload = {
-      email: email.trim(),
-      password,
-    };
-    const trimmedUsername = username.trim();
-    if (trimmedUsername) {
-      payload.username = trimmedUsername;
-    }
-
     try {
-      const response = await apiFetch('/auth/register/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await register({ email, username, password });
 
       if (!response.ok) {
         let message = 'Registration failed :(';
