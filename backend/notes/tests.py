@@ -166,14 +166,16 @@ class WorkspaceApiTests(APITestCase):
             f"Expected 200 on workspace list, got {response.status_code}: {response.data}",
         )
         workspace_ids = {item["id"] for item in response.data}
+        outsider_workspace_ids = set(
+            Workspace.objects.filter(owner=self.outsider).values_list("id", flat=True)
+        )
         self.assertIn(
             self.workspace.id,
             workspace_ids,
             f"Collaborator workspace missing from list: {response.data}",
         )
-        self.assertNotIn(
-            Workspace.objects.get(owner=self.outsider).id,
-            workspace_ids,
+        self.assertTrue(
+            workspace_ids.isdisjoint(outsider_workspace_ids),
             f"Unexpected outsider workspace included in list: {response.data}",
         )
 

@@ -1,6 +1,26 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-01-19
+### Added
+- Added a GitHub Actions workflow to run frontend and backend tests (`tests.yaml`).
+- Added a Dependabot auto-merge workflow for patch/minor updates.
+- Added a ChatGPT summary comment for Dependabot major version updates.
+- Added GitHub YAML linting with auto-formatting for `.github` YAML files in the lint workflow.
+- Added a Continuous Integration workflow to run Lint and Tests as a single CI gate.
+- Added PR summary concurrency cancellation to stop outdated summaries on new commits.
+- Added a custom ESLint v9 flat config for the frontend and removed the deprecated `.eslintignore`.
+### Changed
+- Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
+- Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
+- Replaced the Dependabot auto-approval action with a GitHub API call to avoid the missing action repo.
+- Dependabot auto-merge now triggers after Continuous Integration completes and builds a metadata event payload.
+- Dependabot major updates now call OpenAI and log the response before posting a PR comment.
+- Lint and Tests now run via the Continuous Integration workflow only, with reusable workflow calls.
+- Lint change detection now uses PR base/head SHAs when available for workflow calls.
+- Removed inherited secrets from the Continuous Integration workflow calls.
+- Renamed the Continuous Integration workflow file to `continuous_integration.yaml`.
+
 ## 2026-01-18
 ### Added
 - Added frontend test utilities for shared theme/router setup (`frontend/src/test-utils.js`).

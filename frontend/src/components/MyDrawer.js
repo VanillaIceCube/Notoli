@@ -19,6 +19,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+
 import {
   createWorkspace,
   deleteWorkspace,
@@ -38,7 +39,9 @@ export default function MyDrawer({
 
   // Fetch Workspace Name
   const location = useLocation();
+
   const workspaceId = getWorkspaceId(location.pathname);
+
   const token = sessionStorage.getItem('accessToken');
 
   const fetchWorkspaceName = useCallback(async () => {

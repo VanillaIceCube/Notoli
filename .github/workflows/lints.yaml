@@ -1,13 +1,7 @@
 name: Lint
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-    branches: [ main ]
-    paths:
-      - "frontend/**"
-      - "backend/**"
-      - ".github/workflows/lint.yml"
+  workflow_call:
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -24,10 +18,12 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend:  ${{ steps.filter.outputs.backend }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          base: ${{ github.event.pull_request.base.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           filters: |
             frontend:
               - 'frontend/**'
@@ -43,15 +39,15 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: '18.20.8'
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
 
-      - name: Install dependancies
+      - name: Install dependencies
         run: npm ci
 
       - name: Prettier (auto-fix)
@@ -61,7 +57,7 @@ jobs:
         run: npm run lint -- --fix
 
       - name: Commit auto-fixes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "Github Actions: Prettier & ESLint automatic lint fixes"
           branch: ${{ github.head_ref }}
@@ -85,9 +81,9 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
           cache: 'pip'
@@ -103,7 +99,7 @@ jobs:
         run: ruff format .
 
       - name: Commit auto-fixes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "Github Actions: Ruff automatic lint fixes"
           branch: ${{ github.head_ref }}
