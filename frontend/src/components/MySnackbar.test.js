@@ -22,9 +22,7 @@ describe('MySnackbar', () => {
   });
 
   test('when a severity is provided, it renders an alert with that severity', () => {
-    renderWithProviders(
-      <MySnackbar open severity="error" message="Boom" onClose={jest.fn()} />,
-    );
+    renderWithProviders(<MySnackbar open severity="error" message="Boom" onClose={jest.fn()} />);
 
     const alert = screen.getByRole('alert');
     expect(alert).toHaveClass('MuiAlert-standardError');
