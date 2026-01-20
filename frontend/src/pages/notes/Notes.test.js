@@ -19,6 +19,16 @@ jest.mock('react-router-dom', () => ({
   useParams: () => mockUseParams(),
 }));
 
+jest.mock('@mui/material', () => {
+  const React = require('react');
+  const actual = jest.requireActual('@mui/material');
+  return {
+    ...actual,
+    Menu: ({ open, children }) =>
+      open ? React.createElement('div', { 'data-testid': 'menu' }, children) : null,
+  };
+});
+
 jest.mock('../../services/BackendClient', () => ({
   createNote: jest.fn(),
   deleteNote: jest.fn(),
@@ -57,6 +67,9 @@ async function renderNotes(routeEntries = ['/workspace/1/todolist/5']) {
 
   await waitFor(() => {
     expect(fetchNotesApi).toHaveBeenCalledWith('5', 'token');
+  });
+  await waitFor(() => {
+    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
   });
 
   return { ...view, setAppBarHeader };

@@ -17,6 +17,16 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
+jest.mock('@mui/material', () => {
+  const React = require('react');
+  const actual = jest.requireActual('@mui/material');
+  return {
+    ...actual,
+    Menu: ({ open, children }) =>
+      open ? React.createElement('div', { 'data-testid': 'menu' }, children) : null,
+  };
+});
+
 jest.mock('../../services/BackendClient', () => ({
   createWorkspace: jest.fn(),
   deleteWorkspace: jest.fn(),
@@ -43,6 +53,9 @@ async function renderWorkspaces() {
 
   await waitFor(() => {
     expect(fetchWorkspacesApi).toHaveBeenCalledWith('token');
+  });
+  await waitFor(() => {
+    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
   });
 
   return { ...view, setAppBarHeader };
