@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { setupUserEvent } from '../test-utils';
 import MySnackbar from './MySnackbar';
 
 describe('MySnackbar', () => {
@@ -13,10 +13,11 @@ describe('MySnackbar', () => {
 
   test('when the close button is clicked, it calls onClose', async () => {
     const onClose = jest.fn();
+    const user = setupUserEvent();
 
     render(<MySnackbar open severity="error" message="Oops" onClose={onClose} />);
 
-    await userEvent.click(screen.getByLabelText(/close/i));
+    await user.click(screen.getByLabelText(/close/i));
 
     expect(onClose).toHaveBeenCalled();
   });
