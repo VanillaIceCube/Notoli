@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ### Added
 - Added a GitHub Actions workflow to run frontend and backend tests (`tests.yaml`).
 - Added a Dependabot auto-merge workflow for patch/minor updates.
+- Added a ChatGPT summary comment for Dependabot major version updates.
 - Added GitHub YAML linting with auto-formatting for `.github` YAML files in the lint workflow.
 - Added a Continuous Integration workflow to run Lint and Tests as a single CI gate.
 - Added PR summary concurrency cancellation to stop outdated summaries on new commits.
@@ -14,6 +15,7 @@ All notable changes to this project are documented in this file.
 - Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
 - Replaced the Dependabot auto-approval action with a GitHub API call to avoid the missing action repo.
 - Dependabot auto-merge now triggers after Continuous Integration completes and builds a metadata event payload.
+- Dependabot major updates now call OpenAI and log the response before posting a PR comment.
 - Lint and Tests now run via the Continuous Integration workflow only, with reusable workflow calls.
 - Lint change detection now uses PR base/head SHAs when available for workflow calls.
 - Removed inherited secrets from the Continuous Integration workflow calls.
