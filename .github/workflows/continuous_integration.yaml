@@ -1,0 +1,21 @@
+name: Continuous Integration
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: continuous-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  lints:
+    name: Lint
+    uses: ./.github/workflows/lints.yaml
+
+  tests:
+    name: Tests
+    uses: ./.github/workflows/tests.yaml
