@@ -16,9 +16,9 @@ import {
   updateNote,
   deleteNote,
 } from './backendClient';
-import { apiFetch } from './client';
+import { apiFetch } from './apiClient';
 
-jest.mock('./client', () => ({
+jest.mock('./apiClient', () => ({
   apiFetch: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
