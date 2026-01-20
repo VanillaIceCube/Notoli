@@ -19,7 +19,7 @@ describe('AuthenticatedRoute', () => {
     sessionStorage.clear();
   });
 
-  it('redirects to /login when no access token is present', () => {
+  it('when no access token is present, it redirects to /login', () => {
     renderWithProviders(
       <>
         <Routes>
@@ -43,7 +43,7 @@ describe('AuthenticatedRoute', () => {
     expect(screen.queryByText('secret')).not.toBeInTheDocument();
   });
 
-  it('renders children when access token exists', () => {
+  it('when an access token exists, it renders children', () => {
     sessionStorage.setItem('accessToken', 'token');
 
     renderWithProviders(
