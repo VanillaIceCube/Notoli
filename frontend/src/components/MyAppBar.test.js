@@ -1,6 +1,5 @@
-import { renderWithProviders } from '../test-utils';
+import { renderWithProviders, setupUserEvent } from '../test-utils';
 import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import MyAppBar from './MyAppBar';
 import { useNavigate } from 'react-router-dom';
 import { goBackToParent } from '../utils/Navigation';
@@ -17,10 +16,12 @@ jest.mock('../utils/Navigation', () => ({
 
 describe('MyAppBar', () => {
   const mockNavigate = jest.fn();
+  let user;
 
   beforeEach(() => {
     jest.clearAllMocks();
     useNavigate.mockReturnValue(mockNavigate);
+    user = setupUserEvent();
   });
 
   test('when on /login, it does not render', () => {
@@ -36,7 +37,7 @@ describe('MyAppBar', () => {
       routeEntries: ['/workspace/1/todolist/2'],
     });
 
-    await userEvent.click(screen.getByLabelText('back button'));
+    await user.click(screen.getByLabelText('back button'));
 
     expect(goBackToParent).toHaveBeenCalledWith('/workspace/1/todolist/2', mockNavigate);
   });
@@ -48,7 +49,7 @@ describe('MyAppBar', () => {
       routeEntries: ['/'],
     });
 
-    await userEvent.click(screen.getByLabelText(/menu/i));
+    await user.click(screen.getByLabelText(/menu/i));
 
     expect(setDrawerOpen).toHaveBeenCalledWith(expect.any(Function));
   });

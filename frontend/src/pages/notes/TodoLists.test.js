@@ -1,7 +1,6 @@
-import { renderWithProviders } from '../../test-utils';
+import { renderWithProviders, setupUserEvent } from '../../test-utils';
 import { Route, Routes } from 'react-router-dom';
 import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import TodoLists from './TodoLists';
 import {
   createTodoList,
@@ -18,9 +17,12 @@ jest.mock('../../services/BackendClient', () => ({
 }));
 
 describe('TodoLists', () => {
+  let user;
+
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.setItem('accessToken', 'token');
+    user = setupUserEvent();
   });
 
   test('when workspaceId is missing, it does not fetch lists', () => {
@@ -43,10 +45,7 @@ describe('TodoLists', () => {
 
     renderWithProviders(
       <Routes>
-        <Route
-          path="/workspace/:workspaceId"
-          element={<TodoLists setAppBarHeader={jest.fn()} />}
-        />
+        <Route path="/workspace/:workspaceId" element={<TodoLists setAppBarHeader={jest.fn()} />} />
       </Routes>,
       { routeEntries: ['/workspace/1'] },
     );
@@ -63,18 +62,15 @@ describe('TodoLists', () => {
 
     renderWithProviders(
       <Routes>
-        <Route
-          path="/workspace/:workspaceId"
-          element={<TodoLists setAppBarHeader={jest.fn()} />}
-        />
+        <Route path="/workspace/:workspaceId" element={<TodoLists setAppBarHeader={jest.fn()} />} />
       </Routes>,
       { routeEntries: ['/workspace/1'] },
     );
 
-    await userEvent.click(await screen.findByText('Add New'));
+    await user.click(await screen.findByText('Add New'));
 
     const input = screen.getByPlaceholderText('New TodoList Name…');
-    await userEvent.type(input, 'New List{enter}');
+    await user.type(input, 'New List{enter}');
 
     expect(await screen.findByText('New List')).toBeInTheDocument();
   });
@@ -92,26 +88,23 @@ describe('TodoLists', () => {
 
     renderWithProviders(
       <Routes>
-        <Route
-          path="/workspace/:workspaceId"
-          element={<TodoLists setAppBarHeader={jest.fn()} />}
-        />
+        <Route path="/workspace/:workspaceId" element={<TodoLists setAppBarHeader={jest.fn()} />} />
       </Routes>,
       { routeEntries: ['/workspace/1'] },
     );
 
     const menuIcons = await screen.findAllByTestId('MoreVertIcon');
-    await userEvent.click(menuIcons[0]);
-    await userEvent.click(screen.getByText('Edit'));
+    await user.click(menuIcons[0]);
+    await user.click(screen.getByText('Edit'));
 
     const editInput = screen.getByDisplayValue('Old List');
-    await userEvent.clear(editInput);
-    await userEvent.type(editInput, 'Updated List{enter}');
+    await user.clear(editInput);
+    await user.type(editInput, 'Updated List{enter}');
 
     expect(await screen.findByText('Updated List')).toBeInTheDocument();
 
-    await userEvent.click(screen.getAllByTestId('MoreVertIcon')[0]);
-    await userEvent.click(screen.getByText('Delete'));
+    await user.click(screen.getAllByTestId('MoreVertIcon')[0]);
+    await user.click(screen.getByText('Delete'));
 
     await waitFor(() => {
       expect(screen.queryByText('Updated List')).not.toBeInTheDocument();

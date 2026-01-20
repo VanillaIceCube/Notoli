@@ -6,36 +6,72 @@ const mockAuthenticatedRoute = jest.fn(function MockAuthenticatedRoute({ childre
   return <div>{children}</div>;
 });
 
-jest.mock('./components/MySnackbar', () => function MockMySnackbar(props) {
-  mockSnackbar(props);
-  return <div data-testid="snackbar" />;
-});
+jest.mock(
+  './components/MySnackbar',
+  () =>
+    function MockMySnackbar(props) {
+      mockSnackbar(props);
+      return <div data-testid="snackbar" />;
+    },
+);
 
-jest.mock('./components/AuthenticatedRoute', () => function MockAuthenticatedRouteWrapper(props) {
-  return mockAuthenticatedRoute(props);
-});
+jest.mock(
+  './components/AuthenticatedRoute',
+  () =>
+    function MockAuthenticatedRouteWrapper(props) {
+      return mockAuthenticatedRoute(props);
+    },
+);
 
-jest.mock('./pages/authentication/Login', () => function MockLogin() {
-  return <div>Login Page</div>;
-});
-jest.mock('./pages/authentication/Register', () => function MockRegister() {
-  return <div>Register Page</div>;
-});
-jest.mock('./pages/notes/Workspaces', () => function MockWorkspaces() {
-  return <div>Workspaces Page</div>;
-});
-jest.mock('./pages/notes/TodoLists', () => function MockTodoLists() {
-  return <div>TodoLists Page</div>;
-});
-jest.mock('./pages/notes/Notes', () => function MockNotes() {
-  return <div>Notes Page</div>;
-});
-jest.mock('./components/MyAppBar', () => function MockMyAppBar() {
-  return <div>AppBar</div>;
-});
-jest.mock('./components/MyDrawer', () => function MockMyDrawer() {
-  return <div>Drawer</div>;
-});
+jest.mock(
+  './pages/authentication/Login',
+  () =>
+    function MockLogin() {
+      return <div>Login Page</div>;
+    },
+);
+jest.mock(
+  './pages/authentication/Register',
+  () =>
+    function MockRegister() {
+      return <div>Register Page</div>;
+    },
+);
+jest.mock(
+  './pages/notes/Workspaces',
+  () =>
+    function MockWorkspaces() {
+      return <div>Workspaces Page</div>;
+    },
+);
+jest.mock(
+  './pages/notes/TodoLists',
+  () =>
+    function MockTodoLists() {
+      return <div>TodoLists Page</div>;
+    },
+);
+jest.mock(
+  './pages/notes/Notes',
+  () =>
+    function MockNotes() {
+      return <div>Notes Page</div>;
+    },
+);
+jest.mock(
+  './components/MyAppBar',
+  () =>
+    function MockMyAppBar() {
+      return <div>AppBar</div>;
+    },
+);
+jest.mock(
+  './components/MyDrawer',
+  () =>
+    function MockMyDrawer() {
+      return <div>Drawer</div>;
+    },
+);
 
 beforeEach(() => {
   sessionStorage.clear();

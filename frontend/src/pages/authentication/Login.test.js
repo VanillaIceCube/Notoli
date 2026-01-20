@@ -1,6 +1,5 @@
 import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { renderWithProviders } from '../../test-utils';
+import { renderWithProviders, setupUserEvent } from '../../test-utils';
 import Login from './Login';
 import { fetchWorkspaces, login } from '../../services/BackendClient';
 import { useNavigate } from 'react-router-dom';
@@ -27,11 +26,13 @@ jest.mock('../../services/BackendClient', () => ({
 
 describe('Login', () => {
   const mockNavigate = jest.fn();
+  let user;
 
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.clear();
     useNavigate.mockReturnValue(mockNavigate);
+    user = setupUserEvent();
   });
 
   test('when rendered, it shows email/password inputs and submit button', () => {
@@ -59,9 +60,9 @@ describe('Login', () => {
 
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
-    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
-    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+    await user.type(screen.getByLabelText(/email/i), 'test_email@example.com');
+    await user.type(screen.getByLabelText(/password/i), 'test_password');
+    await user.click(screen.getByRole('button', { name: /login/i }));
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/workspace/3');
@@ -83,11 +84,11 @@ describe('Login', () => {
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
     // Type credentials
-    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    await user.type(screen.getByLabelText(/email/i), 'test_email@example.com');
+    await user.type(screen.getByLabelText(/password/i), 'test_password');
 
     // Click login
-    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+    await user.click(screen.getByRole('button', { name: /login/i }));
 
     // Confirm the login request happened with the creds we typed
     await waitFor(() => {
@@ -120,11 +121,11 @@ describe('Login', () => {
       renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
       // Type credentials
-      await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+      await user.type(screen.getByLabelText(/email/i), 'test_email@example.com');
+      await user.type(screen.getByLabelText(/password/i), 'test_password');
 
       // Click login
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+      await user.click(screen.getByRole('button', { name: /login/i }));
 
       // Assert tokens were saved
       await waitFor(() => {
@@ -152,9 +153,9 @@ describe('Login', () => {
 
     renderWithProviders(<Login showSnackbar={showSnackbar} />);
 
-    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
-    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+    await user.type(screen.getByLabelText(/email/i), 'test_email@example.com');
+    await user.type(screen.getByLabelText(/password/i), 'test_password');
+    await user.click(screen.getByRole('button', { name: /login/i }));
 
     await waitFor(() => {
       expect(showSnackbar).toHaveBeenCalledWith('success', 'Login successful!');
@@ -175,9 +176,9 @@ describe('Login', () => {
 
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
-    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
-    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+    await user.type(screen.getByLabelText(/email/i), 'test_email@example.com');
+    await user.type(screen.getByLabelText(/password/i), 'test_password');
+    await user.click(screen.getByRole('button', { name: /login/i }));
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/');
@@ -200,9 +201,9 @@ describe('Login', () => {
 
     renderWithProviders(<Login showSnackbar={showSnackbar} />);
 
-    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
-    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+    await user.type(screen.getByLabelText(/email/i), 'test_email@example.com');
+    await user.type(screen.getByLabelText(/password/i), 'test_password');
+    await user.click(screen.getByRole('button', { name: /login/i }));
 
     await waitFor(() => {
       expect(showSnackbar).toHaveBeenCalledWith('error', 'Workspace load failed :(');
@@ -229,11 +230,11 @@ describe('Login', () => {
       renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
       // Type credentials
-      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      await user.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
+      await user.type(screen.getByLabelText(/password/i), 'bad_password');
 
       // Click login
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+      await user.click(screen.getByRole('button', { name: /login/i }));
 
       await waitFor(() => {
         expect(mockNavigate).not.toHaveBeenCalled();
@@ -261,9 +262,9 @@ describe('Login', () => {
     try {
       renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
-      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+      await user.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
+      await user.type(screen.getByLabelText(/password/i), 'bad_password');
+      await user.click(screen.getByRole('button', { name: /login/i }));
 
       await waitFor(() => {
         expect(setItemSpy).not.toHaveBeenCalled();
@@ -291,9 +292,9 @@ describe('Login', () => {
     try {
       renderWithProviders(<Login showSnackbar={showSnackbar} />);
 
-      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+      await user.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
+      await user.type(screen.getByLabelText(/password/i), 'bad_password');
+      await user.click(screen.getByRole('button', { name: /login/i }));
 
       await waitFor(() => {
         expect(showSnackbar).toHaveBeenCalledWith('error', 'Login failed :(');
@@ -315,9 +316,9 @@ describe('Login', () => {
     try {
       renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
-      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+      await user.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
+      await user.type(screen.getByLabelText(/password/i), 'bad_password');
+      await user.click(screen.getByRole('button', { name: /login/i }));
 
       await waitFor(() => {
         expect(mockNavigate).not.toHaveBeenCalled();
@@ -340,9 +341,9 @@ describe('Login', () => {
     try {
       renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
-      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+      await user.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
+      await user.type(screen.getByLabelText(/password/i), 'bad_password');
+      await user.click(screen.getByRole('button', { name: /login/i }));
 
       await waitFor(() => {
         expect(setItemSpy).not.toHaveBeenCalled();
@@ -366,9 +367,9 @@ describe('Login', () => {
     try {
       renderWithProviders(<Login showSnackbar={showSnackbar} />);
 
-      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+      await user.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
+      await user.type(screen.getByLabelText(/password/i), 'bad_password');
+      await user.click(screen.getByRole('button', { name: /login/i }));
 
       await waitFor(() => {
         expect(showSnackbar).toHaveBeenCalledWith('error', 'Network error :(');

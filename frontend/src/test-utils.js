@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
 
 // Shared test setup: disable MUI ripples (act warnings) and silence router v7 warnings.
 const testTheme = createTheme({
@@ -24,4 +25,8 @@ export function renderWithProviders(ui, { routeEntries = ['/'], ...renderOptions
     </ThemeProvider>,
     renderOptions,
   );
+}
+
+export function setupUserEvent() {
+  return userEvent.setup ? userEvent.setup() : userEvent;
 }

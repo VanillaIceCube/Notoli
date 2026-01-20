@@ -1,6 +1,5 @@
-import { renderWithProviders } from '../../test-utils';
+import { renderWithProviders, setupUserEvent } from '../../test-utils';
 import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import Workspaces from './Workspaces';
 import {
   createWorkspace,
@@ -24,11 +23,13 @@ jest.mock('../../services/BackendClient', () => ({
 
 describe('Workspaces', () => {
   const mockNavigate = jest.fn();
+  let user;
 
   beforeEach(() => {
     jest.clearAllMocks();
     useNavigate.mockReturnValue(mockNavigate);
     sessionStorage.setItem('accessToken', 'token');
+    user = setupUserEvent();
   });
 
   test('when loading, it shows a loading state', () => {
@@ -63,7 +64,7 @@ describe('Workspaces', () => {
 
     renderWithProviders(<Workspaces setAppBarHeader={jest.fn()} />);
 
-    await userEvent.click(await screen.findByText('Design'));
+    await user.click(await screen.findByText('Design'));
 
     expect(mockNavigate).toHaveBeenCalledWith('/workspace/8');
   });
@@ -77,10 +78,10 @@ describe('Workspaces', () => {
 
     renderWithProviders(<Workspaces setAppBarHeader={jest.fn()} />);
 
-    await userEvent.click(await screen.findByText('Add New'));
+    await user.click(await screen.findByText('Add New'));
 
     const input = screen.getByPlaceholderText('New Workspace Name…');
-    await userEvent.type(input, 'New Space{enter}');
+    await user.type(input, 'New Space{enter}');
 
     expect(await screen.findByText('New Space')).toBeInTheDocument();
   });
@@ -99,17 +100,17 @@ describe('Workspaces', () => {
     renderWithProviders(<Workspaces setAppBarHeader={jest.fn()} />);
 
     const moreButtons = await screen.findAllByTestId('MoreVertIcon');
-    await userEvent.click(moreButtons[0]);
-    await userEvent.click(screen.getByText('Edit'));
+    await user.click(moreButtons[0]);
+    await user.click(screen.getByText('Edit'));
 
     const editInput = screen.getByDisplayValue('Old Name');
-    await userEvent.clear(editInput);
-    await userEvent.type(editInput, 'Updated Name{enter}');
+    await user.clear(editInput);
+    await user.type(editInput, 'Updated Name{enter}');
 
     expect(await screen.findByText('Updated Name')).toBeInTheDocument();
 
-    await userEvent.click(screen.getAllByTestId('MoreVertIcon')[0]);
-    await userEvent.click(screen.getByText('Delete'));
+    await user.click(screen.getAllByTestId('MoreVertIcon')[0]);
+    await user.click(screen.getByText('Delete'));
 
     await waitFor(() => {
       expect(screen.queryByText('Updated Name')).not.toBeInTheDocument();

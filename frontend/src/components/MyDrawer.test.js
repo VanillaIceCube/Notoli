@@ -1,6 +1,5 @@
-import { renderWithProviders } from '../test-utils';
+import { renderWithProviders, setupUserEvent } from '../test-utils';
 import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import MyDrawer from './MyDrawer';
 import {
   createWorkspace,
@@ -37,11 +36,13 @@ const renderDrawer = (options = {}) =>
 
 describe('MyDrawer', () => {
   const mockNavigate = jest.fn();
+  let user;
 
   beforeEach(() => {
     jest.clearAllMocks();
     useNavigate.mockReturnValue(mockNavigate);
     sessionStorage.setItem('accessToken', 'token');
+    user = setupUserEvent();
     fetchWorkspace.mockResolvedValue({
       ok: true,
       json: async () => ({ name: 'Workspace A' }),
@@ -53,7 +54,7 @@ describe('MyDrawer', () => {
 
     renderDrawer();
 
-    await userEvent.click(screen.getByText('Workspace'));
+    await user.click(screen.getByText('Workspace'));
 
     expect(screen.getByText('Loading…')).toBeInTheDocument();
   });
@@ -63,7 +64,7 @@ describe('MyDrawer', () => {
 
     renderDrawer();
 
-    await userEvent.click(screen.getByText('Workspace'));
+    await user.click(screen.getByText('Workspace'));
 
     expect(await screen.findByText(/error: http 500/i)).toBeInTheDocument();
   });
@@ -76,9 +77,9 @@ describe('MyDrawer', () => {
 
     renderDrawer();
 
-    await userEvent.click(screen.getByText('Workspace'));
+    await user.click(screen.getByText('Workspace'));
 
-    await userEvent.click(await screen.findByText('Alpha'));
+    await user.click(await screen.findByText('Alpha'));
 
     expect(mockNavigate).toHaveBeenCalledWith('/workspace/3');
   });
@@ -92,11 +93,11 @@ describe('MyDrawer', () => {
 
     renderDrawer();
 
-    await userEvent.click(screen.getByText('Workspace'));
-    await userEvent.click(await screen.findByText('Add New'));
+    await user.click(screen.getByText('Workspace'));
+    await user.click(await screen.findByText('Add New'));
 
     const input = screen.getByPlaceholderText('New Workspace Name...');
-    await userEvent.type(input, 'New Workspace{enter}');
+    await user.type(input, 'New Workspace{enter}');
 
     expect(await screen.findByText('New Workspace')).toBeInTheDocument();
     expect(createWorkspace).toHaveBeenCalled();
@@ -115,21 +116,21 @@ describe('MyDrawer', () => {
 
     renderDrawer();
 
-    await userEvent.click(screen.getByText('Workspace'));
+    await user.click(screen.getByText('Workspace'));
 
     const moreButtons = await screen.findAllByTestId('MoreVertIcon');
-    await userEvent.click(moreButtons[0]);
-    await userEvent.click(screen.getByText('Edit'));
+    await user.click(moreButtons[0]);
+    await user.click(screen.getByText('Edit'));
 
     const editInput = screen.getByDisplayValue('Old Name');
-    await userEvent.clear(editInput);
-    await userEvent.type(editInput, 'Updated Name{enter}');
+    await user.clear(editInput);
+    await user.type(editInput, 'Updated Name{enter}');
 
     expect(await screen.findByText('Updated Name')).toBeInTheDocument();
 
     const updatedMenuIcon = screen.getAllByTestId('MoreVertIcon')[0];
-    await userEvent.click(updatedMenuIcon);
-    await userEvent.click(screen.getByText('Delete'));
+    await user.click(updatedMenuIcon);
+    await user.click(screen.getByText('Delete'));
 
     await waitFor(() => {
       expect(screen.queryByText('Updated Name')).not.toBeInTheDocument();
