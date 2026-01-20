@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router-dom';
 
 import Notes from './Notes';
-import { renderWithProviders } from '../../test-utils';
+import { createDeferred, renderWithProviders, waitForLoadingToFinish } from '../../test-utils';
+import { noteFixtures } from '../../test-fixtures';
 import {
   createNote,
   deleteNote,
@@ -19,16 +20,6 @@ jest.mock('react-router-dom', () => ({
   useParams: () => mockUseParams(),
 }));
 
-jest.mock('@mui/material', () => {
-  const React = require('react');
-  const actual = jest.requireActual('@mui/material');
-  return {
-    ...actual,
-    Menu: ({ open, children }) =>
-      open ? React.createElement('div', { 'data-testid': 'menu' }, children) : null,
-  };
-});
-
 jest.mock('../../services/BackendClient', () => ({
   createNote: jest.fn(),
   deleteNote: jest.fn(),
@@ -36,19 +27,6 @@ jest.mock('../../services/BackendClient', () => ({
   fetchTodoList: jest.fn(),
   updateNote: jest.fn(),
 }));
-
-const defaultNotes = [
-  { id: 101, note: 'test_note_01' },
-  { id: 102, note: 'test_note_02' },
-];
-
-function createDeferred() {
-  let resolve;
-  const promise = new Promise((resolver) => {
-    resolve = resolver;
-  });
-  return { promise, resolve };
-}
 
 function LocationDisplay() {
   const location = useLocation();
@@ -68,9 +46,7 @@ async function renderNotes(routeEntries = ['/workspace/1/todolist/5']) {
   await waitFor(() => {
     expect(fetchNotesApi).toHaveBeenCalledWith('5', 'token');
   });
-  await waitFor(() => {
-    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-  });
+  await waitForLoadingToFinish();
 
   return { ...view, setAppBarHeader };
 }
@@ -82,7 +58,7 @@ describe('Notes', () => {
     mockUseParams.mockReturnValue({ todoListId: '5' });
     fetchNotesApi.mockResolvedValue({
       ok: true,
-      json: async () => defaultNotes,
+      json: async () => noteFixtures,
     });
     fetchTodoListApi.mockResolvedValue({
       ok: true,

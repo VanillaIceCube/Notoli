@@ -2,7 +2,8 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import Workspaces from './Workspaces';
-import { renderWithProviders } from '../../test-utils';
+import { createDeferred, renderWithProviders, waitForLoadingToFinish } from '../../test-utils';
+import { workspaceFixtures } from '../../test-fixtures';
 import {
   createWorkspace,
   deleteWorkspace,
@@ -17,35 +18,12 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
-jest.mock('@mui/material', () => {
-  const React = require('react');
-  const actual = jest.requireActual('@mui/material');
-  return {
-    ...actual,
-    Menu: ({ open, children }) =>
-      open ? React.createElement('div', { 'data-testid': 'menu' }, children) : null,
-  };
-});
-
 jest.mock('../../services/BackendClient', () => ({
   createWorkspace: jest.fn(),
   deleteWorkspace: jest.fn(),
   fetchWorkspaces: jest.fn(),
   updateWorkspace: jest.fn(),
 }));
-
-const defaultWorkspaces = [
-  { id: 1, name: 'test_workspace_01' },
-  { id: 2, name: 'test_workspace_02' },
-];
-
-function createDeferred() {
-  let resolve;
-  const promise = new Promise((resolver) => {
-    resolve = resolver;
-  });
-  return { promise, resolve };
-}
 
 async function renderWorkspaces() {
   const setAppBarHeader = jest.fn();
@@ -54,9 +32,7 @@ async function renderWorkspaces() {
   await waitFor(() => {
     expect(fetchWorkspacesApi).toHaveBeenCalledWith('token');
   });
-  await waitFor(() => {
-    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-  });
+  await waitForLoadingToFinish();
 
   return { ...view, setAppBarHeader };
 }
@@ -67,7 +43,7 @@ describe('Workspaces', () => {
     sessionStorage.setItem('accessToken', 'token');
     fetchWorkspacesApi.mockResolvedValue({
       ok: true,
-      json: async () => defaultWorkspaces,
+      json: async () => workspaceFixtures,
     });
   });
 
@@ -154,7 +130,11 @@ describe('Workspaces', () => {
     await userEvent.type(input, 'test_workspace_01 Updated{enter}');
 
     await waitFor(() => {
-      expect(updateWorkspace).toHaveBeenCalledWith(1, { name: 'test_workspace_01 Updated' }, 'token');
+      expect(updateWorkspace).toHaveBeenCalledWith(
+        1,
+        { name: 'test_workspace_01 Updated' },
+        'token',
+      );
     });
     expect(await screen.findByText('test_workspace_01 Updated')).toBeInTheDocument();
   });

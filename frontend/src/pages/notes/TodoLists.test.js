@@ -2,7 +2,8 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import TodoLists from './TodoLists';
-import { renderWithProviders } from '../../test-utils';
+import { createDeferred, renderWithProviders, waitForLoadingToFinish } from '../../test-utils';
+import { todoListFixtures } from '../../test-fixtures';
 import {
   createTodoList,
   deleteTodoList,
@@ -19,35 +20,12 @@ jest.mock('react-router-dom', () => ({
   useParams: () => mockUseParams(),
 }));
 
-jest.mock('@mui/material', () => {
-  const React = require('react');
-  const actual = jest.requireActual('@mui/material');
-  return {
-    ...actual,
-    Menu: ({ open, children }) =>
-      open ? React.createElement('div', { 'data-testid': 'menu' }, children) : null,
-  };
-});
-
 jest.mock('../../services/BackendClient', () => ({
   createTodoList: jest.fn(),
   deleteTodoList: jest.fn(),
   fetchTodoLists: jest.fn(),
   updateTodoList: jest.fn(),
 }));
-
-const defaultTodoLists = [
-  { id: 10, name: 'test_todolist_01' },
-  { id: 11, name: 'test_todolist_02' },
-];
-
-function createDeferred() {
-  let resolve;
-  const promise = new Promise((resolver) => {
-    resolve = resolver;
-  });
-  return { promise, resolve };
-}
 
 async function renderTodoLists() {
   const setAppBarHeader = jest.fn();
@@ -56,9 +34,7 @@ async function renderTodoLists() {
   await waitFor(() => {
     expect(fetchTodoListsApi).toHaveBeenCalledWith('1', 'token');
   });
-  await waitFor(() => {
-    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
-  });
+  await waitForLoadingToFinish();
 
   return { ...view, setAppBarHeader };
 }
@@ -70,7 +46,7 @@ describe('TodoLists', () => {
     mockUseParams.mockReturnValue({ workspaceId: '1' });
     fetchTodoListsApi.mockResolvedValue({
       ok: true,
-      json: async () => defaultTodoLists,
+      json: async () => todoListFixtures,
     });
   });
 
