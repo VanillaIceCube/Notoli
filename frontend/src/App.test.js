@@ -2,22 +2,40 @@ import { render, screen } from '@testing-library/react';
 import App from './App';
 
 const mockSnackbar = jest.fn();
-const mockAuthenticatedRoute = jest.fn(({ children }) => <div>{children}</div>);
+const mockAuthenticatedRoute = jest.fn(function MockAuthenticatedRoute({ children }) {
+  return <div>{children}</div>;
+});
 
-jest.mock('./components/MySnackbar', () => (props) => {
+jest.mock('./components/MySnackbar', () => function MockMySnackbar(props) {
   mockSnackbar(props);
   return <div data-testid="snackbar" />;
 });
 
-jest.mock('./components/AuthenticatedRoute', () => (props) => mockAuthenticatedRoute(props));
+jest.mock('./components/AuthenticatedRoute', () => function MockAuthenticatedRouteWrapper(props) {
+  return mockAuthenticatedRoute(props);
+});
 
-jest.mock('./pages/authentication/Login', () => () => <div>Login Page</div>);
-jest.mock('./pages/authentication/Register', () => () => <div>Register Page</div>);
-jest.mock('./pages/notes/Workspaces', () => () => <div>Workspaces Page</div>);
-jest.mock('./pages/notes/TodoLists', () => () => <div>TodoLists Page</div>);
-jest.mock('./pages/notes/Notes', () => () => <div>Notes Page</div>);
-jest.mock('./components/MyAppBar', () => () => <div>AppBar</div>);
-jest.mock('./components/MyDrawer', () => () => <div>Drawer</div>);
+jest.mock('./pages/authentication/Login', () => function MockLogin() {
+  return <div>Login Page</div>;
+});
+jest.mock('./pages/authentication/Register', () => function MockRegister() {
+  return <div>Register Page</div>;
+});
+jest.mock('./pages/notes/Workspaces', () => function MockWorkspaces() {
+  return <div>Workspaces Page</div>;
+});
+jest.mock('./pages/notes/TodoLists', () => function MockTodoLists() {
+  return <div>TodoLists Page</div>;
+});
+jest.mock('./pages/notes/Notes', () => function MockNotes() {
+  return <div>Notes Page</div>;
+});
+jest.mock('./components/MyAppBar', () => function MockMyAppBar() {
+  return <div>AppBar</div>;
+});
+jest.mock('./components/MyDrawer', () => function MockMyDrawer() {
+  return <div>Drawer</div>;
+});
 
 beforeEach(() => {
   sessionStorage.clear();
