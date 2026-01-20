@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -24,4 +24,18 @@ export function renderWithProviders(ui, { routeEntries = ['/'], ...renderOptions
     </ThemeProvider>,
     renderOptions,
   );
+}
+
+export function createDeferred() {
+  let resolve;
+  const promise = new Promise((resolver) => {
+    resolve = resolver;
+  });
+  return { promise, resolve };
+}
+
+export async function waitForLoadingToFinish() {
+  await waitFor(() => {
+    expect(document.body.textContent || '').not.toMatch(/loading/i);
+  });
 }

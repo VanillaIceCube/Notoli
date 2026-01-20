@@ -14,6 +14,10 @@ All notable changes to this project are documented in this file.
 - Added frontend tests for `MyAppBar` (`frontend/src/components/MyAppBar.test.js`).
 - Added frontend tests for `MyDrawer` (`frontend/src/components/MyDrawer.test.js`).
 - Added frontend tests for `MySnackbar` (`frontend/src/components/MySnackbar.test.js`).
+- Added frontend tests for `Workspaces` (`frontend/src/pages/notes/Workspaces.test.js`).
+- Added frontend tests for `TodoLists` (`frontend/src/pages/notes/TodoLists.test.js`).
+- Added frontend tests for `Notes` (`frontend/src/pages/notes/Notes.test.js`).
+- Added shared frontend test fixtures (`frontend/src/test-fixtures.js`).
 ### Changed
 - Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
 - Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
@@ -25,6 +29,8 @@ All notable changes to this project are documented in this file.
 - Removed inherited secrets from the Continuous Integration workflow calls.
 - Renamed the Continuous Integration workflow file to `continuous_integration.yaml`.
 - Updated frontend ESLint dependencies to align with CRA compatibility.
+- Consolidated frontend test helpers into shared utilities (`frontend/src/test-utils.js`).
+- Centralized MUI Menu mocking in the frontend test setup (`frontend/src/setupTests.js`).
 
 ## 2026-01-18
 ### Added
