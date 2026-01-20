@@ -63,6 +63,91 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Summarize major update with ChatGPT
+        id: major_summary
+        if: steps.pr.outputs.author == 'dependabot[bot]' && steps.metadata.outputs.update-type == 'version-update:semver-major'
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
+          PACKAGE_NAME: ${{ steps.metadata.outputs.dependency-names }}
+          OLD_VERSION: ${{ steps.metadata.outputs.previous-version }}
+          NEW_VERSION: ${{ steps.metadata.outputs.new-version }}
+          ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
+          SCOPE: ${{ steps.metadata.outputs.dependency-type }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "summary=Missing OPENAI_API_KEY secret." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -z "$OPENAI_PROJECT_ID" ]; then
+            echo "summary=Missing OPENAI_PROJECT_ID secret." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PROMPT="📦 Dependency Update Summary (Major Version)\n🔖 Package\n\nName: ${PACKAGE_NAME}\n\nFrom → To: ${OLD_VERSION} → ${NEW_VERSION}\n\nEcosystem: ${ECOSYSTEM}\n\nScope: ${SCOPE}\n\n🧠 What Changed (High-Level)\n\nBrief summary of what the new major version introduces\n\nFocus on breaking changes, removed APIs, or behavior shifts\n\nNo marketing fluff\n\n💥 Breaking Changes\n\nList explicit breaking changes\n\nCall out:\n\nRemoved functions / props\n\nRenamed configs\n\nChanged defaults\n\nRequired code changes\n\nIf none are documented, say “No documented breaking changes”\n\n🔄 Required Code or Config Changes\n\nYes / No\n\nIf yes:\n\nWhat files are likely affected\n\nExample changes (if obvious)\n\nIf unknown:\n\nState uncertainty clearly\n\n⚠️ Risk & Impact Assessment\n\nRisk Level: Low | Medium | High\n\nWhy:\n\nRuntime risk?\n\nBuild/test risk?\n\nBehavioral/UI risk?\n\nAreas Most Affected:\n\ne.g. auth, routing, state, styling, API calls\n\n🧪 Test Coverage Confidence\n\nDo existing tests meaningfully cover impacted areas?\n\nAny missing test coverage that increases risk?\n\n📚 Migration & Docs\n\nMigration guide available? Yes / No\n\nLink referenced in changelog? Yes / No\n\nEstimated migration effort:\n\nMinutes | <1 hour | Several hours | Multi-day\n\n✅ Recommendation\n\nChoose one:\n\n✅ Safe to merge after tests\n\n🕒 Merge later (low urgency)\n\n🛑 Do not merge without manual changes\n\n🔍 Needs investigation before decision\n\nOne-sentence justification.\n\n📝 Action Items (If Any)\n\n Update config files\n\n Refactor affected code paths\n\n Add / update tests\n\n Re-run specific checks\n\n🔚 TL;DR\n\nOne sentence:\n\n“This is a high/medium/low-risk major update that does / does not require code changes before merging.”"
+          jq -n \
+            --arg prompt "$PROMPT" \
+            '
+            {
+              model: "gpt-5.1",
+              temperature: 0.2,
+              messages: [
+                { "role": "system", "content": "You summarize dependency major updates for maintainers." },
+                { "role": "user", "content": $prompt }
+              ]
+            }
+            ' > body.json
+
+          RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/chat/completions" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -H "OpenAI-Project: $OPENAI_PROJECT_ID" \
+            --data @body.json)
+
+          echo "Raw response:"
+          echo "$RESPONSE"
+
+          SUMMARY=$(echo "$RESPONSE" | jq -r '
+            if .choices and .choices[0].message and .choices[0].message.content then
+              .choices[0].message.content
+            elif .error and .error.message then
+              "OpenAI API error: " + .error.message
+            else
+              "OpenAI did not return a summary."
+            end
+          ')
+
+          echo "Summary content:"
+          echo "$SUMMARY"
+
+          {
+            echo 'summary<<EOF'
+            printf '%s\n' "$SUMMARY"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post major update summary to PR
+        if: steps.pr.outputs.author == 'dependabot[bot]' && steps.metadata.outputs.update-type == 'version-update:semver-major'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUMMARY_BODY: ${{ steps.major_summary.outputs.summary }}
+        run: |
+          PR_NUMBER="${{ steps.pr.outputs.number }}"
+
+          if [ -z "$SUMMARY_BODY" ]; then
+            echo "No summary to post."
+            exit 0
+          fi
+
+          jq -n --arg body "$SUMMARY_BODY" '{body: $body}' > comment.json
+
+          curl -s -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+            -d @comment.json
+
       - name: Auto-approve Dependabot PR
         if: steps.pr.outputs.author == 'dependabot[bot]' && (steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor')
         uses: actions/github-script@v7
