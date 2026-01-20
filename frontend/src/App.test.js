@@ -10,7 +10,7 @@ jest.mock('react-router-dom', () => ({
 }));
 
 jest.mock('./components/AuthenticatedRoute', () => ({ children }) => {
-  const token = window.sessionStorage?.getItem('accessToken');
+  const token = globalThis.sessionStorage?.getItem('accessToken');
   if (!token) {
     return <div>LoginRedirect</div>;
   }
