@@ -383,7 +383,6 @@ export default function MyDrawer({
               {/* Add New */}
               {!isAdding ? (
                 <Button
-                  dense
                   sx={{
                     pl: 3,
                     pt: 1.5,
