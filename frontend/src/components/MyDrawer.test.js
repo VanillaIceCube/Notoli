@@ -38,7 +38,11 @@ const defaultWorkspaces = [
   { id: 2, name: 'test_workspace_02' },
 ];
 
-async function renderDrawer({ open = true, drawerWorkspacesLabel = '', setDrawerWorkspacesLabel } = {}) {
+async function renderDrawer({
+  open = true,
+  drawerWorkspacesLabel = '',
+  setDrawerWorkspacesLabel,
+} = {}) {
   const setDrawerOpen = jest.fn();
   const labelSetter = setDrawerWorkspacesLabel || jest.fn();
 
@@ -162,10 +166,7 @@ describe('MyDrawer', () => {
     await userEvent.type(input, 'Gamma{enter}');
 
     await waitFor(() => {
-      expect(createWorkspace).toHaveBeenCalledWith(
-        { name: 'Gamma', description: '' },
-        'token',
-      );
+      expect(createWorkspace).toHaveBeenCalledWith({ name: 'Gamma', description: '' }, 'token');
     });
     expect(await screen.findByText('Gamma')).toBeInTheDocument();
   });
@@ -200,7 +201,11 @@ describe('MyDrawer', () => {
     await userEvent.type(input, 'test_workspace_01 Updated{enter}');
 
     await waitFor(() => {
-      expect(updateWorkspace).toHaveBeenCalledWith(1, { name: 'test_workspace_01 Updated' }, 'token');
+      expect(updateWorkspace).toHaveBeenCalledWith(
+        1,
+        { name: 'test_workspace_01 Updated' },
+        'token',
+      );
     });
     expect(await screen.findByText('test_workspace_01 Updated')).toBeInTheDocument();
   });
