@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 - Added a Continuous Integration workflow to run Lint and Tests as a single CI gate.
 - Added PR summary concurrency cancellation to stop outdated summaries on new commits.
 - Added a CRA-compatible frontend ESLint configuration file (`frontend/.eslintrc.js`).
+- Added frontend tests for `AuthenticatedRoute` (`frontend/src/components/AuthenticatedRoute.test.js`).
 ### Changed
 - Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
 - Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
