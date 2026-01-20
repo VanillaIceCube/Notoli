@@ -11,6 +11,7 @@ All notable changes to this project are documented in this file.
 - Added PR summary concurrency cancellation to stop outdated summaries on new commits.
 - Added a CRA-compatible frontend ESLint configuration file (`frontend/.eslintrc.js`).
 - Added frontend tests for `AuthenticatedRoute` (`frontend/src/components/AuthenticatedRoute.test.js`).
+- Added frontend tests for `MyAppBar` (`frontend/src/components/MyAppBar.test.js`).
 ### Changed
 - Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
 - Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
