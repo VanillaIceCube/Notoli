@@ -24,8 +24,11 @@ jest.mock('./components/MyAppBar', () => ({ setDrawerOpen }) => (
 jest.mock('./components/MyDrawer', () => ({ open }) => (
   <div data-testid="drawer">{open ? 'DrawerOpen' : 'DrawerClosed'}</div>
 ));
-jest.mock('./components/MySnackbar', () => ({ open, message }) =>
-  open ? <div data-testid="snackbar">{message}</div> : null,
+jest.mock(
+  './components/MySnackbar',
+  () =>
+    ({ open, message }) =>
+      open ? <div data-testid="snackbar">{message}</div> : null,
 );
 jest.mock('./pages/authentication/Login', () => ({ showSnackbar }) => (
   <button type="button" onClick={() => showSnackbar('success', 'login ok')}>
