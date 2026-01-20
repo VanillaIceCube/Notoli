@@ -19,30 +19,6 @@ describe('AuthenticatedRoute', () => {
     sessionStorage.clear();
   });
 
-  it('when no access token is present, it redirects to /login', () => {
-    renderWithProviders(
-      <>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <AuthenticatedRoute>
-                <div>secret</div>
-              </AuthenticatedRoute>
-            }
-          />
-          <Route path="/login" element={<LoginPage />} />
-        </Routes>
-        <LocationDisplay />
-      </>,
-      { routeEntries: ['/'] },
-    );
-
-    expect(screen.getByTestId('login')).toHaveTextContent('login:REPLACE');
-    expect(screen.getByTestId('location')).toHaveTextContent('/login');
-    expect(screen.queryByText('secret')).not.toBeInTheDocument();
-  });
-
   it('when an access token exists, it renders children', () => {
     sessionStorage.setItem('accessToken', 'token');
 
@@ -67,5 +43,29 @@ describe('AuthenticatedRoute', () => {
     expect(screen.getByText('secret')).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/');
     expect(screen.queryByTestId('login')).not.toBeInTheDocument();
+  });
+
+  it('when no access token is present, it redirects to /login', () => {
+    renderWithProviders(
+      <>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <AuthenticatedRoute>
+                <div>secret</div>
+              </AuthenticatedRoute>
+            }
+          />
+          <Route path="/login" element={<LoginPage />} />
+        </Routes>
+        <LocationDisplay />
+      </>,
+      { routeEntries: ['/'] },
+    );
+
+    expect(screen.getByTestId('login')).toHaveTextContent('login:REPLACE');
+    expect(screen.getByTestId('location')).toHaveTextContent('/login');
+    expect(screen.queryByText('secret')).not.toBeInTheDocument();
   });
 });
