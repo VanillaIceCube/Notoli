@@ -74,6 +74,14 @@ describe('Workspaces', () => {
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
 
+  test('when the fetch succeeds with empty data, it shows the empty state message', async () => {
+    fetchWorkspacesApi.mockResolvedValueOnce({ ok: true, json: async () => [] });
+
+    await renderWorkspaces();
+
+    expect(await screen.findByText(/no to-do lists found/i)).toBeInTheDocument();
+  });
+
   test('when the add flow is opened, it shows the input', async () => {
     await renderWorkspaces();
 
@@ -102,6 +110,41 @@ describe('Workspaces', () => {
       );
     });
     expect(await screen.findByText('test_workspace_03')).toBeInTheDocument();
+  });
+
+  test('when create fails, it shows an error message', async () => {
+    createWorkspace.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+
+    await renderWorkspaces();
+
+    await userEvent.click(screen.getByRole('button', { name: /add new/i }));
+
+    const input = screen.getByPlaceholderText(/new workspace name/i);
+    await userEvent.type(input, 'test_workspace_03{enter}');
+
+    expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
+  });
+
+  test('when add is opened and Escape is pressed, it closes the add input', async () => {
+    await renderWorkspaces();
+
+    await userEvent.click(screen.getByRole('button', { name: /add new/i }));
+
+    const input = screen.getByPlaceholderText(/new workspace name/i);
+    await userEvent.type(input, 'test_workspace_03{Escape}');
+
+    expect(screen.queryByPlaceholderText(/new workspace name/i)).not.toBeInTheDocument();
+  });
+
+  test('when the add input is submitted with only whitespace, it does nothing', async () => {
+    await renderWorkspaces();
+
+    await userEvent.click(screen.getByRole('button', { name: /add new/i }));
+
+    const input = screen.getByPlaceholderText(/new workspace name/i);
+    await userEvent.type(input, '   {enter}');
+
+    expect(createWorkspace).not.toHaveBeenCalled();
   });
 
   test('when edit is opened, it shows the edit input prefilled', async () => {
@@ -139,6 +182,46 @@ describe('Workspaces', () => {
     expect(await screen.findByText('test_workspace_01 Updated')).toBeInTheDocument();
   });
 
+  test('when update fails, it shows an error message', async () => {
+    updateWorkspace.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+
+    await renderWorkspaces();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+
+    const input = screen.getByRole('textbox');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'test_workspace_01 Updated{enter}');
+
+    expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
+  });
+
+  test('when edit is opened and Escape is pressed, it closes the edit input', async () => {
+    await renderWorkspaces();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, '{Escape}');
+
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  test('when the edit input is submitted with only whitespace, it does nothing', async () => {
+    await renderWorkspaces();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+
+    const input = screen.getByRole('textbox');
+    await userEvent.clear(input);
+    await userEvent.type(input, '   {enter}');
+
+    expect(updateWorkspace).not.toHaveBeenCalled();
+  });
+
   test('when delete is confirmed, it removes the item', async () => {
     deleteWorkspace.mockResolvedValueOnce({ ok: true });
 
@@ -153,6 +236,17 @@ describe('Workspaces', () => {
     await waitFor(() => {
       expect(screen.queryByText('test_workspace_01')).not.toBeInTheDocument();
     });
+  });
+
+  test('when delete fails, it shows an error message', async () => {
+    deleteWorkspace.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+
+    await renderWorkspaces();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
+
+    expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
 
   test('when an item is clicked, it navigates to the expected route', async () => {

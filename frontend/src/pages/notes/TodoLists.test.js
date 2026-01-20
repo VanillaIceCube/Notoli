@@ -77,6 +77,24 @@ describe('TodoLists', () => {
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
 
+  test('when the workspaceId is missing, it does not fetch the lists', async () => {
+    mockUseParams.mockReturnValue({ workspaceId: undefined });
+
+    renderWithProviders(<TodoLists setAppBarHeader={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(fetchTodoListsApi).not.toHaveBeenCalled();
+    });
+  });
+
+  test('when the fetch succeeds with empty data, it shows the empty state message', async () => {
+    fetchTodoListsApi.mockResolvedValueOnce({ ok: true, json: async () => [] });
+
+    await renderTodoLists();
+
+    expect(await screen.findByText(/no to-do lists found/i)).toBeInTheDocument();
+  });
+
   test('when the add flow is opened, it shows the input', async () => {
     await renderTodoLists();
 
@@ -106,6 +124,30 @@ describe('TodoLists', () => {
       );
     });
     expect(await screen.findByText('test_todolist_03')).toBeInTheDocument();
+  });
+
+  test('when create fails, it shows an error message', async () => {
+    createTodoList.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+
+    await renderTodoLists();
+
+    await userEvent.click(screen.getByRole('button', { name: /add new/i }));
+
+    const input = screen.getByPlaceholderText(/new todolist name/i);
+    await userEvent.type(input, 'test_todolist_03{enter}');
+
+    expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
+  });
+
+  test('when add is opened and Escape is pressed, it closes the add input', async () => {
+    await renderTodoLists();
+
+    await userEvent.click(screen.getByRole('button', { name: /add new/i }));
+
+    const input = screen.getByPlaceholderText(/new todolist name/i);
+    await userEvent.type(input, 'test_todolist_03{Escape}');
+
+    expect(screen.queryByPlaceholderText(/new todolist name/i)).not.toBeInTheDocument();
   });
 
   test('when edit is opened, it shows the edit input prefilled', async () => {
@@ -143,6 +185,33 @@ describe('TodoLists', () => {
     expect(await screen.findByText('test_todolist_01 Updated')).toBeInTheDocument();
   });
 
+  test('when update fails, it shows an error message', async () => {
+    updateTodoList.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+
+    await renderTodoLists();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+
+    const input = screen.getByRole('textbox');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'test_todolist_01 Updated{enter}');
+
+    expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
+  });
+
+  test('when edit is opened and Escape is pressed, it closes the edit input', async () => {
+    await renderTodoLists();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+
+    const input = screen.getByRole('textbox');
+    await userEvent.type(input, '{Escape}');
+
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
   test('when delete is confirmed, it removes the item', async () => {
     deleteTodoList.mockResolvedValueOnce({ ok: true });
 
@@ -159,11 +228,39 @@ describe('TodoLists', () => {
     });
   });
 
+  test('when delete fails, it shows an error message', async () => {
+    deleteTodoList.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+
+    await renderTodoLists();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
+
+    expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
+  });
+
   test('when an item is clicked, it navigates to the expected route', async () => {
     await renderTodoLists();
 
     await userEvent.click(await screen.findByText('test_todolist_01'));
 
     expect(mockNavigate).toHaveBeenCalledWith('/workspace/1/todolist/10');
+  });
+
+  test('when the workspaceId changes, it refetches the lists', async () => {
+    const { rerender } = renderWithProviders(<TodoLists setAppBarHeader={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(fetchTodoListsApi).toHaveBeenCalledWith('1', 'token');
+    });
+
+    mockUseParams.mockReturnValue({ workspaceId: '2' });
+    fetchTodoListsApi.mockResolvedValueOnce({ ok: true, json: async () => [] });
+
+    rerender(<TodoLists setAppBarHeader={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(fetchTodoListsApi).toHaveBeenCalledWith('2', 'token');
+    });
   });
 });
