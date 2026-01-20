@@ -9,7 +9,7 @@ All notable changes to this project are documented in this file.
 - Added GitHub YAML linting with auto-formatting for `.github` YAML files in the lint workflow.
 - Added a Continuous Integration workflow to run Lint and Tests as a single CI gate.
 - Added PR summary concurrency cancellation to stop outdated summaries on new commits.
-- Added a custom ESLint v9 flat config for the frontend and removed the deprecated `.eslintignore`.
+- Added a CRA-compatible frontend ESLint configuration file (`frontend/.eslintrc.js`).
 ### Changed
 - Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
 - Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
@@ -20,6 +20,7 @@ All notable changes to this project are documented in this file.
 - Lint change detection now uses PR base/head SHAs when available for workflow calls.
 - Removed inherited secrets from the Continuous Integration workflow calls.
 - Renamed the Continuous Integration workflow file to `continuous_integration.yaml`.
+- Updated frontend ESLint dependencies to align with CRA compatibility.
 
 ## 2026-01-18
 ### Added
