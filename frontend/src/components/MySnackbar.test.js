@@ -4,9 +4,7 @@ import MySnackbar from './MySnackbar';
 
 describe('MySnackbar', () => {
   test('when rendered, it shows the message and severity', () => {
-    render(
-      <MySnackbar open severity="success" message="Saved!" onClose={jest.fn()} />,
-    );
+    render(<MySnackbar open severity="success" message="Saved!" onClose={jest.fn()} />);
 
     expect(screen.getByText('Saved!')).toBeInTheDocument();
   });

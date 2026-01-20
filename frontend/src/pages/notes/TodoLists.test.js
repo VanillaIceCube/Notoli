@@ -45,10 +45,7 @@ describe('TodoLists', () => {
 
     renderWithProviders(
       <Routes>
-        <Route
-          path="/workspace/:workspaceId"
-          element={<TodoLists setAppBarHeader={jest.fn()} />}
-        />
+        <Route path="/workspace/:workspaceId" element={<TodoLists setAppBarHeader={jest.fn()} />} />
       </Routes>,
       { routeEntries: ['/workspace/1'] },
     );
@@ -65,10 +62,7 @@ describe('TodoLists', () => {
 
     renderWithProviders(
       <Routes>
-        <Route
-          path="/workspace/:workspaceId"
-          element={<TodoLists setAppBarHeader={jest.fn()} />}
-        />
+        <Route path="/workspace/:workspaceId" element={<TodoLists setAppBarHeader={jest.fn()} />} />
       </Routes>,
       { routeEntries: ['/workspace/1'] },
     );
@@ -94,10 +88,7 @@ describe('TodoLists', () => {
 
     renderWithProviders(
       <Routes>
-        <Route
-          path="/workspace/:workspaceId"
-          element={<TodoLists setAppBarHeader={jest.fn()} />}
-        />
+        <Route path="/workspace/:workspaceId" element={<TodoLists setAppBarHeader={jest.fn()} />} />
       </Routes>,
       { routeEntries: ['/workspace/1'] },
     );
