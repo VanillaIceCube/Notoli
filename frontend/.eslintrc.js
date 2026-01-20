@@ -11,7 +11,6 @@ module.exports = {
       version: "detect",
     },
   },
-  plugins: ["react", "react-hooks", "jsx-a11y"],
   extends: ["react-app", "react-app/jest", "prettier"],
   rules: {
     "react/react-in-jsx-scope": "off",
