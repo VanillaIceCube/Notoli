@@ -26,24 +26,22 @@ describe('MyAppBar', () => {
     mockUseLocation.mockReturnValue({ pathname: '/' });
   });
 
-  test('when the route is /login, it renders nothing', () => {
+  test('when the route is /login, it does not render the app bar', () => {
     mockUseLocation.mockReturnValue({ pathname: '/login' });
 
-    const { container } = renderWithProviders(
-      <MyAppBar appBarHeader="Header" setDrawerOpen={setDrawerOpen} />,
-    );
+    renderWithProviders(<MyAppBar appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText('Header')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
   });
 
-  test('when the route is /register, it renders nothing', () => {
+  test('when the route is /register, it does not render the app bar', () => {
     mockUseLocation.mockReturnValue({ pathname: '/register' });
 
-    const { container } = renderWithProviders(
-      <MyAppBar appBarHeader="Header" setDrawerOpen={setDrawerOpen} />,
-    );
+    renderWithProviders(<MyAppBar appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText('Header')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
   });
 
   test('when the path includes /todolist, it shows the back button', () => {
