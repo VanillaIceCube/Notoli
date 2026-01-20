@@ -20,7 +20,7 @@ import {
   fetchNotes as fetchNotesApi,
   fetchTodoList as fetchTodoListApi,
   updateNote,
-} from '../../services/BackendClient';
+} from '../../services/backendClient';
 
 export default function Notes({ setAppBarHeader }) {
   // Pull Todolist ID

@@ -18,6 +18,7 @@ All notable changes to this project are documented in this file.
 - Added frontend tests for `TodoLists` (`frontend/src/pages/notes/TodoLists.test.js`).
 - Added frontend tests for `Notes` (`frontend/src/pages/notes/Notes.test.js`).
 - Added shared frontend test fixtures (`frontend/src/test-fixtures.js`).
+- Added frontend tests for `backendClient` (`frontend/src/services/backendClient.test.js`).
 ### Changed
 - Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
 - Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
@@ -31,6 +32,7 @@ All notable changes to this project are documented in this file.
 - Updated frontend ESLint dependencies to align with CRA compatibility.
 - Consolidated frontend test helpers into shared utilities (`frontend/src/test-utils.js`).
 - Centralized MUI Menu mocking in the frontend test setup (`frontend/src/setupTests.js`).
+- Renamed `BackendClient.js` to `backendClient.js` for naming consistency.
 
 ## 2026-01-18
 ### Added

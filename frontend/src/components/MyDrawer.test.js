@@ -10,7 +10,7 @@ import {
   fetchWorkspace as fetchWorkspaceApi,
   fetchWorkspaces as fetchWorkspacesApi,
   updateWorkspace,
-} from '../services/BackendClient';
+} from '../services/backendClient';
 
 const mockNavigate = jest.fn();
 const mockUseLocation = jest.fn();
@@ -25,7 +25,7 @@ jest.mock('../utils/Navigation', () => ({
   getWorkspaceId: jest.fn(),
 }));
 
-jest.mock('../services/BackendClient', () => ({
+jest.mock('../services/backendClient', () => ({
   createWorkspace: jest.fn(),
   deleteWorkspace: jest.fn(),
   fetchWorkspace: jest.fn(),

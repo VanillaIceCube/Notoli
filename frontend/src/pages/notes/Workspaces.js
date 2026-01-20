@@ -19,7 +19,7 @@ import {
   deleteWorkspace,
   fetchWorkspaces as fetchWorkspacesApi,
   updateWorkspace,
-} from '../../services/BackendClient';
+} from '../../services/backendClient';
 
 export default function Workspaces({ setAppBarHeader }) {
   // Misc
