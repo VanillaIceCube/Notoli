@@ -22,6 +22,7 @@ All notable changes to this project are documented in this file.
 - Added frontend tests for `apiClient` (`frontend/src/services/apiClient.test.js`).
 - Added frontend tests for `Navigation` (`frontend/src/utils/Navigation.test.js`).
 - Added frontend tests for `App` (`frontend/src/App.test.js`).
+- Added frontend tests for `index` (`frontend/src/index.test.js`).
 ### Changed
 - Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
 - Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
