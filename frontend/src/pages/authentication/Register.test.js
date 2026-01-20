@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-utils';
 import Register from './Register';
-import { register } from '../../services/BackendClient';
+import { register } from '../../services/backendClient';
 import { useNavigate } from 'react-router-dom';
 
 jest.mock('react-router-dom', () => ({
@@ -10,7 +10,7 @@ jest.mock('react-router-dom', () => ({
   useNavigate: jest.fn(),
 }));
 
-jest.mock('../../services/BackendClient', () => ({
+jest.mock('../../services/backendClient', () => ({
   register: jest.fn(),
 }));
 

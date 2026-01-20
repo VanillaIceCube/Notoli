@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-utils';
 import Login from './Login';
-import { fetchWorkspaces, login } from '../../services/BackendClient';
+import { fetchWorkspaces, login } from '../../services/backendClient';
 import { useNavigate } from 'react-router-dom';
 
 jest.mock('react-router-dom', () => ({
@@ -10,7 +10,7 @@ jest.mock('react-router-dom', () => ({
   useNavigate: jest.fn(),
 }));
 
-jest.mock('../../services/BackendClient', () => ({
+jest.mock('../../services/backendClient', () => ({
   fetchWorkspaces: jest.fn(() =>
     Promise.resolve({
       ok: true,
@@ -43,15 +43,10 @@ describe('Login', () => {
   });
 
   test('when login succeeds and workspaces exist, it navigates to the first workspace', async () => {
-    fetchWorkspaces
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [],
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [{ id: 7 }, { id: 3 }, { id: 12 }],
-      });
+    fetchWorkspaces.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 7 }, { id: 3 }, { id: 12 }],
+    });
     login.mockResolvedValue({
       ok: true,
       json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
@@ -69,8 +64,6 @@ describe('Login', () => {
   });
 
   test('when login succeeds and no workspaces exist, it navigates home', async () => {
-    // Component calls /api/workspaces/ on mount, so we must handle it.
-    // Then when we login, /auth/login/ should succeed.
     fetchWorkspaces.mockResolvedValue({
       ok: true,
       json: async () => [],
@@ -104,8 +97,6 @@ describe('Login', () => {
   });
 
   test('when login succeeds, it stores access/refresh tokens', async () => {
-    // Component calls /api/workspaces/ on mount, so we must handle it.
-    // Then when we login, /auth/login/ should succeed.
     fetchWorkspaces.mockResolvedValue({
       ok: true,
       json: async () => [],
@@ -162,12 +153,7 @@ describe('Login', () => {
   });
 
   test('when workspace fetch fails after login, it navigates home', async () => {
-    fetchWorkspaces
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [],
-      })
-      .mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+    fetchWorkspaces.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
     login.mockResolvedValue({
       ok: true,
       json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
@@ -185,12 +171,7 @@ describe('Login', () => {
   });
 
   test('when workspace fetch fails after login, it shows an error snackbar', async () => {
-    fetchWorkspaces
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => [],
-      })
-      .mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+    fetchWorkspaces.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
     login.mockResolvedValue({
       ok: true,
       json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
@@ -210,12 +191,6 @@ describe('Login', () => {
   });
 
   test('when login fails, it does not navigate', async () => {
-    // Component calls /api/workspaces/ on mount, so we must handle it.
-    // Then when we login, /auth/login/ should succeed.
-    fetchWorkspaces.mockResolvedValue({
-      ok: true,
-      json: async () => [],
-    });
     login.mockResolvedValue({
       ok: false,
       status: 401,
@@ -245,10 +220,6 @@ describe('Login', () => {
   });
 
   test('when login fails, it does not store tokens', async () => {
-    fetchWorkspaces.mockResolvedValue({
-      ok: true,
-      json: async () => [],
-    });
     login.mockResolvedValue({
       ok: false,
       status: 401,
@@ -275,10 +246,6 @@ describe('Login', () => {
   });
 
   test('when login fails, it shows an error snackbar', async () => {
-    fetchWorkspaces.mockResolvedValue({
-      ok: true,
-      json: async () => [],
-    });
     login.mockResolvedValue({
       ok: false,
       status: 401,
@@ -304,10 +271,6 @@ describe('Login', () => {
   });
 
   test('when login fails due to a network error, it does not navigate', async () => {
-    fetchWorkspaces.mockResolvedValue({
-      ok: true,
-      json: async () => [],
-    });
     login.mockRejectedValue(new TypeError('NetworkError when attempting to fetch resource.'));
 
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -328,10 +291,6 @@ describe('Login', () => {
   });
 
   test('when login fails due to a network error, it does not store tokens', async () => {
-    fetchWorkspaces.mockResolvedValue({
-      ok: true,
-      json: async () => [],
-    });
     login.mockRejectedValue(new TypeError('NetworkError when attempting to fetch resource.'));
 
     const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
@@ -354,10 +313,6 @@ describe('Login', () => {
   });
 
   test('when login fails due to a network error, it shows a network error snackbar', async () => {
-    fetchWorkspaces.mockResolvedValue({
-      ok: true,
-      json: async () => [],
-    });
     login.mockRejectedValue(new TypeError('NetworkError when attempting to fetch resource.'));
 
     const showSnackbar = jest.fn();

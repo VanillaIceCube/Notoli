@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { fetchWorkspaces as fetchWorkspacesApi, login } from '../../services/BackendClient';
+import { fetchWorkspaces as fetchWorkspacesApi, login } from '../../services/backendClient';
 
 export default function Login({ showSnackbar }) {
   // Basics
@@ -28,10 +28,6 @@ export default function Login({ showSnackbar }) {
     },
     [showSnackbar],
   );
-
-  useEffect(() => {
-    fetchWorkspaces();
-  }, [fetchWorkspaces]);
 
   // Login function
   const handleLogin = async () => {

@@ -11,7 +11,7 @@ import {
   fetchNotes as fetchNotesApi,
   fetchTodoList as fetchTodoListApi,
   updateNote,
-} from '../../services/BackendClient';
+} from '../../services/backendClient';
 
 const mockUseParams = jest.fn();
 
@@ -20,7 +20,7 @@ jest.mock('react-router-dom', () => ({
   useParams: () => mockUseParams(),
 }));
 
-jest.mock('../../services/BackendClient', () => ({
+jest.mock('../../services/backendClient', () => ({
   createNote: jest.fn(),
   deleteNote: jest.fn(),
   fetchNotes: jest.fn(),

@@ -4,6 +4,7 @@ module.exports = {
     browser: true,
     node: true,
     jest: true,
+    es2020: true,
   },
   ignorePatterns: ["build/**", "coverage/**", "node_modules/**"],
   settings: {
