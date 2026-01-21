@@ -2,6 +2,11 @@ name: Dependabot Auto Merge
 
 on:
   workflow_call:
+    secrets:
+      OPENAI_API_KEY:
+        required: false
+      OPENAI_PROJECT_ID:
+        required: false
 
 permissions:
   contents: write

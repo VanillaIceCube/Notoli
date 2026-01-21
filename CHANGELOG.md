@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 - Added a reusable Dependabot auto-merge workflow (`.github/workflows/dependabot_auto_merge.yml`).
 ### Changed
 - Continuous Integration now calls the Dependabot auto-merge workflow after lints/tests for Dependabot PRs.
+- Continuous Integration now passes OpenAI secrets to the Dependabot auto-merge workflow.
 
 ## 2026-01-19
 ### Added
