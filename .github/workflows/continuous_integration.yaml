@@ -19,3 +19,13 @@ jobs:
   tests:
     name: Tests
     uses: ./.github/workflows/tests.yaml
+
+  dependabot-auto-merge:
+    name: Dependabot Auto Merge
+    needs: [lints, tests]
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    uses: ./.github/workflows/dependabot_auto_merge.yml
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write

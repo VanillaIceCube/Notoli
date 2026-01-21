@@ -1,71 +1,28 @@
-name: Auto Merge
+name: Dependabot Auto Merge
 
 on:
-  workflow_run:
-    workflows: ["Continuous Integration"]
-    types: [completed]
+  workflow_call:
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   issues: write
 
 jobs:
   dependabot-auto-merge:
-    if: github.event.workflow_run.conclusion == 'success'
+    name: Dependabot Auto Merge
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve pull request
-        id: pr
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const pullRequests = context.payload.workflow_run.pull_requests;
-            if (!pullRequests || pullRequests.length === 0) {
-              core.setFailed('No pull request found for this workflow run.');
-              return;
-            }
-            const pull_number = pullRequests[0].number;
-            const { owner, repo } = context.repo;
-            const pr = await github.rest.pulls.get({
-              owner,
-              repo,
-              pull_number,
-            });
-            core.setOutput('number', pull_number.toString());
-            core.setOutput('author', pr.data.user.login);
-
-      - name: Build Dependabot event payload
-        id: event
-        if: steps.pr.outputs.author == 'dependabot[bot]'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const fs = require('fs');
-            const path = require('path');
-            const pull_number = Number('${{ steps.pr.outputs.number }}');
-            const { owner, repo } = context.repo;
-            const pr = await github.rest.pulls.get({
-              owner,
-              repo,
-              pull_number,
-            });
-            const eventPath = path.join(process.env.RUNNER_TEMP, 'dependabot-event.json');
-            fs.writeFileSync(eventPath, JSON.stringify({ pull_request: pr.data }));
-            core.setOutput('path', eventPath);
-
       - name: Fetch Dependabot metadata
         id: metadata
-        if: steps.pr.outputs.author == 'dependabot[bot]'
         uses: dependabot/fetch-metadata@v2
-        env:
-          GITHUB_EVENT_PATH: ${{ steps.event.outputs.path }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Summarize major update with ChatGPT
         id: major_summary
-        if: steps.pr.outputs.author == 'dependabot[bot]' && steps.metadata.outputs.update-type == 'version-update:semver-major'
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
@@ -75,17 +32,12 @@ jobs:
           ECOSYSTEM: ${{ steps.metadata.outputs.package-ecosystem }}
           SCOPE: ${{ steps.metadata.outputs.dependency-type }}
         run: |
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo "summary=Missing OPENAI_API_KEY secret." >> "$GITHUB_OUTPUT"
+          if [ -z "$OPENAI_API_KEY" ] || [ -z "$OPENAI_PROJECT_ID" ]; then
+            echo "summary=Missing OpenAI secrets; skipping summary." >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          if [ -z "$OPENAI_PROJECT_ID" ]; then
-            echo "summary=Missing OPENAI_PROJECT_ID secret." >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          PROMPT="📦 Dependency Update Summary (Major Version)\n🔖 Package\n\nName: ${PACKAGE_NAME}\n\nFrom → To: ${OLD_VERSION} → ${NEW_VERSION}\n\nEcosystem: ${ECOSYSTEM}\n\nScope: ${SCOPE}\n\n🧠 What Changed (High-Level)\n\nBrief summary of what the new major version introduces\n\nFocus on breaking changes, removed APIs, or behavior shifts\n\nNo marketing fluff\n\n💥 Breaking Changes\n\nList explicit breaking changes\n\nCall out:\n\nRemoved functions / props\n\nRenamed configs\n\nChanged defaults\n\nRequired code changes\n\nIf none are documented, say “No documented breaking changes”\n\n🔄 Required Code or Config Changes\n\nYes / No\n\nIf yes:\n\nWhat files are likely affected\n\nExample changes (if obvious)\n\nIf unknown:\n\nState uncertainty clearly\n\n⚠️ Risk & Impact Assessment\n\nRisk Level: Low | Medium | High\n\nWhy:\n\nRuntime risk?\n\nBuild/test risk?\n\nBehavioral/UI risk?\n\nAreas Most Affected:\n\ne.g. auth, routing, state, styling, API calls\n\n🧪 Test Coverage Confidence\n\nDo existing tests meaningfully cover impacted areas?\n\nAny missing test coverage that increases risk?\n\n📚 Migration & Docs\n\nMigration guide available? Yes / No\n\nLink referenced in changelog? Yes / No\n\nEstimated migration effort:\n\nMinutes | <1 hour | Several hours | Multi-day\n\n✅ Recommendation\n\nChoose one:\n\n✅ Safe to merge after tests\n\n🕒 Merge later (low urgency)\n\n🛑 Do not merge without manual changes\n\n🔍 Needs investigation before decision\n\nOne-sentence justification.\n\n📝 Action Items (If Any)\n\n Update config files\n\n Refactor affected code paths\n\n Add / update tests\n\n Re-run specific checks\n\n🔚 TL;DR\n\nOne sentence:\n\n“This is a high/medium/low-risk major update that does / does not require code changes before merging.”"
+          PROMPT="Dependency Update Summary (Major)\n\nPackage: ${PACKAGE_NAME}\nFrom: ${OLD_VERSION}\nTo: ${NEW_VERSION}\nEcosystem: ${ECOSYSTEM}\nScope: ${SCOPE}\n\nProvide:\n- High-level changes (focus on breaking changes)\n- Required code/config changes (Yes/No + details)\n- Risk level (Low/Medium/High) with rationale\n- Test coverage confidence\n- Migration guide availability\n- Recommendation (merge later / do not merge / needs investigation)\n- TL;DR"
           jq -n \
             --arg prompt "$PROMPT" \
             '
@@ -105,9 +57,6 @@ jobs:
             -H "OpenAI-Project: $OPENAI_PROJECT_ID" \
             --data @body.json)
 
-          echo "Raw response:"
-          echo "$RESPONSE"
-
           SUMMARY=$(echo "$RESPONSE" | jq -r '
             if .choices and .choices[0].message and .choices[0].message.content then
               .choices[0].message.content
@@ -118,9 +67,6 @@ jobs:
             end
           ')
 
-          echo "Summary content:"
-          echo "$SUMMARY"
-
           {
             echo 'summary<<EOF'
             printf '%s\n' "$SUMMARY"
@@ -128,13 +74,12 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Post major update summary to PR
-        if: steps.pr.outputs.author == 'dependabot[bot]' && steps.metadata.outputs.update-type == 'version-update:semver-major'
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SUMMARY_BODY: ${{ steps.major_summary.outputs.summary }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          PR_NUMBER="${{ steps.pr.outputs.number }}"
-
           if [ -z "$SUMMARY_BODY" ]; then
             echo "No summary to post."
             exit 0
@@ -149,12 +94,12 @@ jobs:
             -d @comment.json
 
       - name: Auto-approve Dependabot PR
-        if: steps.pr.outputs.author == 'dependabot[bot]' && (steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor')
+        if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
         uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
-            const pull_number = Number('${{ steps.pr.outputs.number }}');
+            const pull_number = context.issue.number;
             await github.rest.pulls.createReview({
               owner,
               repo,
@@ -163,12 +108,12 @@ jobs:
             });
 
       - name: Enable auto-merge
-        if: steps.pr.outputs.author == 'dependabot[bot]' && (steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor')
+        if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
         uses: actions/github-script@v8
         with:
           script: |
             const { owner, repo } = context.repo;
-            const pull_number = Number('${{ steps.pr.outputs.number }}');
+            const pull_number = context.issue.number;
             const query = `
               query($owner: String!, $repo: String!, $number: Int!) {
                 repository(owner: $owner, name: $repo) {

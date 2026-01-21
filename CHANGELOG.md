@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-01-21
+### Added
+- Added a reusable Dependabot auto-merge workflow (`.github/workflows/dependabot_auto_merge.yml`).
+### Changed
+- Continuous Integration now calls the Dependabot auto-merge workflow after lints/tests for Dependabot PRs.
+
 ## 2026-01-19
 ### Added
 - Added a GitHub Actions workflow to run frontend and backend tests (`tests.yaml`).
