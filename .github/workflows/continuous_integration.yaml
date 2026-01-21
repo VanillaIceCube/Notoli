@@ -20,6 +20,27 @@ jobs:
     name: Tests
     uses: ./.github/workflows/tests.yaml
 
+  dependabot-test-failure-comment:
+    name: Dependabot Test Failure Comment
+    needs: [tests]
+    if: always() && github.event.pull_request.user.login == 'dependabot[bot]' && needs.tests.result == 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Comment for Codex review
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pull_number = context.issue.number;
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: pull_number,
+              body: '@codex review',
+            });
+
   dependabot-auto-merge:
     name: Dependabot Auto Merge
     needs: [lints, tests]
