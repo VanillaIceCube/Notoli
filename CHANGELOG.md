@@ -9,6 +9,7 @@ All notable changes to this project are documented in this file.
 - Continuous Integration now calls the Dependabot auto-merge workflow after lints/tests for Dependabot PRs.
 - Continuous Integration now passes OpenAI secrets to the Dependabot auto-merge workflow.
 - Dependabot auto-merge now waits for a clean mergeable state before enabling auto-merge.
+- Dependabot auto-merge now merges directly when PRs are already clean.
 
 ## 2026-01-19
 ### Added
