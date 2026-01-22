@@ -4,12 +4,12 @@ All notable changes to this project are documented in this file.
 ## 2026-01-21
 ### Added
 - Added a reusable Dependabot auto-merge workflow (`.github/workflows/dependabot_auto_merge.yml`).
-- Added a Dependabot test-failure comment that posts `@codex review`.
 ### Changed
 - Continuous Integration now calls the Dependabot auto-merge workflow after lints/tests for Dependabot PRs.
 - Continuous Integration now passes OpenAI secrets to the Dependabot auto-merge workflow.
-- Dependabot auto-merge now waits for a clean mergeable state before enabling auto-merge.
-- Dependabot auto-merge now merges directly when PRs are already clean.
+- Dependabot auto-merge now relies on mergeability checks (conflict/unknown/unstable handling) before enabling auto-merge.
+- Dependabot auto-merge now merges directly when a PR is clean-but-unstable instead of waiting.
+- Dependabot auto-merge now skips auto-approval and focuses on auto-merge actions only.
 
 ## 2026-01-19
 ### Added
