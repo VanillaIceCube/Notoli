@@ -148,18 +148,21 @@ jobs:
               return;
             }
 
-            await wait(10000);
-
             let pr;
-            const maxAttempts = 3;
+            const maxAttempts = 36;
             for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+              if (attempt > 1) {
+                await wait(5000);
+              }
               const { data } = await github.rest.pulls.get({ owner, repo, pull_number });
               pr = data;
-              if (pr.mergeable !== null && pr.mergeable_state && pr.mergeable_state !== 'unknown') {
+              if (
+                pr.mergeable !== null &&
+                pr.mergeable_state &&
+                pr.mergeable_state !== 'unknown' &&
+                pr.mergeable_state !== 'unstable'
+              ) {
                 break;
-              }
-              if (attempt < maxAttempts) {
-                await wait(5000);
               }
             }
 
@@ -183,8 +186,8 @@ jobs:
               return;
             }
 
-            if (pr.mergeable == null || pr.mergeable_state === 'unknown') {
-              core.warning('PR mergeability is still being calculated; skipping for now.');
+            if (pr.mergeable == null || pr.mergeable_state === 'unknown' || pr.mergeable_state === 'unstable') {
+              core.warning('PR is not yet in a stable mergeable state; skipping for now.');
               return;
             }
 
