@@ -80,31 +80,103 @@ jobs:
 
       - name: Post major update summary to PR
         if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        uses: actions/github-script@v8
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SUMMARY_BODY: ${{ steps.major_summary.outputs.summary }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          if [ -z "$SUMMARY_BODY" ]; then
-            echo "No summary to post."
-            exit 0
-          fi
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pull_number = Number(process.env.PR_NUMBER);
+            const summaryBody = (process.env.SUMMARY_BODY || '').trim();
 
-          jq -n --arg body "$SUMMARY_BODY" '{body: $body}' > comment.json
+            if (!pull_number) {
+              core.warning('PR number is not available; skipping summary comment.');
+              return;
+            }
 
-          curl -s -X POST \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
-            -d @comment.json
+            if (!summaryBody) {
+              core.info('No summary to post.');
+              return;
+            }
+
+            const marker = '<!-- dependabot-major-summary -->';
+            const body = `${summaryBody}\n\n${marker}`;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner,
+              repo,
+              issue_number: pull_number,
+              per_page: 100,
+            });
+
+            const existing = comments.find(
+              (comment) =>
+                comment.user &&
+                comment.user.login === 'github-actions[bot]' &&
+                typeof comment.body === 'string' &&
+                comment.body.includes(marker)
+            );
+
+            if (existing) {
+              const cleanedExisting = existing.body.replace(marker, '').trim();
+              if (cleanedExisting === summaryBody) {
+                core.info('Summary comment already up to date; skipping.');
+                return;
+              }
+
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info('Summary comment updated.');
+              return;
+            }
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: pull_number,
+              body,
+            });
+            core.info('Summary comment posted.');
 
       - name: Auto-approve Dependabot PR
         if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
         uses: actions/github-script@v8
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         with:
           script: |
             const { owner, repo } = context.repo;
-            const pull_number = context.issue.number;
+            const pull_number = Number(process.env.PR_NUMBER);
+
+            if (!pull_number) {
+              core.warning('PR number is not available; skipping auto-approve.');
+              return;
+            }
+
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner,
+              repo,
+              pull_number,
+              per_page: 100,
+            });
+
+            const alreadyApproved = reviews.some(
+              (review) =>
+                review.user &&
+                review.user.login === 'github-actions[bot]' &&
+                review.state === 'APPROVED'
+            );
+
+            if (alreadyApproved) {
+              core.info('PR already approved by github-actions[bot]; skipping.');
+              return;
+            }
+
             await github.rest.pulls.createReview({
               owner,
               repo,
@@ -115,47 +187,66 @@ jobs:
       - name: Enable auto-merge
         if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
         uses: actions/github-script@v8
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         with:
           script: |
             const { owner, repo } = context.repo;
-            const pull_number = context.issue.number;
+            const pull_number = Number(process.env.PR_NUMBER);
             const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-            let pr;
-            for (let attempt = 1; attempt <= 6; attempt += 1) {
-              const { data } = await github.rest.pulls.get({ owner, repo, pull_number });
-              pr = data;
-              core.info(`mergeable_state=${pr.mergeable_state} mergeable=${pr.mergeable}`);
-              if (pr.mergeable_state === 'clean' && pr.mergeable !== false) {
-                break;
-              }
-              if (attempt < 6) {
-                await wait(10000);
-              }
-            }
-
-            if (!pr || pr.mergeable === false) {
-              core.warning('PR is not mergeable; skipping auto-merge handling.');
+            if (!pull_number) {
+              core.warning('PR number is not available; skipping auto-merge.');
               return;
             }
 
-            if (pr.mergeable_state === 'clean') {
-              if (pr.merged) {
-                core.info('PR is already merged; skipping.');
-                return;
+            let pr;
+            const maxAttempts = 4;
+            for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+              const { data } = await github.rest.pulls.get({ owner, repo, pull_number });
+              pr = data;
+              core.info(`mergeable_state=${pr.mergeable_state} mergeable=${pr.mergeable}`);
+              if (pr.mergeable !== null && pr.mergeable_state && pr.mergeable_state !== 'unknown') {
+                break;
               }
-              await github.rest.pulls.merge({
-                owner,
-                repo,
-                pull_number,
-                merge_method: 'merge',
-              });
-              core.info('PR merged directly because it is clean.');
+              if (attempt < maxAttempts) {
+                await wait(5000);
+              }
+            }
+
+            if (!pr) {
+              core.warning('PR data not available; skipping auto-merge handling.');
+              return;
+            }
+
+            if (pr.merged) {
+              core.info('PR is already merged; skipping.');
+              return;
+            }
+
+            if (pr.draft) {
+              core.warning('PR is a draft; skipping.');
+              return;
+            }
+
+            if (pr.mergeable === false || pr.mergeable_state === 'dirty') {
+              core.warning('PR has merge conflicts; skipping.');
               return;
             }
 
             if (pr.mergeable_state === 'unstable') {
-              core.info('PR checks are still running; enabling auto-merge for when checks pass.');
+              core.warning('PR checks are failing; skipping.');
+              return;
+            }
+
+            if (pr.auto_merge) {
+              core.info('Auto-merge is already enabled; skipping.');
+              return;
+            }
+
+            if (pr.mergeable == null || pr.mergeable_state === 'unknown') {
+              core.warning('PR mergeability is still being calculated; skipping for now.');
+              return;
             }
 
             const mutation = `
@@ -173,7 +264,13 @@ jobs:
                 }
               }
             `;
-            await github.graphql(mutation, {
-              pullRequestId: pr.node_id,
-              mergeMethod: "MERGE",
-            });
+            try {
+              await github.graphql(mutation, {
+                pullRequestId: pr.node_id,
+                mergeMethod: "MERGE",
+              });
+              core.info('Auto-merge enabled.');
+            } catch (error) {
+              const message = error?.message || 'Unknown error';
+              core.warning(`Auto-merge not enabled: ${message}`);
+            }
