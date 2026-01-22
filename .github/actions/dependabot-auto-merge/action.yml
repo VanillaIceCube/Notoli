@@ -1,0 +1,17 @@
+name: Dependabot Approve and Merge
+description: Approve and merge Dependabot PRs for patch/minor updates.
+inputs:
+  update-type:
+    description: Dependabot update-type output.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Approve and merge Dependabot PR
+      if: inputs.update-type == 'version-update:semver-patch' || inputs.update-type == 'version-update:semver-minor'
+      uses: actions/github-script@v8
+      with:
+        github-token: ${{ github.token }}
+        script: |
+          const run = require(process.env.GITHUB_ACTION_PATH + '/approve-and-merge.js');
+          await run({ github, context, core });
