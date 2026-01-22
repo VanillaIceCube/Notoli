@@ -23,7 +23,7 @@ jobs:
   dependabot-commentaries:
     name: Dependabot Commentaries
     needs: [tests]
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    if: always() && github.event.pull_request.user.login == 'dependabot[bot]'
     uses: ./.github/workflows/dependabot_commentaries.yaml
     permissions:
       issues: write
