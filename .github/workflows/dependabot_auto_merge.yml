@@ -141,7 +141,6 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             const pull_number = Number(process.env.PR_NUMBER);
-            const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
             if (!pull_number) {
               core.warning('PR number is not available; skipping.');
@@ -149,22 +148,8 @@ jobs:
             }
 
             let pr;
-            const maxAttempts = 36;
-            for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-              if (attempt > 1) {
-                await wait(5000);
-              }
-              const { data } = await github.rest.pulls.get({ owner, repo, pull_number });
-              pr = data;
-              if (
-                pr.mergeable !== null &&
-                pr.mergeable_state &&
-                pr.mergeable_state !== 'unknown' &&
-                pr.mergeable_state !== 'unstable'
-              ) {
-                break;
-              }
-            }
+            const { data } = await github.rest.pulls.get({ owner, repo, pull_number });
+            pr = data;
 
             if (!pr) {
               core.warning('PR data not available; skipping auto-merge handling.');
@@ -183,6 +168,23 @@ jobs:
 
             if (pr.auto_merge) {
               core.info('Auto-merge is already enabled; skipping.');
+              return;
+            }
+
+            if (pr.mergeable === true && pr.mergeable_state === 'unstable') {
+              core.warning('PR is unstable; attempting immediate merge anyway.');
+              try {
+                await github.rest.pulls.merge({
+                  owner,
+                  repo,
+                  pull_number,
+                  merge_method: 'merge',
+                });
+                core.info('PR merged directly while unstable.');
+              } catch (error) {
+                const message = error?.message || 'Unknown error';
+                core.warning(`Immediate merge failed: ${message}`);
+              }
               return;
             }
 
