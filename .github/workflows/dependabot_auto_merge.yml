@@ -155,8 +155,7 @@ jobs:
             }
 
             if (pr.mergeable_state === 'unstable') {
-              core.warning('PR is in unstable state; skipping auto-merge enablement.');
-              return;
+              core.info('PR checks are still running; enabling auto-merge for when checks pass.');
             }
 
             const mutation = `
