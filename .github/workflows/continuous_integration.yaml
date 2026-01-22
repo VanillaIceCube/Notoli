@@ -3,32 +3,37 @@ name: Continuous Integration
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
   group: continuous-integration-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   lints:
     name: Lint
+    if: (github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]') || (github.event_name == 'pull_request_target' && github.event.pull_request.user.login == 'dependabot[bot]')
     uses: ./.github/workflows/lints.yaml
 
   tests:
     name: Tests
+    if: (github.event_name == 'pull_request' && github.event.pull_request.user.login != 'dependabot[bot]') || (github.event_name == 'pull_request_target' && github.event.pull_request.user.login == 'dependabot[bot]')
     uses: ./.github/workflows/tests.yaml
 
   dependabot-commentaries:
     name: Dependabot Commentaries
     needs: [tests]
-    if: always() && github.event.pull_request.user.login == 'dependabot[bot]'
+    if: always() && github.event_name == 'pull_request_target' && github.event.pull_request.user.login == 'dependabot[bot]'
     uses: ./.github/workflows/dependabot_commentaries.yaml
     permissions:
       actions: read
       contents: read
       issues: write
+      pull-requests: write
     with:
       tests_result: ${{ needs.tests.result }}
       pr_number: ${{ github.event.pull_request.number }}
@@ -40,7 +45,7 @@ jobs:
   dependabot-auto-merge:
     name: Dependabot Auto Merge
     needs: [lints, tests]
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && needs.lints.result == 'success' && needs.tests.result == 'success'
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.user.login == 'dependabot[bot]' && needs.lints.result == 'success' && needs.tests.result == 'success'
     uses: ./.github/workflows/dependabot_auto_merge.yml
     permissions:
       contents: write
