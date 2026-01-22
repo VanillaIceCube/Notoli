@@ -44,12 +44,15 @@ jobs:
   dependabot-auto-merge:
     name: Dependabot Auto Merge
     needs: [lints, tests]
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && needs.lints.result == 'success' && needs.tests.result == 'success'
     uses: ./.github/workflows/dependabot_auto_merge.yml
     permissions:
       contents: write
       pull-requests: write
       issues: write
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
+      pr_author: ${{ github.event.pull_request.user.login }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
