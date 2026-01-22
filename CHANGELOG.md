@@ -2,6 +2,11 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-01-21
+### Changed
+- Removed the limit to for dependabot PRs
+
+
+## 2026-01-21
 ### Added
 - Added a reusable Dependabot auto-merge workflow (`.github/workflows/dependabot_auto_merge.yml`).
 ### Changed
