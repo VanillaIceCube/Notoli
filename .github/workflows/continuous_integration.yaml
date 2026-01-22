@@ -50,9 +50,6 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
-    with:
-      pr_number: ${{ github.event.pull_request.number }}
-      pr_author: ${{ github.event.pull_request.user.login }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
