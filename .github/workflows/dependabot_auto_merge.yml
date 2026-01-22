@@ -235,8 +235,7 @@ jobs:
             }
 
             if (pr.mergeable_state === 'unstable') {
-              core.warning('PR checks are failing; skipping.');
-              return;
+              core.warning('PR checks are failing; attempting to enable auto-merge anyway.');
             }
 
             if (pr.auto_merge) {
