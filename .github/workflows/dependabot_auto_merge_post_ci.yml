@@ -1,0 +1,77 @@
+name: Dependabot Auto Merge (Post CI)
+
+on:
+  workflow_run:
+    workflows: ["Continuous Integration"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+jobs:
+  resolve-context:
+    name: Resolve PR Context
+    runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ steps.resolve.outputs.pr_number }}
+      pr_author: ${{ steps.resolve.outputs.pr_author }}
+      tests_result: ${{ steps.resolve.outputs.tests_result }}
+      lints_result: ${{ steps.resolve.outputs.lints_result }}
+      should_run: ${{ steps.resolve.outputs.should_run }}
+    steps:
+      - name: Resolve PR and job results
+        id: resolve
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pullRequests = context.payload.workflow_run.pull_requests || [];
+
+            if (pullRequests.length === 0) {
+              core.setOutput('should_run', 'false');
+              core.info('No pull requests found for this workflow_run.');
+              return;
+            }
+
+            const prNumber = pullRequests[0].number;
+            const { data: pr } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: prNumber,
+            });
+
+            core.setOutput('pr_number', String(prNumber));
+            core.setOutput('pr_author', pr.user?.login || '');
+            core.setOutput('should_run', 'true');
+
+            const jobs = await github.paginate(
+              github.rest.actions.listJobsForWorkflowRun,
+              {
+                owner,
+                repo,
+                run_id: context.payload.workflow_run.id,
+                per_page: 100,
+              }
+            );
+
+            const lintsJob = jobs.find((job) => job.name === 'Lint');
+            const testsJob = jobs.find((job) => job.name === 'Tests');
+
+            core.setOutput('lints_result', lintsJob?.conclusion || 'unknown');
+            core.setOutput('tests_result', testsJob?.conclusion || 'unknown');
+
+  dependabot-auto-merge:
+    name: Dependabot Auto Merge
+    needs: resolve-context
+    if: needs.resolve-context.outputs.should_run == 'true' && needs.resolve-context.outputs.pr_author == 'dependabot[bot]'
+    uses: ./.github/workflows/dependabot_auto_merge.yml
+    permissions:
+      contents: write
+      pull-requests: write
+    with:
+      tests_result: ${{ needs.resolve-context.outputs.tests_result }}
+      lints_result: ${{ needs.resolve-context.outputs.lints_result }}
+      pr_number: ${{ needs.resolve-context.outputs.pr_number }}
+      pr_author: ${{ needs.resolve-context.outputs.pr_author }}

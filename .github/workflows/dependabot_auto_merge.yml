@@ -2,6 +2,19 @@ name: Dependabot Auto Merge
 
 on:
   workflow_call:
+    inputs:
+      tests_result:
+        required: true
+        type: string
+      lints_result:
+        required: true
+        type: string
+      pr_number:
+        required: true
+        type: number
+      pr_author:
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -10,10 +23,10 @@ permissions:
 jobs:
   dependabot-auto-merge:
     name: Dependabot Auto Merge
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    if: inputs.pr_author == 'dependabot[bot]' && inputs.lints_result == 'success' && inputs.tests_result == 'success'
     runs-on: ubuntu-latest
     env:
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_NUMBER: ${{ inputs.pr_number }}
     steps:
       - name: Fetch Dependabot metadata
         id: metadata
@@ -25,6 +38,7 @@ jobs:
         if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
         uses: actions/github-script@v8
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
             const pull_number = Number(process.env.PR_NUMBER);
@@ -91,3 +105,5 @@ jobs:
               const message = error?.message || 'Unknown error';
               core.warning(`Auto-merge not enabled: ${message}`);
             }
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
