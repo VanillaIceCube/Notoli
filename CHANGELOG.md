@@ -35,7 +35,7 @@ All notable changes to this project are documented in this file.
 - Added frontend tests for `index` (`frontend/src/index.test.js`).
 ### Changed
 - Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
-- Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
+- Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summary.yaml`).
 - Replaced the Dependabot auto-approval action with a GitHub API call to avoid the missing action repo.
 - Dependabot auto-merge now triggers after Continuous Integration completes and builds a metadata event payload.
 - Dependabot major updates now call OpenAI and log the response before posting a PR comment.
