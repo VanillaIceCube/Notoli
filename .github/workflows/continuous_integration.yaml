@@ -26,6 +26,8 @@ jobs:
     if: always() && github.event.pull_request.user.login == 'dependabot[bot]'
     uses: ./.github/workflows/dependabot_commentaries.yaml
     permissions:
+      actions: read
+      contents: read
       issues: write
     with:
       tests_result: ${{ needs.tests.result }}
