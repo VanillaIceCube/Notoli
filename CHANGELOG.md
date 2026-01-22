@@ -3,13 +3,11 @@ All notable changes to this project are documented in this file.
 
 ## 2026-01-21
 ### Added
-- Added a reusable Dependabot auto-merge workflow (`.github/workflows/dependabot_auto_merge.yml`).
-- Added a Dependabot test-failure comment that posts `@codex review`.
+- Added a Dependabot commentaries workflow for major summaries and test-failure comments (`.github/workflows/dependabot_commentaries.yaml`).
 ### Changed
-- Continuous Integration now calls the Dependabot auto-merge workflow after lints/tests for Dependabot PRs.
-- Continuous Integration now passes OpenAI secrets to the Dependabot auto-merge workflow.
-- Dependabot auto-merge now waits for a clean mergeable state before enabling auto-merge.
-- Dependabot auto-merge now merges directly when PRs are already clean.
+- Continuous Integration now runs Dependabot commentaries and auto-merge workflows after lints/tests for Dependabot PRs.
+- Moved major-update summaries out of auto-merge and into the commentaries workflow.
+- Simplified Dependabot auto-merge flow and added a direct-merge fallback when PRs are unstable.
 
 ## 2026-01-19
 ### Added
@@ -35,7 +33,7 @@ All notable changes to this project are documented in this file.
 - Added frontend tests for `index` (`frontend/src/index.test.js`).
 ### Changed
 - Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
-- Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summaries.yaml`).
+- Renamed GitHub Actions workflow files to use singular names (`pr_summary.yaml`, `dependabot_auto_merge.yml`).
 - Replaced the Dependabot auto-approval action with a GitHub API call to avoid the missing action repo.
 - Dependabot auto-merge now triggers after Continuous Integration completes and builds a metadata event payload.
 - Dependabot major updates now call OpenAI and log the response before posting a PR comment.

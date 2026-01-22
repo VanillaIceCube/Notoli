@@ -20,26 +20,20 @@ jobs:
     name: Tests
     uses: ./.github/workflows/tests.yaml
 
-  dependabot-test-failure-comment:
-    name: Dependabot Test Failure Comment
+  dependabot-commentaries:
+    name: Dependabot Commentaries
     needs: [tests]
-    if: always() && github.event.pull_request.user.login == 'dependabot[bot]' && needs.tests.result == 'failure'
-    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    uses: ./.github/workflows/dependabot_commentaries.yaml
     permissions:
       issues: write
-    steps:
-      - name: Comment for Codex review
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const pull_number = context.issue.number;
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number: pull_number,
-              body: '@codex review',
-            });
+    with:
+      tests_result: ${{ needs.tests.result }}
+      pr_number: ${{ github.event.pull_request.number }}
+      pr_author: ${{ github.event.pull_request.user.login }}
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
 
   dependabot-auto-merge:
     name: Dependabot Auto Merge
@@ -49,7 +43,3 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      issues: write
-    secrets:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
