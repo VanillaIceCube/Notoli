@@ -148,6 +148,8 @@ jobs:
               return;
             }
 
+            await wait(10000);
+
             let pr;
             const maxAttempts = 3;
             for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
