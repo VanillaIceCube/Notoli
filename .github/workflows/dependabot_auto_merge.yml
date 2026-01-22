@@ -134,7 +134,7 @@ jobs:
             });
             core.info('Summary comment posted.');
 
-      - name: Approve and enable auto-merge
+      - name: Enable auto-merge
         if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
         uses: actions/github-script@v8
         with:
@@ -146,29 +146,6 @@ jobs:
             if (!pull_number) {
               core.warning('PR number is not available; skipping.');
               return;
-            }
-
-            const reviews = await github.paginate(github.rest.pulls.listReviews, {
-              owner,
-              repo,
-              pull_number,
-              per_page: 100,
-            });
-
-            const alreadyApproved = reviews.some(
-              (review) =>
-                review.user &&
-                review.user.login === 'github-actions[bot]' &&
-                review.state === 'APPROVED'
-            );
-
-            if (!alreadyApproved) {
-              await github.rest.pulls.createReview({
-                owner,
-                repo,
-                pull_number,
-                event: 'APPROVE',
-              });
             }
 
             let pr;
