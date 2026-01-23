@@ -24,7 +24,7 @@ jobs:
   pr-summary:
     name: Commentary
     needs: [lints, tests]
-    uses: ./.github/workflows/pr_summary.yaml
+    uses: ./.github/workflows/commentary.yaml
     secrets: inherit
 
   auto-merge:
