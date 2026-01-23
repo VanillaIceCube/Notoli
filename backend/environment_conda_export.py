@@ -77,6 +77,10 @@ import argparse
 from typing import Union
 #===================================
 
+class IndentDumper(yaml.SafeDumper):
+    def increase_indent(self, flow=False, indentless=False):
+        return super().increase_indent(flow, False)
+
 def CLI() -> argparse.Namespace:
     '''Provides the command line interface for the script'''
     # create the top-level parser
@@ -91,6 +95,7 @@ def CLI() -> argparse.Namespace:
     parser.add_argument('-o','--output', type=str, default=None, help='Specify an output file to save with environment data. If not provided, it will be printed to the terminal')
     parser.add_argument('--requirements-output', type=str, default=None, help='Optional requirements.txt output path. Defaults to requirements.txt alongside --output when provided.')
     parser.add_argument('--strip-pip', action='store_true', help='Remove pip section from the environment.yml output when writing requirements.txt.')
+    parser.add_argument('--pip-list-all', action='store_true', help='Use full `pip list --format=freeze` (includes dependencies) for requirements.txt.')
     
     args = parser.parse_args()
     return args
@@ -172,7 +177,6 @@ def is_pip_section(dependency) -> bool:
 def get_pip_section(dependency_list:list) -> dict:
     for dependency in dependency_list:
         if isinstance(dependency, dict) and 'pip' in dependency:
-            print(f"Dependency is (should be pip dict):\n{dependency}\n")
             return dependency
     return {}
 
@@ -184,6 +188,108 @@ def extract_pip_packages(dependency_list:list) -> list:
 
 def remove_pip_section(dependency_list:list) -> list:
     return [dep for dep in dependency_list if not (isinstance(dep, dict) and 'pip' in dep)]
+
+def _normalize_pkg_name(name:str) -> str:
+    return name.strip().lower().replace('_', '-')
+
+def keep_only_python_and_pip(dependency_list:list) -> list:
+    kept = []
+    has_pip = False
+    for dep in dependency_list:
+        if isinstance(dep, str):
+            name_split_dict = _split_by_name_and_version(dep)
+            pkg_name = _normalize_pkg_name(name_split_dict.get('name'))
+            if pkg_name in {'python', 'pip'}:
+                kept.append(dep)
+                if pkg_name == 'pip':
+                    has_pip = True
+        elif isinstance(dep, dict) and 'pip' in dep:
+            kept.append(dep)
+            has_pip = True
+    if not has_pip:
+        kept.append('pip')
+    return kept
+
+def conda_deps_to_requirements(dependency_list:list) -> list:
+    reqs = []
+    for dep in dependency_list:
+        if not isinstance(dep, str):
+            continue
+        name_split_dict = _split_by_name_and_version(dep)
+        pkg_name = _normalize_pkg_name(name_split_dict.get('name'))
+        if pkg_name in {'python', 'pip'}:
+            continue
+        version = name_split_dict.get('version')
+        if version:
+            reqs.append(f"{pkg_name}=={version}")
+        else:
+            reqs.append(pkg_name)
+    return reqs
+
+def requirement_name(req_line:str) -> str:
+    raw = req_line.strip()
+    if ' @ ' in raw:
+        name = raw.split(' @ ', 1)[0]
+    elif '==' in raw:
+        name = raw.split('==', 1)[0]
+    elif '===' in raw:
+        name = raw.split('===', 1)[0]
+    else:
+        name = raw
+    return _normalize_pkg_name(name)
+
+def build_minimal_dependencies(dependency_list:list, requirements_path:str, include_pip_requirements:bool=True) -> list:
+    python_entry = None
+    pip_entry_str = None
+    for dep in dependency_list:
+        if isinstance(dep, str):
+            name_split_dict = _split_by_name_and_version(dep)
+            pkg_name = _normalize_pkg_name(name_split_dict.get('name'))
+            if pkg_name == 'python' and python_entry is None:
+                python_entry = dep
+            elif pkg_name == 'pip' and pip_entry_str is None:
+                pip_entry_str = dep
+    deps = []
+    deps.append(python_entry or 'python')
+    deps.append(pip_entry_str or 'pip')
+    if include_pip_requirements and requirements_path:
+        req_path = pathlib.Path(requirements_path)
+        deps.append({'pip': [f"-r {req_path.name}"]})
+    return deps
+
+def read_requirements_lines(requirements_path:str) -> list:
+    if requirements_path is None:
+        return []
+    req_path = pathlib.Path(requirements_path)
+    if not req_path.exists():
+        return []
+    lines = []
+    for line in req_path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        if line.startswith('-r ') or line.startswith('--'):
+            continue
+        lines.append(line)
+    return lines
+
+def pip_list_not_required(include_dependencies: bool=False) -> list:
+    cmd = [sys.executable, '-m', 'pip', 'list', '--format=freeze']
+    if not include_dependencies:
+        cmd.append('--not-required')
+    cp = subprocess.run(
+        cmd,
+        stdout=subprocess.PIPE,
+        text=True
+    )
+    cp.check_returncode()
+    lines = []
+    for line in cp.stdout.splitlines():
+        line = line.strip()
+        if line:
+            lines.append(line)
+    return lines
+
 
 def replace_pip_with_requirements(dependency_list:list, requirements_path:str) -> list:
     if requirements_path is None:
@@ -257,15 +363,49 @@ def merge_dependencies(full_env, history_env, use_versions:bool) -> list:
     return _dependencies
 
 def produce_output(output_file:str, env_data:dict, verbose:bool):
+    dump_kwargs = {
+        'sort_keys': False,
+        'default_flow_style': False,
+        'indent': 2,
+        'Dumper': IndentDumper,
+    }
+    comment_block = (
+        "\n"
+        "# Update env + requirements.txt (pip packages go into requirements.txt)\n"
+        "# `python backend/environment_conda_export.py --from-history --use-versions -o backend/environment.yml`\n"
+        "# Ensure conda-forge priority (one-time)\n"
+        "# `conda config --add channels conda-forge`\n"
+        "# `conda config --set channel_priority strict`\n"
+        "# Overwrite environment from yaml\n"
+        "# `conda env update --file backend/environment.yml --prune --solver=libmamba`\n"
+    )
     if output_file is None:
-        yaml.dump(env_data, sys.stdout)
+        yaml.dump(env_data, sys.stdout, **dump_kwargs)
+        sys.stdout.write(comment_block)
     else:
         with open(output_file, 'w') as f_handler:
-            yaml.dump(env_data, f_handler)
+            yaml.dump(env_data, f_handler, **dump_kwargs)
+            f_handler.write(comment_block)
         
         #-- print to terminal if selected by user
         if verbose:
-            yaml.dump(env_data, sys.stdout)
+            yaml.dump(env_data, sys.stdout, **dump_kwargs)
+            sys.stdout.write(comment_block)
+
+def reorder_env_dict(env_data:dict) -> dict:
+    ordered = {}
+    if 'name' in env_data:
+        ordered['name'] = env_data['name']
+    if 'channels' in env_data:
+        ordered['channels'] = env_data['channels']
+    if 'dependencies' in env_data:
+        ordered['dependencies'] = env_data['dependencies']
+    if 'prefix' in env_data:
+        ordered['prefix'] = env_data['prefix']
+    for key, value in env_data.items():
+        if key not in ordered:
+            ordered[key] = value
+    return ordered
 
 def write_requirements(requirements_path:str, pip_packages:list) -> None:
     if requirements_path is None:
@@ -317,8 +457,10 @@ def main(args):
     output_file  :str  = args.output
     requirements_output: str = args.requirements_output
     strip_pip: bool = args.strip_pip
+    pip_list_all: bool = args.pip_list_all
 
     full_env_output = export_env(from_history=False, no_builds=no_builds)
+    hist_env_output = None
 
     #-- Maintain default conda env export functionality
     if not from_history:
@@ -327,7 +469,8 @@ def main(args):
         #return
 
     elif from_history and not use_versions:  #return the standard --from-history response
-        final_env_dict = export_env(from_history=True)  #from history
+        hist_env_output = export_env(from_history=True)  #from history
+        final_env_dict = hist_env_output
         final_env_dict['channels'] = full_env_output['channels']
 
         _pip_section = get_pip_section(full_env_output['dependencies'])
@@ -340,7 +483,7 @@ def main(args):
     elif from_history and use_versions:
         #-- Create merged list of dependencies
         full_env_output:dict = export_env(from_history=False, no_builds=False)
-        hist_env_output:dict = export_env(from_history=True)
+        hist_env_output = export_env(from_history=True)
         _merged_dependencies:list = merge_dependencies(full_env_output, hist_env_output, use_versions)
         
         #-- setup final env dictionary
@@ -360,14 +503,25 @@ def main(args):
 
     #-- Output final result
     requirements_path = default_requirements_path(output_file, requirements_output)
-    pip_packages = extract_pip_packages(final_env_dict.get('dependencies', []))
-    if strip_pip:
-        final_env_dict['dependencies'] = remove_pip_section(final_env_dict.get('dependencies', []))
-    else:
-        final_env_dict['dependencies'] = replace_pip_with_requirements(
-            final_env_dict.get('dependencies', []),
-            requirements_path
-        )
+    pip_packages = pip_list_not_required(include_dependencies=pip_list_all)
+    conda_hist_packages = []
+    if hist_env_output and isinstance(hist_env_output.get('dependencies', None), list):
+        conda_hist_packages = conda_deps_to_requirements(hist_env_output['dependencies'])
+    merged_packages = []
+    seen_names = set()
+    for req in conda_hist_packages + pip_packages:
+        name = requirement_name(req)
+        if name not in seen_names:
+            merged_packages.append(req)
+            seen_names.add(name)
+    pip_packages = merged_packages
+
+    final_env_dict['dependencies'] = build_minimal_dependencies(
+        final_env_dict.get('dependencies', []),
+        requirements_path,
+        include_pip_requirements=not strip_pip
+    )
+    final_env_dict = reorder_env_dict(final_env_dict)
     produce_output(output_file, final_env_dict, verbose=verbose)
     write_requirements(requirements_path, pip_packages)
     

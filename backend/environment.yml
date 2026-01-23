@@ -10,5 +10,8 @@ dependencies:
 
 # Update env + requirements.txt (pip packages go into requirements.txt)
 # `python backend/environment_conda_export.py --from-history --use-versions -o backend/environment.yml`
+# Ensure conda-forge priority (one-time)
+# `conda config --add channels conda-forge`
+# `conda config --set channel_priority strict`
 # Overwrite environment from yaml
-# `conda env update --file backend/environment.yml --prune`
+# `conda env update --file backend/environment.yml --prune --solver=libmamba`
