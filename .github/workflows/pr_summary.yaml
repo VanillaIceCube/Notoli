@@ -1,4 +1,4 @@
-name: PR Summary
+name: Commentary
 
 on:
   workflow_call:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   ai-review:
-    name: ChatGPT Summary
+    name: PR Summary
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
 

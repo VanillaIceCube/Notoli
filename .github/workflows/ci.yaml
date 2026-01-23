@@ -14,12 +14,12 @@ permissions:
 
 jobs:
   pr-summary:
-    name: PR Summary
+    name: Commentary
     uses: ./.github/workflows/pr_summary.yaml
     secrets: inherit
 
   lints:
-    name: Lint
+    name: Lints
     uses: ./.github/workflows/lints.yaml
 
   tests:
