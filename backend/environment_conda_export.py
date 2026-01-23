@@ -89,6 +89,8 @@ def CLI() -> argparse.Namespace:
     parser.add_argument('--include-prefix', action='store_true', help="Boolean flag to include the `prefix` line that conda appends to an environment file")
     parser.add_argument('-n','--env-name',type=str,default=None, help="Give a name to the conda environment. If not provided, use current environment's name")
     parser.add_argument('-o','--output', type=str, default=None, help='Specify an output file to save with environment data. If not provided, it will be printed to the terminal')
+    parser.add_argument('--requirements-output', type=str, default=None, help='Optional requirements.txt output path. Defaults to requirements.txt alongside --output when provided.')
+    parser.add_argument('--strip-pip', action='store_true', help='Remove pip section from the environment.yml output when writing requirements.txt.')
     
     args = parser.parse_args()
     return args
@@ -174,6 +176,32 @@ def get_pip_section(dependency_list:list) -> dict:
             return dependency
     return {}
 
+def extract_pip_packages(dependency_list:list) -> list:
+    for dependency in dependency_list:
+        if isinstance(dependency, dict) and 'pip' in dependency:
+            return dependency.get('pip', [])
+    return []
+
+def remove_pip_section(dependency_list:list) -> list:
+    return [dep for dep in dependency_list if not (isinstance(dep, dict) and 'pip' in dep)]
+
+def replace_pip_with_requirements(dependency_list:list, requirements_path:str) -> list:
+    if requirements_path is None:
+        return dependency_list
+    req_path = pathlib.Path(requirements_path)
+    pip_entry = {'pip': [f"-r {req_path.name}"]}
+    replaced = []
+    pip_replaced = False
+    for dep in dependency_list:
+        if isinstance(dep, dict) and 'pip' in dep:
+            replaced.append(pip_entry)
+            pip_replaced = True
+        else:
+            replaced.append(dep)
+    if not pip_replaced:
+        replaced.append(pip_entry)
+    return replaced
+
 def _create_split_dictionary(env_data:list) -> dict:
     #TODO:figure out a way to extract pip version and also have
     # another dict for pip installs (maybe use different keys): i.e.
@@ -239,6 +267,20 @@ def produce_output(output_file:str, env_data:dict, verbose:bool):
         if verbose:
             yaml.dump(env_data, sys.stdout)
 
+def write_requirements(requirements_path:str, pip_packages:list) -> None:
+    if requirements_path is None:
+        return
+    with open(requirements_path, 'w') as f_handler:
+        for pkg in pip_packages:
+            f_handler.write(f"{pkg}\n")
+
+def default_requirements_path(output_file:str, explicit_path:str) -> str:
+    if explicit_path:
+        return explicit_path
+    if output_file:
+        return str(pathlib.Path(output_file).with_name('requirements.txt'))
+    return None
+
 def _replace_env_name(new_name:str, reference_env:dict, env_to_modify:dict, include_prefix:bool=True) -> dict:
     '''Modifies the `name` and `prefix` sections of Conda's 
     environment dictionary file'''
@@ -273,6 +315,8 @@ def main(args):
     include_prefix:bool = args.include_prefix
     env_name     :str  = args.env_name
     output_file  :str  = args.output
+    requirements_output: str = args.requirements_output
+    strip_pip: bool = args.strip_pip
 
     full_env_output = export_env(from_history=False, no_builds=no_builds)
 
@@ -315,7 +359,17 @@ def main(args):
     final_env_dict = _replace_env_name(env_name, full_env_output, final_env_dict, include_prefix=include_prefix)
 
     #-- Output final result
+    requirements_path = default_requirements_path(output_file, requirements_output)
+    pip_packages = extract_pip_packages(final_env_dict.get('dependencies', []))
+    if strip_pip:
+        final_env_dict['dependencies'] = remove_pip_section(final_env_dict.get('dependencies', []))
+    else:
+        final_env_dict['dependencies'] = replace_pip_with_requirements(
+            final_env_dict.get('dependencies', []),
+            requirements_path
+        )
     produce_output(output_file, final_env_dict, verbose=verbose)
+    write_requirements(requirements_path, pip_packages)
     
 
 if __name__ == '__main__':

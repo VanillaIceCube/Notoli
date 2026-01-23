@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
-## 2026-01-23
+## 2026-01-22
 ### Changed
 - CI now runs the PR summary workflow after lints and tests complete.
 - PR summary reports exactly which OpenAI secrets are missing when not configured.
@@ -11,8 +11,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Removed the limit to for dependabot PRs
 
-
-## 2026-01-21
+## 2026-01-20
 ### Added
 - Added a reusable Dependabot auto-merge workflow (`.github/workflows/dependabot_auto_merge.yml`).
 ### Changed

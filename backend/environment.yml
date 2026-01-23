@@ -1,17 +1,14 @@
-channels:
-- conda-forge
-- defaults
-dependencies:
-- django=5.2.8
-- django-cors-headers=4.7.0
-- django-filter=25.1
-- djangorestframework=3.16.0
-- djangorestframework_simplejwt=5.5.0
-- gunicorn
-- python=3.12.11
-- pyyaml=6.0.2
-- whitenoise=6.11.0
 name: notoli_env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12.11
+  - pip
+  - pip:
+      - -r requirements.txt
 
-# Update the yaml file with `python environment_conda_export.py --from-history --use-versions -o environment.yml`
-# When working across environments, overwite using `conda env update --file environment.yml --prune`
+# Update env + requirements.txt (pip packages go into requirements.txt)
+# `python backend/environment_conda_export.py --from-history --use-versions -o backend/environment.yml`
+# Overwrite environment from yaml
+# `conda env update --file backend/environment.yml --prune`
