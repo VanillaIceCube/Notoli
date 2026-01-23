@@ -10,8 +10,14 @@ concurrency:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
+  pr-summary:
+    name: PR Summary
+    uses: ./.github/workflows/pr_summary.yaml
+    secrets: inherit
+
   lints:
     name: Lint
     uses: ./.github/workflows/lints.yaml
@@ -20,11 +26,11 @@ jobs:
     name: Tests
     uses: ./.github/workflows/tests.yaml
 
-  dependabot-auto-merge:
-    name: Dependabot Auto Merge
+  auto-merge:
+    name: Auto Merge
     needs: [lints, tests]
     if: github.event.pull_request.user.login == 'dependabot[bot]' && needs.lints.result == 'success' && needs.tests.result == 'success'
-    uses: ./.github/workflows/dependabot_auto_merge.yml
+    uses: ./.github/workflows/auto_merge.yml
     permissions:
       contents: write
       pull-requests: write
