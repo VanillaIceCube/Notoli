@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: CI
 
 on:
   pull_request:
@@ -10,21 +10,28 @@ concurrency:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   lints:
-    name: Lint
+    name: Lints
     uses: ./.github/workflows/lints.yaml
 
   tests:
     name: Tests
     uses: ./.github/workflows/tests.yaml
+  
+  pr-summary:
+    name: Commentary
+    needs: [lints, tests]
+    uses: ./.github/workflows/commentary.yaml
+    secrets: inherit
 
-  dependabot-auto-merge:
-    name: Dependabot Auto Merge
+  auto-merge:
+    name: Auto Merge
     needs: [lints, tests]
     if: github.event.pull_request.user.login == 'dependabot[bot]' && needs.lints.result == 'success' && needs.tests.result == 'success'
-    uses: ./.github/workflows/dependabot_auto_merge.yml
+    uses: ./.github/workflows/auto_merge.yml
     permissions:
       contents: write
       pull-requests: write
