@@ -1,0 +1,56 @@
+name: Read Versions
+description: Read Node and Python versions from repo source-of-truth files.
+inputs:
+  read_node:
+    description: "Read Node version from frontend/package.json engines.node"
+    required: false
+    default: "true"
+  read_python:
+    description: "Read Python version from backend/environment.yml python pin"
+    required: false
+    default: "true"
+outputs:
+  node_version:
+    description: "Node version from frontend/package.json engines.node"
+  python_version:
+    description: "Python version from backend/environment.yml"
+runs:
+  using: composite
+  steps:
+    - name: Read Node version
+      if: ${{ inputs.read_node == 'true' }}
+      shell: bash
+      run: |
+        python - <<'PY'
+        import json
+        import os
+        from pathlib import Path
+
+        root = Path(os.environ["GITHUB_WORKSPACE"])
+        package_path = root / "frontend" / "package.json"
+        data = json.loads(package_path.read_text(encoding="utf-8"))
+        version = (data.get("engines") or {}).get("node")
+        if not version:
+            raise SystemExit("Missing engines.node in frontend/package.json")
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+            f.write(f"node_version={version}\n")
+        PY
+
+    - name: Read Python version
+      if: ${{ inputs.read_python == 'true' }}
+      shell: bash
+      run: |
+        python - <<'PY'
+        import os
+        import re
+        from pathlib import Path
+
+        root = Path(os.environ["GITHUB_WORKSPACE"])
+        env_path = root / "backend" / "environment.yml"
+        text = env_path.read_text(encoding="utf-8")
+        match = re.search(r"^\s*-\s*python=([0-9.]+)\s*$", text, re.M)
+        if not match:
+            raise SystemExit("Missing python pin in backend/environment.yml")
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+            f.write(f"python_version={match.group(1)}\n")
+        PY
