@@ -3,8 +3,8 @@ FROM continuumio/miniconda3
 # Set working directory
 WORKDIR /backend
 
-# Copy environment file and install
-COPY environment.yml .
+# Copy environment + requirements and install
+COPY environment.yml requirements.txt ./
 RUN conda env create -f environment.yml && conda clean --all -y
 
 # Use the conda env by default

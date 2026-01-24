@@ -44,19 +44,10 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
-          cache-dependency-path: backend/environment.yml
+          cache-dependency-path: backend/requirements.txt
 
       - name: Install backend dependencies
-        run: |
-          pip install \
-            django==5.2.8 \
-            django-cors-headers==4.7.0 \
-            django-filter==25.1 \
-            djangorestframework==3.16.0 \
-            djangorestframework-simplejwt==5.5.0 \
-            gunicorn \
-            pyyaml==6.0.2 \
-            whitenoise==6.11.0
+        run: pip install -r requirements.txt
 
       - name: Run backend tests
         run: python manage.py test --verbosity=2
