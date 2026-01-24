@@ -12,7 +12,9 @@ import {
   Menu,
   MenuItem,
 } from '@mui/material';
-import { Add, Close, MoreVert } from '@mui/icons-material';
+import Add from '@mui/icons-material/Add';
+import Close from '@mui/icons-material/Close';
+import MoreVert from '@mui/icons-material/MoreVert';
 import Divider from '@mui/material/Divider';
 import { getWorkspaceId } from '../utils/Navigation';
 import { useLocation, useNavigate } from 'react-router-dom';
