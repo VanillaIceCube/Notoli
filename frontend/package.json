@@ -2,7 +2,6 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
-
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
@@ -13,33 +12,28 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "axios": "^1.13.2",
+    "eslint-config-prettier": "^10.1.8",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-router-dom": "^6.30.0",
     "react-scripts": "5.0.1",
     "web-vitals": "^5.1.0"
   },
-
   "devDependencies": {
     "eslint": "^8.57.1",
-    "eslint-config-prettier": "^10.1.8",
     "eslint-config-react-app": "^7.0.1",
     "prettier": "^3.8.1"
   },
-
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-
     "lint": "eslint \"src/**/*.{js,jsx}\"",
     "lint:strict": "eslint \"src/**/*.{js,jsx}\" --max-warnings=0",
-
     "format": "prettier . --write",
     "format:check": "prettier . --check"
   },
-
   "browserslist": {
     "production": [
       ">0.2%",

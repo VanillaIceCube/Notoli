@@ -12,7 +12,7 @@ module.exports = {
       version: "detect",
     },
   },
-  extends: ["react-app", "react-app/jest", "prettier"],
+  extends: ["react-app", "react-app/jest"],
   rules: {
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
