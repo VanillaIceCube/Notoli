@@ -3,12 +3,16 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.12.11
+  - python=3.14.2
   - pip
   - pip:
       - -r requirements.txt
 
 # Update env + requirements.txt (pip packages go into requirements.txt)
-# `python backend/environment_conda_export.py --from-history --use-versions -o backend/environment.yml`
+# `python C:/Users/jaala/OneDrive/Documents/Github/Notoli/backend/environment_manager.py export -o C:/Users/jaala/OneDrive/Documents/Github/Notoli/backend/environment.yml`
 # Overwrite environment from yaml
-# `conda env update --file backend/environment.yml --prune`
+# `conda env update --file C:/Users/jaala/OneDrive/Documents/Github/Notoli/backend/environment.yml --prune`
+# Fresh create from yaml
+# `conda env create --file C:/Users/jaala/OneDrive/Documents/Github/Notoli/backend/environment.yml`
+# Note: conda will run pip and install -r requirements.txt from the pip section.
+# (requirements file written to: C:/Users/jaala/OneDrive/Documents/Github/Notoli/backend/requirements.txt)

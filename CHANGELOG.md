@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-01-24
+### Changed
+- Standardized Conda environment management using a single `environment_conda_export.py` script.
+- Environment exports now always generate a minimal `environment.yml` and a separate `requirements.txt` for pip packages.
+- Pip dependencies are captured as top-level installs with pinned versions, excluding transitive dependencies.
+- Removed unstable pip entries (e.g. `@ file:///…`) to ensure portable, reproducible environments.
+
+
 ## 2026-01-22
 ### Changed
 - CI now runs the PR summary workflow after lints and tests complete.
