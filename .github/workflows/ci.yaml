@@ -18,6 +18,8 @@ jobs:
     uses: ./.github/workflows/lints.yaml
     with:
       checkout_ref: ${{ github.event.pull_request.head.ref }}
+    secrets:
+      auto_commit_token: ${{ secrets.AUTO_COMMIT_TOKEN }}
 
   tests:
     name: Tests

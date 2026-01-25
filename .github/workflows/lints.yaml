@@ -7,6 +7,10 @@ on:
         description: "Branch or ref to check out for auto-fix commits."
         required: false
         type: string
+    secrets:
+      auto_commit_token:
+        description: "Token to use for auto-fix commits so follow-up workflows run."
+        required: false
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -27,6 +31,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
+          token: ${{ secrets.auto_commit_token || github.token }}
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -51,6 +56,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
+          token: ${{ secrets.auto_commit_token || github.token }}
 
       - name: Read versions
         id: versions
@@ -93,6 +99,7 @@ jobs:
             frontend
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
+          token: ${{ secrets.auto_commit_token || github.token }}
 
       - name: Prettier (check only)
         run: npm run format:check
@@ -113,6 +120,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
+          token: ${{ secrets.auto_commit_token || github.token }}
 
       - name: Read versions
         id: versions
@@ -155,6 +163,7 @@ jobs:
             backend
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
+          token: ${{ secrets.auto_commit_token || github.token }}
 
       - name: Ruff (check only)
         run: ruff check .
