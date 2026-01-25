@@ -3,6 +3,12 @@ name: CI
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      checkout_ref:
+        description: "Branch or ref to check out for auto-fix reruns."
+        required: false
+        type: string
 
 concurrency:
   group: continuous-integration-${{ github.ref }}
@@ -17,7 +23,8 @@ jobs:
     name: Lints
     uses: ./.github/workflows/lints.yaml
     with:
-      checkout_ref: ${{ github.event.pull_request.head.ref }}
+      checkout_ref: ${{ inputs.checkout_ref || github.event.pull_request.head.ref || github.ref_name }}
+      caller_run_id: ${{ github.run_id }}
 
   tests:
     name: Tests
