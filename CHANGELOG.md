@@ -11,6 +11,7 @@ All notable changes to this project are documented in this file.
 - Skip lint auto-commit steps when no changes are detected after auto-fixes.
 - Scoped lint auto-commit actions to their respective subdirectories to ensure changes are staged.
 - Updated GitHub Actions versions to use released `actions/checkout@v4` and `actions/setup-python@v5` (and aligned setup-node to v4).
+- Reverted lint auto-commit repository scoping to avoid running outside the git root.
 
 ## 2026-01-24
 ### Changed

@@ -87,11 +87,10 @@ jobs:
         if: steps.git-changes.outputs.changed == 'true'
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          repository: frontend
           commit_message: "Github Actions: Prettier & ESLint automatic lint fixes"
           branch: ${{ inputs.checkout_ref || github.head_ref }}
           file_pattern: |
-            **/*
+            frontend
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
 
@@ -150,11 +149,10 @@ jobs:
         if: steps.git-changes.outputs.changed == 'true'
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          repository: backend
           commit_message: "Github Actions: Ruff automatic lint fixes"
           branch: ${{ inputs.checkout_ref || github.head_ref }}
           file_pattern: |
-            **/*
+            backend
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
 
