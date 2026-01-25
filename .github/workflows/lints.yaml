@@ -7,6 +7,10 @@ on:
         description: "Branch or ref to check out for auto-fix commits."
         required: false
         type: string
+    secrets:
+      LINT_AUTOCOMMIT_TOKEN:
+        description: "PAT with repo/workflow scope to allow auto-commit to retrigger workflows."
+        required: false
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -85,6 +89,7 @@ jobs:
         if: steps.git-changes.outputs.changed == 'true'
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
+          token: ${{ secrets.LINT_AUTOCOMMIT_TOKEN || github.token }}
           commit_message: "Github Actions: Prettier & ESLint automatic lint fixes"
           branch: ${{ inputs.checkout_ref || github.head_ref }}
           file_pattern: |
@@ -147,6 +152,7 @@ jobs:
         if: steps.git-changes.outputs.changed == 'true'
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
+          token: ${{ secrets.LINT_AUTOCOMMIT_TOKEN || github.token }}
           commit_message: "Github Actions: Ruff automatic lint fixes"
           branch: ${{ inputs.checkout_ref || github.head_ref }}
           file_pattern: |
