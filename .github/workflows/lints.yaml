@@ -7,6 +7,10 @@ on:
         description: "Branch or ref to check out for auto-fix commits."
         required: false
         type: string
+    secrets:
+      LINT_AUTOCOMMIT_TOKEN:
+        description: "PAT with repo/workflow scope to allow auto-commit to retrigger workflows."
+        required: false
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -27,6 +31,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
+          token: ${{ secrets.LINT_AUTOCOMMIT_TOKEN || github.token }}
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -36,102 +41,67 @@ jobs:
             backend:
               - 'backend/**'
 
-  lint-frontend:
-    name: Lint Frontend (ESLint + Prettier)
+  lint:
+    name: Lint Frontend + Backend
     needs: changes
-    if: needs.changes.outputs.frontend == 'true'
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
+          token: ${{ secrets.LINT_AUTOCOMMIT_TOKEN || github.token }}
 
       - name: Read versions
         id: versions
         uses: ./.github/actions/read-versions
-        with:
-          read_python: "false"
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        if: needs.changes.outputs.frontend == 'true'
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ steps.versions.outputs.node_version }}
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
+        if: needs.changes.outputs.frontend == 'true'
         run: npm ci
+        working-directory: frontend
 
       - name: Prettier (auto-fix)
+        if: needs.changes.outputs.frontend == 'true'
         run: npm run format
+        working-directory: frontend
 
       - name: ESLint (auto-fix)
+        if: needs.changes.outputs.frontend == 'true'
         run: npm run lint -- --fix
+        working-directory: frontend
 
-      - name: Detect changes
-        id: git-changes
-        run: |
-          if git diff --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            git diff --name-only
-          fi
-
-      - name: Commit auto-fixes
-        if: steps.git-changes.outputs.changed == 'true'
-        uses: stefanzweifel/git-auto-commit-action@v7
-        with:
-          commit_message: "Github Actions: Prettier & ESLint automatic lint fixes"
-          branch: ${{ inputs.checkout_ref || github.head_ref }}
-          file_pattern: |
-            frontend
-          commit_user_name: "lint-bot"
-          commit_user_email: "lint-bot@users.noreply.github.com"
-
-      - name: Prettier (check only)
-        run: npm run format:check
-
-      - name: ESLint (no warnings)
-        run: npm run lint:strict
-
-  lint-backend:
-    name: Lint Backend (Ruff)
-    needs: changes
-    if: needs.changes.outputs.backend == 'true'
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ inputs.checkout_ref || github.ref }}
-
-      - name: Read versions
-        id: versions
-        uses: ./.github/actions/read-versions
-        with:
-          read_node: "false"
-
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        if: needs.changes.outputs.backend == 'true'
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ steps.versions.outputs.python_version }}
           cache: 'pip'
           cache-dependency-path: backend/environment.yml
 
-      - name: Install deps
+      - name: Install Ruff
+        if: needs.changes.outputs.backend == 'true'
         run: pip install ruff
+        working-directory: backend
 
       - name: Ruff (auto-fix)
+        if: needs.changes.outputs.backend == 'true'
         run: ruff check . --fix
+        working-directory: backend
 
       - name: Ruff format (auto-fix)
+        if: needs.changes.outputs.backend == 'true'
         run: ruff format .
+        working-directory: backend
 
       - name: Detect changes
         id: git-changes
@@ -147,15 +117,31 @@ jobs:
         if: steps.git-changes.outputs.changed == 'true'
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          commit_message: "Github Actions: Ruff automatic lint fixes"
+          token: ${{ secrets.LINT_AUTOCOMMIT_TOKEN || github.token }}
+          commit_message: "Github Actions: Lint automatic fixes"
           branch: ${{ inputs.checkout_ref || github.head_ref }}
           file_pattern: |
+            frontend
             backend
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
 
+      - name: Prettier (check only)
+        if: needs.changes.outputs.frontend == 'true'
+        run: npm run format:check
+        working-directory: frontend
+
+      - name: ESLint (no warnings)
+        if: needs.changes.outputs.frontend == 'true'
+        run: npm run lint:strict
+        working-directory: frontend
+
       - name: Ruff (check only)
+        if: needs.changes.outputs.backend == 'true'
         run: ruff check .
+        working-directory: backend
 
       - name: Ruff format (check only)
+        if: needs.changes.outputs.backend == 'true'
         run: ruff format --check .
+        working-directory: backend
