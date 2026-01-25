@@ -77,7 +77,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "Github Actions: Prettier & ESLint automatic lint fixes"
-          branch: ${{ github.head_ref }}
+          branch: ${{ inputs.checkout_ref || github.head_ref }}
           file_pattern: |
             frontend/**/*
           commit_user_name: "lint-bot"
@@ -99,6 +99,9 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.checkout_ref || github.ref }}
 
       - name: Read versions
         id: versions
@@ -125,7 +128,7 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "Github Actions: Ruff automatic lint fixes"
-          branch: ${{ github.head_ref }}
+          branch: ${{ inputs.checkout_ref || github.head_ref }}
           file_pattern: |
             backend/**/*
           commit_user_name: "lint-bot"
