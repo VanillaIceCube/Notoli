@@ -31,6 +31,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
+          token: ${{ secrets.LINT_AUTOCOMMIT_TOKEN || github.token }}
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -53,6 +54,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
+          token: ${{ secrets.LINT_AUTOCOMMIT_TOKEN || github.token }}
 
       - name: Read versions
         id: versions
@@ -116,6 +118,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
+          token: ${{ secrets.LINT_AUTOCOMMIT_TOKEN || github.token }}
 
       - name: Read versions
         id: versions
