@@ -13,6 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
+  actions: write
   contents: write
 
 jobs:
@@ -92,10 +93,46 @@ jobs:
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
 
+      - name: Trigger CI rerun on latest commit
+        if: steps.git-changes.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        env:
+          CHECKOUT_REF: ${{ inputs.checkout_ref || github.head_ref || github.ref_name }}
+        with:
+          script: |
+            const ref = process.env.CHECKOUT_REF;
+            if (!ref) {
+              core.setFailed('Missing checkout ref for workflow dispatch.');
+              return;
+            }
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yaml',
+              ref,
+              inputs: {
+                checkout_ref: ref,
+              },
+            });
+
+      - name: Cancel current workflow run
+        if: steps.git-changes.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.cancelWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+            });
+
       - name: Prettier (check only)
+        if: steps.git-changes.outputs.changed != 'true'
         run: npm run format:check
 
       - name: ESLint (no warnings)
+        if: steps.git-changes.outputs.changed != 'true'
         run: npm run lint:strict
 
   lint-backend:
@@ -154,8 +191,44 @@ jobs:
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
 
+      - name: Trigger CI rerun on latest commit
+        if: steps.git-changes.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        env:
+          CHECKOUT_REF: ${{ inputs.checkout_ref || github.head_ref || github.ref_name }}
+        with:
+          script: |
+            const ref = process.env.CHECKOUT_REF;
+            if (!ref) {
+              core.setFailed('Missing checkout ref for workflow dispatch.');
+              return;
+            }
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yaml',
+              ref,
+              inputs: {
+                checkout_ref: ref,
+              },
+            });
+
+      - name: Cancel current workflow run
+        if: steps.git-changes.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.cancelWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+            });
+
       - name: Ruff (check only)
+        if: steps.git-changes.outputs.changed != 'true'
         run: ruff check .
 
       - name: Ruff format (check only)
+        if: steps.git-changes.outputs.changed != 'true'
         run: ruff format --check .
