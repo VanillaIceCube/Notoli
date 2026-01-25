@@ -2,6 +2,11 @@ name: Tests
 
 on:
   workflow_call:
+    inputs:
+      checkout_ref:
+        description: "Branch or ref to check out for tests."
+        required: false
+        type: string
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -16,6 +21,8 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.checkout_ref || github.ref }}
 
       - name: Read versions
         id: versions
@@ -45,6 +52,8 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.checkout_ref || github.ref }}
 
       - name: Read versions
         id: versions

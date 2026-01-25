@@ -1,0 +1,21 @@
+name: Lint Auto Fixes
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: lint-autofix-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  lints:
+    name: Lints (Auto-fix)
+    uses: ./.github/workflows/lints.yaml
+    with:
+      checkout_ref: ${{ github.event.pull_request.head.ref }}
+      auto_fix: true
+      run_checks: true
