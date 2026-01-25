@@ -6,16 +6,16 @@ module.exports = {
     jest: true,
     es2020: true,
   },
-  ignorePatterns: ["build/**", "coverage/**", "node_modules/**"],
+  ignorePatterns: ['build/**', 'coverage/**', 'node_modules/**'],
   settings: {
     react: {
-      version: "detect",
+      version: 'detect',
     },
   },
-  extends: ["react-app", "react-app/jest"],
+  extends: ['react-app', 'react-app/jest'],
   rules: {
-    "react/react-in-jsx-scope": "off",
-    "react/prop-types": "off",
-    "jsx-a11y/no-autofocus": "off",
+    'react/react-in-jsx-scope': 'off',
+    'react/prop-types': 'off',
+    'jsx-a11y/no-autofocus': 'off',
   },
 };
