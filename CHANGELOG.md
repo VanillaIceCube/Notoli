@@ -1,13 +1,17 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-01-25
+### Changed
+- Centralized CI version detection into a reusable `read-versions` composite action for Node and Python.
+- Documented Ruff lint rules and enabled safe autofix for unused assignments via config.
+
 ## 2026-01-24
 ### Changed
 - Standardized Conda environment management using a single `environment_conda_export.py` script.
 - Environment exports now always generate a minimal `environment.yml` and a separate `requirements.txt` for pip packages.
 - Pip dependencies are captured as top-level installs with pinned versions, excluding transitive dependencies.
 - Removed unstable pip entries (e.g. `@ file:///…`) to ensure portable, reproducible environments.
-- Centralized CI version detection into a reusable `read-versions` composite action for Node and Python.
 
 
 ## 2026-01-22
