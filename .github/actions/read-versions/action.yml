@@ -12,16 +12,19 @@ inputs:
 outputs:
   node_version:
     description: "Node version from frontend/package.json engines.node"
+    value: ${{ steps.node.outputs.node_version }}
   python_version:
     description: "Python version from backend/environment.yml"
+    value: ${{ steps.python.outputs.python_version }}
 runs:
   using: composite
   steps:
     - name: Read Node version
+      id: node
       if: ${{ inputs.read_node == 'true' }}
       shell: bash
       run: |
-        python - <<'PY'
+        python3 - <<'PY'
         import json
         import os
         from pathlib import Path
@@ -37,10 +40,11 @@ runs:
         PY
 
     - name: Read Python version
+      id: python
       if: ${{ inputs.read_python == 'true' }}
       shell: bash
       run: |
-        python - <<'PY'
+        python3 - <<'PY'
         import os
         import re
         from pathlib import Path
