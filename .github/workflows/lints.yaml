@@ -23,7 +23,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend:  ${{ steps.filter.outputs.backend }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
@@ -47,7 +47,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
@@ -58,7 +58,7 @@ jobs:
         with:
           read_python: "false"
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ steps.versions.outputs.node_version }}
           cache: 'npm'
@@ -110,7 +110,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
@@ -121,7 +121,7 @@ jobs:
         with:
           read_node: "false"
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ steps.versions.outputs.python_version }}
           cache: 'pip'

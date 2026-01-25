@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 - Aligned lint auto-commit branches with the checkout ref for reusable workflow calls.
 - Skip lint auto-commit steps when no changes are detected after auto-fixes.
 - Scoped lint auto-commit actions to their respective subdirectories to ensure changes are staged.
+- Updated GitHub Actions versions to use released `actions/checkout@v4` and `actions/setup-python@v5` (and aligned setup-node to v4).
 
 ## 2026-01-24
 ### Changed
