@@ -6,13 +6,17 @@ from django.db import models
 class Workspace(models.Model):
     # Attributes
     name = models.CharField(max_length=255)
+
     description = models.TextField(blank=True)
 
     # Ownership
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+
         on_delete=models.CASCADE,
+
         related_name="owned_workspaces",
+        
     )
     collaborators = models.ManyToManyField(
         settings.AUTH_USER_MODEL, blank=True, related_name="collaborating_workspaces"

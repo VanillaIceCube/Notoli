@@ -17,22 +17,30 @@ function App() {
 
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
+
   const [drawerWorkspacesLabel, setDrawerWorkspacesLabel] = useState('');
 
   // Snackbar
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+
   const [snackbarSeverity, setSnackbarSeverity] = useState('');
+
   const [snackbarMessage, setSnackbarMessage] = useState('');
+
 
   const showSnackbar = (severity, message) => {
     setSnackbarSeverity(severity);
+
     setSnackbarMessage(message);
+
     setSnackbarOpen(true);
   };
 
   const handleSnackbarClose = (_event, reason) => {
     if (reason === 'clickaway') return;
+
     setSnackbarOpen(false);
+    
   };
 
   return (
