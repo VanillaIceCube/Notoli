@@ -1,11 +1,15 @@
 name: CI
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      checkout_ref:
+        description: "Branch or ref to check out for auto-fix commits."
+        required: true
+        type: string
 
 concurrency:
-  group: continuous-integration-${{ github.ref }}
+  group: continuous-integration-${{ inputs.checkout_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -17,22 +21,27 @@ jobs:
     name: Lints
     uses: ./.github/workflows/lints.yaml
     with:
-      checkout_ref: ${{ github.event.pull_request.head.ref }}
+      checkout_ref: ${{ inputs.checkout_ref }}
+      auto_fix: false
+      run_checks: true
 
   tests:
     name: Tests
     uses: ./.github/workflows/tests.yaml
+    with:
+      checkout_ref: ${{ inputs.checkout_ref }}
   
   pr-summary:
     name: Commentary
     needs: [lints, tests]
+    if: github.event_name == 'pull_request'
     uses: ./.github/workflows/commentary.yaml
     secrets: inherit
 
   auto-merge:
     name: Auto Merge
     needs: [lints, tests]
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && needs.lints.result == 'success' && needs.tests.result == 'success'
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]' && needs.lints.result == 'success' && needs.tests.result == 'success'
     uses: ./.github/workflows/auto_merge.yml
     permissions:
       contents: write

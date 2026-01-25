@@ -7,6 +7,16 @@ on:
         description: "Branch or ref to check out for auto-fix commits."
         required: false
         type: string
+      auto_fix:
+        description: "Whether to run auto-fix steps and commit changes."
+        required: false
+        type: boolean
+        default: true
+      run_checks:
+        description: "Whether to run check-only lint steps."
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -66,9 +76,11 @@ jobs:
         run: npm ci
 
       - name: Prettier (auto-fix)
+        if: inputs.auto_fix
         run: npm run format
 
       - name: ESLint (auto-fix)
+        if: inputs.auto_fix
         run: npm run lint -- --fix
 
       - name: Detect changes
@@ -82,7 +94,7 @@ jobs:
           fi
 
       - name: Commit auto-fixes
-        if: steps.git-changes.outputs.changed == 'true'
+        if: inputs.auto_fix && steps.git-changes.outputs.changed == 'true'
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "Github Actions: Prettier & ESLint automatic lint fixes"
@@ -93,9 +105,11 @@ jobs:
           commit_user_email: "lint-bot@users.noreply.github.com"
 
       - name: Prettier (check only)
+        if: inputs.run_checks && steps.git-changes.outputs.changed != 'true'
         run: npm run format:check
 
       - name: ESLint (no warnings)
+        if: inputs.run_checks && steps.git-changes.outputs.changed != 'true'
         run: npm run lint:strict
 
   lint-backend:
@@ -128,9 +142,11 @@ jobs:
         run: pip install ruff
 
       - name: Ruff (auto-fix)
+        if: inputs.auto_fix
         run: ruff check . --fix
 
       - name: Ruff format (auto-fix)
+        if: inputs.auto_fix
         run: ruff format .
 
       - name: Detect changes
@@ -144,7 +160,7 @@ jobs:
           fi
 
       - name: Commit auto-fixes
-        if: steps.git-changes.outputs.changed == 'true'
+        if: inputs.auto_fix && steps.git-changes.outputs.changed == 'true'
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "Github Actions: Ruff automatic lint fixes"
@@ -155,7 +171,9 @@ jobs:
           commit_user_email: "lint-bot@users.noreply.github.com"
 
       - name: Ruff (check only)
+        if: inputs.run_checks && steps.git-changes.outputs.changed != 'true'
         run: ruff check .
 
       - name: Ruff format (check only)
+        if: inputs.run_checks && steps.git-changes.outputs.changed != 'true'
         run: ruff format --check .
