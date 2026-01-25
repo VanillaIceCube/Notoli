@@ -31,7 +31,7 @@ Follow one of the setup paths below before running the app.
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
 - Update Conda env: `conda env update --file backend/environment.yml --prune`
 - Regenerate Conda env + requirements:
-  - `python backend/environment_conda_export.py export -o backend/environment.yml`
+  - `python backend/environment_manager.py export -o backend/environment.yml`
 - Frontend deps: `cd frontend` then `npm install`
 - Note: pip dependencies are installed via the `pip:` section in `environment.yml`
   and resolved from `requirements.txt` (never via conda).
