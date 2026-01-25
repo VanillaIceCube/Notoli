@@ -14,6 +14,7 @@ All notable changes to this project are documented in this file.
 - Reverted lint auto-commit repository scoping to avoid running outside the git root.
 - Fixed `read-versions` composite action outputs and reduced noisy paths-filter warnings.
 - Allow lint auto-commits to use a PAT so pushes retrigger workflows.
+- Configured lint checkouts to use the PAT when available so auto-commit pushes use the same credentials.
 
 ## 2026-01-24
 ### Changed
