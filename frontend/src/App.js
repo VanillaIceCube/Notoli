@@ -40,7 +40,9 @@ function App() {
       <Router>
         <MyAppBar appBarHeader={
           appBarHeader
-        } setDrawerOpen={setDrawerOpen} />
+        } setDrawerOpen={
+          setDrawerOpen
+        } />
         <MyDrawer
           open={drawerOpen}
           setDrawerOpen={setDrawerOpen}
