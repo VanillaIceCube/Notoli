@@ -93,6 +93,7 @@ jobs:
             frontend
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
+          token: ${{ secrets.WORKFLOW_PAT || github.token }}
 
       - name: Prettier (check only)
         run: npm run format:check
@@ -155,6 +156,7 @@ jobs:
             backend
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
+          token: ${{ secrets.WORKFLOW_PAT || github.token }}
 
       - name: Ruff (check only)
         run: ruff check .
