@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 - Centralized CI version detection into a reusable `read-versions` composite action for Node and Python.
 - Documented Ruff lint rules and enabled safe autofix for unused assignments via config.
 - Fixed lint workflow checkouts to use the PR head branch so auto-commit can push fixes.
+- Passed the PR head ref into lint workflows invoked via `workflow_call` to avoid detached HEAD.
 
 ## 2026-01-24
 ### Changed

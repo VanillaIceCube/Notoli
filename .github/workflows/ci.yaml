@@ -16,6 +16,8 @@ jobs:
   lints:
     name: Lints
     uses: ./.github/workflows/lints.yaml
+    with:
+      checkout_ref: ${{ github.event.pull_request.head.ref }}
 
   tests:
     name: Tests
