@@ -7,6 +7,10 @@ on:
         description: "Branch or ref to check out for auto-fix commits."
         required: false
         type: string
+    secrets:
+      auto_commit_token:
+        description: "Token to use for auto-fix commits so follow-up workflows run."
+        required: false
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -14,6 +18,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   changes:
@@ -27,6 +32,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
+          token: ${{ secrets.auto_commit_token || github.token }}
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -51,6 +57,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
+          token: ${{ secrets.auto_commit_token || github.token }}
 
       - name: Read versions
         id: versions
@@ -85,6 +92,7 @@ jobs:
 
       - name: Commit auto-fixes
         if: steps.git-changes.outputs.changed == 'true'
+        id: auto-commit-frontend
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "Github Actions: Prettier & ESLint automatic lint fixes"
@@ -93,6 +101,20 @@ jobs:
             frontend
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
+          token: ${{ secrets.auto_commit_token || github.token }}
+
+      - name: Trigger CI after auto-commit
+        if: steps.auto-commit-frontend.outputs.changes_detected == 'true'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.auto_commit_token || github.token }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yaml',
+              ref: '${{ inputs.checkout_ref || github.head_ref }}',
+            });
 
       - name: Prettier (check only)
         run: npm run format:check
@@ -113,6 +135,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
+          token: ${{ secrets.auto_commit_token || github.token }}
 
       - name: Read versions
         id: versions
@@ -147,6 +170,7 @@ jobs:
 
       - name: Commit auto-fixes
         if: steps.git-changes.outputs.changed == 'true'
+        id: auto-commit-backend
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "Github Actions: Ruff automatic lint fixes"
@@ -155,6 +179,20 @@ jobs:
             backend
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
+          token: ${{ secrets.auto_commit_token || github.token }}
+
+      - name: Trigger CI after auto-commit
+        if: steps.auto-commit-backend.outputs.changes_detected == 'true'
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.auto_commit_token || github.token }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yaml',
+              ref: '${{ inputs.checkout_ref || github.head_ref }}',
+            });
 
       - name: Ruff (check only)
         run: ruff check .
