@@ -45,6 +45,7 @@ except ImportError as e:
 # helpers: subprocess
 # ----------------------------
 
+
 def _run(cmd: Sequence[str], *, check: bool = True) -> subprocess.CompletedProcess:
     """Run a command and return CompletedProcess with stdout text."""
     cp = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -58,6 +59,7 @@ def _run(cmd: Sequence[str], *, check: bool = True) -> subprocess.CompletedProce
 
 def _which(executable: str) -> bool:
     from shutil import which
+
     return which(executable) is not None
 
 
@@ -80,7 +82,13 @@ def _normalize_freeze_line(line: str) -> Optional[str]:
         return None
 
     # Reject editable / direct refs here (handled optionally elsewhere).
-    if s.startswith("-e ") or " @ " in s or "://" in s or s.startswith(".") or s.startswith("/"):
+    if (
+        s.startswith("-e ")
+        or " @ " in s
+        or "://" in s
+        or s.startswith(".")
+        or s.startswith("/")
+    ):
         return None
 
     # Keep only name==version
@@ -97,7 +105,9 @@ def _normalize_freeze_line(line: str) -> Optional[str]:
     return f"{name}=={ver}"
 
 
-def _pip_top_level_freeze(*, exclude: Iterable[str], include_editable: bool) -> List[str]:
+def _pip_top_level_freeze(
+    *, exclude: Iterable[str], include_editable: bool
+) -> List[str]:
     """
     Get "top-level" pip installs (not required by any other package).
 
@@ -146,6 +156,7 @@ def _pip_top_level_freeze(*, exclude: Iterable[str], include_editable: bool) -> 
 # conda environment info
 # ----------------------------
 
+
 def _current_conda_env_name() -> str:
     # Best effort: CONDA_DEFAULT_ENV is set in activated envs
     name = os.environ.get("CONDA_DEFAULT_ENV")
@@ -156,6 +167,7 @@ def _current_conda_env_name() -> str:
     if _which("conda"):
         cp = _run(["conda", "info", "--json"])
         import json
+
         info = json.loads(cp.stdout)
         # active_prefix_name is usually present
         return info.get("active_prefix_name") or "conda_env"
@@ -167,6 +179,7 @@ def _current_python_version() -> str:
     if _which("conda"):
         cp = _run(["conda", "list", "python", "--json"])
         import json
+
         rows = json.loads(cp.stdout)
         for r in rows:
             if r.get("name") == "python" and r.get("version"):
@@ -183,7 +196,9 @@ class OutputPaths:
     requirements_txt: pathlib.Path
 
 
-def _resolve_paths(output_env_yml: str, requirements_path: Optional[str]) -> OutputPaths:
+def _resolve_paths(
+    output_env_yml: str, requirements_path: Optional[str]
+) -> OutputPaths:
     env_path = pathlib.Path(output_env_yml).resolve()
 
     if requirements_path:
@@ -198,6 +213,7 @@ def _resolve_paths(output_env_yml: str, requirements_path: Optional[str]) -> Out
 # ----------------------------
 # YAML writing
 # ----------------------------
+
 
 def _build_env_yaml(
     *,
@@ -229,6 +245,7 @@ def _build_env_yaml(
 
     # Dump to string
     import io
+
     buf = io.StringIO()
     y.dump(root, buf)
     yaml_text = buf.getvalue().rstrip() + "\n"
@@ -260,6 +277,7 @@ def _write_requirements(path: pathlib.Path, pkgs: List[str]) -> None:
 # ----------------------------
 # CLI
 # ----------------------------
+
 
 def _cli() -> argparse.Namespace:
     p = argparse.ArgumentParser(
@@ -315,7 +333,9 @@ def _cli() -> argparse.Namespace:
         help="Also print resulting files to stdout.",
     )
 
-    ins = sub.add_parser("install-help", help="Print the install/update commands you should run")
+    sub.add_parser(
+        "install-help", help="Print the install/update commands you should run"
+    )
 
     return p.parse_args()
 
@@ -324,6 +344,7 @@ def _cli() -> argparse.Namespace:
 # commands
 # ----------------------------
 
+
 def cmd_export(args: argparse.Namespace) -> None:
     paths = _resolve_paths(args.output, args.requirements_output)
 
@@ -331,7 +352,9 @@ def cmd_export(args: argparse.Namespace) -> None:
     python_version = args.python_version or _current_python_version()
 
     # Requirements: top-level only, stable name==version lines
-    reqs = _pip_top_level_freeze(exclude=args.exclude, include_editable=args.include_editable)
+    reqs = _pip_top_level_freeze(
+        exclude=args.exclude, include_editable=args.include_editable
+    )
 
     # Write requirements first so the env references a real file name
     _write_requirements(paths.requirements_txt, reqs)
@@ -355,6 +378,7 @@ def cmd_export(args: argparse.Namespace) -> None:
     root["dependencies"] = deps
 
     import io
+
     buf = io.StringIO()
     y.dump(root, buf)
     yaml_text = buf.getvalue().rstrip() + "\n"
