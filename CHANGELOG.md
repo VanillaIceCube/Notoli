@@ -1,7 +1,28 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
-## 2026-01-23
+## 2026-01-25
+### Changed
+- Centralized CI version detection into a reusable `read-versions` composite action for Node and Python.
+- Documented Ruff lint rules and enabled safe autofix for unused assignments via config.
+- Fixed lint workflow checkouts to use the PR head branch so auto-commit can push fixes.
+- Passed the PR head ref into lint workflows invoked via `workflow_call` to avoid detached HEAD.
+- Aligned lint auto-commit branches with the checkout ref for reusable workflow calls.
+- Skip lint auto-commit steps when no changes are detected after auto-fixes.
+- Scoped lint auto-commit actions to their respective subdirectories to ensure changes are staged.
+- Updated GitHub Actions versions to use released `actions/checkout@v4` and `actions/setup-python@v5` (and aligned setup-node to v4).
+- Reverted lint auto-commit repository scoping to avoid running outside the git root.
+- Fixed `read-versions` composite action outputs and reduced noisy paths-filter warnings.
+
+## 2026-01-24
+### Changed
+- Standardized Conda environment management using a single `environment_conda_export.py` script.
+- Environment exports now always generate a minimal `environment.yml` and a separate `requirements.txt` for pip packages.
+- Pip dependencies are captured as top-level installs with pinned versions, excluding transitive dependencies.
+- Removed unstable pip entries (e.g. `@ file:///…`) to ensure portable, reproducible environments.
+
+
+## 2026-01-22
 ### Changed
 - CI now runs the PR summary workflow after lints and tests complete.
 - PR summary reports exactly which OpenAI secrets are missing when not configured.
@@ -11,8 +32,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Removed the limit to for dependabot PRs
 
-
-## 2026-01-21
+## 2026-01-20
 ### Added
 - Added a reusable Dependabot auto-merge workflow (`.github/workflows/dependabot_auto_merge.yml`).
 ### Changed

@@ -1,6 +1,7 @@
 [lint]
-select = ["E", "F", "I"]
-ignore = ["E501"]
+select = ["E", "F", "I"] # Enable pycodestyle errors, pyflakes, and import rules.
+ignore = ["E501"] # Ignore line-length violations; handled by formatting/style elsewhere.
+extend-safe-fixes = ["F841"] # Allow auto-fixing unused assignments without --unsafe-fixes.
 
 [lint.isort]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]

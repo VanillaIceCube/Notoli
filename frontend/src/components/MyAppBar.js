@@ -1,5 +1,8 @@
 import { AppBar, Box, Toolbar, Typography, IconButton } from '@mui/material';
-import { Menu as MenuIcon, AccountCircle, Notifications, ChevronLeft } from '@mui/icons-material';
+import MenuIcon from '@mui/icons-material/Menu';
+import AccountCircle from '@mui/icons-material/AccountCircle';
+import Notifications from '@mui/icons-material/Notifications';
+import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { goBackToParent } from '../utils/Navigation';
 

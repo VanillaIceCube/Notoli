@@ -2,6 +2,11 @@ name: Lints
 
 on:
   workflow_call:
+    inputs:
+      checkout_ref:
+        description: "Branch or ref to check out for auto-fix commits."
+        required: false
+        type: string
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -18,12 +23,13 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend:  ${{ steps.filter.outputs.backend }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.checkout_ref || github.ref }}
       - uses: dorny/paths-filter@v3
         id: filter
         with:
-          base: ${{ github.event.pull_request.base.sha || github.sha }}
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           filters: |
             frontend:
               - 'frontend/**'
@@ -39,11 +45,20 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v4
         with:
-          node-version: '18.20.8'
+          fetch-depth: 0
+          ref: ${{ inputs.checkout_ref || github.ref }}
+
+      - name: Read versions
+        id: versions
+        uses: ./.github/actions/read-versions
+        with:
+          read_python: "false"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.versions.outputs.node_version }}
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
 
@@ -56,13 +71,24 @@ jobs:
       - name: ESLint (auto-fix)
         run: npm run lint -- --fix
 
+      - name: Detect changes
+        id: git-changes
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --name-only
+          fi
+
       - name: Commit auto-fixes
+        if: steps.git-changes.outputs.changed == 'true'
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "Github Actions: Prettier & ESLint automatic lint fixes"
-          branch: ${{ github.head_ref }}
+          branch: ${{ inputs.checkout_ref || github.head_ref }}
           file_pattern: |
-            frontend/**/*
+            frontend
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
 
@@ -81,11 +107,20 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
         with:
-          python-version: '3.12'
+          fetch-depth: 0
+          ref: ${{ inputs.checkout_ref || github.ref }}
+
+      - name: Read versions
+        id: versions
+        uses: ./.github/actions/read-versions
+        with:
+          read_node: "false"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ steps.versions.outputs.python_version }}
           cache: 'pip'
           cache-dependency-path: backend/environment.yml
 
@@ -98,13 +133,24 @@ jobs:
       - name: Ruff format (auto-fix)
         run: ruff format .
 
+      - name: Detect changes
+        id: git-changes
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --name-only
+          fi
+
       - name: Commit auto-fixes
+        if: steps.git-changes.outputs.changed == 'true'
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "Github Actions: Ruff automatic lint fixes"
-          branch: ${{ github.head_ref }}
+          branch: ${{ inputs.checkout_ref || github.head_ref }}
           file_pattern: |
-            backend/**/*
+            backend
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
 
