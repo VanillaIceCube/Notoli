@@ -11,7 +11,9 @@ class Workspace(models.Model):
     # Ownership
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+
         on_delete=models.CASCADE,
+        
         related_name="owned_workspaces",
     )
     collaborators = models.ManyToManyField(
