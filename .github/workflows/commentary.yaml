@@ -168,12 +168,12 @@ jobs:
   ai-review:
     name: PR Review
     if: >
+      github.event_name == 'workflow_call' ||
       (github.event_name == 'issue_comment' &&
         github.event.action == 'created' &&
         github.event.sender.login == 'chatgpt-codex-connector' &&
-        contains(github.event.comment.body, 'You have reached your Codex usage limits for code reviews.') &&
-        github.event.issue.pull_request) ||
-      (github.event_name == 'workflow_call')
+        contains(github.event.comment.body || '', 'You have reached your Codex usage limits for code reviews.') &&
+        github.event.issue.pull_request)
     runs-on: ubuntu-latest
 
     steps:
