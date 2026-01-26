@@ -33,7 +33,10 @@ jobs:
   auto-merge:
     name: Auto Merge
     needs: [lints, tests]
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && needs.lints.result == 'success' && needs.tests.result == 'success'
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      needs.lints.result == 'success' &&
+      needs.tests.result == 'success'
     uses: ./.github/workflows/auto_merge.yml
     permissions:
       contents: write

@@ -31,6 +31,7 @@ jobs:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
           max_bytes: "45000"
+
       - name: Call OpenAI (Summary)
         id: openai
         uses: ./.github/actions/openai-chat
@@ -86,98 +87,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check for Codex usage limit comment
-        id: codex_limit
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const pull_number = context.payload.pull_request.number;
-            const issue_number = pull_number;
-            const limitPattern = /codex usage limits for code reviews/i;
-            const isConnector = (login, type) => {
-              const normalized = (login || '').toLowerCase();
-              return (
-                normalized.includes('chatgpt-codex-connector') ||
-                normalized.includes('codex-connector') ||
-                (type || '').toLowerCase() === 'bot'
-              );
-            };
-            const isLimitHit = (login, type, body) =>
-              isConnector(login, type) && limitPattern.test(body || '');
-            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-            const maxAttempts = 6;
-            const delayMs = 20000;
-            let hit = false;
-
-            for (let attempt = 1; attempt <= maxAttempts && !hit; attempt += 1) {
-              const [comments, reviews, reviewComments] = await Promise.all([
-                github.paginate(github.rest.issues.listComments, {
-                  owner,
-                  repo,
-                  issue_number,
-                  per_page: 100,
-                }),
-                github.paginate(github.rest.pulls.listReviews, {
-                  owner,
-                  repo,
-                  pull_number,
-                  per_page: 100,
-                }),
-                github.paginate(github.rest.pulls.listReviewComments, {
-                  owner,
-                  repo,
-                  pull_number,
-                  per_page: 100,
-                }),
-              ]);
-
-              const commentHit = comments.some((comment) =>
-                isLimitHit(comment.user?.login, comment.user?.type, comment.body)
-              );
-              const reviewHit = reviews.some((review) =>
-                isLimitHit(review.user?.login, review.user?.type, review.body)
-              );
-              const reviewCommentHit = reviewComments.some((comment) =>
-                isLimitHit(comment.user?.login, comment.user?.type, comment.body)
-              );
-
-              hit = commentHit || reviewHit || reviewCommentHit;
-
-              if (!hit && attempt < maxAttempts) {
-                core.info(
-                  `No Codex limit message yet. Waiting ${delayMs / 1000}s (attempt ${attempt}/${maxAttempts})...`
-                );
-                await sleep(delayMs);
-              }
-            }
-
-            if (!hit) {
-              core.info(
-                'No Codex limit message found in issue comments, reviews, or review comments.'
-              );
-            }
-
-            core.setOutput('limit_hit', hit ? 'true' : 'false');
-
       - name: Checkout PR
-        if: steps.codex_limit.outputs.limit_hit == 'true'
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Get PR diff
-        if: steps.codex_limit.outputs.limit_hit == 'true'
         id: pr_diff
         uses: ./.github/actions/get-pr-diff
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
           max_bytes: "45000"
+
       - name: Call OpenAI (Review)
-        if: steps.codex_limit.outputs.limit_hit == 'true'
         id: openai_review
         uses: ./.github/actions/openai-chat
         with:
@@ -200,15 +123,16 @@ jobs:
             }
 
             Rules:
-            - Use only line numbers shown as "R<line>:" in the diff (RIGHT side).
+            - Use only line numbers shown as "A<line>:" in the diff (RIGHT side, added lines only).
             - Use file paths exactly as shown in the diff headers (e.g., "b/path" => "path").
             - Max 6 inline comments. If none, return an empty comments array.
             - If issues are critical, use REQUEST_CHANGES; if no issues, APPROVE; otherwise COMMENT.
             - If the diff is truncated, mention it in the body.
 
             Here is the line-numbered diff:
+
       - name: Create PR Review
-        if: steps.codex_limit.outputs.limit_hit == 'true'
+        id: review_result
         uses: actions/github-script@v8
         env:
           REVIEW_BODY: ${{ steps.openai_review.outputs.content }}
@@ -217,14 +141,28 @@ jobs:
           script: |
             const fs = require('fs');
 
+            const setOutputs = (eventValue, submittedValue) => {
+              core.setOutput('review_event', eventValue);
+              core.setOutput('review_submitted', submittedValue ? 'true' : 'false');
+            };
+
             const raw = (process.env.REVIEW_BODY || '').trim();
             if (!raw) {
               core.warning('Review body is empty; skipping review.');
+              setOutputs('NONE', false);
               return;
             }
 
-            if (raw.startsWith('Missing secret(s):')) {
+            const nonJsonPrefixes = [
+              'Missing secret(s):',
+              'OpenAI API error:',
+              'OpenAI did not return a response.',
+              'OpenAI did not return a review.',
+            ];
+
+            if (nonJsonPrefixes.some((prefix) => raw.startsWith(prefix))) {
               core.warning(raw);
+              setOutputs('NONE', false);
               return;
             }
 
@@ -256,7 +194,7 @@ jobs:
             }
 
             if (!body) {
-              body = 'Automated review generated due to Codex limits.';
+              body = 'Automated review generated.';
             }
 
             const lineDiffPath = process.env.LINE_DIFF_PATH;
@@ -274,8 +212,8 @@ jobs:
                   }
                   continue;
                 }
-                if (line.startsWith('R') && currentPath) {
-                  const match = line.match(/^R(\d+):/);
+                if ((line.startsWith('A') || line.startsWith('R')) && currentPath) {
+                  const match = line.match(/^[AR](\d+):/);
                   if (match) {
                     const num = Number(match[1]);
                     if (!Number.isNaN(num)) {
@@ -323,3 +261,5 @@ jobs:
               body,
               comments: filteredComments.length > 0 ? filteredComments : undefined,
             });
+
+            setOutputs(event, true);
