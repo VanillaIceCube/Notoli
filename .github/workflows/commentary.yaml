@@ -2,6 +2,39 @@ name: Commentary
 
 on:
   workflow_call:
+    inputs:
+      lint_frontend_status:
+        description: Frontend lint status (success/failure/none).
+        required: false
+        type: string
+      lint_frontend_log:
+        description: Frontend lint log tail.
+        required: false
+        type: string
+      lint_backend_status:
+        description: Backend lint status (success/failure/none).
+        required: false
+        type: string
+      lint_backend_log:
+        description: Backend lint log tail.
+        required: false
+        type: string
+      test_frontend_status:
+        description: Frontend test status (success/failure/none).
+        required: false
+        type: string
+      test_frontend_log:
+        description: Frontend test log tail.
+        required: false
+        type: string
+      test_backend_status:
+        description: Backend test status (success/failure/none).
+        required: false
+        type: string
+      test_backend_log:
+        description: Backend test log tail.
+        required: false
+        type: string
 
 concurrency:
   group: commentary-${{ github.ref }}
@@ -128,6 +161,20 @@ jobs:
             - Max 6 inline comments. If none, return an empty comments array.
             - If issues are critical, use REQUEST_CHANGES; if no issues, APPROVE; otherwise COMMENT.
             - If the diff is truncated, mention it in the body.
+
+            CI context (lint/test results):
+            - lint_frontend_status: ${{ inputs.lint_frontend_status || 'none' }}
+            - lint_backend_status: ${{ inputs.lint_backend_status || 'none' }}
+            - test_frontend_status: ${{ inputs.test_frontend_status || 'none' }}
+            - test_backend_status: ${{ inputs.test_backend_status || 'none' }}
+            - lint_frontend_log (tail):
+            ${{ inputs.lint_frontend_log }}
+            - lint_backend_log (tail):
+            ${{ inputs.lint_backend_log }}
+            - test_frontend_log (tail):
+            ${{ inputs.test_frontend_log }}
+            - test_backend_log (tail):
+            ${{ inputs.test_backend_log }}
 
             Here is the line-numbered diff:
 
