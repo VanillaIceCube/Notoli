@@ -25,103 +25,29 @@ jobs:
           fetch-depth: 0
 
       - name: Get PR diff
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          echo "Base: $BASE_SHA"
-          echo "Head: $HEAD_SHA"
-
-          # Get unified diff between base and head
-          git diff --unified=3 "$BASE_SHA" "$HEAD_SHA" > pr.diff
-
-          # Truncate if it's huge so we don't blow up token limits
-          MAX_BYTES=45000
-          ACTUAL_BYTES=$(wc -c < pr.diff || echo 0)
-          if [ "$ACTUAL_BYTES" -gt "$MAX_BYTES" ]; then
-            head -c "$MAX_BYTES" pr.diff > pr_truncated.diff
-            echo "::warning::Diff was too large ($ACTUAL_BYTES bytes). Truncated to $MAX_BYTES bytes."
-            mv pr_truncated.diff pr.diff
-          fi
-
-          echo "Diff size:"
-          wc -c pr.diff
-
+        id: pr_diff
+        uses: ./.github/actions/get-pr-diff
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          head_sha: ${{ github.event.pull_request.head.sha }}
+          max_bytes: "45000"
       - name: Call OpenAI
         id: openai
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
-        run: |
-          missing_secrets=()
-          if [ -z "$OPENAI_API_KEY" ]; then
-            missing_secrets+=("OPENAI_API_KEY")
-          fi
-
-          if [ -z "$OPENAI_PROJECT_ID" ]; then
-            missing_secrets+=("OPENAI_PROJECT_ID")
-          fi
-
-          if [ "${#missing_secrets[@]}" -gt 0 ]; then
-            echo "summary=Missing secret(s): ${missing_secrets[*]}." >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # Keep diff formatting (no flattening)
-          DIFF_CONTENT=$(cat pr.diff)
-
-          # Build prompt
-          PROMPT="You are a PR summarizer for the Notoli project (Backend: Django; Frontend: React + MUI; Docker; GitHub Actions). Produce a high-level, human-readable digest of what changed and why it matters. Focus on intent, scope, behavior changes, and impact. Do NOT do a code review. Do NOT list line-by-line or file-by-file changes. Do NOT restate the diff. Be concise. If the diff is truncated, explicitly note that the summary may be incomplete. Your response MUST use the following exact sections, in order, each containing bullet points (or '(none)' if empty): ## 📌 Summary (what & why): ## 📂 Scope (what areas are affected): ## 🔄 Behavior Changes (user-visible or API-visible): Here is the diff: ${DIFF_CONTENT}"
-
-          # Build JSON safely
-          jq -n \
-            --arg prompt "$PROMPT" \
-            '
-            {
-              model: "gpt-5.1",
-              temperature: 0.3,
-              messages: [
-                { "role": "system", "content": "You are an experienced PR summarizer helping on GitHub pull requests." },
-                { "role": "user", "content": $prompt }
-              ]
-            }
-            ' > body.json
-
-          # Make API request (project is passed via header)
-          RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/chat/completions" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $OPENAI_API_KEY" \
-            -H "OpenAI-Project: $OPENAI_PROJECT_ID" \
-            --data @body.json)
-
-          echo "Raw response:"
-          echo "$RESPONSE"
-
-          # Extract review text or error
-          SUMMARY=$(echo "$RESPONSE" | jq -r '
-            if .choices and .choices[0].message and .choices[0].message.content then
-              .choices[0].message.content
-            elif .error and .error.message then
-              "OpenAI API error: " + .error.message
-            else
-              "OpenAI did not return a summary."
-            end
-          ')
-
-          echo "Summary content:"
-          echo "$SUMMARY"
-
-          # Write multi-line output for GitHub Actions
-          {
-            echo 'summary<<EOF'
-            printf '%s\n' "$SUMMARY"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/openai-chat
+        with:
+          api_key: ${{ secrets.OPENAI_API_KEY }}
+          project_id: ${{ secrets.OPENAI_PROJECT_ID }}
+          diff_path: ${{ steps.pr_diff.outputs.diff_path }}
+          model: "gpt-5.1"
+          temperature: "0.3"
+          system_prompt: "You are an experienced PR summarizer helping on GitHub pull requests."
+          prompt_prefix: |
+            You are a PR summarizer for the Notoli project (Backend: Django; Frontend: React + MUI; Docker; GitHub Actions). Produce a high-level, human-readable digest of what changed and why it matters. Focus on intent, scope, behavior changes, and impact. Do NOT do a code review. Do NOT list line-by-line or file-by-file changes. Do NOT restate the diff. Be concise. If the diff is truncated, explicitly note that the summary may be incomplete. Your response MUST use the following exact sections, in order, each containing bullet points (or '(none)' if empty): ## 📌 Summary (what & why): ## 📂 Scope (what areas are affected): ## 🔄 Behavior Changes (user-visible or API-visible): Here is the diff:
 
       - name: Update PR Description
         uses: actions/github-script@v8
         env:
-          SUMMARY_BODY: ${{ steps.openai.outputs.summary }}
+          SUMMARY_BODY: ${{ steps.openai.outputs.content }}
         with:
           script: |
             const body = process.env.SUMMARY_BODY;
@@ -244,105 +170,31 @@ jobs:
 
       - name: Get PR diff
         if: steps.codex_limit.outputs.limit_hit == 'true'
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          echo "Base: $BASE_SHA"
-          echo "Head: $HEAD_SHA"
-
-          # Get unified diff between base and head
-          git diff --unified=3 "$BASE_SHA" "$HEAD_SHA" > pr.diff
-
-          # Truncate if it's huge so we don't blow up token limits
-          MAX_BYTES=45000
-          ACTUAL_BYTES=$(wc -c < pr.diff || echo 0)
-          if [ "$ACTUAL_BYTES" -gt "$MAX_BYTES" ]; then
-            head -c "$MAX_BYTES" pr.diff > pr_truncated.diff
-            echo "::warning::Diff was too large ($ACTUAL_BYTES bytes). Truncated to $MAX_BYTES bytes."
-            mv pr_truncated.diff pr.diff
-          fi
-
-          echo "Diff size:"
-          wc -c pr.diff
-
+        id: pr_diff
+        uses: ./.github/actions/get-pr-diff
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          head_sha: ${{ github.event.pull_request.head.sha }}
+          max_bytes: "45000"
       - name: Call OpenAI (Review)
         if: steps.codex_limit.outputs.limit_hit == 'true'
         id: openai_review
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
-        run: |
-          missing_secrets=()
-          if [ -z "$OPENAI_API_KEY" ]; then
-            missing_secrets+=("OPENAI_API_KEY")
-          fi
-
-          if [ -z "$OPENAI_PROJECT_ID" ]; then
-            missing_secrets+=("OPENAI_PROJECT_ID")
-          fi
-
-          if [ "${#missing_secrets[@]}" -gt 0 ]; then
-            echo "review=Missing secret(s): ${missing_secrets[*]}." >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # Keep diff formatting (no flattening)
-          DIFF_CONTENT=$(cat pr.diff)
-
-          # Build prompt
-          PROMPT="You are a PR reviewer for the Notoli project (Backend: Django; Frontend: React + MUI; Docker; GitHub Actions). Provide a concise, high-signal code review focused on correctness, security, and maintainability risks. Flag potential bugs, edge cases, missing tests, or backwards-incompatible changes. Avoid style nitpicks. If you are unsure, say so. If the diff is truncated, explicitly note that the review may be incomplete. Use the following exact sections, in order, each containing bullet points (or '(none)' if empty): ## Review Summary: ## Issues & Suggestions: Here is the diff: ${DIFF_CONTENT}"
-
-          # Build JSON safely
-          jq -n \
-            --arg prompt "$PROMPT" \
-            '
-            {
-              model: "gpt-5.1",
-              temperature: 0.2,
-              messages: [
-                { "role": "system", "content": "You are an experienced, pragmatic PR reviewer." },
-                { "role": "user", "content": $prompt }
-              ]
-            }
-            ' > body.json
-
-          # Make API request (project is passed via header)
-          RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/chat/completions" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer $OPENAI_API_KEY" \
-            -H "OpenAI-Project: $OPENAI_PROJECT_ID" \
-            --data @body.json)
-
-          echo "Raw response:"
-          echo "$RESPONSE"
-
-          # Extract review text or error
-          REVIEW=$(echo "$RESPONSE" | jq -r '
-            if .choices and .choices[0].message and .choices[0].message.content then
-              .choices[0].message.content
-            elif .error and .error.message then
-              "OpenAI API error: " + .error.message
-            else
-              "OpenAI did not return a review."
-            end
-          ')
-
-          echo "Review content:"
-          echo "$REVIEW"
-
-          # Write multi-line output for GitHub Actions
-          {
-            echo 'review<<EOF'
-            printf '%s\n' "$REVIEW"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+        uses: ./.github/actions/openai-chat
+        with:
+          api_key: ${{ secrets.OPENAI_API_KEY }}
+          project_id: ${{ secrets.OPENAI_PROJECT_ID }}
+          diff_path: ${{ steps.pr_diff.outputs.diff_path }}
+          model: "gpt-5.1"
+          temperature: "0.2"
+          system_prompt: "You are an experienced, pragmatic PR reviewer."
+          prompt_prefix: |
+            You are a PR reviewer for the Notoli project (Backend: Django; Frontend: React + MUI; Docker; GitHub Actions). Provide a concise, high-signal code review focused on correctness, security, and maintainability risks. Flag potential bugs, edge cases, missing tests, or backwards-incompatible changes. Avoid style nitpicks. If you are unsure, say so. If the diff is truncated, explicitly note that the review may be incomplete. Use the following exact sections, in order, each containing bullet points (or '(none)' if empty): ## Review Summary: ## Issues & Suggestions: Here is the diff:
 
       - name: Comment PR Review
         if: steps.codex_limit.outputs.limit_hit == 'true'
         uses: actions/github-script@v8
         env:
-          REVIEW_BODY: ${{ steps.openai_review.outputs.review }}
+          REVIEW_BODY: ${{ steps.openai_review.outputs.content }}
         with:
           script: |
             const body = process.env.REVIEW_BODY;
@@ -352,7 +204,7 @@ jobs:
             }
 
             const header = [
-              'Codex limit reached for code reviews. Running fallback review:',
+              'Codex limit reached for code reviews. Running custom code review:',
               '',
             ].join('\n');
 
@@ -362,3 +214,5 @@ jobs:
               issue_number: context.payload.pull_request.number,
               body: `${header}${body}`,
             });
+
+
