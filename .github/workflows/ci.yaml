@@ -27,6 +27,7 @@ jobs:
   commentary:
     name: Commentary
     needs: [lints, tests]
+    if: always()
     uses: ./.github/workflows/commentary.yaml
     with:
       pr_number: ${{ github.event.pull_request.number }}
@@ -35,7 +36,7 @@ jobs:
   auto-merge:
     name: Auto Merge
     needs: [lints, tests, commentary]
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && needs.lints.result == 'success' && needs.tests.result == 'success' && needs.commentary.result == 'success'
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && needs.lints.result == 'success' && needs.tests.result == 'success' && (needs.commentary.result == 'success' || needs.commentary.result == 'skipped')
     uses: ./.github/workflows/auto_merge.yml
     permissions:
       contents: write
