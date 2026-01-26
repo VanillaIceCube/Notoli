@@ -23,7 +23,7 @@ jobs:
     name: Tests
     uses: ./.github/workflows/tests.yaml
   
-  pr-summary:
+  commentary:
     name: Commentary
     needs: [lints, tests]
     uses: ./.github/workflows/commentary.yaml
