@@ -12,9 +12,7 @@ class WorkspaceViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = WorkspaceSerializer
 
-    def get_queryset(
-            self
-        ):
+    def get_queryset(self):
         user = self.request.user
         return Workspace.objects.filter(
             Q(owner=user) | Q(created_by=user) | Q(collaborators=user)
