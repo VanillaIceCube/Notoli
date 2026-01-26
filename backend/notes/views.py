@@ -9,10 +9,7 @@ from .serializers import NoteSerializer, TodoListSerializer, WorkspaceSerializer
 
 
 class WorkspaceViewSet(viewsets.ModelViewSet):
-
-    permission_classes = [
-        IsAuthenticated
-    ]
+    permission_classes = [IsAuthenticated]
     serializer_class = WorkspaceSerializer
 
     def get_queryset(self):
