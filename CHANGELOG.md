@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-01-26
+### Changed
+- Dependabot auto-merge now also allows CVSS-based auto-merge for low-severity security alerts (while keeping patch/minor auto-merge).
+- Dependabot metadata lookup now enables alert lookup with `DEPENDABOT_PAT` fallback and includes security-events read access.
+
 ## 2026-01-25
 ### Added
 - Added `backend/environment_conda_export.py` to export Conda environments with pinned versions.
