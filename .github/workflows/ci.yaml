@@ -32,8 +32,14 @@ jobs:
 
   auto-merge:
     name: Auto Merge
-    needs: [lints, tests]
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && needs.lints.result == 'success' && needs.tests.result == 'success'
+    needs: [lints, tests, commentary]
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      needs.lints.result == 'success' &&
+      needs.tests.result == 'success' &&
+      needs.commentary.result == 'success' &&
+      needs.commentary.outputs.review_submitted == 'true' &&
+      needs.commentary.outputs.review_event == 'APPROVE'
     uses: ./.github/workflows/auto_merge.yml
     permissions:
       contents: write

@@ -2,6 +2,13 @@ name: Commentary
 
 on:
   workflow_call:
+    outputs:
+      review_event:
+        description: Review event from ai-review.
+        value: ${{ jobs.ai-review.outputs.review_event }}
+      review_submitted:
+        description: Whether ai-review created a review.
+        value: ${{ jobs.ai-review.outputs.review_submitted }}
 
 concurrency:
   group: commentary-${{ github.ref }}
@@ -31,6 +38,7 @@ jobs:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
           max_bytes: "45000"
+
       - name: Call OpenAI (Summary)
         id: openai
         uses: ./.github/actions/openai-chat
@@ -82,102 +90,26 @@ jobs:
 
   ai-review:
     name: ai-review
-    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    outputs:
+      review_event: ${{ steps.review_result.outputs.review_event }}
+      review_submitted: ${{ steps.review_result.outputs.review_submitted }}
 
     steps:
-      - name: Check for Codex usage limit comment
-        id: codex_limit
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const pull_number = context.payload.pull_request.number;
-            const issue_number = pull_number;
-            const limitPattern = /codex usage limits for code reviews/i;
-            const isConnector = (login, type) => {
-              const normalized = (login || '').toLowerCase();
-              return (
-                normalized.includes('chatgpt-codex-connector') ||
-                normalized.includes('codex-connector') ||
-                (type || '').toLowerCase() === 'bot'
-              );
-            };
-            const isLimitHit = (login, type, body) =>
-              isConnector(login, type) && limitPattern.test(body || '');
-            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-            const maxAttempts = 6;
-            const delayMs = 20000;
-            let hit = false;
-
-            for (let attempt = 1; attempt <= maxAttempts && !hit; attempt += 1) {
-              const [comments, reviews, reviewComments] = await Promise.all([
-                github.paginate(github.rest.issues.listComments, {
-                  owner,
-                  repo,
-                  issue_number,
-                  per_page: 100,
-                }),
-                github.paginate(github.rest.pulls.listReviews, {
-                  owner,
-                  repo,
-                  pull_number,
-                  per_page: 100,
-                }),
-                github.paginate(github.rest.pulls.listReviewComments, {
-                  owner,
-                  repo,
-                  pull_number,
-                  per_page: 100,
-                }),
-              ]);
-
-              const commentHit = comments.some((comment) =>
-                isLimitHit(comment.user?.login, comment.user?.type, comment.body)
-              );
-              const reviewHit = reviews.some((review) =>
-                isLimitHit(review.user?.login, review.user?.type, review.body)
-              );
-              const reviewCommentHit = reviewComments.some((comment) =>
-                isLimitHit(comment.user?.login, comment.user?.type, comment.body)
-              );
-
-              hit = commentHit || reviewHit || reviewCommentHit;
-
-              if (!hit && attempt < maxAttempts) {
-                core.info(
-                  `No Codex limit message yet. Waiting ${delayMs / 1000}s (attempt ${attempt}/${maxAttempts})...`
-                );
-                await sleep(delayMs);
-              }
-            }
-
-            if (!hit) {
-              core.info(
-                'No Codex limit message found in issue comments, reviews, or review comments.'
-              );
-            }
-
-            core.setOutput('limit_hit', hit ? 'true' : 'false');
-
       - name: Checkout PR
-        if: steps.codex_limit.outputs.limit_hit == 'true'
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Get PR diff
-        if: steps.codex_limit.outputs.limit_hit == 'true'
         id: pr_diff
         uses: ./.github/actions/get-pr-diff
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
           max_bytes: "45000"
+
       - name: Call OpenAI (Review)
-        if: steps.codex_limit.outputs.limit_hit == 'true'
         id: openai_review
         uses: ./.github/actions/openai-chat
         with:
@@ -207,8 +139,9 @@ jobs:
             - If the diff is truncated, mention it in the body.
 
             Here is the line-numbered diff:
+
       - name: Create PR Review
-        if: steps.codex_limit.outputs.limit_hit == 'true'
+        id: review_result
         uses: actions/github-script@v8
         env:
           REVIEW_BODY: ${{ steps.openai_review.outputs.content }}
@@ -217,14 +150,21 @@ jobs:
           script: |
             const fs = require('fs');
 
+            const setOutputs = (eventValue, submittedValue) => {
+              core.setOutput('review_event', eventValue);
+              core.setOutput('review_submitted', submittedValue ? 'true' : 'false');
+            };
+
             const raw = (process.env.REVIEW_BODY || '').trim();
             if (!raw) {
               core.warning('Review body is empty; skipping review.');
+              setOutputs('NONE', false);
               return;
             }
 
             if (raw.startsWith('Missing secret(s):')) {
               core.warning(raw);
+              setOutputs('NONE', false);
               return;
             }
 
@@ -256,7 +196,7 @@ jobs:
             }
 
             if (!body) {
-              body = 'Automated review generated due to Codex limits.';
+              body = 'Automated review generated.';
             }
 
             const lineDiffPath = process.env.LINE_DIFF_PATH;
@@ -323,3 +263,5 @@ jobs:
               body,
               comments: filteredComments.length > 0 ? filteredComments : undefined,
             });
+
+            setOutputs(event, true);
