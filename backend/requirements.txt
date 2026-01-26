@@ -1,9 +1,9 @@
-django==5.2.8
-django-cors-headers==4.7.0
+django==6.0.1
+django-cors-headers==4.9.0
 django-filter==25.1
-djangorestframework==3.16.0
-djangorestframework-simplejwt==5.5.0
+djangorestframework==3.16.1
+djangorestframework-simplejwt==5.5.1
 gunicorn==24.1.1
-PyYAML==6.0.2
+PyYAML==6.0.3
 ruamel.yaml==0.19.1
 whitenoise==6.11.0
