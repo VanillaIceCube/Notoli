@@ -1,0 +1,59 @@
+name: Get PR Diff
+description: Generate a unified PR diff and truncate it if too large.
+inputs:
+  base_sha:
+    description: Base commit SHA for the PR.
+    required: true
+  head_sha:
+    description: Head commit SHA for the PR.
+    required: true
+  max_bytes:
+    description: Maximum diff size in bytes before truncation.
+    required: false
+    default: "45000"
+outputs:
+  diff_path:
+    description: Path to the generated diff file.
+    value: ${{ steps.diff.outputs.diff_path }}
+  diff_bytes:
+    description: Size of the original diff in bytes.
+    value: ${{ steps.diff.outputs.diff_bytes }}
+  truncated:
+    description: Whether the diff was truncated.
+    value: ${{ steps.diff.outputs.truncated }}
+runs:
+  using: composite
+  steps:
+    - id: diff
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        BASE_SHA="${{ inputs.base_sha }}"
+        HEAD_SHA="${{ inputs.head_sha }}"
+        MAX_BYTES="${{ inputs.max_bytes }}"
+
+        echo "Base: $BASE_SHA"
+        echo "Head: $HEAD_SHA"
+
+        # Get unified diff between base and head
+        git diff --unified=3 "$BASE_SHA" "$HEAD_SHA" > pr.diff
+
+        # Truncate if it's huge so we don't blow up token limits
+        ACTUAL_BYTES=$(wc -c < pr.diff || echo 0)
+        TRUNCATED=false
+        if [ "$ACTUAL_BYTES" -gt "$MAX_BYTES" ]; then
+          head -c "$MAX_BYTES" pr.diff > pr_truncated.diff
+          echo "::warning::Diff was too large ($ACTUAL_BYTES bytes). Truncated to $MAX_BYTES bytes."
+          mv pr_truncated.diff pr.diff
+          TRUNCATED=true
+        fi
+
+        echo "Diff size:"
+        wc -c pr.diff
+
+        {
+          echo "diff_path=pr.diff"
+          echo "diff_bytes=$ACTUAL_BYTES"
+          echo "truncated=$TRUNCATED"
+        } >> "$GITHUB_OUTPUT"

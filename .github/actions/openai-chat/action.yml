@@ -1,0 +1,103 @@
+name: OpenAI Chat Completion
+description: Call OpenAI chat completions with a prompt prefix and diff content.
+inputs:
+  api_key:
+    description: OpenAI API key.
+    required: true
+  project_id:
+    description: OpenAI project ID.
+    required: true
+  prompt_prefix:
+    description: Prompt text that will be prepended to the diff.
+    required: true
+  diff_path:
+    description: Path to the diff file to append to the prompt.
+    required: true
+  system_prompt:
+    description: System message to send with the request.
+    required: false
+    default: "You are an experienced, pragmatic PR assistant."
+  model:
+    description: OpenAI model name.
+    required: false
+    default: "gpt-5.1"
+  temperature:
+    description: Sampling temperature.
+    required: false
+    default: "0.3"
+outputs:
+  content:
+    description: Assistant response content.
+    value: ${{ steps.chat.outputs.content }}
+runs:
+  using: composite
+  steps:
+    - id: chat
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        missing_secrets=()
+        if [ -z "${{ inputs.api_key }}" ]; then
+          missing_secrets+=("OPENAI_API_KEY")
+        fi
+
+        if [ -z "${{ inputs.project_id }}" ]; then
+          missing_secrets+=("OPENAI_PROJECT_ID")
+        fi
+
+        if [ "${#missing_secrets[@]}" -gt 0 ]; then
+          echo "content=Missing secret(s): ${missing_secrets[*]}." >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+
+        DIFF_CONTENT=$(cat "${{ inputs.diff_path }}")
+        PROMPT="${{ inputs.prompt_prefix }}${DIFF_CONTENT}"
+
+        # Build JSON safely
+        jq -n \
+          --arg prompt "$PROMPT" \
+          --arg model "${{ inputs.model }}" \
+          --argjson temperature "${{ inputs.temperature }}" \
+          --arg system_prompt "${{ inputs.system_prompt }}" \
+          '
+          {
+            model: $model,
+            temperature: $temperature,
+            messages: [
+              { "role": "system", "content": $system_prompt },
+              { "role": "user", "content": $prompt }
+            ]
+          }
+          ' > body.json
+
+        # Make API request (project is passed via header)
+        RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/chat/completions" \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer ${{ inputs.api_key }}" \
+          -H "OpenAI-Project: ${{ inputs.project_id }}" \
+          --data @body.json)
+
+        echo "Raw response:"
+        echo "$RESPONSE"
+
+        # Extract content or error
+        CONTENT=$(echo "$RESPONSE" | jq -r '
+          if .choices and .choices[0].message and .choices[0].message.content then
+            .choices[0].message.content
+          elif .error and .error.message then
+            "OpenAI API error: " + .error.message
+          else
+            "OpenAI did not return a response."
+          end
+        ')
+
+        echo "Response content:"
+        echo "$CONTENT"
+
+        # Write multi-line output for GitHub Actions
+        {
+          echo 'content<<EOF'
+          printf '%s\n' "$CONTENT"
+          echo 'EOF'
+        } >> "$GITHUB_OUTPUT"
