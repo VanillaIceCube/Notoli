@@ -3,6 +3,8 @@ name: Auto Merge
 on:
   workflow_call:
     secrets:
+      DEPENDABOT_PAT:
+        required: false
       OPENAI_API_KEY:
         required: false
       OPENAI_PROJECT_ID:
