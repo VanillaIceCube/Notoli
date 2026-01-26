@@ -32,9 +32,7 @@ function App() {
 
   const handleSnackbarClose = (_event, reason) => {
     if (reason === 'clickaway') return;
-    setSnackbarOpen(
-      false
-    );
+    setSnackbarOpen(false);
   };
 
   return (
