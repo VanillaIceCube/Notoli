@@ -2,6 +2,19 @@ name: Tests
 
 on:
   workflow_call:
+    outputs:
+      test_frontend_status:
+        description: Frontend test status (success/failure/none).
+        value: ${{ jobs.frontend-tests.outputs.status }}
+      test_frontend_log:
+        description: Frontend test log tail.
+        value: ${{ jobs.frontend-tests.outputs.log }}
+      test_backend_status:
+        description: Backend test status (success/failure/none).
+        value: ${{ jobs.backend-tests.outputs.status }}
+      test_backend_log:
+        description: Backend test log tail.
+        value: ${{ jobs.backend-tests.outputs.log }}
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -33,9 +46,46 @@ jobs:
         run: npm ci
 
       - name: Run frontend tests
+        id: test_run
+        continue-on-error: true
         env:
           CI: true
-        run: npm test -- --watchAll=false --verbose --runInBand
+        run: |
+          set -o pipefail
+          status=0
+          npm test -- --watchAll=false --verbose --runInBand 2>&1 | tee test_output.txt || status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Test summary
+        id: test_summary
+        if: always()
+        run: |
+          exit_code="${{ steps.test_run.outputs.exit_code }}"
+          if [ -z "$exit_code" ]; then
+            exit_code=1
+          fi
+          if [ "$exit_code" = "0" ]; then
+            echo "status=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=failure" >> "$GITHUB_OUTPUT"
+          fi
+
+          {
+            echo 'log<<EOF'
+            if [ -f test_output.txt ]; then
+              tail -n 200 test_output.txt
+            else
+              echo "No test output captured."
+            fi
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Fail if tests failed
+        if: steps.test_run.outputs.exit_code != '0'
+        run: exit 1
+    outputs:
+      status: ${{ steps.test_summary.outputs.status }}
+      log: ${{ steps.test_summary.outputs.log }}
 
   backend-tests:
     name: Backend Tests (Django)
@@ -62,4 +112,41 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run backend tests
-        run: python manage.py test --verbosity=2
+        id: test_run
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          status=0
+          python manage.py test --verbosity=2 2>&1 | tee test_output.txt || status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Test summary
+        id: test_summary
+        if: always()
+        run: |
+          exit_code="${{ steps.test_run.outputs.exit_code }}"
+          if [ -z "$exit_code" ]; then
+            exit_code=1
+          fi
+          if [ "$exit_code" = "0" ]; then
+            echo "status=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=failure" >> "$GITHUB_OUTPUT"
+          fi
+
+          {
+            echo 'log<<EOF'
+            if [ -f test_output.txt ]; then
+              tail -n 200 test_output.txt
+            else
+              echo "No test output captured."
+            fi
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Fail if tests failed
+        if: steps.test_run.outputs.exit_code != '0'
+        run: exit 1
+    outputs:
+      status: ${{ steps.test_summary.outputs.status }}
+      log: ${{ steps.test_summary.outputs.log }}

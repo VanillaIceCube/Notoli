@@ -7,6 +7,19 @@ on:
         description: "Branch or ref to check out for auto-fix commits."
         required: false
         type: string
+    outputs:
+      lint_frontend_status:
+        description: Frontend lint status (success/failure/none).
+        value: ${{ jobs.lint-frontend.outputs.status }}
+      lint_frontend_log:
+        description: Frontend lint log tail.
+        value: ${{ jobs.lint-frontend.outputs.log }}
+      lint_backend_status:
+        description: Backend lint status (success/failure/none).
+        value: ${{ jobs.lint-backend.outputs.status }}
+      lint_backend_log:
+        description: Backend lint log tail.
+        value: ${{ jobs.lint-backend.outputs.log }}
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -95,11 +108,46 @@ jobs:
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
 
-      - name: Prettier (check only)
-        run: npm run format:check
+      - name: Lint checks
+        id: lint_checks
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          status=0
+          npm run format:check 2>&1 | tee lint_output.txt || status=$?
+          npm run lint:strict 2>&1 | tee -a lint_output.txt || status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
-      - name: ESLint (no warnings)
-        run: npm run lint:strict
+      - name: Lint summary
+        id: lint_summary
+        if: always()
+        run: |
+          exit_code="${{ steps.lint_checks.outputs.exit_code }}"
+          if [ -z "$exit_code" ]; then
+            exit_code=1
+          fi
+          if [ "$exit_code" = "0" ]; then
+            echo "status=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=failure" >> "$GITHUB_OUTPUT"
+          fi
+
+          {
+            echo 'log<<EOF'
+            if [ -f lint_output.txt ]; then
+              tail -n 200 lint_output.txt
+            else
+              echo "No lint output captured."
+            fi
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Fail if lint failed
+        if: steps.lint_checks.outputs.exit_code != '0'
+        run: exit 1
+    outputs:
+      status: ${{ steps.lint_summary.outputs.status }}
+      log: ${{ steps.lint_summary.outputs.log }}
 
   lint-backend:
     name: Lint Backend (Ruff)
@@ -160,8 +208,43 @@ jobs:
           commit_user_name: "lint-bot"
           commit_user_email: "lint-bot@users.noreply.github.com"
 
-      - name: Ruff (check only)
-        run: ruff check .
+      - name: Ruff checks
+        id: lint_checks
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          status=0
+          ruff check . 2>&1 | tee lint_output.txt || status=$?
+          ruff format --check . 2>&1 | tee -a lint_output.txt || status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
-      - name: Ruff format (check only)
-        run: ruff format --check .
+      - name: Lint summary
+        id: lint_summary
+        if: always()
+        run: |
+          exit_code="${{ steps.lint_checks.outputs.exit_code }}"
+          if [ -z "$exit_code" ]; then
+            exit_code=1
+          fi
+          if [ "$exit_code" = "0" ]; then
+            echo "status=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=failure" >> "$GITHUB_OUTPUT"
+          fi
+
+          {
+            echo 'log<<EOF'
+            if [ -f lint_output.txt ]; then
+              tail -n 200 lint_output.txt
+            else
+              echo "No lint output captured."
+            fi
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Fail if lint failed
+        if: steps.lint_checks.outputs.exit_code != '0'
+        run: exit 1
+    outputs:
+      status: ${{ steps.lint_summary.outputs.status }}
+      log: ${{ steps.lint_summary.outputs.log }}

@@ -27,8 +27,18 @@ jobs:
   commentary:
     name: Commentary
     needs: [lints, tests]
+    if: always()
     uses: ./.github/workflows/commentary.yaml
     secrets: inherit
+    with:
+      lint_frontend_status: ${{ needs.lints.outputs.lint_frontend_status }}
+      lint_frontend_log: ${{ needs.lints.outputs.lint_frontend_log }}
+      lint_backend_status: ${{ needs.lints.outputs.lint_backend_status }}
+      lint_backend_log: ${{ needs.lints.outputs.lint_backend_log }}
+      test_frontend_status: ${{ needs.tests.outputs.test_frontend_status }}
+      test_frontend_log: ${{ needs.tests.outputs.test_frontend_log }}
+      test_backend_status: ${{ needs.tests.outputs.test_backend_status }}
+      test_backend_log: ${{ needs.tests.outputs.test_backend_log }}
 
   auto-merge:
     name: Auto Merge
