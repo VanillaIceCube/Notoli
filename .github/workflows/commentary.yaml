@@ -90,6 +90,7 @@ jobs:
 
   ai-review:
     name: ai-review
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     outputs:
       review_event: ${{ steps.review_result.outputs.review_event }}
