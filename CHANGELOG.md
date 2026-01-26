@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Dependabot auto-merge now also allows CVSS-based auto-merge for low-severity security alerts (while keeping patch/minor auto-merge).
 - Dependabot metadata lookup now enables alert lookup with `DEPENDABOT_PAT` fallback and includes security-events read access.
-- test
+- Removed unused OpenAI secrets from the Dependabot auto-merge workflow wiring.
 
 ## 2026-01-25
 ### Added
