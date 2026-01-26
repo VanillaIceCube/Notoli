@@ -2,22 +2,18 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-01-25
+### Added
+- Added `backend/environment_conda_export.py` to export Conda environments with pinned versions.
 ### Changed
-- Centralized CI version detection into a reusable `read-versions` composite action for Node and Python.
-- Documented Ruff lint rules and enabled safe autofix for unused assignments via config.
-- Fixed lint workflow checkouts to use the PR head branch so auto-commit can push fixes.
-- Passed the PR head ref into lint workflows invoked via `workflow_call` to avoid detached HEAD.
-- Aligned lint auto-commit branches with the checkout ref for reusable workflow calls.
-- Skip lint auto-commit steps when no changes are detected after auto-fixes.
-- Scoped lint auto-commit actions to their respective subdirectories to ensure changes are staged.
-- Updated GitHub Actions versions to use released `actions/checkout@v4` and `actions/setup-python@v5` (and aligned setup-node to v4).
-- Reverted lint auto-commit repository scoping to avoid running outside the git root.
-- Fixed `read-versions` composite action outputs and reduced noisy paths-filter warnings.
-- PR summary workflow now only overwrites the PR description when it is empty or starts with "... "; otherwise it posts the summary as a comment.
-- Added Dependabot pip updates for the backend.
-- PR summary workflow now only overwrites the PR description when it is empty or starts with "..."; otherwise it posts the summary as a comment.
+- CI lint/test workflows now pin Node 18.20.8 and Python 3.12 via setup-node/setup-python v6 and no longer use `read-versions` or `checkout_ref`.
+- Lint auto-fix commits now target `github.head_ref` and scope file patterns to `frontend/**/*` and `backend/**/*`.
+- Backend env management now uses conda-pinned deps in `environment.yml`; tests install backend deps via explicit pip pins; Dockerfile installs from `environment.yml` only.
+- PR summary workflow now always updates the PR description (no comment fallback).
+- Frontend ESLint now extends Prettier; `eslint-config-prettier` moved to devDependencies; axios pinned to 1.13.2; icon imports consolidated.
+- Updated AGENTS maintenance instructions for the new env export script.
 ### Removed
-- Removed the Risk & Impact, Suggested Verification, and Follow-ups sections from the PR summary format.
+- Removed `read-versions`, `backend/environment_manager.py`, and `backend/requirements.txt` (pip section removed from `environment.yml`).
+- Removed the frontend ESLint config test and the Node engines field from `package.json`.
 
 ## 2026-01-24
 ### Changed
