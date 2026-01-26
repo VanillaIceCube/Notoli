@@ -1,0 +1,59 @@
+name: Lint Auto Fixes
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: lint-autofix-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  guard-token:
+    name: Check CI push token
+    runs-on: ubuntu-latest
+    steps:
+      - name: Warn when CI_PUSH_TOKEN is missing
+        if: ${{ !secrets.CI_PUSH_TOKEN }}
+        run: |
+          echo "::warning::CI_PUSH_TOKEN is not set. Commits made with GITHUB_TOKEN will not trigger new workflow runs."
+
+  lints:
+    name: Lints (Auto-fix)
+    needs: guard-token
+    uses: ./.github/workflows/lints.yaml
+    with:
+      checkout_ref: ${{ github.event.pull_request.head.ref }}
+      auto_fix: true
+      run_checks: false
+
+  dispatch-ci:
+    name: Dispatch CI
+    runs-on: ubuntu-latest
+    needs: lints
+    steps:
+      - name: Dispatch CI for latest PR head
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.CI_PUSH_TOKEN || github.token }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+            });
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yaml',
+              ref: pr.head.ref,
+              inputs: {
+                checkout_ref: pr.head.sha,
+              },
+            });
