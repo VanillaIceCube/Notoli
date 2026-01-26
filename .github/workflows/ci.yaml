@@ -52,6 +52,7 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      security-events: read
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
