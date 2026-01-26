@@ -169,29 +169,62 @@ jobs:
             const repo = context.repo.repo;
             const pull_number = context.payload.pull_request.number;
             const issue_number = pull_number;
-            const { data: comments } = await github.rest.issues.listComments({
-              owner,
-              repo,
-              issue_number,
-              per_page: 100,
-            });
-            const { data: reviews } = await github.rest.pulls.listReviews({
-              owner,
-              repo,
-              pull_number,
-              per_page: 100,
-            });
-
             const limitPattern = /codex usage limits for code reviews/i;
             const isLimitHit = (actor, body) =>
               actor === 'chatgpt-codex-connector' && limitPattern.test(body || '');
-            const commentHit = comments.some((comment) =>
-              isLimitHit(comment.user?.login, comment.body)
-            );
-            const reviewHit = reviews.some((review) =>
-              isLimitHit(review.user?.login, review.body)
-            );
-            const hit = commentHit || reviewHit;
+            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+            const maxAttempts = 6;
+            const delayMs = 20000;
+            let hit = false;
+
+            for (let attempt = 1; attempt <= maxAttempts && !hit; attempt += 1) {
+              const [comments, reviews, reviewComments] = await Promise.all([
+                github.paginate(github.rest.issues.listComments, {
+                  owner,
+                  repo,
+                  issue_number,
+                  per_page: 100,
+                }),
+                github.paginate(github.rest.pulls.listReviews, {
+                  owner,
+                  repo,
+                  pull_number,
+                  per_page: 100,
+                }),
+                github.paginate(github.rest.pulls.listReviewComments, {
+                  owner,
+                  repo,
+                  pull_number,
+                  per_page: 100,
+                }),
+              ]);
+
+              const commentHit = comments.some((comment) =>
+                isLimitHit(comment.user?.login, comment.body)
+              );
+              const reviewHit = reviews.some((review) =>
+                isLimitHit(review.user?.login, review.body)
+              );
+              const reviewCommentHit = reviewComments.some((comment) =>
+                isLimitHit(comment.user?.login, comment.body)
+              );
+
+              hit = commentHit || reviewHit || reviewCommentHit;
+
+              if (!hit && attempt < maxAttempts) {
+                core.info(
+                  `No Codex limit message yet. Waiting ${delayMs / 1000}s (attempt ${attempt}/${maxAttempts})...`
+                );
+                await sleep(delayMs);
+              }
+            }
+
+            if (!hit) {
+              core.info(
+                'No Codex limit message found in issue comments, reviews, or review comments.'
+              );
+            }
 
             core.setOutput('limit_hit', hit ? 'true' : 'false');
 
