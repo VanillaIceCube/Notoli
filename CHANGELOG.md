@@ -14,6 +14,8 @@ All notable changes to this project are documented in this file.
 - Reverted lint auto-commit repository scoping to avoid running outside the git root.
 - Fixed `read-versions` composite action outputs and reduced noisy paths-filter warnings.
 - PR summary workflow now only overwrites the PR description when it is empty or starts with "... "; otherwise it posts the summary as a comment.
+### Removed
+- Removed the Risk & Impact, Suggested Verification, and Follow-ups sections from the PR summary format.
 
 ## 2026-01-24
 ### Changed
