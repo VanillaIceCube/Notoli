@@ -24,7 +24,7 @@ jobs:
     name: Tests
     uses: ./.github/workflows/tests.yaml
   
-  pr-summary:
+  commentary:
     name: Commentary
     needs: [lints, tests]
     uses: ./.github/workflows/commentary.yaml
@@ -34,8 +34,8 @@ jobs:
 
   auto-merge:
     name: Auto Merge
-    needs: [lints, tests]
-    if: github.event.pull_request.user.login == 'dependabot[bot]' && needs.lints.result == 'success' && needs.tests.result == 'success'
+    needs: [lints, tests, commentary]
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && needs.lints.result == 'success' && needs.tests.result == 'success' && needs.commentary.result == 'success'
     uses: ./.github/workflows/auto_merge.yml
     permissions:
       contents: write
