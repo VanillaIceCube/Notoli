@@ -13,8 +13,8 @@ permissions:
   issues: write
 
 jobs:
-  pr-trigger:
-    name: pr-trigger
+  ai-summary:
+    name: ai-summary
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
 
@@ -154,8 +154,8 @@ jobs:
               body,
             });
 
-  comment-trigger:
-    name: comment-trigger
+  ai-review:
+    name: ai-review
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
 
@@ -170,8 +170,16 @@ jobs:
             const pull_number = context.payload.pull_request.number;
             const issue_number = pull_number;
             const limitPattern = /codex usage limits for code reviews/i;
-            const isLimitHit = (actor, body) =>
-              actor === 'chatgpt-codex-connector' && limitPattern.test(body || '');
+            const isConnector = (login, type) => {
+              const normalized = (login || '').toLowerCase();
+              return (
+                normalized.includes('chatgpt-codex-connector') ||
+                normalized.includes('codex-connector') ||
+                (type || '').toLowerCase() === 'bot'
+              );
+            };
+            const isLimitHit = (login, type, body) =>
+              isConnector(login, type) && limitPattern.test(body || '');
             const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
             const maxAttempts = 6;
@@ -201,13 +209,13 @@ jobs:
               ]);
 
               const commentHit = comments.some((comment) =>
-                isLimitHit(comment.user?.login, comment.body)
+                isLimitHit(comment.user?.login, comment.user?.type, comment.body)
               );
               const reviewHit = reviews.some((review) =>
-                isLimitHit(review.user?.login, review.body)
+                isLimitHit(review.user?.login, review.user?.type, review.body)
               );
               const reviewCommentHit = reviewComments.some((comment) =>
-                isLimitHit(comment.user?.login, comment.body)
+                isLimitHit(comment.user?.login, comment.user?.type, comment.body)
               );
 
               hit = commentHit || reviewHit || reviewCommentHit;
