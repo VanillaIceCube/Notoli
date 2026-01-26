@@ -139,7 +139,7 @@ jobs:
             });
 
             const existingBody = (pr.body || '').trim();
-            if (!existingBody || existingBody.startsWith('... ')) {
+            if (!existingBody || existingBody.startsWith('...')) {
               await github.rest.pulls.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
