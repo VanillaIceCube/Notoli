@@ -38,9 +38,7 @@ function App() {
   return (
     <React.Fragment>
       <Router>
-        <MyAppBar appBarHeader={
-          appBarHeader
-        } setDrawerOpen={setDrawerOpen} />
+        <MyAppBar appBarHeader={appBarHeader} setDrawerOpen={setDrawerOpen} />
         <MyDrawer
           open={drawerOpen}
           setDrawerOpen={setDrawerOpen}
