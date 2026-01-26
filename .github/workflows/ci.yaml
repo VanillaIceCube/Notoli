@@ -28,6 +28,8 @@ jobs:
     name: Commentary
     needs: [lints, tests]
     uses: ./.github/workflows/commentary.yaml
+    with:
+      pr_number: ${{ github.event.pull_request.number }}
     secrets: inherit
 
   auto-merge:

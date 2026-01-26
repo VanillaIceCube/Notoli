@@ -2,6 +2,15 @@ name: Commentary
 
 on:
   workflow_call:
+    inputs:
+      pr_number:
+        description: "Pull request number for workflow_call runs."
+        required: true
+        type: number
+      sha:
+        description: "Optional commit SHA to review instead of PR head."
+        required: false
+        type: string
   issue_comment:
     types: [created]
 
@@ -15,7 +24,7 @@ permissions:
   issues: write
 
 jobs:
-  ai-review:
+  ai-summary:
     name: PR Summary
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
@@ -156,38 +165,46 @@ jobs:
               body,
             });
 
-  pr-review:
+  ai-review:
     name: PR Review
     if: >
-      github.event_name == 'issue_comment' &&
-      github.event.action == 'created' &&
-      github.event.sender.login == 'chatgpt-codex-connector' &&
-      contains(github.event.comment.body, 'You have reached your Codex usage limits for code reviews.') &&
-      github.event.issue.pull_request
+      (github.event_name == 'issue_comment' &&
+        github.event.action == 'created' &&
+        github.event.sender.login == 'chatgpt-codex-connector' &&
+        contains(github.event.comment.body, 'You have reached your Codex usage limits for code reviews.') &&
+        github.event.issue.pull_request) ||
+      (github.event_name == 'workflow_call')
     runs-on: ubuntu-latest
 
     steps:
       - name: Load PR data
         id: pr
         uses: actions/github-script@v8
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          INPUT_SHA: ${{ inputs.sha }}
         with:
           script: |
+            const prNumber = context.eventName === 'workflow_call'
+              ? Number(process.env.PR_NUMBER)
+              : context.payload.issue.number;
+
             const { data: pr } = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              pull_number: context.payload.issue.number,
+              pull_number: prNumber,
             });
 
             core.setOutput('base_sha', pr.base.sha);
-            core.setOutput('head_sha', pr.head.sha);
+            core.setOutput('head_sha', process.env.INPUT_SHA || pr.head.sha);
             core.setOutput('head_ref', pr.head.ref);
-            core.setOutput('pr_number', pr.number);
+            core.setOutput('pr_number', prNumber);
 
       - name: Checkout PR
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ steps.pr.outputs.head_ref }}
+          ref: ${{ steps.pr.outputs.head_sha }}
 
       - name: Get PR diff
         env:
