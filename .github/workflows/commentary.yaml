@@ -132,7 +132,7 @@ jobs:
             }
 
             Rules:
-            - Use only line numbers shown as "R<line>:" in the diff (RIGHT side).
+            - Use only line numbers shown as "A<line>:" in the diff (RIGHT side, added lines only).
             - Use file paths exactly as shown in the diff headers (e.g., "b/path" => "path").
             - Max 6 inline comments. If none, return an empty comments array.
             - If issues are critical, use REQUEST_CHANGES; if no issues, APPROVE; otherwise COMMENT.
@@ -214,8 +214,8 @@ jobs:
                   }
                   continue;
                 }
-                if (line.startsWith('R') && currentPath) {
-                  const match = line.match(/^R(\d+):/);
+                if (line.startsWith('A') && currentPath) {
+                  const match = line.match(/^A(\d+):/);
                   if (match) {
                     const num = Number(match[1]);
                     if (!Number.isNaN(num)) {

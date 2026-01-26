@@ -83,7 +83,7 @@ runs:
 
                 if line.startswith("+") and not line.startswith("+++"):
                     if new_line is not None:
-                        out.write(f"R{new_line}: {line[1:]}\n")
+                        out.write(f"A{new_line}: {line[1:]}\n")
                         new_line += 1
                     else:
                         out.write(line + "\n")
