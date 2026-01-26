@@ -34,15 +34,23 @@ runs:
   steps:
     - id: chat
       shell: bash
+      env:
+        OPENAI_API_KEY: ${{ inputs.api_key }}
+        OPENAI_PROJECT_ID: ${{ inputs.project_id }}
+        PROMPT_PREFIX: ${{ inputs.prompt_prefix }}
+        SYSTEM_PROMPT: ${{ inputs.system_prompt }}
+        MODEL: ${{ inputs.model }}
+        TEMPERATURE: ${{ inputs.temperature }}
+        DIFF_PATH: ${{ inputs.diff_path }}
       run: |
         set -euo pipefail
 
         missing_secrets=()
-        if [ -z "${{ inputs.api_key }}" ]; then
+        if [ -z "${OPENAI_API_KEY}" ]; then
           missing_secrets+=("OPENAI_API_KEY")
         fi
 
-        if [ -z "${{ inputs.project_id }}" ]; then
+        if [ -z "${OPENAI_PROJECT_ID}" ]; then
           missing_secrets+=("OPENAI_PROJECT_ID")
         fi
 
@@ -51,19 +59,20 @@ runs:
           exit 0
         fi
 
-        DIFF_CONTENT=$(cat "${{ inputs.diff_path }}")
-        PROMPT="${{ inputs.prompt_prefix }}${DIFF_CONTENT}"
+        DIFF_CONTENT=$(cat "$DIFF_PATH")
+        PROMPT="${PROMPT_PREFIX}${DIFF_CONTENT}"
+        TEMPERATURE_VALUE="${TEMPERATURE:-0.3}"
 
         # Build JSON safely
         jq -n \
           --arg prompt "$PROMPT" \
-          --arg model "${{ inputs.model }}" \
-          --argjson temperature "${{ inputs.temperature }}" \
-          --arg system_prompt "${{ inputs.system_prompt }}" \
+          --arg model "$MODEL" \
+          --arg temperature "$TEMPERATURE_VALUE" \
+          --arg system_prompt "$SYSTEM_PROMPT" \
           '
           {
             model: $model,
-            temperature: $temperature,
+            temperature: ($temperature | tonumber),
             messages: [
               { "role": "system", "content": $system_prompt },
               { "role": "user", "content": $prompt }
@@ -74,8 +83,8 @@ runs:
         # Make API request (project is passed via header)
         RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/chat/completions" \
           -H "Content-Type: application/json" \
-          -H "Authorization: Bearer ${{ inputs.api_key }}" \
-          -H "OpenAI-Project: ${{ inputs.project_id }}" \
+          -H "Authorization: Bearer $OPENAI_API_KEY" \
+          -H "OpenAI-Project: $OPENAI_PROJECT_ID" \
           --data @body.json)
 
         echo "Raw response:"

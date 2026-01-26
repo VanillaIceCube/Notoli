@@ -31,7 +31,7 @@ jobs:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
           max_bytes: "45000"
-      - name: Call OpenAI
+      - name: Call OpenAI (Summary)
         id: openai
         uses: ./.github/actions/openai-chat
         with:
@@ -183,36 +183,143 @@ jobs:
         with:
           api_key: ${{ secrets.OPENAI_API_KEY }}
           project_id: ${{ secrets.OPENAI_PROJECT_ID }}
-          diff_path: ${{ steps.pr_diff.outputs.diff_path }}
+          diff_path: ${{ steps.pr_diff.outputs.linediff_path }}
           model: "gpt-5.1"
           temperature: "0.2"
           system_prompt: "You are an experienced, pragmatic PR reviewer."
           prompt_prefix: |
-            You are a PR reviewer for the Notoli project (Backend: Django; Frontend: React + MUI; Docker; GitHub Actions). Provide a concise, high-signal code review focused on correctness, security, and maintainability risks. Flag potential bugs, edge cases, missing tests, or backwards-incompatible changes. Avoid style nitpicks. If you are unsure, say so. If the diff is truncated, explicitly note that the review may be incomplete. Use the following exact sections, in order, each containing bullet points (or '(none)' if empty): ## Review Summary: ## Issues & Suggestions: Here is the diff:
+            You are a PR reviewer for the Notoli project (Backend: Django; Frontend: React + MUI; Docker; GitHub Actions). Provide a concise, high-signal code review focused on correctness, security, and maintainability risks. Flag potential bugs, edge cases, missing tests, or backwards-incompatible changes. Avoid style nitpicks. If you are unsure, say so. Use the line-numbered diff to anchor inline comments.
 
-      - name: Comment PR Review
+            Return ONLY strict JSON (no markdown, no code fences) with this shape:
+            {
+              "event": "APPROVE" | "REQUEST_CHANGES" | "COMMENT",
+              "body": "overall review summary",
+              "comments": [
+                { "path": "relative/file/path", "line": 123, "body": "inline comment" }
+              ]
+            }
+
+            Rules:
+            - Use only line numbers shown as "R<line>:" in the diff (RIGHT side).
+            - Use file paths exactly as shown in the diff headers (e.g., "b/path" => "path").
+            - Max 6 inline comments. If none, return an empty comments array.
+            - If issues are critical, use REQUEST_CHANGES; if no issues, APPROVE; otherwise COMMENT.
+            - If the diff is truncated, mention it in the body.
+
+            Here is the line-numbered diff:
+      - name: Create PR Review
         if: steps.codex_limit.outputs.limit_hit == 'true'
         uses: actions/github-script@v8
         env:
           REVIEW_BODY: ${{ steps.openai_review.outputs.content }}
+          LINE_DIFF_PATH: ${{ steps.pr_diff.outputs.linediff_path }}
         with:
           script: |
-            const body = process.env.REVIEW_BODY;
-            if (!body) {
-              core.warning('Review body is empty; skipping comment.');
+            const fs = require('fs');
+
+            const raw = (process.env.REVIEW_BODY || '').trim();
+            if (!raw) {
+              core.warning('Review body is empty; skipping review.');
               return;
             }
 
-            const header = [
-              'Codex limit reached for code reviews. Running custom code review:',
-              '',
-            ].join('\n');
+            if (raw.startsWith('Missing secret(s):')) {
+              core.warning(raw);
+              return;
+            }
 
-            await github.rest.issues.createComment({
+            const stripCodeFences = (text) => {
+              const trimmed = text.trim();
+              if (!trimmed.startsWith('```')) return trimmed;
+              return trimmed.replace(/^```[a-zA-Z]*\n?/, '').replace(/```$/, '').trim();
+            };
+
+            let parsed;
+            try {
+              parsed = JSON.parse(stripCodeFences(raw));
+            } catch (err) {
+              core.warning(`Failed to parse JSON review payload: ${err.message}`);
+              parsed = null;
+            }
+
+            const allowedEvents = new Set(['APPROVE', 'REQUEST_CHANGES', 'COMMENT']);
+            let event = 'COMMENT';
+            let body = '';
+            let comments = [];
+
+            if (parsed) {
+              event = allowedEvents.has(parsed.event) ? parsed.event : 'COMMENT';
+              body = typeof parsed.body === 'string' ? parsed.body.trim() : '';
+              comments = Array.isArray(parsed.comments) ? parsed.comments : [];
+            } else {
+              body = raw;
+            }
+
+            if (!body) {
+              body = 'Automated review generated due to Codex limits.';
+            }
+
+            const lineDiffPath = process.env.LINE_DIFF_PATH;
+            const validLines = new Map();
+            if (lineDiffPath && fs.existsSync(lineDiffPath)) {
+              const diffLines = fs.readFileSync(lineDiffPath, 'utf8').split(/\r?\n/);
+              let currentPath = null;
+              for (const line of diffLines) {
+                if (line.startsWith('+++ ')) {
+                  const value = line.slice(4).trim();
+                  if (value.startsWith('b/')) {
+                    currentPath = value.slice(2);
+                  } else {
+                    currentPath = null;
+                  }
+                  continue;
+                }
+                if (line.startsWith('R') && currentPath) {
+                  const match = line.match(/^R(\d+):/);
+                  if (match) {
+                    const num = Number(match[1]);
+                    if (!Number.isNaN(num)) {
+                      if (!validLines.has(currentPath)) {
+                        validLines.set(currentPath, new Set());
+                      }
+                      validLines.get(currentPath).add(num);
+                    }
+                  }
+                }
+              }
+            }
+
+            const normalizePath = (path) =>
+              typeof path === 'string' ? path.replace(/^b\//, '').trim() : '';
+
+            const filteredComments = [];
+            let dropped = 0;
+            for (const comment of comments) {
+              const path = normalizePath(comment?.path);
+              const line = Number(comment?.line);
+              const text = typeof comment?.body === 'string' ? comment.body.trim() : '';
+              if (!path || !text || Number.isNaN(line)) {
+                dropped += 1;
+                continue;
+              }
+              const allowed = validLines.get(path);
+              if (!allowed || !allowed.has(line)) {
+                dropped += 1;
+                continue;
+              }
+              filteredComments.push({ path, line, side: 'RIGHT', body: text });
+              if (filteredComments.length >= 6) break;
+            }
+
+            if (dropped > 0) {
+              body += `\n\nNote: ${dropped} inline comment(s) could not be placed on valid lines.`;
+            }
+
+            await github.rest.pulls.createReview({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-              body: `${header}${body}`,
+              pull_number: context.payload.pull_request.number,
+              event,
+              body,
+              comments: filteredComments.length > 0 ? filteredComments : undefined,
             });
-
-
