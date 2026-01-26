@@ -18,9 +18,7 @@ class WorkspaceViewSet(viewsets.ModelViewSet):
             Q(owner=user) | Q(created_by=user) | Q(collaborators=user)
         ).distinct()
 
-    def perform_create(
-            self, serializer
-        ):
+    def perform_create(self, serializer):
         serializer.save(owner=self.request.user, created_by=self.request.user)
 
 
