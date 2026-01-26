@@ -40,13 +40,26 @@ jobs:
               return;
             }
 
-            let pr;
-            const { data } = await github.rest.pulls.get({ owner, repo, pull_number });
-            pr = data;
+            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-            if (!pr) {
-              core.warning('PR data not available; skipping auto-merge handling.');
-              return;
+            let pr;
+            for (let attempt = 0; attempt < 60; attempt += 1) {
+              const { data } = await github.rest.pulls.get({ owner, repo, pull_number });
+              pr = data;
+
+              if (!pr) {
+                core.warning('PR data not available; skipping auto-merge handling.');
+                return;
+              }
+
+              if (pr.mergeable !== null && pr.mergeable_state !== 'unknown') {
+                break;
+              }
+
+              if (attempt < 59) {
+                core.info('Mergeability not ready yet; retrying in 5 seconds.');
+                await sleep(5000);
+              }
             }
 
             if (pr.merged || pr.draft) {
