@@ -16,19 +16,19 @@ permissions:
 jobs:
   lints:
     name: Lints
-    uses: ./.github/workflows/lints.yaml
+    uses: ./.github/workflows/lints.yml
     with:
       checkout_ref: ${{ github.event.pull_request.head.ref }}
 
   tests:
     name: Tests
-    uses: ./.github/workflows/tests.yaml
+    uses: ./.github/workflows/tests.yml
   
   commentary:
     name: Commentary
     needs: [lints, tests]
     if: always()
-    uses: ./.github/workflows/commentary.yaml
+    uses: ./.github/workflows/commentary.yml
     secrets: inherit
     with:
       lint_frontend_status: ${{ needs.lints.outputs.lint_frontend_status }}
@@ -52,6 +52,4 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
-    secrets:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      OPENAI_PROJECT_ID: ${{ secrets.OPENAI_PROJECT_ID }}
+      security-events: read

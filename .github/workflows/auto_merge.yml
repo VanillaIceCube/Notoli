@@ -3,15 +3,14 @@ name: Auto Merge
 on:
   workflow_call:
     secrets:
-      OPENAI_API_KEY:
-        required: false
-      OPENAI_PROJECT_ID:
+      DEPENDABOT_PAT:
         required: false
 
 permissions:
   contents: write
   pull-requests: write
   issues: write
+  security-events: read
 
 jobs:
   dependabot-auto-merge:
@@ -25,15 +24,49 @@ jobs:
         id: metadata
         uses: dependabot/fetch-metadata@v2
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.DEPENDABOT_PAT || secrets.GITHUB_TOKEN }}
+          alert-lookup: true
 
       - name: Enable auto-merge
-        if: steps.metadata.outputs.update-type == 'version-update:semver-patch' || steps.metadata.outputs.update-type == 'version-update:semver-minor'
         uses: actions/github-script@v8
+        env:
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          ALERT_STATE: ${{ steps.metadata.outputs.alert-state }}
+          CVSS: ${{ steps.metadata.outputs.cvss }}
+          CVSS_AUTO_MERGE_MAX: 6.9
         with:
           script: |
             const { owner, repo } = context.repo;
             const pull_number = Number(process.env.PR_NUMBER);
+            const updateType = process.env.UPDATE_TYPE;
+            const alertState = process.env.ALERT_STATE;
+            const cvssRaw = process.env.CVSS;
+            const cvssLimit = Number(process.env.CVSS_AUTO_MERGE_MAX || '6.9');
+            const cvssScore = Number.parseFloat(cvssRaw);
+
+            const isPatch = updateType === 'version-update:semver-patch';
+            const isMinor = updateType === 'version-update:semver-minor';
+            const isPatchOrMinor = isPatch || isMinor;
+            const hasAlert = alertState === 'OPEN';
+            const hasCvss = Number.isFinite(cvssScore);
+            const isLowCvss = hasCvss && cvssScore <= cvssLimit;
+
+            // Allow auto-merge only for patch/minor updates.
+            // If a security alert is present, require CVSS <= limit.
+            const shouldAutoMerge = isPatchOrMinor && (!hasAlert || isLowCvss);
+
+            if (hasAlert && !hasCvss) {
+              core.info(
+                `Security alert present but CVSS is missing/invalid: update-type=${updateType}, alert-state=${alertState}, cvss=${cvssRaw}`
+              );
+            }
+
+            if (!shouldAutoMerge) {
+              core.info(
+                `Auto-merge skipped: update-type=${updateType}, alert-state=${alertState}, cvss=${cvssRaw}`
+              );
+              return;
+            }
 
             if (!pull_number) {
               core.warning('PR number is not available; skipping.');
