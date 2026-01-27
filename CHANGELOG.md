@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-01-27
+### Added
+- Added a production deploy workflow that builds/pushes backend and frontend images to GHCR and deploys via SSH on `env-prod`.
+### Changed
+- PR review inline comment validation now uses GitHub PR patches to avoid invalid line errors.
+
 ## 2026-01-26
 ### Changed
 - Dependabot auto-merge now also allows CVSS-based auto-merge for low-severity security alerts (while keeping patch/minor auto-merge).
