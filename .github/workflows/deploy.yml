@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - env-prod
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-    branches:
-      - env-prod
   workflow_dispatch:
 
 permissions:
