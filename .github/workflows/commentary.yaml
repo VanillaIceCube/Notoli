@@ -183,11 +183,8 @@ jobs:
         uses: actions/github-script@v8
         env:
           REVIEW_BODY: ${{ steps.openai_review.outputs.content }}
-          LINE_DIFF_PATH: ${{ steps.pr_diff.outputs.linediff_path }}
         with:
           script: |
-            const fs = require('fs');
-
             const setOutputs = (eventValue, submittedValue) => {
               core.setOutput('review_event', eventValue);
               core.setOutput('review_submitted', submittedValue ? 'true' : 'false');
@@ -244,34 +241,55 @@ jobs:
               body = 'Automated review generated.';
             }
 
-            const lineDiffPath = process.env.LINE_DIFF_PATH;
             const validLines = new Map();
-            if (lineDiffPath && fs.existsSync(lineDiffPath)) {
-              const diffLines = fs.readFileSync(lineDiffPath, 'utf8').split(/\r?\n/);
-              let currentPath = null;
-              for (const line of diffLines) {
-                if (line.startsWith('+++ ')) {
-                  const value = line.slice(4).trim();
-                  if (value.startsWith('b/')) {
-                    currentPath = value.slice(2);
-                  } else {
-                    currentPath = null;
+            const buildValidLinesFromPatch = (path, patch) => {
+              if (!patch) return;
+              const lines = patch.split(/\r?\n/);
+              let newLine = null;
+              for (const line of lines) {
+                if (line.startsWith('@@')) {
+                  const match = line.match(/\+(\d+)(?:,(\d+))?/);
+                  if (match) {
+                    newLine = Number(match[1]);
                   }
                   continue;
                 }
-                if ((line.startsWith('A') || line.startsWith('R')) && currentPath) {
-                  const match = line.match(/^[AR](\d+):/);
-                  if (match) {
-                    const num = Number(match[1]);
-                    if (!Number.isNaN(num)) {
-                      if (!validLines.has(currentPath)) {
-                        validLines.set(currentPath, new Set());
-                      }
-                      validLines.get(currentPath).add(num);
-                    }
+                if (newLine === null) continue;
+                if (line.startsWith('+') && !line.startsWith('+++')) {
+                  if (!validLines.has(path)) validLines.set(path, new Set());
+                  validLines.get(path).add(newLine);
+                  newLine += 1;
+                  continue;
+                }
+                if (line.startsWith(' ') || line.startsWith('-')) {
+                  if (!line.startsWith('-')) {
+                    newLine += 1;
                   }
+                  continue;
                 }
               }
+            };
+
+            const prNumber = context.payload.pull_request.number;
+            const files = [];
+            let page = 1;
+            while (true) {
+              const { data } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                per_page: 100,
+                page,
+              });
+              if (!data || data.length === 0) break;
+              files.push(...data);
+              if (data.length < 100) break;
+              page += 1;
+            }
+
+            for (const file of files) {
+              if (!file?.filename) continue;
+              buildValidLinesFromPatch(file.filename, file.patch);
             }
 
             const normalizePath = (path) =>
