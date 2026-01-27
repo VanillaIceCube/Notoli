@@ -13,13 +13,17 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    env:
-      OWNER_LOWER: ${{ toLower(github.repository_owner) }}
-      BACKEND_IMAGE: ghcr.io/${{ toLower(github.repository_owner) }}/notoli-backend
-      FRONTEND_IMAGE: ghcr.io/${{ toLower(github.repository_owner) }}/notoli-frontend
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Set image names
+        id: image_names
+        shell: bash
+        run: |
+          echo "owner_lower=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+          echo "backend_image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/notoli-backend" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/notoli-frontend" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -41,8 +45,8 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            ${{ env.BACKEND_IMAGE }}:latest
-            ${{ env.BACKEND_IMAGE }}:sha-${{ github.sha }}
+            ${{ steps.image_names.outputs.backend_image }}:latest
+            ${{ steps.image_names.outputs.backend_image }}:sha-${{ github.sha }}
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
@@ -51,8 +55,19 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: |
-            ${{ env.FRONTEND_IMAGE }}:latest
-            ${{ env.FRONTEND_IMAGE }}:sha-${{ github.sha }}
+            ${{ steps.image_names.outputs.frontend_image }}:latest
+            ${{ steps.image_names.outputs.frontend_image }}:sha-${{ github.sha }}
+
+      - name: Resolve deploy settings
+        id: deploy_vars
+        shell: bash
+        env:
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+        run: |
+          if [ -z "$DEPLOY_PORT" ]; then
+            DEPLOY_PORT=22
+          fi
+          echo "deploy_port=$DEPLOY_PORT" >> "$GITHUB_OUTPUT"
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -60,7 +75,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          port: ${{ steps.deploy_vars.outputs.deploy_port }}
           script: |
             set -e
             cd "${{ secrets.DEPLOY_PATH }}"
