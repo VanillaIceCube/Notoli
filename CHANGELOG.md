@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file.
 - Dependabot auto-merge now also allows CVSS-based auto-merge for low-severity security alerts (while keeping patch/minor auto-merge).
 - Dependabot metadata lookup now enables alert lookup with `DEPENDABOT_PAT` fallback and includes security-events read access.
 - Removed unused OpenAI secrets from the Dependabot auto-merge workflow wiring.
+- Dependabot auto-merge now blocks major updates and requires low CVSS when a security alert is present.
+- Renamed GitHub Actions workflow files to use the `.yml` extension consistently.
 
 ## 2026-01-25
 ### Added
