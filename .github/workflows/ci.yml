@@ -3,6 +3,8 @@ name: CI
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+    branches-ignore:
+      - env-prod
 
 concurrency:
   group: continuous-integration-${{ github.ref }}
@@ -27,7 +29,9 @@ jobs:
   commentary:
     name: Commentary
     needs: [lints, tests]
-    if: always()
+    if: >-
+      always() &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     uses: ./.github/workflows/commentary.yml
     secrets: inherit
     with:
