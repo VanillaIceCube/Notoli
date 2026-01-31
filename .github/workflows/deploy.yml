@@ -24,12 +24,18 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_ALLOWED_HOSTS: ${{ secrets.DJANGO_ALLOWED_HOSTS }}
+          DJANGO_CORS_ALLOWED_ORIGINS: ${{ secrets.DJANGO_CORS_ALLOWED_ORIGINS }}
         run: |
           missing=()
           [ -z "$DEPLOY_HOST" ] && missing+=("DEPLOY_HOST")
           [ -z "$DEPLOY_USER" ] && missing+=("DEPLOY_USER")
           [ -z "$DEPLOY_SSH_KEY" ] && missing+=("DEPLOY_SSH_KEY")
           [ -z "$DEPLOY_PATH" ] && missing+=("DEPLOY_PATH")
+          [ -z "$DJANGO_SECRET_KEY" ] && missing+=("DJANGO_SECRET_KEY")
+          [ -z "$DJANGO_ALLOWED_HOSTS" ] && missing+=("DJANGO_ALLOWED_HOSTS")
+          [ -z "$DJANGO_CORS_ALLOWED_ORIGINS" ] && missing+=("DJANGO_CORS_ALLOWED_ORIGINS")
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "Missing required secrets: ${missing[*]}"
             exit 1
