@@ -72,6 +72,8 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
+          build-args: |
+            REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_API_BASE_URL }}
           tags: |
             ${{ steps.image_names.outputs.frontend_image }}:latest
             ${{ steps.image_names.outputs.frontend_image }}:sha-${{ github.sha }}
