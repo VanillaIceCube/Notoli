@@ -23,14 +23,12 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_PASSPHRASE: ${{ secrets.DEPLOY_PASSPHRASE }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           missing=()
           [ -z "$DEPLOY_HOST" ] && missing+=("DEPLOY_HOST")
           [ -z "$DEPLOY_USER" ] && missing+=("DEPLOY_USER")
           [ -z "$DEPLOY_SSH_KEY" ] && missing+=("DEPLOY_SSH_KEY")
-          [ -z "$DEPLOY_PASSPHRASE" ] && missing+=("DEPLOY_PASSPHRASE")
           [ -z "$DEPLOY_PATH" ] && missing+=("DEPLOY_PATH")
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "Missing required secrets: ${missing[*]}"
@@ -97,7 +95,6 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          passphrase: ${{ secrets.DEPLOY_PASSPHRASE }}
           port: ${{ steps.deploy_vars.outputs.deploy_port }}
           script: |
             set -e
