@@ -11,6 +11,10 @@ RUN npm install
 # Copy your React project code
 COPY . .
 
+# Build-time envs for CRA
+ARG REACT_APP_API_BASE_URL
+ENV REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL
+
 # Build optimized React app (outputs to /frontend/build)
 RUN npm run build
 
