@@ -79,7 +79,7 @@ export default function Login({ showSnackbar }) {
       }}
     >
       <Typography variant="h3" sx={{ mt: 2, fontWeight: 'bold', color: 'white' }}>
-        notoli
+        testing backend permanence
       </Typography>
       <Paper
         elevation={3}
