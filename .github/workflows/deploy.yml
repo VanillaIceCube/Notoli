@@ -91,13 +91,29 @@ jobs:
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          DJANGO_DEBUG: ${{ secrets.DJANGO_DEBUG }}
+          DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
+          DJANGO_SQLITE_PATH: ${{ secrets.DJANGO_SQLITE_PATH }}
+          DJANGO_ALLOWED_HOSTS: ${{ secrets.DJANGO_ALLOWED_HOSTS }}
+          DJANGO_CORS_ALLOWED_ORIGINS: ${{ secrets.DJANGO_CORS_ALLOWED_ORIGINS }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ steps.deploy_vars.outputs.deploy_port }}
+          envs: DJANGO_DEBUG,DJANGO_SECRET_KEY,DJANGO_SQLITE_PATH,DJANGO_ALLOWED_HOSTS,DJANGO_CORS_ALLOWED_ORIGINS
           script: |
             set -e
             cd "${{ secrets.DEPLOY_PATH }}"
+            : "${DJANGO_DEBUG:=1}"
+            : "${DJANGO_SQLITE_PATH:=/backend/db.sqlite3}"
+            cat > .env <<EOF
+            DJANGO_DEBUG=$DJANGO_DEBUG
+            DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY
+            DJANGO_SQLITE_PATH=$DJANGO_SQLITE_PATH
+            DJANGO_ALLOWED_HOSTS=$DJANGO_ALLOWED_HOSTS
+            DJANGO_CORS_ALLOWED_ORIGINS=$DJANGO_CORS_ALLOWED_ORIGINS
+            EOF
             docker compose pull
             docker compose up -d --remove-orphans

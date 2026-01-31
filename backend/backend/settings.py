@@ -20,12 +20,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "default-key")
-DEBUG = os.environ.get("DEBUG", "1") == "1"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "default-key")
+DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
-extra_hosts = os.getenv("ALLOWED_HOSTS")
+extra_hosts = os.getenv("DJANGO_ALLOWED_HOSTS")
 if extra_hosts:
     ALLOWED_HOSTS.extend(extra_hosts.split(","))
 
@@ -66,7 +66,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
 
-extra_origins = os.getenv("CORS_ALLOWED_ORIGINS")
+extra_origins = os.getenv("DJANGO_CORS_ALLOWED_ORIGINS")
 if extra_origins:
     CORS_ALLOWED_ORIGINS.extend(extra_origins.split(","))
 
@@ -108,7 +108,7 @@ WSGI_APPLICATION = "backend.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": os.environ.get("SQLITE_PATH", BASE_DIR / "db.sqlite3"),
+        "NAME": os.environ.get("DJANGO_SQLITE_PATH", BASE_DIR / "db.sqlite3"),
     }
 }
 

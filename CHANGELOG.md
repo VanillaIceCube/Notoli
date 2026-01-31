@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Frontend Docker build now accepts CRA `REACT_APP_API_BASE_URL` as a build-time arg.
 - Deploy workflow passes the CRA API base URL secret into the frontend image build.
+- Backend environment variables are now prefixed with `DJANGO_` (including deploy-time `.env` generation).
 
 ## 2026-01-26
 ### Changed
