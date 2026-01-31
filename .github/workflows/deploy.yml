@@ -100,7 +100,7 @@ jobs:
           script: |
             set -e
             cd "${{ secrets.DEPLOY_PATH }}"
-            : "${DJANGO_DEBUG:=1}"
+            : "${DJANGO_DEBUG:=0}"
             : "${DJANGO_SQLITE_PATH:=/backend/db.sqlite3}"
             cat > .env <<EOF
             DJANGO_DEBUG=$DJANGO_DEBUG
