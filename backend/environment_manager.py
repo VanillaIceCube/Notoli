@@ -384,14 +384,14 @@ def cmd_export(args: argparse.Namespace) -> None:
     yaml_text = buf.getvalue().rstrip() + "\n"
 
     # Footer comment block (with *correct* commands)
-    # Use paths relative-ish for readability if under repo.
-    env_yml_display = paths.env_yml.as_posix()
-    req_display = paths.requirements_txt.as_posix()
+    # Assume user runs from the backend/ folder for brevity.
+    env_yml_display = paths.env_yml.name
+    req_display = paths.requirements_txt.name
 
     footer = (
         "\n"
         "# Update env + requirements.txt (pip packages go into requirements.txt)\n"
-        f"# `python {pathlib.Path(__file__).as_posix()} export -o {env_yml_display}`\n"
+        f"# `python {pathlib.Path(__file__).name} export -o {env_yml_display}`\n"
         "# Overwrite environment from yaml\n"
         f"# `conda env update --file {env_yml_display} --prune`\n"
         "# Fresh create from yaml\n"

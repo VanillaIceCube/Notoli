@@ -87,6 +87,7 @@ export default function Login({ showSnackbar }) {
       >
         <Box
           component="form"
+          autoComplete="on"
           sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
           onSubmit={(e) => {
             e.preventDefault();
@@ -98,6 +99,8 @@ export default function Login({ showSnackbar }) {
             sx={{ background: 'white' }}
             label="Email"
             type="email"
+            name="email"
+            autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -106,6 +109,8 @@ export default function Login({ showSnackbar }) {
             sx={{ background: 'white' }}
             label="Password"
             type="password"
+            name="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />

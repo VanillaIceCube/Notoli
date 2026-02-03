@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-02-03
+### Changed
+- Added an Nginx SPA fallback config for the frontend to support deep links/refresh-on-route.
+- Frontend Docker image now copies the custom Nginx config to serve `index.html` for client-side routes.
+- Updated login form fields to include autofill metadata for iOS/password managers.
+
 ## 2026-01-31
 ### Changed
 - Frontend Docker build now accepts CRA `REACT_APP_API_BASE_URL` as a build-time arg.
