@@ -24,11 +24,14 @@ Follow one of the setup paths below before running the app.
    - `npm start`
 
 ## Setup (Docker)
-1) Create a `.env` at repo root (see `backend.env` for keys).
+1) Create a `.env` in `deploy/` (see `deploy/backend.env` for keys).
    - On servers, ensure the `.env` lives next to `docker-compose.yml` (it is hidden).
 2) Ensure the SQLite file exists when using the bind mount:
+   - `cd deploy`
    - `touch db.sqlite3` (prevents Docker from creating a directory named `db.sqlite3`).
-3) Start: `docker compose up -d`
+3) Start:
+   - `cd deploy`
+   - `docker compose up -d`
 4) If you need path-based routing, use the included reverse proxy and visit:
    - `http://localhost/apps/notoli/` (frontend)
    - `http://localhost/apps/notoli/api/` (backend)

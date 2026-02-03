@@ -95,6 +95,18 @@ jobs:
           fi
           echo "deploy_port=$DEPLOY_PORT" >> "$GITHUB_OUTPUT"
 
+      - name: Upload deploy files
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ steps.deploy_vars.outputs.deploy_port }}
+          source: "deploy/docker-compose.yml,deploy/nginx-proxy.conf"
+          target: ${{ secrets.DEPLOY_PATH }}
+          strip_components: 1
+          overwrite: true
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5
         env:
