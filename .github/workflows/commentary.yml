@@ -38,8 +38,6 @@ on:
     secrets:
       OPENAI_API_KEY:
         required: false
-      OPENAI_PROJECT_ID:
-        required: false
 
 concurrency:
   group: commentary-${{ github.ref }}
@@ -75,7 +73,7 @@ jobs:
         uses: ./.github/actions/openai-chat
         with:
           api_key: ${{ secrets.OPENAI_API_KEY }}
-          project_id: ${{ secrets.OPENAI_PROJECT_ID }}
+          project_id: ${{ vars.OPENAI_PROJECT_ID }}
           diff_path: ${{ steps.pr_diff.outputs.diff_path }}
           model: "gpt-5.1"
           temperature: "0.3"
@@ -143,7 +141,7 @@ jobs:
         uses: ./.github/actions/openai-chat
         with:
           api_key: ${{ secrets.OPENAI_API_KEY }}
-          project_id: ${{ secrets.OPENAI_PROJECT_ID }}
+          project_id: ${{ vars.OPENAI_PROJECT_ID }}
           diff_path: ${{ steps.pr_diff.outputs.linediff_path }}
           model: "gpt-5.1"
           temperature: "0.2"

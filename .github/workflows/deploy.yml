@@ -20,13 +20,13 @@ jobs:
       - name: Validate deploy secrets
         shell: bash
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.DEPLOY_USER }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
-          DJANGO_ALLOWED_HOSTS: ${{ secrets.DJANGO_ALLOWED_HOSTS }}
-          DJANGO_CORS_ALLOWED_ORIGINS: ${{ secrets.DJANGO_CORS_ALLOWED_ORIGINS }}
+          DJANGO_ALLOWED_HOSTS: ${{ vars.DJANGO_ALLOWED_HOSTS }}
+          DJANGO_CORS_ALLOWED_ORIGINS: ${{ vars.DJANGO_CORS_ALLOWED_ORIGINS }}
         run: |
           missing=()
           [ -z "$DEPLOY_HOST" ] && missing+=("DEPLOY_HOST")
@@ -79,7 +79,7 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           build-args: |
-            REACT_APP_API_BASE_URL=${{ secrets.REACT_APP_API_BASE_URL }}
+            REACT_APP_API_BASE_URL=${{ vars.REACT_APP_API_BASE_URL }}
           tags: |
             ${{ steps.image_names.outputs.frontend_image }}:latest
             ${{ steps.image_names.outputs.frontend_image }}:sha-${{ github.sha }}
@@ -88,7 +88,7 @@ jobs:
         id: deploy_vars
         shell: bash
         env:
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
         run: |
           if [ -z "$DEPLOY_PORT" ]; then
             DEPLOY_PORT=22
@@ -98,32 +98,32 @@ jobs:
       - name: Upload deploy files
         uses: appleboy/scp-action@v1
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ steps.deploy_vars.outputs.deploy_port }}
           source: "deploy/docker-compose.yml,deploy/nginx-proxy.conf"
-          target: ${{ secrets.DEPLOY_PATH }}
+          target: ${{ vars.DEPLOY_PATH }}
           strip_components: 1
           overwrite: true
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.5
         env:
-          DJANGO_DEBUG: ${{ secrets.DJANGO_DEBUG }}
+          DJANGO_DEBUG: ${{ vars.DJANGO_DEBUG }}
           DJANGO_SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
-          DJANGO_SQLITE_PATH: ${{ secrets.DJANGO_SQLITE_PATH }}
-          DJANGO_ALLOWED_HOSTS: ${{ secrets.DJANGO_ALLOWED_HOSTS }}
-          DJANGO_CORS_ALLOWED_ORIGINS: ${{ secrets.DJANGO_CORS_ALLOWED_ORIGINS }}
+          DJANGO_SQLITE_PATH: ${{ vars.DJANGO_SQLITE_PATH }}
+          DJANGO_ALLOWED_HOSTS: ${{ vars.DJANGO_ALLOWED_HOSTS }}
+          DJANGO_CORS_ALLOWED_ORIGINS: ${{ vars.DJANGO_CORS_ALLOWED_ORIGINS }}
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ steps.deploy_vars.outputs.deploy_port }}
           envs: DJANGO_DEBUG,DJANGO_SECRET_KEY,DJANGO_SQLITE_PATH,DJANGO_ALLOWED_HOSTS,DJANGO_CORS_ALLOWED_ORIGINS
           script: |
             set -e
-            cd "${{ secrets.DEPLOY_PATH }}"
+            cd "${{ vars.DEPLOY_PATH }}"
             : "${DJANGO_DEBUG:=0}"
             : "${DJANGO_SQLITE_PATH:=/backend/db.sqlite3}"
             cat > .env <<EOF
