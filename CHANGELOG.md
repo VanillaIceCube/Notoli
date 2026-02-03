@@ -9,6 +9,9 @@ All notable changes to this project are documented in this file.
 - Frontend router now uses the CRA public URL as a basename and defaults API calls to `/apps/notoli/api` when unset.
 - Backend now trusts proxy HTTPS headers and supports configurable CSRF trusted origins.
 - Added a Docker reverse-proxy config for path-based routing under `/apps/notoli` with Cloudflare HTTPS header passthrough.
+- Moved deployment assets into `deploy/`, including `docker-compose.yml` and environment files.
+- Updated Docker Compose to mount `nginx-proxy.conf` from the deploy directory.
+- Deploy workflow now uploads the deploy Compose and Nginx config to the VM before running `docker compose`.
 
 ## 2026-01-31
 ### Changed
