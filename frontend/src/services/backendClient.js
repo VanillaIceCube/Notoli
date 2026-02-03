@@ -14,7 +14,7 @@ export const login = ({ email, username, password }) => {
     payload.username = username;
   }
 
-  return apiFetch('/api/auth/login/', {
+  return apiFetch('/auth/login/', {
     method: 'POST',
     headers: jsonHeaders(),
     body: JSON.stringify(payload),
@@ -31,7 +31,7 @@ export const register = ({ email, username, password }) => {
     payload.username = trimmedUsername;
   }
 
-  return apiFetch('/api/auth/register/', {
+  return apiFetch('/auth/register/', {
     method: 'POST',
     headers: jsonHeaders(),
     body: JSON.stringify(payload),
