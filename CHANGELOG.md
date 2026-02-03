@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Added an Nginx SPA fallback config for the frontend to support deep links/refresh-on-route.
 - Frontend Docker image now copies the custom Nginx config to serve `index.html` for client-side routes.
+- Updated login form fields to include autofill metadata for iOS/password managers.
 
 ## 2026-01-31
 ### Changed
