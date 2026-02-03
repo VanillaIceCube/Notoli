@@ -20,7 +20,7 @@ Follow one of the setup paths below before running the app.
 6) Frontend setup:
    - `cd frontend`
    - `npm install`
-   - Optional: set `REACT_APP_API_BASE_URL` (default: `/apps/notoli`)
+   - Optional: set `REACT_APP_API_BASE_URL` (default: `/apps/notoli/api`)
    - `npm start`
 
 ## Setup (Docker)
