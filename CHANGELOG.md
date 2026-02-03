@@ -12,6 +12,8 @@ All notable changes to this project are documented in this file.
 - Moved deployment assets into `deploy/`, including `docker-compose.yml` and environment files.
 - Updated Docker Compose to mount `nginx-proxy.conf` from the deploy directory.
 - Deploy workflow now uploads the deploy Compose and Nginx config to the VM before running `docker compose`.
+- Deploy workflow now uses repo variables for non-secret configuration and keeps secrets only for sensitive values.
+- Commentary workflow now reads `OPENAI_PROJECT_ID` from repo variables instead of secrets.
 
 ## 2026-01-31
 ### Changed
