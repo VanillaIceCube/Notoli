@@ -29,6 +29,9 @@ extra_hosts = os.getenv("DJANGO_ALLOWED_HOSTS")
 if extra_hosts:
     ALLOWED_HOSTS.extend(extra_hosts.split(","))
 
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
 
 # Application definition
 INSTALLED_APPS = [
@@ -69,6 +72,14 @@ CORS_ALLOWED_ORIGINS = [
 extra_origins = os.getenv("DJANGO_CORS_ALLOWED_ORIGINS")
 if extra_origins:
     CORS_ALLOWED_ORIGINS.extend(extra_origins.split(","))
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+]
+
+extra_csrf_origins = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS")
+if extra_csrf_origins:
+    CSRF_TRUSTED_ORIGINS.extend(extra_csrf_origins.split(","))
 
 
 REST_FRAMEWORK = {
