@@ -27,7 +27,7 @@ describe('apiClient', () => {
 
     await apiFetch('/path', { method: 'GET' });
 
-    expect(global.fetch).toHaveBeenCalledWith('/apps/notoli/api/path', { method: 'GET' });
+    expect(global.fetch).toHaveBeenCalledWith('/apps/notoli/path', { method: 'GET' });
   });
 
   test('when options are provided, it passes them through unchanged', async () => {
@@ -41,6 +41,6 @@ describe('apiClient', () => {
 
     await apiFetch('/path', options);
 
-    expect(global.fetch).toHaveBeenCalledWith('/apps/notoli/api/path', options);
+    expect(global.fetch).toHaveBeenCalledWith('/apps/notoli/path', options);
   });
 });
