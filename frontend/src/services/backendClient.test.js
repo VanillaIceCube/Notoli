@@ -30,7 +30,7 @@ describe('backendClient', () => {
   test('when login uses email, it posts the email payload', () => {
     login({ email: 'user@example.com', password: 'secret' });
 
-    expect(apiFetch).toHaveBeenCalledWith('/auth/login/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/auth/login/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.any(String),
@@ -42,7 +42,7 @@ describe('backendClient', () => {
   test('when login uses username, it posts the username payload', () => {
     login({ username: 'user1', password: 'secret' });
 
-    expect(apiFetch).toHaveBeenCalledWith('/auth/login/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/auth/login/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.any(String),
@@ -61,7 +61,7 @@ describe('backendClient', () => {
   test('when register trims inputs, it posts trimmed values', () => {
     register({ email: ' user@example.com ', username: ' user1 ', password: 'secret' });
 
-    expect(apiFetch).toHaveBeenCalledWith('/auth/register/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/auth/register/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.any(String),
@@ -77,7 +77,7 @@ describe('backendClient', () => {
   test('when register has blank username, it omits the username', () => {
     register({ email: 'user@example.com', username: '   ', password: 'secret' });
 
-    expect(apiFetch).toHaveBeenCalledWith('/auth/register/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/auth/register/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: expect.any(String),
