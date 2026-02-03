@@ -35,9 +35,11 @@ function App() {
     setSnackbarOpen(false);
   };
 
+  const routerBasename = process.env.PUBLIC_URL || '/';
+
   return (
     <React.Fragment>
-      <Router>
+      <Router basename={routerBasename}>
         <MyAppBar appBarHeader={appBarHeader} setDrawerOpen={setDrawerOpen} />
         <MyDrawer
           open={drawerOpen}

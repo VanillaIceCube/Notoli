@@ -14,12 +14,13 @@ Follow one of the setup paths below before running the app.
    - `DJANGO_SQLITE_PATH` (default: `backend/db.sqlite3`)
    - `DJANGO_ALLOWED_HOSTS` (comma-separated)
    - `DJANGO_CORS_ALLOWED_ORIGINS` (comma-separated)
+   - `DJANGO_CSRF_TRUSTED_ORIGINS` (comma-separated)
 4) Run backend migrations: `python backend/manage.py migrate`
 5) Start backend: `python backend/manage.py runserver 8000`
 6) Frontend setup:
    - `cd frontend`
    - `npm install`
-   - Optional: set `REACT_APP_API_BASE_URL` (default: `http://127.0.0.1:8000`)
+   - Optional: set `REACT_APP_API_BASE_URL` (default: `/apps/notoli/api`)
    - `npm start`
 
 ## Setup (Docker)
@@ -28,7 +29,10 @@ Follow one of the setup paths below before running the app.
 2) Ensure the SQLite file exists when using the bind mount:
    - `touch db.sqlite3` (prevents Docker from creating a directory named `db.sqlite3`).
 3) Start: `docker compose up -d`
-4) Frontend will be at `http://localhost:3000` and backend at `http://localhost:8000`.
+4) If you need path-based routing, use the included reverse proxy and visit:
+   - `http://localhost/apps/notoli/` (frontend)
+   - `http://localhost/apps/notoli/api/` (backend)
+   Direct ports are still available at `http://localhost:3000` and `http://localhost:8000`.
 
 ## Maintenance
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`

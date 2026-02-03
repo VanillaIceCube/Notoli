@@ -1,6 +1,18 @@
 version: '3.8'
 
 services:
+  proxy:
+    image: nginx:alpine
+    container_name: notoli-proxy
+    volumes:
+      - ./deploy/nginx-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "80:80"
+    restart: always
+    depends_on:
+      - frontend
+      - backend
+
   backend:
     image: ghcr.io/vanillaicecube/notoli-backend:latest
     container_name: notoli-backend
