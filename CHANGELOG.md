@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 - Added an Nginx SPA fallback config for the frontend to support deep links/refresh-on-route.
 - Frontend Docker image now copies the custom Nginx config to serve `index.html` for client-side routes.
 - Updated login form fields to include autofill metadata for iOS/password managers.
-- Frontend router now uses the CRA public URL as a basename and defaults API calls to `/apps/notoli` when unset.
+- Frontend router now uses the CRA public URL as a basename and defaults API calls to `/apps/notoli/api` when unset.
 - Backend now trusts proxy HTTPS headers and supports configurable CSRF trusted origins.
 - Added a Docker reverse-proxy config for path-based routing under `/apps/notoli` with Cloudflare HTTPS header passthrough.
 
