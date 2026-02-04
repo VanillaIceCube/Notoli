@@ -3,7 +3,7 @@ All notable changes to this project are documented in this file.
 
 ## 2026-02-04
 ### Changed
-- Frontend API base URL defaults back to `/apps/notoli/api`, and frontend client paths no longer include `/api` to avoid double prefixes.
+- Frontend API base URL defaults to `/apps/notoli`, and frontend client paths include `/api` or `/auth` to avoid duplicate prefixes.
 
 ## 2026-02-03
 ### Changed

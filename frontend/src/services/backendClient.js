@@ -39,86 +39,86 @@ export const register = ({ email, username, password }) => {
 };
 
 export const fetchWorkspaces = (token) =>
-  apiFetch('/workspaces/', {
+  apiFetch('/api/workspaces/', {
     headers: authHeader(token),
   });
 
 export const fetchWorkspace = (workspaceId, token) =>
-  apiFetch(`/workspaces/${workspaceId}/`, {
+  apiFetch(`/api/workspaces/${workspaceId}/`, {
     headers: authHeader(token),
   });
 
 export const createWorkspace = (payload, token) =>
-  apiFetch('/workspaces/', {
+  apiFetch('/api/workspaces/', {
     method: 'POST',
     headers: jsonHeaders(token),
     body: JSON.stringify(payload),
   });
 
 export const updateWorkspace = (workspaceId, payload, token) =>
-  apiFetch(`/workspaces/${workspaceId}/`, {
+  apiFetch(`/api/workspaces/${workspaceId}/`, {
     method: 'PATCH',
     headers: jsonHeaders(token),
     body: JSON.stringify(payload),
   });
 
 export const deleteWorkspace = (workspaceId, token) =>
-  apiFetch(`/workspaces/${workspaceId}/`, {
+  apiFetch(`/api/workspaces/${workspaceId}/`, {
     method: 'DELETE',
     headers: jsonHeaders(token),
   });
 
 export const fetchTodoLists = (workspaceId, token) =>
-  apiFetch(`/todolists/?workspace=${workspaceId}`, {
+  apiFetch(`/api/todolists/?workspace=${workspaceId}`, {
     headers: authHeader(token),
   });
 
 export const fetchTodoList = (todoListId, token) =>
-  apiFetch(`/todolists/${todoListId}/`, {
+  apiFetch(`/api/todolists/${todoListId}/`, {
     headers: authHeader(token),
   });
 
 export const createTodoList = (workspaceId, payload, token) =>
-  apiFetch(`/todolists/?workspace=${workspaceId}`, {
+  apiFetch(`/api/todolists/?workspace=${workspaceId}`, {
     method: 'POST',
     headers: jsonHeaders(token),
     body: JSON.stringify(payload),
   });
 
 export const updateTodoList = (todoListId, payload, token) =>
-  apiFetch(`/todolists/${todoListId}/`, {
+  apiFetch(`/api/todolists/${todoListId}/`, {
     method: 'PATCH',
     headers: jsonHeaders(token),
     body: JSON.stringify(payload),
   });
 
 export const deleteTodoList = (todoListId, token) =>
-  apiFetch(`/todolists/${todoListId}/`, {
+  apiFetch(`/api/todolists/${todoListId}/`, {
     method: 'DELETE',
     headers: jsonHeaders(token),
   });
 
 export const fetchNotes = (todoListId, token) =>
-  apiFetch(`/notes/?todo_list=${todoListId}`, {
+  apiFetch(`/api/notes/?todo_list=${todoListId}`, {
     headers: authHeader(token),
   });
 
 export const createNote = (todoListId, payload, token) =>
-  apiFetch(`/notes/?todo_list=${todoListId}`, {
+  apiFetch(`/api/notes/?todo_list=${todoListId}`, {
     method: 'POST',
     headers: jsonHeaders(token),
     body: JSON.stringify(payload),
   });
 
 export const updateNote = (noteId, payload, token) =>
-  apiFetch(`/notes/${noteId}/`, {
+  apiFetch(`/api/notes/${noteId}/`, {
     method: 'PATCH',
     headers: jsonHeaders(token),
     body: JSON.stringify(payload),
   });
 
 export const deleteNote = (noteId, token) =>
-  apiFetch(`/notes/${noteId}/`, {
+  apiFetch(`/api/notes/${noteId}/`, {
     method: 'DELETE',
     headers: jsonHeaders(token),
   });
