@@ -28,6 +28,7 @@ jobs:
           DJANGO_ALLOWED_HOSTS: ${{ vars.DJANGO_ALLOWED_HOSTS }}
           DJANGO_CORS_ALLOWED_ORIGINS: ${{ vars.DJANGO_CORS_ALLOWED_ORIGINS }}
           DJANGO_CSRF_TRUSTED_ORIGINS: ${{ vars.DJANGO_CSRF_TRUSTED_ORIGINS }}
+          DJANGO_FORCE_SCRIPT_NAME: ${{ vars.DJANGO_FORCE_SCRIPT_NAME }}
         run: |
           missing=()
           [ -z "$DEPLOY_HOST" ] && missing+=("DEPLOY_HOST")
@@ -38,6 +39,7 @@ jobs:
           [ -z "$DJANGO_ALLOWED_HOSTS" ] && missing+=("DJANGO_ALLOWED_HOSTS")
           [ -z "$DJANGO_CORS_ALLOWED_ORIGINS" ] && missing+=("DJANGO_CORS_ALLOWED_ORIGINS")
           [ -z "$DJANGO_CSRF_TRUSTED_ORIGINS" ] && missing+=("DJANGO_CSRF_TRUSTED_ORIGINS")
+          [ -z "$DJANGO_FORCE_SCRIPT_NAME" ] && missing+=("DJANGO_FORCE_SCRIPT_NAME")
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "Missing required secrets: ${missing[*]}"
             exit 1
@@ -118,17 +120,19 @@ jobs:
           DJANGO_ALLOWED_HOSTS: ${{ vars.DJANGO_ALLOWED_HOSTS }}
           DJANGO_CORS_ALLOWED_ORIGINS: ${{ vars.DJANGO_CORS_ALLOWED_ORIGINS }}
           DJANGO_CSRF_TRUSTED_ORIGINS: ${{ vars.DJANGO_CSRF_TRUSTED_ORIGINS }}
+          DJANGO_FORCE_SCRIPT_NAME: ${{ vars.DJANGO_FORCE_SCRIPT_NAME }}
         with:
           host: ${{ vars.DEPLOY_HOST }}
           username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ steps.deploy_vars.outputs.deploy_port }}
-          envs: DJANGO_DEBUG,DJANGO_SECRET_KEY,DJANGO_SQLITE_PATH,DJANGO_ALLOWED_HOSTS,DJANGO_CORS_ALLOWED_ORIGINS,DJANGO_CSRF_TRUSTED_ORIGINS
+          envs: DJANGO_DEBUG,DJANGO_SECRET_KEY,DJANGO_SQLITE_PATH,DJANGO_ALLOWED_HOSTS,DJANGO_CORS_ALLOWED_ORIGINS,DJANGO_CSRF_TRUSTED_ORIGINS,DJANGO_FORCE_SCRIPT_NAME
           script: |
             set -e
             cd "${{ vars.DEPLOY_PATH }}"
             : "${DJANGO_DEBUG:=0}"
             : "${DJANGO_SQLITE_PATH:=/backend/db.sqlite3}"
+            : "${DJANGO_FORCE_SCRIPT_NAME:=/apps/notoli}"
             cat > .env <<EOF
             DJANGO_DEBUG=$DJANGO_DEBUG
             DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY
@@ -136,6 +140,7 @@ jobs:
             DJANGO_ALLOWED_HOSTS=$DJANGO_ALLOWED_HOSTS
             DJANGO_CORS_ALLOWED_ORIGINS=$DJANGO_CORS_ALLOWED_ORIGINS
             DJANGO_CSRF_TRUSTED_ORIGINS=$DJANGO_CSRF_TRUSTED_ORIGINS
+            DJANGO_FORCE_SCRIPT_NAME=$DJANGO_FORCE_SCRIPT_NAME
             EOF
             docker system prune -af
             docker compose pull
