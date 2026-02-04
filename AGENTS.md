@@ -15,6 +15,7 @@ Follow one of the setup paths below before running the app.
    - `DJANGO_ALLOWED_HOSTS` (comma-separated)
    - `DJANGO_CORS_ALLOWED_ORIGINS` (comma-separated)
    - `DJANGO_CSRF_TRUSTED_ORIGINS` (comma-separated)
+   - `DJANGO_FORCE_SCRIPT_NAME` (default: unset; set to `/apps/notoli` for path-based routing)
 4) Run backend migrations: `python backend/manage.py migrate`
 5) Start backend: `python backend/manage.py runserver 8000`
 6) Frontend setup:
