@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-02-04
+### Changed
+- Default frontend API base URL now points to `/apps/notoli` to avoid double `/api` prefixes when client paths include `/api`.
+
 ## 2026-02-03
 ### Changed
 - Added an Nginx SPA fallback config for the frontend to support deep links/refresh-on-route.
