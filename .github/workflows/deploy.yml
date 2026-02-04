@@ -135,4 +135,5 @@ jobs:
             EOF
             docker compose pull
             docker compose up -d --remove-orphans
+            docker compose up -d --force-recreate proxy
             docker compose exec -T backend python manage.py migrate
