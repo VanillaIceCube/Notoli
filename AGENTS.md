@@ -20,7 +20,8 @@ Follow one of the setup paths below before running the app.
 6) Frontend setup:
    - `cd frontend`
    - `npm install`
-   - Optional: set `REACT_APP_API_BASE_URL` (default: `/apps/notoli`)
+   - Optional: set `REACT_APP_API_BASE_URL` (default: `http://localhost:8000`)
+     - For production builds, set this to `https://api.judeandrewalaba.com`
    - `npm start`
 
 ## Setup (Docker)
@@ -32,10 +33,11 @@ Follow one of the setup paths below before running the app.
 3) Start:
    - `cd deploy`
    - `docker compose up -d`
-4) If you need path-based routing, use the included reverse proxy and visit:
-   - `http://localhost/apps/notoli/` (frontend)
-   - `http://localhost/apps/notoli/api/` (backend)
-   Direct ports are still available at `http://localhost:3000` and `http://localhost:8000`.
+4) The included reverse proxy serves the frontend at:
+   - `http://localhost/apps/notoli/`
+   Backend is exposed on the direct port:
+   - `http://localhost:8000`
+   Frontend is still available at `http://localhost:3000`.
 
 ## Maintenance
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
