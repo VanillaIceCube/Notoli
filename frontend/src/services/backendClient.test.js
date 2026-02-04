@@ -89,7 +89,7 @@ describe('backendClient', () => {
   test('when fetching workspaces with a token, it sends the auth header', () => {
     fetchWorkspaces('token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/workspaces/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/workspaces/', {
       headers: { Authorization: 'Bearer token' },
     });
   });
@@ -97,7 +97,7 @@ describe('backendClient', () => {
   test('when fetching workspaces without a token, it omits the auth header', () => {
     fetchWorkspaces();
 
-    expect(apiFetch).toHaveBeenCalledWith('/workspaces/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/workspaces/', {
       headers: {},
     });
   });
@@ -105,7 +105,7 @@ describe('backendClient', () => {
   test('when fetching a workspace, it calls the workspace endpoint', () => {
     fetchWorkspace(3, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/workspaces/3/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/workspaces/3/', {
       headers: { Authorization: 'Bearer token' },
     });
   });
@@ -113,7 +113,7 @@ describe('backendClient', () => {
   test('when creating a workspace, it posts JSON with auth', () => {
     createWorkspace({ name: 'Alpha' }, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/workspaces/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/workspaces/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
       body: JSON.stringify({ name: 'Alpha' }),
@@ -123,7 +123,7 @@ describe('backendClient', () => {
   test('when updating a workspace, it patches JSON with auth', () => {
     updateWorkspace(3, { name: 'Beta' }, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/workspaces/3/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/workspaces/3/', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
       body: JSON.stringify({ name: 'Beta' }),
@@ -133,7 +133,7 @@ describe('backendClient', () => {
   test('when deleting a workspace, it deletes with auth', () => {
     deleteWorkspace(3, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/workspaces/3/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/workspaces/3/', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
     });
@@ -142,7 +142,7 @@ describe('backendClient', () => {
   test('when fetching todo lists, it calls the workspace query endpoint', () => {
     fetchTodoLists(9, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/todolists/?workspace=9', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/todolists/?workspace=9', {
       headers: { Authorization: 'Bearer token' },
     });
   });
@@ -150,7 +150,7 @@ describe('backendClient', () => {
   test('when fetching a todo list, it calls the todo list endpoint', () => {
     fetchTodoList(5, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/todolists/5/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/todolists/5/', {
       headers: { Authorization: 'Bearer token' },
     });
   });
@@ -158,7 +158,7 @@ describe('backendClient', () => {
   test('when creating a todo list, it posts JSON with auth', () => {
     createTodoList(9, { name: 'List' }, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/todolists/?workspace=9', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/todolists/?workspace=9', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
       body: JSON.stringify({ name: 'List' }),
@@ -168,7 +168,7 @@ describe('backendClient', () => {
   test('when updating a todo list, it patches JSON with auth', () => {
     updateTodoList(5, { name: 'Updated' }, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/todolists/5/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/todolists/5/', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
       body: JSON.stringify({ name: 'Updated' }),
@@ -178,7 +178,7 @@ describe('backendClient', () => {
   test('when deleting a todo list, it deletes with auth', () => {
     deleteTodoList(5, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/todolists/5/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/todolists/5/', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
     });
@@ -187,7 +187,7 @@ describe('backendClient', () => {
   test('when fetching notes, it calls the todo list query endpoint', () => {
     fetchNotes(7, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/notes/?todo_list=7', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/notes/?todo_list=7', {
       headers: { Authorization: 'Bearer token' },
     });
   });
@@ -195,7 +195,7 @@ describe('backendClient', () => {
   test('when creating a note, it posts JSON with auth', () => {
     createNote(7, { note: 'Hello' }, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/notes/?todo_list=7', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/notes/?todo_list=7', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
       body: JSON.stringify({ note: 'Hello' }),
@@ -205,7 +205,7 @@ describe('backendClient', () => {
   test('when updating a note, it patches JSON with auth', () => {
     updateNote(2, { note: 'Updated' }, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/notes/2/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/notes/2/', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
       body: JSON.stringify({ note: 'Updated' }),
@@ -215,7 +215,7 @@ describe('backendClient', () => {
   test('when deleting a note, it deletes with auth', () => {
     deleteNote(2, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/notes/2/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/notes/2/', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
     });
