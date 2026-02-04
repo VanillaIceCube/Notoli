@@ -21,7 +21,7 @@ Follow one of the setup paths below before running the app.
    - `cd frontend`
    - `npm install`
    - Optional: set `REACT_APP_API_BASE_URL` (default: `http://localhost:8000`)
-     - For production builds, set this to `https://api.judeandrewalaba.com`
+     - For production builds, set this to `https://api.judeandrewalaba.com/apps/notoli`
    - `npm start`
 
 ## Setup (Docker)
