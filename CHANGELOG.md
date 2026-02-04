@@ -3,7 +3,8 @@ All notable changes to this project are documented in this file.
 
 ## 2026-02-04
 ### Changed
-- Frontend API base URL defaults to `/apps/notoli`, and frontend client paths include `/api` or `/auth` to avoid duplicate prefixes.
+- Frontend API base URL defaults to `http://localhost:8000` for local dev; production should set `REACT_APP_API_BASE_URL` to the API subdomain.
+- Nginx now serves the backend via `api.judeandrewalaba.com` instead of path-based `/apps/notoli/api`.
 
 ## 2026-02-03
 ### Changed
