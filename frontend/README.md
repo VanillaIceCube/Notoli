@@ -1,8 +1,8 @@
-# Frontend (React)
+# 🎨 Frontend (React)
 
 The Notoli frontend is a Create React App (CRA) single-page app with React Router and Material UI.
 
-## App Routes
+## 🧭 App Routes
 
 - `/` shows workspaces
 - `/workspace/:workspaceId` shows todo lists for a workspace
@@ -12,7 +12,7 @@ The Notoli frontend is a Create React App (CRA) single-page app with React Route
 Authentication tokens are stored in `sessionStorage` (`accessToken` and `refreshToken`).
 The refresh token is stored for later use, but the frontend currently does not auto-refresh access tokens.
 
-## Path-Based Hosting (`/apps/notoli`)
+## 🧩 Path-Based Hosting (`/apps/notoli`)
 
 This app is designed to be hosted under a subpath (not at `/`), for example:
 
@@ -24,7 +24,7 @@ Important pieces:
 - `src/App.js` uses `process.env.PUBLIC_URL` as the React Router basename
 - The container’s Nginx config (`frontend/nginx.conf`) serves `index.html` for deep links (`try_files ... /index.html`)
 
-## API Base URL
+## 🔌 API Base URL
 
 API calls go through `src/services/apiClient.js`.
 
@@ -35,7 +35,7 @@ API calls go through `src/services/apiClient.js`.
 
 Note: in the Docker image, `REACT_APP_API_BASE_URL` is a build-time value (it’s baked into the static build).
 
-## Local Development
+## 💻 Local Development
 
 From the repo root (full setup lives in [`AGENTS.md`](../AGENTS.md)):
 
@@ -45,7 +45,7 @@ npm install
 npm start
 ```
 
-## Useful Commands
+## 🧰 Useful Commands
 
 ```bash
 cd frontend
@@ -55,6 +55,6 @@ npm run lint
 npm run format
 ```
 
-## Node Version
+## 🧱 Node Version
 
 CI reads the Node version from `frontend/package.json` (`engines.node`).

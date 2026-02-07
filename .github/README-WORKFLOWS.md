@@ -1,7 +1,7 @@
-# GitHub Automation
+# 🤖 GitHub Automation
 This repo uses GitHub Actions for CI and deployments, plus Dependabot for dependency updates.
 
-## Flow 1: CI (`.github/workflows/ci.yml`)
+## ✅ Flow 1: CI (`.github/workflows/ci.yml`)
 Trigger:
 - Pull requests (opened/synchronize/reopened/ready_for_review)
 
@@ -26,7 +26,7 @@ Version pins:
 - Node version is read from `frontend/package.json` (`engines.node`)
 - Python version is read from `backend/environment.yml` (`python=<version>`)
 
-## Flow 2: Deploy (`.github/workflows/deploy.yml`)
+## 🚀 Flow 2: Deploy (`.github/workflows/deploy.yml`)
 Trigger:
 - Push to the `env-prod` branch
 - Manual `workflow_dispatch`
@@ -46,7 +46,7 @@ Deploy inputs (GitHub repo vars / secrets):
 - Backend config: `DJANGO_SECRET_KEY` (secret), plus vars like `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `DJANGO_FORCE_SCRIPT_NAME`
 - Frontend build arg: `REACT_APP_API_BASE_URL`
 
-## Flow 3: Dependabot (`.github/dependabot.yml` + CI/Auto Merge)
+## 📦 Flow 3: Dependabot (`.github/dependabot.yml` + CI/Auto Merge)
 Dependabot configuration:
 - [`.github/dependabot.yml`](dependabot.yml) opens daily PRs for:
   - npm (`/frontend`)

@@ -1,14 +1,14 @@
-# Backend (Django)
+# 🛠️ Backend (Django)
 
 The Notoli backend is a Django + Django REST Framework API, served by Gunicorn in production.
 
-## What Lives Here
+## 🧭 What Lives Here
 - `backend/backend/`: Django project settings/urls (`settings.py`, `urls.py`)
 - `backend/authentication/`: custom user model + JWT auth endpoints
 - `backend/notes/`: workspaces, todo lists, and notes (DRF viewsets)
 - `backend/manage.py`: Django management entrypoint
 
-## API Routes
+## 🗺️ API Routes
 Top-level routes (without any path prefix):
 - Auth: `/auth/` (register/login/refresh)
 - API: `/api/` (workspaces/todolists/notes)
@@ -19,7 +19,7 @@ If you deploy behind a path prefix like `/apps/notoli`, these become:
 - `/apps/notoli/api/`
 - `/apps/notoli/admin/`
 
-## Authentication
+## 🔐 Authentication
 JWT auth is provided by `djangorestframework-simplejwt`.
 
 Common endpoints:
@@ -32,7 +32,7 @@ New users get a default workspace (`"My Workspace"`) created automatically via a
 All `/api/*` endpoints require:
 - Header: `Authorization: Bearer <accessToken>`
 
-## Data Model (High Level)
+## 🧱 Data Model (High Level)
 - Workspace: top-level container for organizing todo lists
 - TodoList: belongs to a workspace; associates notes via a many-to-many relation
 - Note: a single item (`note` + optional `description`); can be linked into multiple todo lists
@@ -40,7 +40,7 @@ All `/api/*` endpoints require:
 Access scoping:
 - The API filters objects by `owner`/`created_by`/`collaborators` so users only see what they have access to.
 
-## Local Development
+## 💻 Local Development
 Full setup (Conda, env vars) lives in [`AGENTS.md`](../AGENTS.md). Common commands:
 
 ```bash
@@ -70,7 +70,7 @@ ruff check .
 ruff format --check .
 ```
 
-## Configuration
+## ⚙️ Configuration
 Key environment variables (see `backend/backend/settings.py` for defaults):
 - `DJANGO_SECRET_KEY`
 - `DJANGO_DEBUG` (`1`/`0`)
