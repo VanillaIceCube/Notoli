@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 All notable changes to this project are documented in this file.
 
 ## 2026-02-07
@@ -7,7 +7,7 @@ All notable changes to this project are documented in this file.
 - Expanded project documentation substantially (features, routes, API overview, architecture, quick start, config, repo layout).
 - Expanded `README.md` tech stack to include DigitalOcean and Cloudflare.
 - Expanded `AGENTS.md` with an infra note for Cloudflare + DigitalOcean (what to review when domains/paths/routes change).
-- Split documentation into component READMEs: `backend/README.md`, `frontend/README.md`, `deploy/README.md`, and `.github/README.md` (and trimmed the root `README.md`).
+- Split documentation into component READMEs: `backend/README.md`, `frontend/README.md`, `deploy/README.md`, and `.github/README-WORKFLOWS.md` (and trimmed the root `README.md`).
 
 ## 2026-02-06
 ### Changed
@@ -69,7 +69,7 @@ All notable changes to this project are documented in this file.
 - Standardized Conda environment management using a single `environment_conda_export.py` script.
 - Environment exports now always generate a minimal `environment.yml` and a separate `requirements.txt` for pip packages.
 - Pip dependencies are captured as top-level installs with pinned versions, excluding transitive dependencies.
-- Removed unstable pip entries (e.g. `@ file:///…`) to ensure portable, reproducible environments.
+- Removed unstable pip entries (e.g. `@ file:///â€¦`) to ensure portable, reproducible environments.
 
 
 ## 2026-01-22

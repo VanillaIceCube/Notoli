@@ -1,10 +1,10 @@
-# 📝 Notoli  
+﻿# ðŸ“ Notoli  
 **A Notion-Inspired To-Do List App**
 Notoli is my personalized take on a to-do list application, inspired by the flexibility of Notion databases.
-It’s designed to support **multiple views** of the same list, so my wife, Diana, and I can each use the app in the way that works best for us, whether that’s a clean, simple Notes-style interface or a more detailed, database-like workflow.
+Itâ€™s designed to support **multiple views** of the same list, so my wife, Diana, and I can each use the app in the way that works best for us, whether thatâ€™s a clean, simple Notes-style interface or a more detailed, database-like workflow.
 
-## ✨ Features
-- **Workspaces → TodoLists → Notes** hierarchy
+## âœ¨ Features
+- **Workspaces â†’ TodoLists â†’ Notes** hierarchy
 - **JWT auth** (register/login/refresh) with an email-first login flow
 - **Sane defaults**: new accounts get a default workspace automatically
 - **Fast CRUD UI**: add, edit, and delete items inline
@@ -13,7 +13,7 @@ It’s designed to support **multiple views** of the same list, so my wife, Dian
 - **Path-based hosting**: designed to run under a subpath like `/apps/notoli`
 - **Dockerized deployment**: frontend + backend + Nginx reverse proxy
 
-## 🚀 Tech Stack
+## ðŸš€ Tech Stack
 **Backend:** Django
 **Frontend:** React + Material UI
 **Environment Management:** Conda
@@ -22,18 +22,18 @@ It’s designed to support **multiple views** of the same list, so my wife, Dian
 **DNS/Proxy:** Cloudflare
 **CI/CD & Workflows:** Github Actions
 
-## 📚 Documentation
+## ðŸ“š Documentation
 - Setup, env vars, and common commands: [`AGENTS.md`](AGENTS.md)
 - Backend (API, auth, data model): [`backend/README.md`](backend/README.md)
 - Frontend (routing, API base URL): [`frontend/README.md`](frontend/README.md)
 - Deployment (Docker + Nginx): [`deploy/README.md`](deploy/README.md)
-- CI/CD + automation: [`.github/README.md`](.github/README.md)
+- CI/CD + automation: [`.github/README-WORKFLOWS.md`](.github/README-WORKFLOWS.md)
 - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
 
-## 📜 License
+## ðŸ“œ License
 This project is licensed under a **Modified MIT License (Non-Commercial Use Only)**.
 See the [LICENSE](./LICENSE) file for full details.
 
-## 🙏 Acknowledgments
+## ðŸ™ Acknowledgments
 This project includes code from [`conda_export.py`](https://github.com/andresberejnoi/Conda-Tools) by **Andres Berejnoi**,
 used under the terms of the original [MIT License](https://opensource.org/licenses/MIT).

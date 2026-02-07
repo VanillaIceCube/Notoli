@@ -1,4 +1,4 @@
-# AGENTS.md
+﻿# AGENTS.md
 
 This repo uses manual setup steps so Codex does not assume Django or Node are installed.
 Follow one of the setup paths below before running the app.
@@ -9,7 +9,7 @@ Also update the relevant README(s):
 - Backend/API/auth: `backend/README.md`
 - Frontend/routing/API base URL: `frontend/README.md`
 - Deployment/Docker/Nginx: `deploy/README.md`
-- CI/CD, Dependabot, workflows: `.github/README.md`
+- CI/CD, Dependabot, workflows: `.github/README-WORKFLOWS.md`
 
 Infra: Production runs behind Cloudflare (DNS/proxy) on a DigitalOcean VM. If you change domains, paths (e.g. `/apps/notoli`), or add new backend routes, also review:
 - Cloudflare DNS/proxy settings and any Redirect/WAF/Caching rules
