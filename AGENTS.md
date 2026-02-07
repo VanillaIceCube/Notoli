@@ -3,6 +3,8 @@
 This repo uses manual setup steps so Codex does not assume Django or Node are installed.
 Follow one of the setup paths below before running the app.
 
+Documentation: When you change setup, routing, env vars, or deploy steps, update `AGENTS.md`. When you change product behavior, stack, or high-level usage, update `README.md`.
+
 ## Setup (local dev with Conda)
 1) Create or update the Conda environment:
    - create: `conda env create -f backend/environment.yml`
@@ -39,6 +41,21 @@ Follow one of the setup paths below before running the app.
    Backend is exposed on the direct port:
    - `http://localhost:8000`
    Frontend is still available at `http://localhost:3000`.
+
+## Production Routing Notes
+- Public URLs (path-based):
+  - Frontend: `https://judeandrewalaba.com/apps/notoli`
+  - Backend:
+    - `https://judeandrewalaba.com/apps/notoli/api`
+    - `https://judeandrewalaba.com/apps/notoli/auth`
+    - `https://judeandrewalaba.com/apps/notoli/admin`
+- Required env vars for the path-based backend:
+  - `DJANGO_FORCE_SCRIPT_NAME=/apps/notoli`
+  - `DJANGO_ALLOWED_HOSTS=judeandrewalaba.com,www.judeandrewalaba.com`
+  - `DJANGO_CORS_ALLOWED_ORIGINS=https://judeandrewalaba.com,https://www.judeandrewalaba.com`
+  - `DJANGO_CSRF_TRUSTED_ORIGINS=https://judeandrewalaba.com,https://www.judeandrewalaba.com`
+- Frontend API base for production builds:
+  - `REACT_APP_API_BASE_URL=https://judeandrewalaba.com/apps/notoli`
 
 ## Maintenance
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
