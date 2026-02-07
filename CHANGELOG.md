@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-02-07
+### Changed
+- Updated `README.md` wording around "multiple views" to be less personal/compare-y while still mentioning Diana.
+- Expanded `README.md` tech stack to include DigitalOcean and Cloudflare.
+- Expanded `AGENTS.md` with an infra note for Cloudflare + DigitalOcean (what to review when domains/paths/routes change).
+
 ## 2026-02-06
 ### Changed
 - Frontend API base URL defaults to `http://localhost:8000` for local dev; production should set `REACT_APP_API_BASE_URL` to `https://judeandrewalaba.com/apps/notoli`.
