@@ -22,7 +22,7 @@ Follow one of the setup paths below before running the app.
    - `cd frontend`
    - `npm install`
    - Optional: set `REACT_APP_API_BASE_URL` (default: `http://localhost:8000`)
-     - For production builds, set this to `https://api.judeandrewalaba.com/apps/notoli`
+     - For production builds, set this to `https://judeandrewalaba.com/apps/notoli`
    - `npm start`
 
 ## Setup (Docker)
@@ -48,4 +48,3 @@ Follow one of the setup paths below before running the app.
 - Frontend deps: `cd frontend` then `npm install`
 - Note: pip dependencies are installed via the `pip:` section in `environment.yml`
   and resolved from `requirements.txt` (never via conda).
-  
