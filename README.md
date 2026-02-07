@@ -1,9 +1,9 @@
-﻿# ðŸ“ Notoli  
+﻿# 📝 Notoli  
 **A Notion-Inspired To-Do List App**
 Notoli is my personalized take on a to-do list application, inspired by the flexibility of Notion databases.
 Itâ€™s designed to support **multiple views** of the same list, so my wife, Diana, and I can each use the app in the way that works best for us, whether thatâ€™s a clean, simple Notes-style interface or a more detailed, database-like workflow.
 
-## âœ¨ Features
+## ✨ Features
 - **Workspaces â†’ TodoLists â†’ Notes** hierarchy
 - **JWT auth** (register/login/refresh) with an email-first login flow
 - **Sane defaults**: new accounts get a default workspace automatically
@@ -13,7 +13,7 @@ Itâ€™s designed to support **multiple views** of the same list, so my wife,
 - **Path-based hosting**: designed to run under a subpath like `/apps/notoli`
 - **Dockerized deployment**: frontend + backend + Nginx reverse proxy
 
-## ðŸš€ Tech Stack
+## 🚀 Tech Stack
 **Backend:** Django
 **Frontend:** React + Material UI
 **Environment Management:** Conda
@@ -22,7 +22,7 @@ Itâ€™s designed to support **multiple views** of the same list, so my wife,
 **DNS/Proxy:** Cloudflare
 **CI/CD & Workflows:** Github Actions
 
-## ðŸ“š Documentation
+## 📚 Documentation
 - Setup, env vars, and common commands: [`AGENTS.md`](AGENTS.md)
 - Backend (API, auth, data model): [`backend/README.md`](backend/README.md)
 - Frontend (routing, API base URL): [`frontend/README.md`](frontend/README.md)
@@ -30,10 +30,10 @@ Itâ€™s designed to support **multiple views** of the same list, so my wife,
 - CI/CD + automation: [`.github/README-WORKFLOWS.md`](.github/README-WORKFLOWS.md)
 - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
 
-## ðŸ“œ License
+## 📜 License
 This project is licensed under a **Modified MIT License (Non-Commercial Use Only)**.
 See the [LICENSE](./LICENSE) file for full details.
 
-## ðŸ™ Acknowledgments
+## 🙏 Acknowledgments
 This project includes code from [`conda_export.py`](https://github.com/andresberejnoi/Conda-Tools) by **Andres Berejnoi**,
 used under the terms of the original [MIT License](https://opensource.org/licenses/MIT).
