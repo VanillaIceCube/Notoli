@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-02-06
+### Changed
+- Frontend API base URL defaults to `http://localhost:8000` for local dev; production should set `REACT_APP_API_BASE_URL` to `https://judeandrewalaba.com/apps/notoli`.
+- Nginx now serves the backend via `judeandrewalaba.com/apps/notoli/{api,auth,admin}`.
+
 ## 2026-02-04
 ### Changed
 - Frontend API base URL defaults to `http://localhost:8000` for local dev; production should set `REACT_APP_API_BASE_URL` to the API subdomain.
@@ -12,7 +17,7 @@ All notable changes to this project are documented in this file.
 - Added an Nginx SPA fallback config for the frontend to support deep links/refresh-on-route.
 - Frontend Docker image now copies the custom Nginx config to serve `index.html` for client-side routes.
 - Updated login form fields to include autofill metadata for iOS/password managers.
-- Frontend router now uses the CRA public URL as a basename and defaults API calls to `/apps/notoli/api` when unset.
+- Frontend router now uses the CRA public URL as a basename; API calls are prefixed by `REACT_APP_API_BASE_URL` (defaults to `http://localhost:8000`).
 - Backend now trusts proxy HTTPS headers and supports configurable CSRF trusted origins.
 - Added a Docker reverse-proxy config for path-based routing under `/apps/notoli` with Cloudflare HTTPS header passthrough.
 - Moved deployment assets into `deploy/`, including `docker-compose.yml` and environment files.
