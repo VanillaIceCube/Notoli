@@ -12,6 +12,29 @@ Also update the relevant README(s):
 - CI/CD, Dependabot, workflows: `.github/README-WORKFLOWS.md`
 Also update `CHANGELOG.md`.
 
+## Changelog format
+When updating `CHANGELOG.md`, add a new dated section at the top and group entries under:
+- `### Added`
+- `### Fixed`
+- `### Changed`
+- `### Removed`
+Omit any empty groups (do not include a heading if there are no entries for it).
+Keep headings in that order and ensure each entry is filed under the correct group.
+
+Template:
+
+```md
+## YYYY-MM-DD
+### Added
+- ...
+### Fixed
+- ...
+### Changed
+- ...
+### Removed
+- ...
+```
+
 Infra: Production runs behind Cloudflare (DNS/proxy) on a DigitalOcean VM. If you change domains, paths (e.g. `/apps/notoli`), or add new backend routes, also review:
 - Cloudflare DNS/proxy settings and any Redirect/WAF/Caching rules
 - Origin reverse-proxy config: `deploy/nginx-proxy.conf`
