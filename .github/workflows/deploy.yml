@@ -121,14 +121,8 @@ jobs:
           DJANGO_CORS_ALLOWED_ORIGINS: ${{ vars.DJANGO_CORS_ALLOWED_ORIGINS }}
           DJANGO_CSRF_TRUSTED_ORIGINS: ${{ vars.DJANGO_CSRF_TRUSTED_ORIGINS }}
           DJANGO_FORCE_SCRIPT_NAME: ${{ vars.DJANGO_FORCE_SCRIPT_NAME }}
-          # Preferred (unambiguous and short)
           CLOUDFLARE_ORIGIN_CERT_B64: ${{ secrets.CLOUDFLARE_ORIGIN_CERT_B64 }}
           CLOUDFLARE_ORIGIN_KEY_B64: ${{ secrets.CLOUDFLARE_ORIGIN_KEY_B64 }}
-          # Back-compat (deprecated): older secret names
-          CLOUDFLARE_ORIGIN_CERT_PEM_B64: ${{ secrets.CLOUDFLARE_ORIGIN_CERT_PEM_B64 }}
-          CLOUDFLARE_ORIGIN_KEY_PEM_B64: ${{ secrets.CLOUDFLARE_ORIGIN_KEY_PEM_B64 }}
-          CF_ORIGIN_CERT_B64: ${{ secrets.CF_ORIGIN_CERT_B64 }}
-          CF_ORIGIN_KEY_B64: ${{ secrets.CF_ORIGIN_KEY_B64 }}
         with:
           host: ${{ vars.DEPLOY_HOST }}
           username: ${{ vars.DEPLOY_USER }}
