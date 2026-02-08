@@ -44,7 +44,7 @@ What it does:
 Deployment prerequisite:
 - For Cloudflare Full (strict), the origin must have a Cloudflare Origin Certificate.
 - Option A (manual): provision on the server at `certs/origin.pem` and `certs/origin.key` (see `deploy/README.md`).
-- Option B (automated): set GitHub Secrets `CLOUDFLARE_ORIGIN_CERT_PEM_B64` and `CLOUDFLARE_ORIGIN_KEY_PEM_B64` so the workflow writes the files to `certs/` during deploy.
+- Option B (automated): set GitHub Secrets `CLOUDFLARE_ORIGIN_CERT_PEM_B64` and `CLOUDFLARE_ORIGIN_KEY_PEM_B64` so the workflow uploads the files to `certs/` during deploy (raw PEM accepted).
 
 Deploy inputs (GitHub repo vars / secrets):
 - Server connection: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`, optional `DEPLOY_PORT`, secret `DEPLOY_SSH_KEY`
