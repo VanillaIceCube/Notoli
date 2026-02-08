@@ -20,8 +20,9 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Frontend API base URL defaults to `http://localhost:8000` for local dev; production should set `REACT_APP_API_BASE_URL` to `https://judeandrewalaba.com/apps/notoli`.
 - Nginx now serves the backend via `judeandrewalaba.com/apps/notoli/{api,auth,admin}` (and proxies Django admin/DRF static under `/apps/notoli/static/{admin,rest_framework}`).
-- Removed the legacy `api.judeandrewalaba.com` reverse-proxy server block (API subdomain no longer used).
 - Updated `AGENTS.md` with production routing notes and a docs update reminder.
+### Removed
+- Removed the legacy `api.judeandrewalaba.com` reverse-proxy server block (API subdomain no longer used).
 
 ## 2026-02-03
 ### Changed
@@ -30,13 +31,14 @@ All notable changes to this project are documented in this file.
 - Backend uses `DJANGO_FORCE_SCRIPT_NAME` to generate admin URLs under `/apps/notoli`.
 
 ## 2026-02-02
-### Changed
+### Added
 - Added an Nginx SPA fallback config for the frontend to support deep links/refresh-on-route.
+- Added a Docker reverse-proxy config for path-based routing under `/apps/notoli` with Cloudflare HTTPS header passthrough.
+### Changed
 - Frontend Docker image now copies the custom Nginx config to serve `index.html` for client-side routes.
 - Updated login form fields to include autofill metadata for iOS/password managers.
 - Frontend router now uses the CRA public URL as a basename; API calls are prefixed by `REACT_APP_API_BASE_URL` (defaults to `http://localhost:8000`).
 - Backend now trusts proxy HTTPS headers and supports configurable CSRF trusted origins.
-- Added a Docker reverse-proxy config for path-based routing under `/apps/notoli` with Cloudflare HTTPS header passthrough.
 - Moved deployment assets into `deploy/`, including `docker-compose.yml` and environment files.
 - Updated Docker Compose to mount `nginx-proxy.conf` from the deploy directory.
 - Deploy workflow now uploads the deploy Compose and Nginx config to the VM before running `docker compose`.
@@ -53,9 +55,10 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Dependabot auto-merge now also allows CVSS-based auto-merge for low-severity security alerts (while keeping patch/minor auto-merge).
 - Dependabot metadata lookup now enables alert lookup with `DEPENDABOT_PAT` fallback and includes security-events read access.
-- Removed unused OpenAI secrets from the Dependabot auto-merge workflow wiring.
 - Dependabot auto-merge now blocks major updates and requires low CVSS when a security alert is present.
 - Renamed GitHub Actions workflow files to use the `.yml` extension consistently.
+### Removed
+- Removed unused OpenAI secrets from the Dependabot auto-merge workflow wiring.
 
 ## 2026-01-25
 ### Added
@@ -76,8 +79,8 @@ All notable changes to this project are documented in this file.
 - Standardized Conda environment management using a single `environment_conda_export.py` script.
 - Environment exports now always generate a minimal `environment.yml` and a separate `requirements.txt` for pip packages.
 - Pip dependencies are captured as top-level installs with pinned versions, excluding transitive dependencies.
+### Removed
 - Removed unstable pip entries (e.g. `@ file:///â€¦`) to ensure portable, reproducible environments.
-
 
 ## 2026-01-22
 ### Changed
@@ -86,7 +89,7 @@ All notable changes to this project are documented in this file.
 - PR summary is now a reusable workflow called by CI instead of a separate PR trigger.
 
 ## 2026-01-21
-### Changed
+### Removed
 - Removed the limit to for dependabot PRs
 
 ## 2026-01-20
@@ -129,13 +132,14 @@ All notable changes to this project are documented in this file.
 - Dependabot major updates now call OpenAI and log the response before posting a PR comment.
 - Lint and Tests now run via the Continuous Integration workflow only, with reusable workflow calls.
 - Lint change detection now uses PR base/head SHAs when available for workflow calls.
-- Removed inherited secrets from the Continuous Integration workflow calls.
 - Renamed the Continuous Integration workflow file to `continuous_integration.yaml`.
 - Updated frontend ESLint dependencies to align with CRA compatibility.
 - Consolidated frontend test helpers into shared utilities (`frontend/src/test-utils.js`).
 - Centralized MUI Menu mocking in the frontend test setup (`frontend/src/setupTests.js`).
 - Renamed `BackendClient.js` to `backendClient.js` for naming consistency.
 - Renamed `client.js` to `apiClient.js` for naming consistency.
+### Removed
+- Removed inherited secrets from the Continuous Integration workflow calls.
 
 ## 2026-01-18
 ### Added
@@ -288,7 +292,6 @@ All notable changes to this project are documented in this file.
 - `MyDrawer` now fetches workspace name.
 - <img width="452" height="953" alt="image" src="https://github.com/user-attachments/assets/b581481c-bc33-4c10-808f-01aefc8ff11c" />
 - `getWorkspaceId` in utils.
-### Changed
 - Added notoli typography to `Login.js`.
 - <img width="451" height="956" alt="image" src="https://github.com/user-attachments/assets/bcd079b1-beb5-4078-99a1-650beeb8d58a" />
 
@@ -324,8 +327,8 @@ All notable changes to this project are documented in this file.
 ## 2025-07-28
 ### Added
 - Introduced a centralized Snackbar component in `App.js`, enabling consistent notifications across pages.
-- Enhanced `Login.js` to utilize the global Snackbar for displaying login success and error messages.
 ### Changed
+- Enhanced `Login.js` to utilize the global Snackbar for displaying login success and error messages.
 - Refactored `App.js` to manage Snackbar state and provide a unified Snackbar experience.
 - Updated `Login.js` to delegate Snackbar displays to the new centralized Snackbar management in `App.js`.
 - `autoHideDuration` in `MySnackbar` shortened.
@@ -344,6 +347,7 @@ All notable changes to this project are documented in this file.
 - Implemented dynamic routing in `TodoLists.js` and `Notes.js` using `useParams`.
 - Added navigation improvements in `Workspaces.js`, `TodoLists.js`, and `Notes.js` via `useNavigate`.
 - Built initial fetch logic in `TodoLists.js` and `Notes.js` to load workspace-specific data.
+- Added `django-filter` to project dependencies.
 ### Fixed
 - Corrected typos and improved error handling in `views.py` (todos and notes).
 - Resolved workspace access validation issues in `views.py`.
@@ -352,7 +356,6 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Enhanced fetch logic in `TodoLists.js` and `Notes.js` to include `?workspace=<id>`.
 - Updated DRF settings to enable default filters and permissions for todos and notes.
-- Added `django-filter` to project dependencies.
 - Updated route paths in `App.js` for consistent workspace routing of todos and notes.
 - Enhanced path parameter handling in `TodoLists.js`, `Notes.js`, and related components for consistency.
 - Renamed and reorganized branches for dev/prod workflow.
@@ -378,6 +381,12 @@ All notable changes to this project are documented in this file.
 ## 2025-06-30
 ### Added
 - Deletion capabilities in `Workspaces.js`, allowing users to remove workspaces directly from the interface.
+- Introduced error handling and state management improvements in the `onSaveNew` function within `Workspaces.js`.  
+- Added a new `onDelete` function in `Workspaces.js` for handling workspace deletions seamlessly.  
+- Implemented a pessimistic local-merge strategy in `Workspaces.js` to update the UI immediately after workspace creation.
+### Fixed
+- Corrected the deletion process in `Workspaces.js` by ensuring proper API call syntax with template literals.  
+- Updated error handling in the `onDelete` function to reset errors before attempting deletion.
 ### Changed
 - Improved UI update after deleting a workspace by modifying the state update logic.  
 - Refactored state management and menu handling in `Workspaces.js`:  
@@ -385,15 +394,9 @@ All notable changes to this project are documented in this file.
   - Enhanced function organization and naming for triple-dot menu interactions.  
   - Streamlined MUI component handling for better code readability.  
 - Refactored workspace fetching mechanism in `Workspaces.js` by encapsulating it into a dedicated `fetchWorkspaces` function.  
-- Introduced error handling and state management improvements in the `onSaveNew` function within `Workspaces.js`.  
-- Added a new `onDelete` function in `Workspaces.js` for handling workspace deletions seamlessly.  
-- Implemented a pessimistic local-merge strategy in `Workspaces.js` to update the UI immediately after workspace creation.
 - Refactored `Workspaces` component in `Workspaces.js`:
   - Renamed `onSaveNew` to `onAdd` for function clarity.
   - Renamed state variable `newName` to `WorkspaceName` for enhanced readability.
-### Fixed
-- Corrected the deletion process in `Workspaces.js` by ensuring proper API call syntax with template literals.  
-- Updated error handling in the `onDelete` function to reset errors before attempting deletion.
 ### Removed
 - Removed the unused `onStartAdding` function from `Workspaces.js` in the frontend to clean up the codebase.
 
@@ -402,17 +405,16 @@ All notable changes to this project are documented in this file.
 - Basenames to the URL router in `urls.py` for enhanced reverse URL lookups.
 - Introduced a triple-dot menu for managing workspaces in `Workspaces.js`.
 - ![image](https://github.com/user-attachments/assets/a0277a31-b8be-4a1c-a854-0c5ccad291bd)
-- Enhanced UI styling on the Workspaces page by adding background colors to `Divider` components and updating styles for `Menu` and `MenuItem` components.
-- ![image](https://github.com/user-attachments/assets/8ef1ae12-c2d9-4960-960b-ab4c4437cf34)
 - Added functionality to create new workspaces in the UI, allowing users to input workspace names directly.
 - ![image](https://github.com/user-attachments/assets/12794334-0ab8-4af9-9adf-fe3268992c30)
+### Fixed
+- Resolved an issue preventing creation of new workspaces from the UI.
+### Changed
+- Enhanced UI styling on the Workspaces page by adding background colors to `Divider` components and updating styles for `Menu` and `MenuItem` components.
+- ![image](https://github.com/user-attachments/assets/8ef1ae12-c2d9-4960-960b-ab4c4437cf34)
 - Aligned text to the left in workspace titles for improved readability.
 - Updated `TextField` styling to ensure consistent color themes, including focus and underline effects.
 - ![image](https://github.com/user-attachments/assets/5d0de5ea-29c0-455a-85a7-df26b39923f7)
-### Fixed
-- Resolved an issue preventing creation of new workspaces from the UI.
-
-### Changed
 - `WorkspaceSerializer` now treats `owner` and `created_by` fields as optional during creation.
 - `AuthenticatedRoute` component updated to use `sessionStorage` for token retrieval.
 - Renamed "Dianas TODO List" to "New Workspace" in `Workspaces.js`.
@@ -421,7 +423,6 @@ All notable changes to this project are documented in this file.
 ## 2025-06-23
 ### Fixed
 - Filtered notes by user and removed frontend owner hacks.
-
 ### Changed
 - Refactored the `models.py` in the `notes` app for improved clarity and organization:
   - Renamed the `TodoList` model to `Workspace`.
@@ -441,8 +442,9 @@ All notable changes to this project are documented in this file.
 - Implemented the `handleAddNew` function to allow creating new TODO lists from the frontend.
 ### Changed
 - Updated "Add New" button in `TodoLists.js` to trigger the new list creation functionality.
-- Removed comment related to hardcoding of the API URL in `TodoLists.js`.
 - Refactored `Login.js` and `TodoLists.js` components to simplify JSX and consolidate `sx` prop configurations for improved readability.
+### Removed
+- Removed comment related to hardcoding of the API URL in `TodoLists.js`.
 
 ## 2025-06-19
 ### Changed
@@ -487,7 +489,7 @@ All notable changes to this project are documented in this file.
 - Login page wired to backend authentication via Axios.
 - ![image](https://github.com/user-attachments/assets/bf9cca23-1da6-4efd-a115-5f20f675b979)
 - CORS support in the backend using `django-cors-headers`.
-### Changed
+### Removed
 - Removed unused CRA boilerplate and cleaned default styles.
 
 ## 2025-05-03
