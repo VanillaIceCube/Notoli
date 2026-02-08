@@ -26,8 +26,8 @@ Production (recommended): generate a Cloudflare Origin Certificate for `judeandr
 
 Optional: provision via GitHub Actions Secrets (recommended for repeatable deploys)
 - Create GitHub Secrets:
-  - `CLOUDFLARE_ORIGIN_CERT_PEM_B64` (base64-encoded `origin.pem`)
-  - `CLOUDFLARE_ORIGIN_KEY_PEM_B64` (base64-encoded `origin.key`)
+  - `CLOUDFLARE_ORIGIN_CERT_PEM_B64` (raw PEM or base64-encoded `origin.pem`)
+  - `CLOUDFLARE_ORIGIN_KEY_PEM_B64` (raw PEM or base64-encoded `origin.key`)
 
 Base64 helpers:
 - Linux/macOS: `base64 -w0 certs/origin.pem` and `base64 -w0 certs/origin.key`
