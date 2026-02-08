@@ -99,6 +99,40 @@ jobs:
           fi
           echo "deploy_port=$DEPLOY_PORT" >> "$GITHUB_OUTPUT"
 
+      - name: Stage deploy bundle (including TLS certs)
+        shell: bash
+        env:
+          CLOUDFLARE_ORIGIN_CERT_PEM_B64: ${{ secrets.CLOUDFLARE_ORIGIN_CERT_PEM_B64 }}
+          CLOUDFLARE_ORIGIN_KEY_PEM_B64: ${{ secrets.CLOUDFLARE_ORIGIN_KEY_PEM_B64 }}
+        run: |
+          set -euo pipefail
+
+          rm -rf deploy_bundle
+          mkdir -p deploy_bundle/certs
+
+          cp deploy/docker-compose.yml deploy_bundle/docker-compose.yml
+          cp deploy/nginx-proxy.conf deploy_bundle/nginx-proxy.conf
+
+          # Write certs into the bundle if secrets exist.
+          # Raw PEM is preferred here because ssh-action env vars don't reliably support multi-line values.
+          if [ -n "${CLOUDFLARE_ORIGIN_CERT_PEM_B64:-}" ] && [ -n "${CLOUDFLARE_ORIGIN_KEY_PEM_B64:-}" ]; then
+            if printf '%s' "$CLOUDFLARE_ORIGIN_CERT_PEM_B64" | grep -q "BEGIN CERTIFICATE"; then
+              printf '%s' "$CLOUDFLARE_ORIGIN_CERT_PEM_B64" > deploy_bundle/certs/origin.pem
+            else
+              # Support base64 too, even though the secret name contains `_B64`.
+              printf '%s' "$CLOUDFLARE_ORIGIN_CERT_PEM_B64" | tr -d ' \t\r\n' | base64 -d -i > deploy_bundle/certs/origin.pem
+            fi
+
+            if printf '%s' "$CLOUDFLARE_ORIGIN_KEY_PEM_B64" | grep -q "BEGIN .*PRIVATE KEY"; then
+              printf '%s' "$CLOUDFLARE_ORIGIN_KEY_PEM_B64" > deploy_bundle/certs/origin.key
+            else
+              printf '%s' "$CLOUDFLARE_ORIGIN_KEY_PEM_B64" | tr -d ' \t\r\n' | base64 -d -i > deploy_bundle/certs/origin.key
+            fi
+
+            chmod 644 deploy_bundle/certs/origin.pem
+            chmod 600 deploy_bundle/certs/origin.key
+          fi
+
       - name: Upload deploy files
         uses: appleboy/scp-action@v1
         with:
@@ -106,7 +140,7 @@ jobs:
           username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ steps.deploy_vars.outputs.deploy_port }}
-          source: "deploy/docker-compose.yml,deploy/nginx-proxy.conf"
+          source: "deploy_bundle/docker-compose.yml,deploy_bundle/nginx-proxy.conf,deploy_bundle/certs/origin.pem,deploy_bundle/certs/origin.key"
           target: ${{ vars.DEPLOY_PATH }}
           strip_components: 1
           overwrite: true
@@ -121,14 +155,12 @@ jobs:
           DJANGO_CORS_ALLOWED_ORIGINS: ${{ vars.DJANGO_CORS_ALLOWED_ORIGINS }}
           DJANGO_CSRF_TRUSTED_ORIGINS: ${{ vars.DJANGO_CSRF_TRUSTED_ORIGINS }}
           DJANGO_FORCE_SCRIPT_NAME: ${{ vars.DJANGO_FORCE_SCRIPT_NAME }}
-          CLOUDFLARE_ORIGIN_CERT_PEM_B64: ${{ secrets.CLOUDFLARE_ORIGIN_CERT_PEM_B64 }}
-          CLOUDFLARE_ORIGIN_KEY_PEM_B64: ${{ secrets.CLOUDFLARE_ORIGIN_KEY_PEM_B64 }}
         with:
           host: ${{ vars.DEPLOY_HOST }}
           username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ steps.deploy_vars.outputs.deploy_port }}
-          envs: DJANGO_DEBUG,DJANGO_SECRET_KEY,DJANGO_SQLITE_PATH,DJANGO_ALLOWED_HOSTS,DJANGO_CORS_ALLOWED_ORIGINS,DJANGO_CSRF_TRUSTED_ORIGINS,DJANGO_FORCE_SCRIPT_NAME,CLOUDFLARE_ORIGIN_CERT_PEM_B64,CLOUDFLARE_ORIGIN_KEY_PEM_B64
+          envs: DJANGO_DEBUG,DJANGO_SECRET_KEY,DJANGO_SQLITE_PATH,DJANGO_ALLOWED_HOSTS,DJANGO_CORS_ALLOWED_ORIGINS,DJANGO_CSRF_TRUSTED_ORIGINS,DJANGO_FORCE_SCRIPT_NAME
           script: |
             set -e
             cd "${{ vars.DEPLOY_PATH }}"
@@ -136,29 +168,13 @@ jobs:
             : "${DJANGO_SQLITE_PATH:=/backend/db.sqlite3}"
             : "${DJANGO_FORCE_SCRIPT_NAME:=/apps/notoli}"
 
-            # If provided, write the Cloudflare Origin cert/key from GitHub Secrets.
-            # Otherwise, expect the files to already exist on the server.
-            mkdir -p certs
-
-            if [ -n "${CLOUDFLARE_ORIGIN_CERT_PEM_B64:-}" ] && [ -n "${CLOUDFLARE_ORIGIN_KEY_PEM_B64:-}" ]; then
-              umask 077
-              # Sanitize potential CR/LF from copied secrets before decoding.
-              if ! printf '%s' "$CLOUDFLARE_ORIGIN_CERT_PEM_B64" | tr -d '\r\n' | base64 -d > certs/origin.pem; then
-                echo "Failed to base64-decode CLOUDFLARE_ORIGIN_CERT_PEM_B64. Ensure the secret value is base64 (not raw PEM) and is copied without extra characters."
-                exit 1
-              fi
-              if ! printf '%s' "$CLOUDFLARE_ORIGIN_KEY_PEM_B64" | tr -d '\r\n' | base64 -d > certs/origin.key; then
-                echo "Failed to base64-decode CLOUDFLARE_ORIGIN_KEY_PEM_B64. Ensure the secret value is base64 (not raw PEM) and is copied without extra characters."
-                exit 1
-              fi
-              chmod 644 certs/origin.pem
-              chmod 600 certs/origin.key
-            else
-              if [ ! -f certs/origin.pem ] || [ ! -f certs/origin.key ]; then
-                echo "Missing TLS certs. Either provision certs/origin.pem + certs/origin.key on the server, or set GitHub Secrets CLOUDFLARE_ORIGIN_CERT_PEM_B64 and CLOUDFLARE_ORIGIN_KEY_PEM_B64."
-                exit 1
-              fi
+            # TLS certs are uploaded as files (via SCP) to avoid multi-line env var issues.
+            if [ ! -f certs/origin.pem ] || [ ! -f certs/origin.key ]; then
+              echo "Missing TLS certs. Either provision certs/origin.pem + certs/origin.key on the server, or set GitHub Secrets CLOUDFLARE_ORIGIN_CERT_PEM_B64 and CLOUDFLARE_ORIGIN_KEY_PEM_B64 (raw PEM is accepted)."
+              exit 1
             fi
+            chmod 644 certs/origin.pem
+            chmod 600 certs/origin.key
 
             cat > .env <<EOF
             DJANGO_DEBUG=$DJANGO_DEBUG

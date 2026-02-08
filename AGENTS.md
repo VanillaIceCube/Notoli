@@ -46,9 +46,9 @@ Infra: Production runs behind Cloudflare (DNS/proxy) on a DigitalOcean VM. If yo
    - Production (Cloudflare Origin Certificate):
      - `/root/apps/notoli/certs/origin.pem`
      - `/root/apps/notoli/certs/origin.key`
-   - Optional (automated deploy): store base64-encoded values in GitHub Secrets:
-     - `CLOUDFLARE_ORIGIN_CERT_PEM_B64` (base64 of `origin.pem`)
-     - `CLOUDFLARE_ORIGIN_KEY_PEM_B64` (base64 of `origin.key`)
+   - Optional (automated deploy): store values in GitHub Secrets (raw PEM or base64):
+     - `CLOUDFLARE_ORIGIN_CERT_PEM_B64` (raw PEM or base64 of `origin.pem`)
+     - `CLOUDFLARE_ORIGIN_KEY_PEM_B64` (raw PEM or base64 of `origin.key`)
    - These are mounted into the proxy container as `/etc/nginx/certs` (see `deploy/docker-compose.yml`).
 3) Ensure the SQLite file exists when using the bind mount:
    - `cd deploy`
