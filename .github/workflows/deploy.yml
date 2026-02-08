@@ -121,18 +121,61 @@ jobs:
           DJANGO_CORS_ALLOWED_ORIGINS: ${{ vars.DJANGO_CORS_ALLOWED_ORIGINS }}
           DJANGO_CSRF_TRUSTED_ORIGINS: ${{ vars.DJANGO_CSRF_TRUSTED_ORIGINS }}
           DJANGO_FORCE_SCRIPT_NAME: ${{ vars.DJANGO_FORCE_SCRIPT_NAME }}
+          # Preferred (unambiguous and short)
+          CLOUDFLARE_ORIGIN_CERT_B64: ${{ secrets.CLOUDFLARE_ORIGIN_CERT_B64 }}
+          CLOUDFLARE_ORIGIN_KEY_B64: ${{ secrets.CLOUDFLARE_ORIGIN_KEY_B64 }}
+          # Back-compat (deprecated): older secret names
+          CLOUDFLARE_ORIGIN_CERT_PEM_B64: ${{ secrets.CLOUDFLARE_ORIGIN_CERT_PEM_B64 }}
+          CLOUDFLARE_ORIGIN_KEY_PEM_B64: ${{ secrets.CLOUDFLARE_ORIGIN_KEY_PEM_B64 }}
+          CF_ORIGIN_CERT_B64: ${{ secrets.CF_ORIGIN_CERT_B64 }}
+          CF_ORIGIN_KEY_B64: ${{ secrets.CF_ORIGIN_KEY_B64 }}
         with:
           host: ${{ vars.DEPLOY_HOST }}
           username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ steps.deploy_vars.outputs.deploy_port }}
-          envs: DJANGO_DEBUG,DJANGO_SECRET_KEY,DJANGO_SQLITE_PATH,DJANGO_ALLOWED_HOSTS,DJANGO_CORS_ALLOWED_ORIGINS,DJANGO_CSRF_TRUSTED_ORIGINS,DJANGO_FORCE_SCRIPT_NAME
+          envs: DJANGO_DEBUG,DJANGO_SECRET_KEY,DJANGO_SQLITE_PATH,DJANGO_ALLOWED_HOSTS,DJANGO_CORS_ALLOWED_ORIGINS,DJANGO_CSRF_TRUSTED_ORIGINS,DJANGO_FORCE_SCRIPT_NAME,CLOUDFLARE_ORIGIN_CERT_B64,CLOUDFLARE_ORIGIN_KEY_B64,CLOUDFLARE_ORIGIN_CERT_PEM_B64,CLOUDFLARE_ORIGIN_KEY_PEM_B64,CF_ORIGIN_CERT_B64,CF_ORIGIN_KEY_B64
           script: |
             set -e
             cd "${{ vars.DEPLOY_PATH }}"
             : "${DJANGO_DEBUG:=0}"
             : "${DJANGO_SQLITE_PATH:=/backend/db.sqlite3}"
             : "${DJANGO_FORCE_SCRIPT_NAME:=/apps/notoli}"
+
+            # If provided, write the Cloudflare Origin cert/key from GitHub Secrets.
+            # Otherwise, expect the files to already exist on the server.
+            mkdir -p certs
+            # Prefer CLOUDFLARE_ORIGIN_{CERT,KEY}_B64; fall back to deprecated names if needed.
+            if [ -z "${CLOUDFLARE_ORIGIN_CERT_B64:-}" ] && [ -n "${CLOUDFLARE_ORIGIN_CERT_PEM_B64:-}" ]; then
+              echo "Warning: using deprecated secret CLOUDFLARE_ORIGIN_CERT_PEM_B64; rename to CLOUDFLARE_ORIGIN_CERT_B64."
+              CLOUDFLARE_ORIGIN_CERT_B64="$CLOUDFLARE_ORIGIN_CERT_PEM_B64"
+            fi
+            if [ -z "${CLOUDFLARE_ORIGIN_KEY_B64:-}" ] && [ -n "${CLOUDFLARE_ORIGIN_KEY_PEM_B64:-}" ]; then
+              echo "Warning: using deprecated secret CLOUDFLARE_ORIGIN_KEY_PEM_B64; rename to CLOUDFLARE_ORIGIN_KEY_B64."
+              CLOUDFLARE_ORIGIN_KEY_B64="$CLOUDFLARE_ORIGIN_KEY_PEM_B64"
+            fi
+            if [ -z "${CLOUDFLARE_ORIGIN_CERT_B64:-}" ] && [ -n "${CF_ORIGIN_CERT_B64:-}" ]; then
+              echo "Warning: using deprecated secret CF_ORIGIN_CERT_B64; rename to CLOUDFLARE_ORIGIN_CERT_B64."
+              CLOUDFLARE_ORIGIN_CERT_B64="$CF_ORIGIN_CERT_B64"
+            fi
+            if [ -z "${CLOUDFLARE_ORIGIN_KEY_B64:-}" ] && [ -n "${CF_ORIGIN_KEY_B64:-}" ]; then
+              echo "Warning: using deprecated secret CF_ORIGIN_KEY_B64; rename to CLOUDFLARE_ORIGIN_KEY_B64."
+              CLOUDFLARE_ORIGIN_KEY_B64="$CF_ORIGIN_KEY_B64"
+            fi
+
+            if [ -n "${CLOUDFLARE_ORIGIN_CERT_B64:-}" ] && [ -n "${CLOUDFLARE_ORIGIN_KEY_B64:-}" ]; then
+              umask 077
+              echo "$CLOUDFLARE_ORIGIN_CERT_B64" | base64 -d > certs/origin.pem
+              echo "$CLOUDFLARE_ORIGIN_KEY_B64" | base64 -d > certs/origin.key
+              chmod 644 certs/origin.pem
+              chmod 600 certs/origin.key
+            else
+              if [ ! -f certs/origin.pem ] || [ ! -f certs/origin.key ]; then
+                echo "Missing TLS certs. Either provision certs/origin.pem + certs/origin.key on the server, or set GitHub Secrets CLOUDFLARE_ORIGIN_CERT_B64 and CLOUDFLARE_ORIGIN_KEY_B64."
+                exit 1
+              fi
+            fi
+
             cat > .env <<EOF
             DJANGO_DEBUG=$DJANGO_DEBUG
             DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY
@@ -141,6 +184,7 @@ jobs:
             DJANGO_CORS_ALLOWED_ORIGINS=$DJANGO_CORS_ALLOWED_ORIGINS
             DJANGO_CSRF_TRUSTED_ORIGINS=$DJANGO_CSRF_TRUSTED_ORIGINS
             DJANGO_FORCE_SCRIPT_NAME=$DJANGO_FORCE_SCRIPT_NAME
+            NOTOLI_CERTS_DIR=./certs
             EOF
             docker system prune -af
             docker compose pull

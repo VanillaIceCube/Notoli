@@ -20,6 +20,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 **Deployment:** Docker
 **Hosting:** DigitalOcean
 **DNS/Proxy:** Cloudflare
+**TLS:** Cloudflare Full (strict) to origin (Cloudflare Origin Certificate)
 **CI/CD & Workflows:** GitHub Actions
 
 ## 📚 Documentation
