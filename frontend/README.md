@@ -1,70 +1,60 @@
-# Getting Started with Create React App
+# 🎨 Frontend (React)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The Notoli frontend is a Create React App (CRA) single-page app with React Router and Material UI.
 
-## Available Scripts
+## 🧭 App Routes
 
-In the project directory, you can run:
+- `/` shows workspaces
+- `/workspace/:workspaceId` shows todo lists for a workspace
+- `/workspace/:workspaceId/todolist/:todoListId` shows notes for a todo list
+- `/login` and `/register` are public; everything else requires auth
 
-### `npm start`
+Authentication tokens are stored in `sessionStorage` (`accessToken` and `refreshToken`).
+The refresh token is stored for later use, but the frontend currently does not auto-refresh access tokens.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## 🧩 Path-Based Hosting (`/apps/notoli`)
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+This app is designed to be hosted under a subpath (not at `/`), for example:
 
-### `npm test`
+- `https://<your-domain>/apps/notoli`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Important pieces:
 
-### `npm run build`
+- `frontend/package.json` sets `homepage` to `/apps/notoli`
+- `src/App.js` uses `process.env.PUBLIC_URL` as the React Router basename
+- The container’s Nginx config (`frontend/nginx.conf`) serves `index.html` for deep links (`try_files ... /index.html`)
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## 🔌 API Base URL
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+API calls go through `src/services/apiClient.js`.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- `REACT_APP_API_BASE_URL` is used as a prefix for all backend requests.
+- Default is `http://localhost:8000` for local dev.
+- For production behind `/apps/notoli`, set:
+  - `REACT_APP_API_BASE_URL=https://<your-domain>/apps/notoli`
 
-### `npm run eject`
+Note: in the Docker image, `REACT_APP_API_BASE_URL` is a build-time value (it’s baked into the static build).
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## 💻 Local Development
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+From the repo root (full setup lives in [`AGENTS.md`](../AGENTS.md)):
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```bash
+cd frontend
+npm install
+npm start
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## 🧰 Useful Commands
 
-## Learn More
+```bash
+cd frontend
+npm test -- --watchAll=false
+npm run build
+npm run lint
+npm run format
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## 🧱 Node Version
 
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+CI reads the Node version from `frontend/package.json` (`engines.node`).

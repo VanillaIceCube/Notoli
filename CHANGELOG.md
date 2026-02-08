@@ -1,18 +1,35 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-02-07
+### Changed
+- Enabled full end-to-end HTTPS (Cloudflare -> origin) via Nginx TLS on port 443 using Cloudflare Origin Certificates; port 80 now redirects to HTTPS.
+- Updated Docker Compose/Nginx proxy config to publish `443` and mount origin certs into the proxy container.
+- Deploy workflow can now provision origin cert/key from GitHub Secrets (`CLOUDFLARE_ORIGIN_CERT_B64`, `CLOUDFLARE_ORIGIN_KEY_B64`) and writes them to `certs/` on the server during deploy.
+- Updated documentation for Cloudflare `Full (strict)` and certificate provisioning.
+
 ## 2026-02-06
 ### Changed
-- Frontend API base URL defaults to `http://localhost:8000` for local dev; production should set `REACT_APP_API_BASE_URL` to `https://judeandrewalaba.com/apps/notoli`.
-- Nginx now serves the backend via `judeandrewalaba.com/apps/notoli/{api,auth,admin}`.
+- Updated `README.md` wording around "multiple views" to be less personal/compare-y while still mentioning Diana.
+- Expanded project documentation substantially (features, routes, API overview, architecture, quick start, config, repo layout).
+- Expanded `README.md` tech stack to include DigitalOcean and Cloudflare.
+- Expanded `AGENTS.md` with an infra note for Cloudflare + DigitalOcean (what to review when domains/paths/routes change).
+- Split documentation into component READMEs: `backend/README.md`, `frontend/README.md`, `deploy/README.md`, and `.github/README-WORKFLOWS.md` (and trimmed the root `README.md`).
 
 ## 2026-02-04
+### Changed
+- Frontend API base URL defaults to `http://localhost:8000` for local dev; production should set `REACT_APP_API_BASE_URL` to `https://judeandrewalaba.com/apps/notoli`.
+- Nginx now serves the backend via `judeandrewalaba.com/apps/notoli/{api,auth,admin}` (and proxies Django admin/DRF static under `/apps/notoli/static/{admin,rest_framework}`).
+- Removed the legacy `api.judeandrewalaba.com` reverse-proxy server block (API subdomain no longer used).
+- Updated `AGENTS.md` with production routing notes and a docs update reminder.
+
+## 2026-02-03
 ### Changed
 - Frontend API base URL defaults to `http://localhost:8000` for local dev; production should set `REACT_APP_API_BASE_URL` to the API subdomain.
 - Nginx now serves the backend via `api.judeandrewalaba.com/apps/notoli/*` (API/Auth/Admin).
 - Backend uses `DJANGO_FORCE_SCRIPT_NAME` to generate admin URLs under `/apps/notoli`.
 
-## 2026-02-03
+## 2026-02-02
 ### Changed
 - Added an Nginx SPA fallback config for the frontend to support deep links/refresh-on-route.
 - Frontend Docker image now copies the custom Nginx config to serve `index.html` for client-side routes.
@@ -59,7 +76,7 @@ All notable changes to this project are documented in this file.
 - Standardized Conda environment management using a single `environment_conda_export.py` script.
 - Environment exports now always generate a minimal `environment.yml` and a separate `requirements.txt` for pip packages.
 - Pip dependencies are captured as top-level installs with pinned versions, excluding transitive dependencies.
-- Removed unstable pip entries (e.g. `@ file:///…`) to ensure portable, reproducible environments.
+- Removed unstable pip entries (e.g. `@ file:///â€¦`) to ensure portable, reproducible environments.
 
 
 ## 2026-01-22
