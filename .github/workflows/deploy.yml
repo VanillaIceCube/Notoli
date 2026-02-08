@@ -100,10 +100,11 @@ jobs:
           echo "deploy_port=$DEPLOY_PORT" >> "$GITHUB_OUTPUT"
 
       - name: Stage deploy bundle (including TLS certs)
+        id: stage_bundle
         shell: bash
         env:
-          CLOUDFLARE_ORIGIN_CERT_PEM_B64: ${{ secrets.CLOUDFLARE_ORIGIN_CERT_PEM_B64 }}
-          CLOUDFLARE_ORIGIN_KEY_PEM_B64: ${{ secrets.CLOUDFLARE_ORIGIN_KEY_PEM_B64 }}
+          CLOUDFLARE_ORIGIN_CERT_PEM: ${{ secrets.CLOUDFLARE_ORIGIN_CERT_PEM }}
+          CLOUDFLARE_ORIGIN_KEY_PEM: ${{ secrets.CLOUDFLARE_ORIGIN_KEY_PEM }}
         run: |
           set -euo pipefail
 
@@ -115,22 +116,24 @@ jobs:
 
           # Write certs into the bundle if secrets exist.
           # Raw PEM is preferred here because ssh-action env vars don't reliably support multi-line values.
-          if [ -n "${CLOUDFLARE_ORIGIN_CERT_PEM_B64:-}" ] && [ -n "${CLOUDFLARE_ORIGIN_KEY_PEM_B64:-}" ]; then
-            if printf '%s' "$CLOUDFLARE_ORIGIN_CERT_PEM_B64" | grep -q "BEGIN CERTIFICATE"; then
-              printf '%s' "$CLOUDFLARE_ORIGIN_CERT_PEM_B64" > deploy_bundle/certs/origin.pem
-            else
-              # Support base64 too, even though the secret name contains `_B64`.
-              printf '%s' "$CLOUDFLARE_ORIGIN_CERT_PEM_B64" | tr -d ' \t\r\n' | base64 -d -i > deploy_bundle/certs/origin.pem
+          if [ -n "${CLOUDFLARE_ORIGIN_CERT_PEM:-}" ] && [ -n "${CLOUDFLARE_ORIGIN_KEY_PEM:-}" ]; then
+            if ! printf '%s' "$CLOUDFLARE_ORIGIN_CERT_PEM" | grep -q "BEGIN CERTIFICATE"; then
+              echo "CLOUDFLARE_ORIGIN_CERT_PEM is set but does not look like PEM (missing BEGIN CERTIFICATE)."
+              exit 1
+            fi
+            if ! printf '%s' "$CLOUDFLARE_ORIGIN_KEY_PEM" | grep -q "BEGIN .*PRIVATE KEY"; then
+              echo "CLOUDFLARE_ORIGIN_KEY_PEM is set but does not look like PEM (missing BEGIN PRIVATE KEY)."
+              exit 1
             fi
 
-            if printf '%s' "$CLOUDFLARE_ORIGIN_KEY_PEM_B64" | grep -q "BEGIN .*PRIVATE KEY"; then
-              printf '%s' "$CLOUDFLARE_ORIGIN_KEY_PEM_B64" > deploy_bundle/certs/origin.key
-            else
-              printf '%s' "$CLOUDFLARE_ORIGIN_KEY_PEM_B64" | tr -d ' \t\r\n' | base64 -d -i > deploy_bundle/certs/origin.key
-            fi
-
+            printf '%s' "$CLOUDFLARE_ORIGIN_CERT_PEM" > deploy_bundle/certs/origin.pem
+            printf '%s' "$CLOUDFLARE_ORIGIN_KEY_PEM" > deploy_bundle/certs/origin.key
             chmod 644 deploy_bundle/certs/origin.pem
             chmod 600 deploy_bundle/certs/origin.key
+
+            echo "certs_present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "certs_present=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Upload deploy files
@@ -140,9 +143,22 @@ jobs:
           username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ steps.deploy_vars.outputs.deploy_port }}
-          source: "deploy_bundle/docker-compose.yml,deploy_bundle/nginx-proxy.conf,deploy_bundle/certs/origin.pem,deploy_bundle/certs/origin.key"
+          source: "deploy_bundle/docker-compose.yml,deploy_bundle/nginx-proxy.conf"
           target: ${{ vars.DEPLOY_PATH }}
           strip_components: 1
+          overwrite: true
+
+      - name: Upload TLS certs
+        if: ${{ steps.stage_bundle.outputs.certs_present == 'true' }}
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ vars.DEPLOY_HOST }}
+          username: ${{ vars.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ steps.deploy_vars.outputs.deploy_port }}
+          source: "deploy_bundle/certs/origin.pem,deploy_bundle/certs/origin.key"
+          target: ${{ vars.DEPLOY_PATH }}/certs
+          strip_components: 2
           overwrite: true
 
       - name: Deploy via SSH
@@ -170,7 +186,7 @@ jobs:
 
             # TLS certs are uploaded as files (via SCP) to avoid multi-line env var issues.
             if [ ! -f certs/origin.pem ] || [ ! -f certs/origin.key ]; then
-              echo "Missing TLS certs. Either provision certs/origin.pem + certs/origin.key on the server, or set GitHub Secrets CLOUDFLARE_ORIGIN_CERT_PEM_B64 and CLOUDFLARE_ORIGIN_KEY_PEM_B64 (raw PEM is accepted)."
+              echo "Missing TLS certs. Either provision certs/origin.pem + certs/origin.key on the server, or set GitHub Secrets CLOUDFLARE_ORIGIN_CERT_PEM and CLOUDFLARE_ORIGIN_KEY_PEM."
               exit 1
             fi
             chmod 644 certs/origin.pem
