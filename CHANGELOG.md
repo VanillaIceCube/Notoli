@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Enabled full end-to-end HTTPS (Cloudflare -> origin) via Nginx TLS on port 443 using Cloudflare Origin Certificates; port 80 now redirects to HTTPS.
 - Updated Docker Compose/Nginx proxy config to publish `443` and mount origin certs into the proxy container.
-- Deploy workflow can now provision origin cert/key from GitHub Secrets (`CLOUDFLARE_ORIGIN_CERT_B64`, `CLOUDFLARE_ORIGIN_KEY_B64`) and writes them to `certs/` on the server during deploy.
+- Deploy workflow can now provision origin cert/key from GitHub Secrets (`CLOUDFLARE_ORIGIN_CERT_PEM_B64`, `CLOUDFLARE_ORIGIN_KEY_PEM_B64`) and writes them to `certs/` on the server during deploy.
 - Updated documentation for Cloudflare `Full (strict)` and certificate provisioning.
 
 ## 2026-02-06
