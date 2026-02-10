@@ -74,7 +74,9 @@ class NoteSerializer(serializers.ModelSerializer):
 
         # Preserve existing API behavior: if no workspace is provided, a todo list is required.
         if todo_list is None and workspace is None:
-            raise serializers.ValidationError({"todo_list": ["This field is required."]})
+            raise serializers.ValidationError(
+                {"todo_list": ["This field is required."]}
+            )
 
         if todo_list is not None and workspace is not None:
             if todo_list.workspace_id != workspace.id:
