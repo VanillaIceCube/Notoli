@@ -92,20 +92,29 @@ class TodoListAdmin(admin.ModelAdmin):
 
 @admin.register(Note)
 class NoteAdmin(admin.ModelAdmin):
-    list_display = ("note", "owner", "collaborators_display", "created_at", "updated_at")
-    list_filter = ("owner", "created_at", "updated_at")
+    list_display = (
+        "note",
+        "workspace",
+        "owner",
+        "collaborators_display",
+        "created_at",
+        "updated_at",
+    )
+    list_filter = ("workspace", "owner", "created_at", "updated_at")
     search_fields = (
         "note",
         "description",
+        "workspace__name",
         "owner__username",
         "owner__email",
         "collaborators__username",
         "collaborators__email",
     )
-    autocomplete_fields = ("owner", "collaborators", "created_by")
+    autocomplete_fields = ("workspace", "owner", "collaborators", "created_by")
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (
         (None, {"fields": ("note", "description")}),
+        ("Scope", {"fields": ("workspace",)}),
         ("Ownership", {"fields": ("owner", "collaborators")}),
         ("Metadata", {"fields": ("created_by", "created_at", "updated_at")}),
     )
@@ -114,7 +123,7 @@ class NoteAdmin(admin.ModelAdmin):
         return (
             super()
             .get_queryset(request)
-            .select_related("owner", "created_by")
+            .select_related("workspace", "owner", "created_by")
             .prefetch_related("collaborators")
         )
 

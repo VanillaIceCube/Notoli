@@ -30,6 +30,7 @@ class ModelTests(APITestCase):
         self.note = Note.objects.create(
             note="Owner Note",
             description="Owner Note Description",
+            workspace=self.workspace,
             owner=self.owner,
             created_by=self.owner,
         )
@@ -405,6 +406,39 @@ class TodoListApiTests(APITestCase):
             f"Expected 404 when outsider deletes todolist, got {response.status_code}: {response.data}",
         )
 
+    def test_todolist_cannot_add_notes_from_other_workspace(self):
+        other_workspace = Workspace.objects.create(
+            name="Other Workspace",
+            description="Other Workspace Description",
+            owner=self.owner,
+            created_by=self.owner,
+        )
+        other_note = Note.objects.create(
+            note="Cross Workspace Note",
+            description="Should not be attachable across workspaces",
+            workspace=other_workspace,
+            owner=self.owner,
+            created_by=self.owner,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            f"/api/todolists/{self.todo_list.id}/",
+            {"notes": [other_note.id]},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            f"Expected 400 when attaching cross-workspace notes, got {response.status_code}: {response.data}",
+        )
+        self.assertIn(
+            "notes",
+            response.data,
+            f"Expected 'notes' validation error, got: {response.data}",
+        )
+
 
 class NoteApiTests(APITestCase):
     def setUp(self):
@@ -440,6 +474,7 @@ class NoteApiTests(APITestCase):
         self.note = Note.objects.create(
             note="Owner Note",
             description="Owner Note Description",
+            workspace=self.workspace,
             owner=self.owner,
             created_by=self.owner,
         )
@@ -463,6 +498,11 @@ class NoteApiTests(APITestCase):
             f"Expected 201 for collaborator note create, got {response.status_code}: {response.data}",
         )
         note = Note.objects.get(id=response.data.get("id"))
+        self.assertEqual(
+            note.workspace,
+            self.workspace,
+            f"Expected note workspace to match todo list workspace, got {note.workspace_id}",
+        )
         self.assertEqual(
             note.owner,
             self.collaborator,
@@ -546,6 +586,7 @@ class NoteApiTests(APITestCase):
         other_note = Note.objects.create(
             note="Other Note",
             description="Other Note Description",
+            workspace=self.workspace,
             owner=self.owner,
             created_by=self.owner,
         )
