@@ -394,7 +394,9 @@ class TodoListApiTests(APITestCase):
             f"Expected 403 when filtering by workspace without access, got {response.status_code}: {response.data}",
         )
 
-    def test_list_todolists_filters_by_workspace_allowed_for_list_only_collaborator(self):
+    def test_list_todolists_filters_by_workspace_allowed_for_list_only_collaborator(
+        self,
+    ):
         list_in_workspace = TodoList.objects.create(
             name="Shared List",
             description="List-level share only",
