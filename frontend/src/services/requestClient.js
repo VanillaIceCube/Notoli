@@ -24,6 +24,17 @@ export function redirectToLogin() {
 
 export function logout() {
   clearAuthSession();
+  try {
+    sessionStorage.setItem(
+      'pendingSnackbar',
+      JSON.stringify({
+        severity: 'success',
+        message: 'Logout Successful :)',
+      }),
+    );
+  } catch (_err) {
+    // ignore
+  }
   redirectToLogin();
 }
 

@@ -113,6 +113,10 @@ describe('requestClient', () => {
     expect(sessionStorage.getItem('refreshToken')).toBeNull();
     expect(sessionStorage.getItem('username')).toBeNull();
     expect(sessionStorage.getItem('email')).toBeNull();
+    expect(JSON.parse(sessionStorage.getItem('pendingSnackbar'))).toEqual({
+      severity: 'success',
+      message: 'Logout Successful :)',
+    });
     expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 });

@@ -7,6 +7,7 @@ All notable changes to this project are documented in this file.
 - Standardized frontend login/register response handling and session persistence via shared auth session helpers.
 - `POST /auth/register/` now returns `email` alongside `access`/`refresh` and `username`.
 - Frontend auth redirects now use React Router navigation (`useNavigate`) instead of `window.location` redirects.
+- Logout now shows a success snackbar on the login screen after redirect.
 
 ## 2026-02-09
 ### Added
