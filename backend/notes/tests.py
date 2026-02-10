@@ -502,6 +502,11 @@ class NoteApiTests(APITestCase):
             email="collaborator_email@example.com",
             password="collaborator-password",
         )
+        self.note_only_collaborator = User.objects.create_user(
+            username="note_only_collaborator",
+            email="note_only_collaborator_email@example.com",
+            password="note-only-password",
+        )
         self.outsider = User.objects.create_user(
             username="outsider",
             email="outsider_email@example.com",
@@ -529,6 +534,7 @@ class NoteApiTests(APITestCase):
             created_by=self.owner,
         )
         self.todo_list.notes.add(self.note)
+        self.note.collaborators.add(self.note_only_collaborator)
 
     def test_create_note_as_collaborator(self):
         self.client.force_authenticate(user=self.collaborator)
@@ -811,6 +817,35 @@ class NoteApiTests(APITestCase):
         self.assertTrue(
             other_todo_list.notes.filter(id=self.note.id).exists(),
             "Expected note to be attached to the specified todo list.",
+        )
+
+    def test_patch_note_todo_list_attach_requires_todolist_access(self):
+        other_todo_list = TodoList.objects.create(
+            name="Private List",
+            description="Not shared with note-only collaborator",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+        )
+
+        # User can edit the note (note collaborator) but should not be able to attach
+        # it to a todo list they don't have access to.
+        self.client.force_authenticate(user=self.note_only_collaborator)
+        response = self.client.patch(
+            f"/api/notes/{self.note.id}/",
+            {"todo_list": other_todo_list.id},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+            f"Expected 403 when attaching to a todo list without access, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("detail"),
+            "You cannot add notes to this todo-list.",
+            f"Unexpected error detail when access denied: {response.data}",
         )
 
     def test_patch_note_todo_list_cross_workspace_rejected(self):

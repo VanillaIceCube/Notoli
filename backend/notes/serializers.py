@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 
 from .models import Note, TodoList, Workspace
 
@@ -73,6 +74,20 @@ class NoteSerializer(serializers.ModelSerializer):
         workspace = attrs.get("workspace")
 
         instance_workspace = getattr(self.instance, "workspace", None)
+
+        # Enforce that attaching to a todo list via PATCH requires access to that list.
+        # Otherwise a user who can edit a note could inject it into a list they can't access.
+        if todo_list is not None:
+            request = self.context.get("request")
+            user = getattr(request, "user", None)
+            if user is not None and getattr(user, "is_authenticated", False):
+                has_todolist_access = (
+                    todo_list.owner_id == user.id
+                    or todo_list.created_by_id == user.id
+                    or todo_list.collaborators.filter(id=user.id).exists()
+                )
+                if not has_todolist_access:
+                    raise PermissionDenied("You cannot add notes to this todo-list.")
 
         # Hard boundary: Notes cannot move between workspaces once created.
         # Validate this first so clients get a clear immutability error even if they also send `todo_list`.
