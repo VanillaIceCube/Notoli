@@ -16,7 +16,7 @@ import Notifications from '@mui/icons-material/Notifications';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { goBackToParent } from '../utils/Navigation';
-import { logout } from '../services/apiClient';
+import { logout } from '../services/requestClient';
 
 export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
   const location = useLocation();

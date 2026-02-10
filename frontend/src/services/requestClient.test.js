@@ -1,6 +1,6 @@
 const originalEnv = process.env;
 
-describe('apiClient', () => {
+describe('requestClient', () => {
   beforeEach(() => {
     jest.resetModules();
     process.env = { ...originalEnv };
@@ -16,7 +16,7 @@ describe('apiClient', () => {
 
   test('when REACT_APP_API_BASE_URL is set, it prefixes the base URL', async () => {
     process.env.REACT_APP_API_BASE_URL = 'https://api.example.com';
-    const { apiFetch } = await import('./apiClient');
+    const { apiFetch } = await import('./requestClient');
 
     await apiFetch('/path', { method: 'GET' });
 
@@ -25,7 +25,7 @@ describe('apiClient', () => {
 
   test('when REACT_APP_API_BASE_URL is not set, it uses the default base URL', async () => {
     delete process.env.REACT_APP_API_BASE_URL;
-    const { apiFetch } = await import('./apiClient');
+    const { apiFetch } = await import('./requestClient');
 
     await apiFetch('/path', { method: 'GET' });
 
@@ -39,7 +39,7 @@ describe('apiClient', () => {
       body: JSON.stringify({ ok: true }),
     };
     delete process.env.REACT_APP_API_BASE_URL;
-    const { apiFetch } = await import('./apiClient');
+    const { apiFetch } = await import('./requestClient');
 
     await apiFetch('/path', options);
 
@@ -58,7 +58,7 @@ describe('apiClient', () => {
     const mockNavigate = jest.fn();
     setNavigate(mockNavigate);
 
-    const { apiFetch } = await import('./apiClient');
+    const { apiFetch } = await import('./requestClient');
 
     await apiFetch('/api/workspaces/', { method: 'GET' });
 
@@ -83,7 +83,7 @@ describe('apiClient', () => {
     const mockNavigate = jest.fn();
     setNavigate(mockNavigate);
 
-    const { apiFetch } = await import('./apiClient');
+    const { apiFetch } = await import('./requestClient');
 
     await apiFetch('/auth/login/', { method: 'POST' });
 
@@ -105,7 +105,7 @@ describe('apiClient', () => {
     const mockNavigate = jest.fn();
     setNavigate(mockNavigate);
 
-    const { logout } = await import('./apiClient');
+    const { logout } = await import('./requestClient');
 
     logout();
 

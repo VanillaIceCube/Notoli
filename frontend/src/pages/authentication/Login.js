@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { fetchWorkspaces as fetchWorkspacesApi, login } from '../../services/backendClient';
+import { fetchWorkspaces as fetchWorkspacesApi, login } from '../../services/notoliApiClient';
 import { persistAuthSession, readOkJson } from '../../services/authSession';
 
 export default function Login({ showSnackbar }) {
