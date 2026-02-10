@@ -1,5 +1,9 @@
-# Changelog
+﻿# Changelog
 All notable changes to this project are documented in this file.
+
+## 2026-02-09
+### Changed
+- Improved Django admin list views for Workspaces, Todo Lists, and Notes to show owner/collaborators (and workspace for todo lists).
 
 ## 2026-02-07
 ### Changed
