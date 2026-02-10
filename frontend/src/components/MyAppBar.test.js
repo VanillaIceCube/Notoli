@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import MyAppBar from './MyAppBar';
 import { renderWithProviders } from '../test-utils';
 import { goBackToParent } from '../utils/Navigation';
+import { setNavigate } from '../services/navigationService';
 
 const mockNavigate = jest.fn();
 const mockUseLocation = jest.fn();
@@ -24,6 +25,7 @@ describe('MyAppBar', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.clear();
+    setNavigate(mockNavigate);
     mockUseLocation.mockReturnValue({ pathname: '/' });
   });
 
@@ -120,6 +122,6 @@ describe('MyAppBar', () => {
     expect(sessionStorage.getItem('refreshToken')).toBeNull();
     expect(sessionStorage.getItem('username')).toBeNull();
     expect(sessionStorage.getItem('email')).toBeNull();
-    expect(window.location.pathname).toBe('/login');
+    expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 });

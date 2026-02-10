@@ -48,12 +48,15 @@ describe('apiClient', () => {
 
   test('when a non-auth endpoint returns 401, it clears tokens and redirects to /login', async () => {
     delete process.env.REACT_APP_API_BASE_URL;
-    process.env.PUBLIC_URL = '/apps/notoli';
     global.fetch = jest.fn(() => Promise.resolve({ ok: false, status: 401 }));
 
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
-    window.history.replaceState({}, '', '/apps/notoli/workspace/1');
+    window.history.replaceState({}, '', '/workspace/1');
+
+    const { setNavigate } = await import('./navigationService');
+    const mockNavigate = jest.fn();
+    setNavigate(mockNavigate);
 
     const { apiFetch } = await import('./apiClient');
 
@@ -65,17 +68,20 @@ describe('apiClient', () => {
       severity: 'error',
       message: 'Your session expired. Please log in again.',
     });
-    expect(window.location.pathname).toBe('/apps/notoli/login');
+    expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 
   test('when /auth/login/ returns 401, it does not redirect or clear tokens', async () => {
     delete process.env.REACT_APP_API_BASE_URL;
-    process.env.PUBLIC_URL = '/apps/notoli';
     global.fetch = jest.fn(() => Promise.resolve({ ok: false, status: 401 }));
 
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
-    window.history.replaceState({}, '', '/apps/notoli/login');
+    window.history.replaceState({}, '', '/login');
+
+    const { setNavigate } = await import('./navigationService');
+    const mockNavigate = jest.fn();
+    setNavigate(mockNavigate);
 
     const { apiFetch } = await import('./apiClient');
 
@@ -83,18 +89,21 @@ describe('apiClient', () => {
 
     expect(sessionStorage.getItem('accessToken')).toBe('ACCESS');
     expect(sessionStorage.getItem('refreshToken')).toBe('REFRESH');
-    expect(window.location.pathname).toBe('/apps/notoli/login');
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   test('when logout() is called, it clears tokens/profile and redirects to /login', async () => {
     delete process.env.REACT_APP_API_BASE_URL;
-    process.env.PUBLIC_URL = '/apps/notoli';
 
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
     sessionStorage.setItem('username', 'judea');
     sessionStorage.setItem('email', 'judea@example.com');
-    window.history.replaceState({}, '', '/apps/notoli/workspace/1');
+    window.history.replaceState({}, '', '/workspace/1');
+
+    const { setNavigate } = await import('./navigationService');
+    const mockNavigate = jest.fn();
+    setNavigate(mockNavigate);
 
     const { logout } = await import('./apiClient');
 
@@ -104,6 +113,6 @@ describe('apiClient', () => {
     expect(sessionStorage.getItem('refreshToken')).toBeNull();
     expect(sessionStorage.getItem('username')).toBeNull();
     expect(sessionStorage.getItem('email')).toBeNull();
-    expect(window.location.pathname).toBe('/apps/notoli/login');
+    expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 });

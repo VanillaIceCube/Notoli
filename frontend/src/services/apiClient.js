@@ -1,18 +1,6 @@
+import { navigate } from './navigationService';
+
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
-
-function getAppBasePath() {
-  // CRA sets PUBLIC_URL at build time (derived from `homepage` in package.json).
-  // In local dev it's typically empty, so we fall back to root.
-  const base = process.env.PUBLIC_URL || '';
-  if (!base || base === '/') return '';
-  return base.replace(/\/+$/, '');
-}
-
-function buildAppPath(path) {
-  const base = getAppBasePath();
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `${base}${normalizedPath}`;
-}
 
 function shouldRedirectToLogin(path) {
   // Auth endpoints may legitimately return 401 (bad credentials) and should be handled by the UI.
@@ -31,29 +19,7 @@ export function clearAuthSession() {
 }
 
 export function redirectToLogin() {
-  if (typeof window === 'undefined') return;
-
-  const loginPath = buildAppPath('/login');
-  const registerPath = buildAppPath('/register');
-
-  const currentPath = window.location?.pathname?.replace(/\/+$/, '') ?? '';
-  const normalizedLogin = loginPath.replace(/\/+$/, '');
-  const normalizedRegister = registerPath.replace(/\/+$/, '');
-  if (currentPath === normalizedLogin || currentPath === normalizedRegister) return;
-
-  const isJsdom =
-    typeof navigator !== 'undefined' &&
-    typeof navigator.userAgent === 'string' &&
-    navigator.userAgent.toLowerCase().includes('jsdom');
-
-  // In production, prefer a full redirect to clear any stale in-memory state.
-  // In tests (jsdom), navigation isn't implemented, so just update the URL.
-  if (isJsdom) {
-    window.history.replaceState({}, '', loginPath);
-    return;
-  }
-
-  window.location.replace(loginPath);
+  navigate('/login', { replace: true });
 }
 
 export function logout() {
@@ -66,13 +32,8 @@ function handleUnauthorized() {
 
   if (typeof window === 'undefined') return;
 
-  const loginPath = buildAppPath('/login');
-  const registerPath = buildAppPath('/register');
-
   const currentPath = window.location?.pathname?.replace(/\/+$/, '') ?? '';
-  const normalizedLogin = loginPath.replace(/\/+$/, '');
-  const normalizedRegister = registerPath.replace(/\/+$/, '');
-  if (currentPath === normalizedLogin || currentPath === normalizedRegister) return;
+  if (currentPath.endsWith('/login') || currentPath.endsWith('/register')) return;
 
   // Let the login screen explain why the user got redirected.
   try {
@@ -87,19 +48,7 @@ function handleUnauthorized() {
     // ignore
   }
 
-  const isJsdom =
-    typeof navigator !== 'undefined' &&
-    typeof navigator.userAgent === 'string' &&
-    navigator.userAgent.toLowerCase().includes('jsdom');
-
-  // In production, prefer a full redirect to clear any stale in-memory state.
-  // In tests (jsdom), navigation isn't implemented, so just update the URL.
-  if (isJsdom) {
-    window.history.replaceState({}, '', loginPath);
-    return;
-  }
-
-  window.location.replace(loginPath);
+  redirectToLogin();
 }
 
 export async function apiFetch(path, options = {}) {

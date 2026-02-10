@@ -1,12 +1,18 @@
 ﻿# Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-02-10
+### Changed
+- Standardized frontend login/register response handling and session persistence via shared auth session helpers.
+- `POST /auth/register/` now returns `email` alongside `access`/`refresh` and `username`.
+- Frontend auth redirects now use React Router navigation (`useNavigate`) instead of `window.location` redirects.
+
 ## 2026-02-09
 ### Added
 - Added API regression tests to prevent moving todo lists and notes across workspaces after creation.
 - `POST /auth/login/` now returns `username` and `email` alongside `access`/`refresh`.
 - Added an app bar profile popover menu (username/email header + logout).
-- Added frontend unit tests for shared auth session helpers.
+- Added frontend unit tests for shared auth session, navigation, and API client auth helpers.
 ### Fixed
 - Allowed partial note PATCH updates without requiring clients to re-send `workspace` or `todo_list`.
 - Note update validation now prioritizes `workspace` immutability errors over derived `todo_list` mismatch errors when both are provided.
@@ -20,7 +26,6 @@ All notable changes to this project are documented in this file.
 - Notes now belong to a Workspace (tenancy boundary), and Todo Lists can only include Notes from the same Workspace.
 - Notes API now allows attaching an existing note to another todo list via PATCH `todo_list` (within the same workspace).
 - Login success snackbar now greets the user with `Welcome {username}!`.
-- `POST /auth/register/` now returns `email` alongside `access`/`refresh` and `username`.
 
 ## 2026-02-07
 ### Changed

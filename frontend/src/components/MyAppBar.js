@@ -96,10 +96,10 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
             }}
           >
             <MenuItem
-              disabled
+              disableRipple
               sx={{
-                opacity: 1,
                 cursor: 'default',
+                '&:hover': { backgroundColor: 'transparent' },
                 py: 0.75,
               }}
             >
@@ -107,8 +107,8 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
                 primary={profilePrimary}
                 secondary={profileSecondary}
                 slotProps={{
-                  primary: { sx: { fontWeight: 'bold' } },
-                  secondary: { sx: { color: 'var(--secondary-color)', opacity: 0.85 } },
+                  primary: { sx: { fontWeight: 'bold', color: 'var(--secondary-color)' } },
+                  secondary: { sx: { color: 'var(--secondary-color)', opacity: 1 } },
                 }}
               />
             </MenuItem>
