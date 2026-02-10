@@ -14,8 +14,13 @@ def _require_workspace_access(user, workspace_id):
     except (TypeError, ValueError):
         raise NotFound("Workspace not found.")
 
+    # Prefer 404 for non-existent workspaces and 403 for existing-but-inaccessible workspaces.
+    if not Workspace.objects.filter(pk=workspace_id).exists():
+        raise NotFound("Workspace not found.")
+
     accessible_workspaces = Workspace.objects.accessible_to(user)
-    get_object_or_404(accessible_workspaces, pk=workspace_id)
+    if not accessible_workspaces.filter(pk=workspace_id).exists():
+        raise PermissionDenied("You do not have access to this workspace.")
 
 
 class WorkspaceViewSet(viewsets.ModelViewSet):

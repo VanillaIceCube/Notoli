@@ -385,8 +385,8 @@ class TodoListApiTests(APITestCase):
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_404_NOT_FOUND,
-            f"Expected 404 when filtering by workspace without access, got {response.status_code}: {response.data}",
+            status.HTTP_403_FORBIDDEN,
+            f"Expected 403 when filtering by workspace without access, got {response.status_code}: {response.data}",
         )
 
     def test_retrieve_todolist_denied_for_outsider(self):
@@ -682,8 +682,8 @@ class NoteApiTests(APITestCase):
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_404_NOT_FOUND,
-            f"Expected 404 when filtering notes by workspace without access, got {response.status_code}: {response.data}",
+            status.HTTP_403_FORBIDDEN,
+            f"Expected 403 when filtering notes by workspace without access, got {response.status_code}: {response.data}",
         )
 
     def test_note_can_belong_to_multiple_todolists(self):
