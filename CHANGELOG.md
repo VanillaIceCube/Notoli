@@ -12,6 +12,7 @@ All notable changes to this project are documented in this file.
 - Note PATCH `todo_list` attach now enforces todo list access (prevents injecting notes into lists you can't access).
 - `?workspace=` list filters now work for users who have item-level access (note/todolist collaborators) even if they are not workspace collaborators.
 - Frontend now clears auth tokens and redirects to `/login` when an API request returns `401 Unauthorized` (instead of showing a raw `HTTP 401` error).
+- Frontend now shows an error snackbar on `/login` after a `401` redirect so users understand why they were logged out.
 ### Changed
 - Improved Django admin list views for Workspaces, Todo Lists, and Notes to show owner/collaborators (and workspace for todo lists).
 - Notes now belong to a Workspace (tenancy boundary), and Todo Lists can only include Notes from the same Workspace.

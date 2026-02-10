@@ -61,6 +61,10 @@ describe('apiClient', () => {
 
     expect(sessionStorage.getItem('accessToken')).toBeNull();
     expect(sessionStorage.getItem('refreshToken')).toBeNull();
+    expect(JSON.parse(sessionStorage.getItem('pendingSnackbar'))).toEqual({
+      severity: 'error',
+      message: 'Your session expired. Please log in again.',
+    });
     expect(window.location.pathname).toBe('/apps/notoli/login');
   });
 

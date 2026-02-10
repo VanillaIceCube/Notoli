@@ -42,6 +42,26 @@ describe('Login', () => {
     expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
   });
 
+  test('when a pending snackbar exists in sessionStorage, it shows it once on render', async () => {
+    sessionStorage.setItem(
+      'pendingSnackbar',
+      JSON.stringify({ severity: 'error', message: 'Your session expired. Please log in again.' }),
+    );
+
+    const showSnackbar = jest.fn();
+
+    renderWithProviders(<Login showSnackbar={showSnackbar} />);
+
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith(
+        'error',
+        'Your session expired. Please log in again.',
+      );
+    });
+
+    expect(sessionStorage.getItem('pendingSnackbar')).toBeNull();
+  });
+
   test('when login succeeds and workspaces exist, it navigates to the first workspace', async () => {
     fetchWorkspaces.mockResolvedValueOnce({
       ok: true,

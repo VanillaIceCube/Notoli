@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { fetchWorkspaces as fetchWorkspacesApi, login } from '../../services/backendClient';
@@ -9,6 +9,24 @@ export default function Login({ showSnackbar }) {
   const [password, setPassword] = useState('');
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem('pendingSnackbar');
+    if (!raw) return;
+
+    sessionStorage.removeItem('pendingSnackbar');
+
+    if (typeof showSnackbar !== 'function') return;
+
+    try {
+      const payload = JSON.parse(raw);
+      const severity = payload?.severity || 'error';
+      const message = payload?.message || 'Please log in again.';
+      showSnackbar(severity, message);
+    } catch (_err) {
+      showSnackbar('error', 'Please log in again.');
+    }
+  }, [showSnackbar]);
 
   // Pull Workspace List
   const fetchWorkspaces = useCallback(

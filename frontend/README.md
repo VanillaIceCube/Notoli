@@ -11,7 +11,7 @@ The Notoli frontend is a Create React App (CRA) single-page app with React Route
 
 Authentication tokens are stored in `sessionStorage` (`accessToken` and `refreshToken`).
 The refresh token is stored for later use, but the frontend currently does not auto-refresh access tokens.
-If an API request returns `401 Unauthorized` (expired/invalid token), the frontend clears stored tokens and redirects to `/login`.
+If an API request returns `401 Unauthorized` (expired/invalid token), the frontend clears stored tokens, redirects to `/login`, and shows an error snackbar explaining the logout.
 
 ## 🧩 Path-Based Hosting (`/apps/notoli`)
 

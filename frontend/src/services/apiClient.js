@@ -37,6 +37,19 @@ function handleUnauthorized() {
   const normalizedRegister = registerPath.replace(/\/+$/, '');
   if (currentPath === normalizedLogin || currentPath === normalizedRegister) return;
 
+  // Let the login screen explain why the user got redirected.
+  try {
+    sessionStorage.setItem(
+      'pendingSnackbar',
+      JSON.stringify({
+        severity: 'error',
+        message: 'Your session expired. Please log in again.',
+      }),
+    );
+  } catch (_err) {
+    // ignore
+  }
+
   const isJsdom =
     typeof navigator !== 'undefined' &&
     typeof navigator.userAgent === 'string' &&
