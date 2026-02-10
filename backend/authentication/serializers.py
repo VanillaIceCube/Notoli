@@ -26,4 +26,9 @@ class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
             else:
                 attrs[self.username_field] = email
 
-        return super().validate(attrs)
+        data = super().validate(attrs)
+        # Include basic user info so clients can greet/identify the logged-in user
+        # without a follow-up request.
+        data["username"] = self.user.get_username()
+        data["email"] = self.user.email
+        return data

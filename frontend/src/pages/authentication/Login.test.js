@@ -20,7 +20,7 @@ jest.mock('../../services/backendClient', () => ({
   login: jest.fn(() =>
     Promise.resolve({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
+      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
     }),
   ),
 }));
@@ -42,6 +42,26 @@ describe('Login', () => {
     expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
   });
 
+  test('when a pending snackbar exists in sessionStorage, it shows it once on render', async () => {
+    sessionStorage.setItem(
+      'pendingSnackbar',
+      JSON.stringify({ severity: 'error', message: 'Your session expired. Please log in again.' }),
+    );
+
+    const showSnackbar = jest.fn();
+
+    renderWithProviders(<Login showSnackbar={showSnackbar} />);
+
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith(
+        'error',
+        'Your session expired. Please log in again.',
+      );
+    });
+
+    expect(sessionStorage.getItem('pendingSnackbar')).toBeNull();
+  });
+
   test('when login succeeds and workspaces exist, it navigates to the first workspace', async () => {
     fetchWorkspaces.mockResolvedValueOnce({
       ok: true,
@@ -49,7 +69,7 @@ describe('Login', () => {
     });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
+      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
     });
 
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
@@ -70,7 +90,7 @@ describe('Login', () => {
     });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
+      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
     });
 
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
@@ -103,7 +123,11 @@ describe('Login', () => {
     });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'test_access_token', refresh: 'test_refresh_token' }),
+      json: async () => ({
+        access: 'test_access_token',
+        refresh: 'test_refresh_token',
+        username: 'test_email',
+      }),
     });
 
     const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
@@ -136,7 +160,7 @@ describe('Login', () => {
     });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
+      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
     });
 
     const showSnackbar = jest.fn();
@@ -148,7 +172,7 @@ describe('Login', () => {
     await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
     await waitFor(() => {
-      expect(showSnackbar).toHaveBeenCalledWith('success', 'Login successful!');
+      expect(showSnackbar).toHaveBeenCalledWith('success', 'Welcome test_email!');
     });
   });
 
@@ -156,7 +180,7 @@ describe('Login', () => {
     fetchWorkspaces.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
+      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
     });
 
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
@@ -174,7 +198,7 @@ describe('Login', () => {
     fetchWorkspaces.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH' }),
+      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
     });
 
     const showSnackbar = jest.fn();

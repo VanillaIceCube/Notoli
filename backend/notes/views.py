@@ -1,11 +1,51 @@
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 
 from .models import Note, TodoList, Workspace
 from .serializers import NoteSerializer, TodoListSerializer, WorkspaceSerializer
+
+
+def _require_workspace_access(user, workspace_id):
+    try:
+        workspace_id = int(workspace_id)
+    except (TypeError, ValueError):
+        raise NotFound("Workspace not found.")
+
+    # Prefer 404 for non-existent workspaces and 403 for existing-but-inaccessible workspaces.
+    if not Workspace.objects.filter(pk=workspace_id).exists():
+        raise NotFound("Workspace not found.")
+
+    accessible_workspaces = Workspace.objects.accessible_to(user)
+    if not accessible_workspaces.filter(pk=workspace_id).exists():
+        raise PermissionDenied("You do not have access to this workspace.")
+
+
+def _require_workspace_filter_access(user, workspace_id, base_queryset):
+    """
+    Workspace filters should not be stricter than item-level permissions.
+
+    Allow `?workspace=` if:
+    - The workspace exists AND the user is a workspace-level member (owner/creator/collaborator), OR
+    - The user has any item-level access within that workspace (e.g., note/todolist collaborator).
+    """
+    try:
+        workspace_id = int(workspace_id)
+    except (TypeError, ValueError):
+        raise NotFound("Workspace not found.")
+
+    if not Workspace.objects.filter(pk=workspace_id).exists():
+        raise NotFound("Workspace not found.")
+
+    if Workspace.objects.accessible_to(user).filter(pk=workspace_id).exists():
+        return
+
+    if base_queryset.filter(workspace_id=workspace_id).exists():
+        return
+
+    raise PermissionDenied("You do not have access to this workspace.")
 
 
 class WorkspaceViewSet(viewsets.ModelViewSet):
@@ -13,10 +53,7 @@ class WorkspaceViewSet(viewsets.ModelViewSet):
     serializer_class = WorkspaceSerializer
 
     def get_queryset(self):
-        user = self.request.user
-        return Workspace.objects.filter(
-            Q(owner=user) | Q(created_by=user) | Q(collaborators=user)
-        ).distinct()
+        return Workspace.objects.accessible_to(self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user, created_by=self.request.user)
@@ -37,6 +74,7 @@ class TodoListViewSet(viewsets.ModelViewSet):
         # Adding additional querying capabilities by ?workspace=ID
         workspace_id = self.request.query_params.get("workspace")
         if workspace_id:
+            _require_workspace_filter_access(user, workspace_id, queryset)
             queryset = queryset.filter(workspace_id=workspace_id)
 
         return queryset.distinct()
@@ -70,6 +108,12 @@ class NoteViewSet(viewsets.ModelViewSet):
             Q(owner=user) | Q(created_by=user) | Q(collaborators=user)
         )
 
+        # Adding additional querying capabilities by ?workspace=ID
+        workspace_id = self.request.query_params.get("workspace")
+        if workspace_id:
+            _require_workspace_filter_access(user, workspace_id, queryset)
+            queryset = queryset.filter(workspace_id=workspace_id)
+
         # Adding additional querying capabilities by ?todolist=ID
         todo_list_id = self.request.query_params.get("todo_list")
         if todo_list_id:
@@ -78,16 +122,23 @@ class NoteViewSet(viewsets.ModelViewSet):
         return queryset.distinct()
 
     def perform_create(self, serializer):
-        # Require todolist upon creation
         todo_list = serializer.validated_data.get("todo_list")
-        if todo_list is None:
-            raise PermissionDenied("todo_list is required.")
+        workspace = serializer.validated_data.get("workspace")
 
-        # Ensure user access to specified todo-list
-        if not (
-            todo_list.owner == self.request.user
-            or self.request.user in todo_list.collaborators.all()
-        ):
-            raise PermissionDenied("You cannot add notes to this todo-list.")
+        # Ensure user access to specified todo-list (when provided).
+        if todo_list is not None:
+            if not (
+                todo_list.owner == self.request.user
+                or self.request.user in todo_list.collaborators.all()
+            ):
+                raise PermissionDenied("You cannot add notes to this todo-list.")
+
+        # Ensure user access to specified workspace (when creating a workspace-scoped note).
+        if todo_list is None and workspace is not None:
+            if not (
+                workspace.owner == self.request.user
+                or self.request.user in workspace.collaborators.all()
+            ):
+                raise PermissionDenied("You cannot add notes to this workspace.")
 
         serializer.save(owner=self.request.user, created_by=self.request.user)

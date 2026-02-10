@@ -12,6 +12,29 @@ Also update the relevant README(s):
 - CI/CD, Dependabot, workflows: `.github/README-WORKFLOWS.md`
 Also update `CHANGELOG.md`.
 
+## Changelog format
+When updating `CHANGELOG.md`, add a new dated section at the top and group entries under:
+- `### Added`
+- `### Fixed`
+- `### Changed`
+- `### Removed`
+Omit any empty groups (do not include a heading if there are no entries for it).
+Keep headings in that order and ensure each entry is filed under the correct group.
+
+Template:
+
+```md
+## YYYY-MM-DD
+### Added
+- ...
+### Fixed
+- ...
+### Changed
+- ...
+### Removed
+- ...
+```
+
 Infra: Production runs behind Cloudflare (DNS/proxy) on a DigitalOcean VM. If you change domains, paths (e.g. `/apps/notoli`), or add new backend routes, also review:
 - Cloudflare DNS/proxy settings and any Redirect/WAF/Caching rules
 - Origin reverse-proxy config: `deploy/nginx-proxy.conf`
@@ -82,6 +105,9 @@ Infra: Production runs behind Cloudflare (DNS/proxy) on a DigitalOcean VM. If yo
   - `DJANGO_CSRF_TRUSTED_ORIGINS=https://judeandrewalaba.com,https://www.judeandrewalaba.com`
 - Frontend API base for production builds:
   - `REACT_APP_API_BASE_URL=https://judeandrewalaba.com/apps/notoli`
+- Frontend auth behavior:
+  - Tokens live in `sessionStorage` (`accessToken`/`refreshToken`).
+  - Any backend `401` from non-login/register endpoints clears tokens and redirects to `/login` (under the `PUBLIC_URL` basename, e.g. `/apps/notoli/login`) and shows an error snackbar on the login page.
 
 ## Maintenance
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
