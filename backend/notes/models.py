@@ -1,5 +1,13 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
+
+
+class WorkspaceQuerySet(models.QuerySet):
+    def accessible_to(self, user):
+        return self.filter(
+            Q(owner=user) | Q(created_by=user) | Q(collaborators=user)
+        ).distinct()
 
 
 # Workspace: A container or 'Master Todolist' containing all data
@@ -26,6 +34,8 @@ class Workspace(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = WorkspaceQuerySet.as_manager()
 
     def __str__(self):
         return self.name

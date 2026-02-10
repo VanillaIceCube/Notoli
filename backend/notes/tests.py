@@ -878,3 +878,37 @@ class NoteApiTests(APITestCase):
             self.workspace.id,
             "Note workspace unexpectedly changed.",
         )
+
+    def test_note_workspace_immutability_error_precedes_todolist_validation(self):
+        other_workspace = Workspace.objects.create(
+            name="Second Workspace",
+            description="Second Workspace Description",
+            owner=self.owner,
+            created_by=self.owner,
+        )
+
+        # If a client tries to change both `workspace` and `todo_list`, the API should
+        # report the workspace immutability error (clearer semantics) rather than a
+        # derived workspace/todo_list mismatch error.
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            f"/api/notes/{self.note.id}/",
+            {"workspace": other_workspace.id, "todo_list": self.todo_list.id},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            f"Expected 400 when attempting to change note workspace, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("workspace"),
+            ["Cannot change workspace of an existing note."],
+            f"Unexpected error body when changing note workspace: {response.data}",
+        )
+        self.assertNotIn(
+            "todo_list",
+            response.data,
+            f"Expected workspace error to be raised first: {response.data}",
+        )

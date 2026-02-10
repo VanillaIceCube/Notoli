@@ -14,9 +14,7 @@ def _require_workspace_access(user, workspace_id):
     except (TypeError, ValueError):
         raise NotFound("Workspace not found.")
 
-    accessible_workspaces = Workspace.objects.filter(
-        Q(owner=user) | Q(created_by=user) | Q(collaborators=user)
-    ).distinct()
+    accessible_workspaces = Workspace.objects.accessible_to(user)
     get_object_or_404(accessible_workspaces, pk=workspace_id)
 
 
@@ -25,10 +23,7 @@ class WorkspaceViewSet(viewsets.ModelViewSet):
     serializer_class = WorkspaceSerializer
 
     def get_queryset(self):
-        user = self.request.user
-        return Workspace.objects.filter(
-            Q(owner=user) | Q(created_by=user) | Q(collaborators=user)
-        ).distinct()
+        return Workspace.objects.accessible_to(self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user, created_by=self.request.user)

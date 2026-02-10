@@ -73,7 +73,17 @@ class NoteSerializer(serializers.ModelSerializer):
         workspace = attrs.get("workspace")
 
         instance_workspace = getattr(self.instance, "workspace", None)
-        effective_workspace = workspace or instance_workspace
+
+        # Hard boundary: Notes cannot move between workspaces once created.
+        # Validate this first so clients get a clear immutability error even if they also send `todo_list`.
+        if self.instance is not None and "workspace" in attrs:
+            if attrs["workspace"].id != self.instance.workspace_id:
+                raise serializers.ValidationError(
+                    {"workspace": ["Cannot change workspace of an existing note."]}
+                )
+
+        # For updates, the note's workspace is immutable, so always validate against the instance workspace.
+        effective_workspace = instance_workspace if self.instance is not None else workspace
 
         # Creation requires scope. Updates can omit scope as long as the instance already has it.
         if todo_list is None and workspace is None:
@@ -94,13 +104,6 @@ class NoteSerializer(serializers.ModelSerializer):
                             "Todo list must be in the same workspace as the note."
                         ]
                     }
-                )
-
-        # Hard boundary: Notes cannot move between workspaces once created.
-        if self.instance is not None and "workspace" in attrs:
-            if attrs["workspace"].id != self.instance.workspace_id:
-                raise serializers.ValidationError(
-                    {"workspace": ["Cannot change workspace of an existing note."]}
                 )
 
         return attrs
