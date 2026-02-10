@@ -13,4 +13,3 @@ export function navigate(to, options) {
   navigateImpl(to, options);
   return true;
 }
-

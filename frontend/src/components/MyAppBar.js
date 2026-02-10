@@ -29,7 +29,8 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
   const profileUsername = sessionStorage.getItem('username') || '';
   const profileEmail = sessionStorage.getItem('email') || '';
   const profilePrimary = profileUsername || profileEmail.split?.('@')?.[0] || 'username';
-  const profileSecondary = profileEmail || (profilePrimary === 'username' ? 'username@gmail.com' : null);
+  const profileSecondary =
+    profileEmail || (profilePrimary === 'username' ? 'username@gmail.com' : null);
 
   // Don't render on auth pages
   if (location.pathname === '/login' || location.pathname === '/register') return null;

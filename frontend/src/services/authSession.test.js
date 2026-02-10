@@ -76,7 +76,10 @@ describe('authSession', () => {
         json: async () => ({ access: 'A', refresh: 'R' }),
       });
 
-      await expect(readOkJson(response, 'fallback')).resolves.toEqual({ access: 'A', refresh: 'R' });
+      await expect(readOkJson(response, 'fallback')).resolves.toEqual({
+        access: 'A',
+        refresh: 'R',
+      });
     });
 
     test('when response is ok but json is null, it throws fallbackMessage', async () => {
@@ -143,4 +146,3 @@ describe('authSession', () => {
     });
   });
 });
-

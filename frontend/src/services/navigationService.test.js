@@ -31,4 +31,3 @@ describe('navigationService', () => {
     expect(navigate('/login')).toBe(false);
   });
 });
-

@@ -13,10 +13,7 @@ export async function getResponseErrorMessage(response, fallbackMessage) {
 
 export async function readOkJson(response, fallbackMessage) {
   if (!response?.ok) {
-    const message = await getResponseErrorMessage(
-      response,
-      `HTTP ${response?.status ?? 'error'}`,
-    );
+    const message = await getResponseErrorMessage(response, `HTTP ${response?.status ?? 'error'}`);
     throw new Error(message);
   }
 
@@ -47,4 +44,3 @@ export function persistAuthSession(data) {
     // ignore (storage may be blocked)
   }
 }
-
