@@ -29,7 +29,13 @@ def _summarize_items(items, limit: int = 3) -> str:
 
 @admin.register(Workspace)
 class WorkspaceAdmin(admin.ModelAdmin):
-    list_display = ("name", "owner", "collaborators_display", "created_at", "updated_at")
+    list_display = (
+        "name",
+        "owner",
+        "collaborators_display",
+        "created_at",
+        "updated_at",
+    )
     list_filter = ("owner", "created_at", "updated_at")
     search_fields = (
         "name",
