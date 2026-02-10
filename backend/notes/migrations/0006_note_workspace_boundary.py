@@ -56,7 +56,9 @@ def backfill_note_workspace(apps, schema_editor):
                     note_id=note.id,
                 ).delete()
 
-        Note.objects.using(db_alias).filter(id=note.id).update(workspace_id=workspace_id)
+        Note.objects.using(db_alias).filter(id=note.id).update(
+            workspace_id=workspace_id
+        )
 
 
 def noop_reverse(apps, schema_editor):
@@ -91,4 +93,3 @@ class Migration(migrations.Migration):
             ),
         ),
     ]
-

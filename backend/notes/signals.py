@@ -1,7 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db.models.signals import m2m_changed
-from django.db.models.signals import post_save
+from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
 
 from .models import Note, TodoList, Workspace
@@ -23,7 +22,9 @@ def create_default_workspace(sender, instance, created, **kwargs):
 
 
 @receiver(m2m_changed, sender=TodoList.notes.through)
-def enforce_note_workspace_boundary(sender, instance, action, reverse, model, pk_set, **kwargs):
+def enforce_note_workspace_boundary(
+    sender, instance, action, reverse, model, pk_set, **kwargs
+):
     """
     Prevent cross-workspace links between TodoLists and Notes.
 
@@ -39,9 +40,11 @@ def enforce_note_workspace_boundary(sender, instance, action, reverse, model, pk
     if reverse:
         # instance is a Note; pk_set contains TodoList IDs.
         note = instance
-        if TodoList.objects.filter(id__in=pk_set).exclude(
-            workspace_id=note.workspace_id
-        ).exists():
+        if (
+            TodoList.objects.filter(id__in=pk_set)
+            .exclude(workspace_id=note.workspace_id)
+            .exists()
+        ):
             raise ValidationError(
                 "Cannot add a note to a todo list in a different workspace."
             )
@@ -49,7 +52,9 @@ def enforce_note_workspace_boundary(sender, instance, action, reverse, model, pk
 
     # instance is a TodoList; pk_set contains Note IDs.
     todo_list = instance
-    if Note.objects.filter(id__in=pk_set).exclude(
-        workspace_id=todo_list.workspace_id
-    ).exists():
+    if (
+        Note.objects.filter(id__in=pk_set)
+        .exclude(workspace_id=todo_list.workspace_id)
+        .exists()
+    ):
         raise ValidationError("Cannot add notes from a different workspace.")
