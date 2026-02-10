@@ -70,6 +70,11 @@ class NoteViewSet(viewsets.ModelViewSet):
             Q(owner=user) | Q(created_by=user) | Q(collaborators=user)
         )
 
+        # Adding additional querying capabilities by ?workspace=ID
+        workspace_id = self.request.query_params.get("workspace")
+        if workspace_id:
+            queryset = queryset.filter(workspace_id=workspace_id)
+
         # Adding additional querying capabilities by ?todolist=ID
         todo_list_id = self.request.query_params.get("todo_list")
         if todo_list_id:
@@ -78,16 +83,23 @@ class NoteViewSet(viewsets.ModelViewSet):
         return queryset.distinct()
 
     def perform_create(self, serializer):
-        # Require todolist upon creation
         todo_list = serializer.validated_data.get("todo_list")
-        if todo_list is None:
-            raise PermissionDenied("todo_list is required.")
+        workspace = serializer.validated_data.get("workspace")
 
-        # Ensure user access to specified todo-list
-        if not (
-            todo_list.owner == self.request.user
-            or self.request.user in todo_list.collaborators.all()
-        ):
-            raise PermissionDenied("You cannot add notes to this todo-list.")
+        # Ensure user access to specified todo-list (when provided).
+        if todo_list is not None:
+            if not (
+                todo_list.owner == self.request.user
+                or self.request.user in todo_list.collaborators.all()
+            ):
+                raise PermissionDenied("You cannot add notes to this todo-list.")
+
+        # Ensure user access to specified workspace (when creating a workspace-scoped note).
+        if todo_list is None and workspace is not None:
+            if not (
+                workspace.owner == self.request.user
+                or self.request.user in workspace.collaborators.all()
+            ):
+                raise PermissionDenied("You cannot add notes to this workspace.")
 
         serializer.save(owner=self.request.user, created_by=self.request.user)

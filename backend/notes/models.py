@@ -80,6 +80,11 @@ class Note(models.Model):
     note = models.CharField(max_length=255)
     description = models.TextField(blank=True)
 
+    # Scope
+    workspace = models.ForeignKey(
+        Workspace, on_delete=models.CASCADE, related_name="notes"
+    )
+
     # Ownership
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="owned_notes"
