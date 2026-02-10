@@ -439,6 +439,39 @@ class TodoListApiTests(APITestCase):
             f"Expected 'notes' validation error, got: {response.data}",
         )
 
+    def test_todolist_cannot_change_workspace_after_create(self):
+        other_workspace = Workspace.objects.create(
+            name="Second Workspace",
+            description="Second Workspace Description",
+            owner=self.owner,
+            created_by=self.owner,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            f"/api/todolists/{self.todo_list.id}/",
+            {"workspace": other_workspace.id},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            f"Expected 400 when changing todolist workspace, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("workspace"),
+            ["Cannot change workspace of a todo list."],
+            f"Unexpected error body when changing todolist workspace: {response.data}",
+        )
+
+        self.todo_list.refresh_from_db()
+        self.assertEqual(
+            self.todo_list.workspace_id,
+            self.workspace.id,
+            "TodoList workspace unexpectedly changed.",
+        )
+
 
 class NoteApiTests(APITestCase):
     def setUp(self):
@@ -695,4 +728,37 @@ class NoteApiTests(APITestCase):
             response.status_code,
             status.HTTP_404_NOT_FOUND,
             f"Expected 404 when outsider deletes note, got {response.status_code}: {response.data}",
+        )
+
+    def test_note_cannot_change_workspace_after_create(self):
+        other_workspace = Workspace.objects.create(
+            name="Second Workspace",
+            description="Second Workspace Description",
+            owner=self.owner,
+            created_by=self.owner,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            f"/api/notes/{self.note.id}/",
+            {"workspace": other_workspace.id},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            f"Expected 400 when changing note workspace, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("workspace"),
+            ["Cannot change workspace of an existing note."],
+            f"Unexpected error body when changing note workspace: {response.data}",
+        )
+
+        self.note.refresh_from_db()
+        self.assertEqual(
+            self.note.workspace_id,
+            self.workspace.id,
+            "Note workspace unexpectedly changed.",
         )

@@ -2,6 +2,8 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-02-09
+### Added
+- Added API regression tests to prevent moving todo lists and notes across workspaces after creation.
 ### Changed
 - Improved Django admin list views for Workspaces, Todo Lists, and Notes to show owner/collaborators (and workspace for todo lists).
 - Notes now belong to a Workspace (tenancy boundary), and Todo Lists can only include Notes from the same Workspace.
