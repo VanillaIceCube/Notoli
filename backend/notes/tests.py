@@ -227,6 +227,11 @@ class TodoListApiTests(APITestCase):
             email="collaborator_email@example.com",
             password="collaborator-password",
         )
+        self.list_only_collaborator = User.objects.create_user(
+            username="list_only_collaborator",
+            email="list_only_collaborator_email@example.com",
+            password="list-only-password",
+        )
         self.outsider = User.objects.create_user(
             username="outsider",
             email="outsider_email@example.com",
@@ -387,6 +392,31 @@ class TodoListApiTests(APITestCase):
             response.status_code,
             status.HTTP_403_FORBIDDEN,
             f"Expected 403 when filtering by workspace without access, got {response.status_code}: {response.data}",
+        )
+
+    def test_list_todolists_filters_by_workspace_allowed_for_list_only_collaborator(self):
+        list_in_workspace = TodoList.objects.create(
+            name="Shared List",
+            description="List-level share only",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+        )
+        list_in_workspace.collaborators.add(self.list_only_collaborator)
+
+        self.client.force_authenticate(user=self.list_only_collaborator)
+        response = self.client.get(f"/api/todolists/?workspace={self.workspace.id}")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            f"Expected 200 for list-only collaborator workspace filter, got {response.status_code}: {response.data}",
+        )
+        response_ids = {item["id"] for item in response.data}
+        self.assertIn(
+            list_in_workspace.id,
+            response_ids,
+            f"Expected shared todolist to be included in filtered response: {response.data}",
         )
 
     def test_retrieve_todolist_denied_for_outsider(self):
@@ -690,6 +720,22 @@ class NoteApiTests(APITestCase):
             response.status_code,
             status.HTTP_403_FORBIDDEN,
             f"Expected 403 when filtering notes by workspace without access, got {response.status_code}: {response.data}",
+        )
+
+    def test_list_notes_filters_by_workspace_allowed_for_note_only_collaborator(self):
+        self.client.force_authenticate(user=self.note_only_collaborator)
+        response = self.client.get(f"/api/notes/?workspace={self.workspace.id}")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            f"Expected 200 for note-only collaborator workspace filter, got {response.status_code}: {response.data}",
+        )
+        response_ids = {item["id"] for item in response.data}
+        self.assertIn(
+            self.note.id,
+            response_ids,
+            f"Expected shared note to be included in filtered response: {response.data}",
         )
 
     def test_note_can_belong_to_multiple_todolists(self):

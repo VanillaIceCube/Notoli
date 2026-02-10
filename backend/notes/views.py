@@ -23,6 +23,31 @@ def _require_workspace_access(user, workspace_id):
         raise PermissionDenied("You do not have access to this workspace.")
 
 
+def _require_workspace_filter_access(user, workspace_id, base_queryset):
+    """
+    Workspace filters should not be stricter than item-level permissions.
+
+    Allow `?workspace=` if:
+    - The workspace exists AND the user is a workspace-level member (owner/creator/collaborator), OR
+    - The user has any item-level access within that workspace (e.g., note/todolist collaborator).
+    """
+    try:
+        workspace_id = int(workspace_id)
+    except (TypeError, ValueError):
+        raise NotFound("Workspace not found.")
+
+    if not Workspace.objects.filter(pk=workspace_id).exists():
+        raise NotFound("Workspace not found.")
+
+    if Workspace.objects.accessible_to(user).filter(pk=workspace_id).exists():
+        return
+
+    if base_queryset.filter(workspace_id=workspace_id).exists():
+        return
+
+    raise PermissionDenied("You do not have access to this workspace.")
+
+
 class WorkspaceViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = WorkspaceSerializer
@@ -49,7 +74,7 @@ class TodoListViewSet(viewsets.ModelViewSet):
         # Adding additional querying capabilities by ?workspace=ID
         workspace_id = self.request.query_params.get("workspace")
         if workspace_id:
-            _require_workspace_access(user, workspace_id)
+            _require_workspace_filter_access(user, workspace_id, queryset)
             queryset = queryset.filter(workspace_id=workspace_id)
 
         return queryset.distinct()
@@ -86,7 +111,7 @@ class NoteViewSet(viewsets.ModelViewSet):
         # Adding additional querying capabilities by ?workspace=ID
         workspace_id = self.request.query_params.get("workspace")
         if workspace_id:
-            _require_workspace_access(user, workspace_id)
+            _require_workspace_filter_access(user, workspace_id, queryset)
             queryset = queryset.filter(workspace_id=workspace_id)
 
         # Adding additional querying capabilities by ?todolist=ID
