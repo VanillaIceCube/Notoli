@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import PermissionDenied
 
 from .models import Note, TodoList, Workspace
 
@@ -72,27 +73,54 @@ class NoteSerializer(serializers.ModelSerializer):
         todo_list = attrs.get("todo_list")
         workspace = attrs.get("workspace")
 
-        # Preserve existing API behavior: if no workspace is provided, a todo list is required.
-        if todo_list is None and workspace is None:
-            raise serializers.ValidationError(
-                {"todo_list": ["This field is required."]}
-            )
+        instance_workspace = getattr(self.instance, "workspace", None)
 
-        if todo_list is not None and workspace is not None:
-            if todo_list.workspace_id != workspace.id:
-                raise serializers.ValidationError(
-                    {
-                        "workspace": [
-                            "Workspace must match the workspace of the provided todo_list."
-                        ]
-                    }
+        # Enforce that attaching to a todo list via PATCH requires access to that list.
+        # Otherwise a user who can edit a note could inject it into a list they can't access.
+        if todo_list is not None:
+            request = self.context.get("request")
+            user = getattr(request, "user", None)
+            if user is not None and getattr(user, "is_authenticated", False):
+                has_todolist_access = (
+                    todo_list.owner_id == user.id
+                    or todo_list.created_by_id == user.id
+                    or todo_list.collaborators.filter(id=user.id).exists()
                 )
+                if not has_todolist_access:
+                    raise PermissionDenied("You cannot add notes to this todo-list.")
 
         # Hard boundary: Notes cannot move between workspaces once created.
+        # Validate this first so clients get a clear immutability error even if they also send `todo_list`.
         if self.instance is not None and "workspace" in attrs:
             if attrs["workspace"].id != self.instance.workspace_id:
                 raise serializers.ValidationError(
                     {"workspace": ["Cannot change workspace of an existing note."]}
+                )
+
+        # For updates, the note's workspace is immutable, so always validate against the instance workspace.
+        effective_workspace = (
+            instance_workspace if self.instance is not None else workspace
+        )
+
+        # Creation requires scope. Updates can omit scope as long as the instance already has it.
+        if todo_list is None and workspace is None:
+            if self.instance is None or instance_workspace is None:
+                raise serializers.ValidationError(
+                    {
+                        "todo_list": [
+                            "This field is required when workspace is not provided."
+                        ],
+                    }
+                )
+
+        if todo_list is not None and effective_workspace is not None:
+            if todo_list.workspace_id != effective_workspace.id:
+                raise serializers.ValidationError(
+                    {
+                        "todo_list": [
+                            "Todo list must be in the same workspace as the note."
+                        ]
+                    }
                 )
 
         return attrs
@@ -104,6 +132,18 @@ class NoteSerializer(serializers.ModelSerializer):
             validated_data["workspace"] = todo_list.workspace
 
         note = super().create(validated_data)
+
+        if todo_list is not None:
+            todo_list.notes.add(note)
+
+        return note
+
+    def update(self, instance, validated_data):
+        # `todo_list` is an API convenience for attaching a note to a todo list.
+        # It is not a model field, so we must handle it explicitly on update.
+        todo_list = validated_data.pop("todo_list", None)
+
+        note = super().update(instance, validated_data)
 
         if todo_list is not None:
             todo_list.notes.add(note)

@@ -4,9 +4,18 @@ All notable changes to this project are documented in this file.
 ## 2026-02-09
 ### Added
 - Added API regression tests to prevent moving todo lists and notes across workspaces after creation.
+- `POST /auth/login/` now returns `username` and `email` alongside `access`/`refresh`.
+### Fixed
+- Allowed partial note PATCH updates without requiring clients to re-send `workspace` or `todo_list`.
+- Note update validation now prioritizes `workspace` immutability errors over derived `todo_list` mismatch errors when both are provided.
+- `?workspace=` list filters for todo lists/notes now return 403 when the workspace exists but the user doesn't have access to it.
+- Note PATCH `todo_list` attach now enforces todo list access (prevents injecting notes into lists you can't access).
+- `?workspace=` list filters now work for users who have item-level access (note/todolist collaborators) even if they are not workspace collaborators.
 ### Changed
 - Improved Django admin list views for Workspaces, Todo Lists, and Notes to show owner/collaborators (and workspace for todo lists).
 - Notes now belong to a Workspace (tenancy boundary), and Todo Lists can only include Notes from the same Workspace.
+- Notes API now allows attaching an existing note to another todo list via PATCH `todo_list` (within the same workspace).
+- Login success snackbar now greets the user with `Welcome {username}!`.
 
 ## 2026-02-07
 ### Changed

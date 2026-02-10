@@ -45,7 +45,12 @@ export default function Login({ showSnackbar }) {
       sessionStorage.setItem('refreshToken', data.refresh);
 
       // Update Snackbar
-      showSnackbar('success', 'Login successful!');
+      const welcomeName =
+        data?.username ||
+        data?.email?.split?.('@')?.[0] ||
+        email.trim().split?.('@')?.[0] ||
+        'there';
+      showSnackbar('success', `Welcome ${welcomeName}!`);
 
       // Navigate to first Workspace, if empty, navigate to root
       const workspaces = await fetchWorkspaces(data.access, true);

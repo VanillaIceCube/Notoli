@@ -263,6 +263,16 @@ class LoginTests(APITestCase):
             response.data.get("refresh"),
             f"Expected refresh token in response: {response.data}",
         )
+        self.assertEqual(
+            response.data.get("username"),
+            "test_email",
+            f"Expected username in response: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("email"),
+            "test_email@example.com",
+            f"Expected email in response: {response.data}",
+        )
 
     def test_login_invalid_password(self):
         response = self.client.post(
