@@ -72,16 +72,26 @@ class NoteSerializer(serializers.ModelSerializer):
         todo_list = attrs.get("todo_list")
         workspace = attrs.get("workspace")
 
-        # Preserve existing API behavior: if no workspace is provided, a todo list is required.
-        if todo_list is None and workspace is None:
-            raise serializers.ValidationError({"todo_list": ["This field is required."]})
+        instance_workspace = getattr(self.instance, "workspace", None)
+        effective_workspace = workspace or instance_workspace
 
-        if todo_list is not None and workspace is not None:
-            if todo_list.workspace_id != workspace.id:
+        # Creation requires scope. Updates can omit scope as long as the instance already has it.
+        if todo_list is None and workspace is None:
+            if self.instance is None or instance_workspace is None:
                 raise serializers.ValidationError(
                     {
-                        "workspace": [
-                            "Workspace must match the workspace of the provided todo_list."
+                        "todo_list": [
+                            "This field is required when workspace is not provided."
+                        ],
+                    }
+                )
+
+        if todo_list is not None and effective_workspace is not None:
+            if todo_list.workspace_id != effective_workspace.id:
+                raise serializers.ValidationError(
+                    {
+                        "todo_list": [
+                            "Todo list must be in the same workspace as the note."
                         ]
                     }
                 )
@@ -102,6 +112,18 @@ class NoteSerializer(serializers.ModelSerializer):
             validated_data["workspace"] = todo_list.workspace
 
         note = super().create(validated_data)
+
+        if todo_list is not None:
+            todo_list.notes.add(note)
+
+        return note
+
+    def update(self, instance, validated_data):
+        # `todo_list` is an API convenience for attaching a note to a todo list.
+        # It is not a model field, so we must handle it explicitly on update.
+        todo_list = validated_data.pop("todo_list", None)
+
+        note = super().update(instance, validated_data)
 
         if todo_list is not None:
             todo_list.notes.add(note)

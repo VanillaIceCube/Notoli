@@ -372,6 +372,23 @@ class TodoListApiTests(APITestCase):
             f"Expected only one todolist in filtered response, got {response.data}",
         )
 
+    def test_list_todolists_filters_by_workspace_denied_for_outsider_workspace(self):
+        other_workspace = Workspace.objects.create(
+            name="Other Workspace",
+            description="Other Workspace Description",
+            owner=self.outsider,
+            created_by=self.outsider,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(f"/api/todolists/?workspace={other_workspace.id}")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+            f"Expected 404 when filtering by workspace without access, got {response.status_code}: {response.data}",
+        )
+
     def test_retrieve_todolist_denied_for_outsider(self):
         self.client.force_authenticate(user=self.outsider)
         response = self.client.get(f"/api/todolists/{self.todo_list.id}/")
@@ -581,7 +598,7 @@ class NoteApiTests(APITestCase):
         )
         self.assertEqual(
             response.data.get("todo_list"),
-            ["This field is required."],
+            ["This field is required when workspace is not provided."],
             f"Unexpected error body when todo_list is missing: {response.data}",
         )
 
@@ -643,6 +660,30 @@ class NoteApiTests(APITestCase):
             len(response_ids),
             1,
             f"Expected only one note in filtered response, got {response.data}",
+        )
+
+    def test_list_notes_filters_by_workspace_denied_for_outsider_workspace(self):
+        other_workspace = Workspace.objects.create(
+            name="Other Workspace",
+            description="Other Workspace Description",
+            owner=self.outsider,
+            created_by=self.outsider,
+        )
+        Note.objects.create(
+            note="Outsider Note",
+            description="Should not be accessible",
+            workspace=other_workspace,
+            owner=self.outsider,
+            created_by=self.outsider,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(f"/api/notes/?workspace={other_workspace.id}")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+            f"Expected 404 when filtering notes by workspace without access, got {response.status_code}: {response.data}",
         )
 
     def test_note_can_belong_to_multiple_todolists(self):
@@ -728,6 +769,81 @@ class NoteApiTests(APITestCase):
             response.status_code,
             status.HTTP_404_NOT_FOUND,
             f"Expected 404 when outsider deletes note, got {response.status_code}: {response.data}",
+        )
+
+    def test_patch_note_allows_partial_update_without_resupplying_scope(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            f"/api/notes/{self.note.id}/",
+            {"description": "Updated Description"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            f"Expected 200 when patching note without scope fields, got {response.status_code}: {response.data}",
+        )
+        self.note.refresh_from_db()
+        self.assertEqual(self.note.description, "Updated Description")
+
+    def test_patch_note_todo_list_attaches_within_workspace(self):
+        other_todo_list = TodoList.objects.create(
+            name="Secondary List",
+            description="Secondary List Description",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            f"/api/notes/{self.note.id}/",
+            {"todo_list": other_todo_list.id},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            f"Expected 200 when attaching note to another list, got {response.status_code}: {response.data}",
+        )
+        self.assertTrue(
+            other_todo_list.notes.filter(id=self.note.id).exists(),
+            "Expected note to be attached to the specified todo list.",
+        )
+
+    def test_patch_note_todo_list_cross_workspace_rejected(self):
+        other_workspace = Workspace.objects.create(
+            name="Other Workspace",
+            description="Other Workspace Description",
+            owner=self.owner,
+            created_by=self.owner,
+        )
+        other_todo_list = TodoList.objects.create(
+            name="Other List",
+            description="Other List Description",
+            workspace=other_workspace,
+            owner=self.owner,
+            created_by=self.owner,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            f"/api/notes/{self.note.id}/",
+            {"todo_list": other_todo_list.id},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            f"Expected 400 when attaching note to cross-workspace list, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("todo_list"),
+            ["Todo list must be in the same workspace as the note."],
+            f"Unexpected error body for cross-workspace todo_list: {response.data}",
         )
 
     def test_note_cannot_change_workspace_after_create(self):

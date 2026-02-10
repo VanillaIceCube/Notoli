@@ -1,11 +1,23 @@
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 
 from .models import Note, TodoList, Workspace
 from .serializers import NoteSerializer, TodoListSerializer, WorkspaceSerializer
+
+
+def _require_workspace_access(user, workspace_id):
+    try:
+        workspace_id = int(workspace_id)
+    except (TypeError, ValueError):
+        raise NotFound("Workspace not found.")
+
+    accessible_workspaces = Workspace.objects.filter(
+        Q(owner=user) | Q(created_by=user) | Q(collaborators=user)
+    ).distinct()
+    get_object_or_404(accessible_workspaces, pk=workspace_id)
 
 
 class WorkspaceViewSet(viewsets.ModelViewSet):
@@ -37,6 +49,7 @@ class TodoListViewSet(viewsets.ModelViewSet):
         # Adding additional querying capabilities by ?workspace=ID
         workspace_id = self.request.query_params.get("workspace")
         if workspace_id:
+            _require_workspace_access(user, workspace_id)
             queryset = queryset.filter(workspace_id=workspace_id)
 
         return queryset.distinct()
@@ -73,6 +86,7 @@ class NoteViewSet(viewsets.ModelViewSet):
         # Adding additional querying capabilities by ?workspace=ID
         workspace_id = self.request.query_params.get("workspace")
         if workspace_id:
+            _require_workspace_access(user, workspace_id)
             queryset = queryset.filter(workspace_id=workspace_id)
 
         # Adding additional querying capabilities by ?todolist=ID
