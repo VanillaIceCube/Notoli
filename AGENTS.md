@@ -105,6 +105,9 @@ Infra: Production runs behind Cloudflare (DNS/proxy) on a DigitalOcean VM. If yo
   - `DJANGO_CSRF_TRUSTED_ORIGINS=https://judeandrewalaba.com,https://www.judeandrewalaba.com`
 - Frontend API base for production builds:
   - `REACT_APP_API_BASE_URL=https://judeandrewalaba.com/apps/notoli`
+- Frontend auth behavior:
+  - Tokens live in `sessionStorage` (`accessToken`/`refreshToken`).
+  - Any backend `401` from non-login/register endpoints clears tokens and redirects to `/login` (under the `PUBLIC_URL` basename, e.g. `/apps/notoli/login`).
 
 ## Maintenance
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
