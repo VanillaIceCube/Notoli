@@ -85,4 +85,25 @@ describe('apiClient', () => {
     expect(sessionStorage.getItem('refreshToken')).toBe('REFRESH');
     expect(window.location.pathname).toBe('/apps/notoli/login');
   });
+
+  test('when logout() is called, it clears tokens/profile and redirects to /login', async () => {
+    delete process.env.REACT_APP_API_BASE_URL;
+    process.env.PUBLIC_URL = '/apps/notoli';
+
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    sessionStorage.setItem('refreshToken', 'REFRESH');
+    sessionStorage.setItem('username', 'judea');
+    sessionStorage.setItem('email', 'judea@example.com');
+    window.history.replaceState({}, '', '/apps/notoli/workspace/1');
+
+    const { logout } = await import('./apiClient');
+
+    logout();
+
+    expect(sessionStorage.getItem('accessToken')).toBeNull();
+    expect(sessionStorage.getItem('refreshToken')).toBeNull();
+    expect(sessionStorage.getItem('username')).toBeNull();
+    expect(sessionStorage.getItem('email')).toBeNull();
+    expect(window.location.pathname).toBe('/apps/notoli/login');
+  });
 });

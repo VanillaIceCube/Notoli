@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { fetchWorkspaces as fetchWorkspacesApi, login } from '../../services/backendClient';
+import { persistAuthSession, readOkJson } from '../../services/authSession';
 
 export default function Login({ showSnackbar }) {
   // Basics
@@ -52,15 +53,8 @@ export default function Login({ showSnackbar }) {
     try {
       const response = await login({ email: email.trim(), password });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Save tokens
-      sessionStorage.setItem('accessToken', data.access);
-      sessionStorage.setItem('refreshToken', data.refresh);
+      const data = await readOkJson(response, 'Login failed :(');
+      persistAuthSession(data);
 
       // Update Snackbar
       const welcomeName =

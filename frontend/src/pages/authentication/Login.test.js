@@ -20,7 +20,12 @@ jest.mock('../../services/backendClient', () => ({
   login: jest.fn(() =>
     Promise.resolve({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
     }),
   ),
 }));
@@ -69,7 +74,12 @@ describe('Login', () => {
     });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
     });
 
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
@@ -90,7 +100,12 @@ describe('Login', () => {
     });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
     });
 
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
@@ -127,6 +142,7 @@ describe('Login', () => {
         access: 'test_access_token',
         refresh: 'test_refresh_token',
         username: 'test_email',
+        email: 'test_email@example.com',
       }),
     });
 
@@ -160,7 +176,12 @@ describe('Login', () => {
     });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
     });
 
     const showSnackbar = jest.fn();
@@ -180,7 +201,12 @@ describe('Login', () => {
     fetchWorkspaces.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
     });
 
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
@@ -198,7 +224,12 @@ describe('Login', () => {
     fetchWorkspaces.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
     });
 
     const showSnackbar = jest.fn();

@@ -37,6 +37,8 @@ describe('Register', () => {
       ok: true,
       json: async () => ({
         message: 'User created successfully.',
+        username: 'test_username',
+        email: 'test_email@example.com',
         access: 'access-token',
         refresh: 'refresh-token',
         workspace_id: 12,
