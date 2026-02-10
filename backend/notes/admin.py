@@ -15,6 +15,18 @@ def _summarize_users(users, limit: int = 3) -> str:
     return shown
 
 
+def _summarize_items(items, limit: int = 3) -> str:
+    items = list(items)
+    if not items:
+        return "-"
+
+    shown = ", ".join(str(i) for i in items[:limit])
+    remaining = len(items) - limit
+    if remaining > 0:
+        return f"{shown} (+{remaining} more)"
+    return shown
+
+
 @admin.register(Workspace)
 class WorkspaceAdmin(admin.ModelAdmin):
     list_display = ("name", "owner", "collaborators_display", "created_at", "updated_at")
@@ -94,6 +106,7 @@ class TodoListAdmin(admin.ModelAdmin):
 class NoteAdmin(admin.ModelAdmin):
     list_display = (
         "note",
+        "todolists_display",
         "workspace",
         "owner",
         "collaborators_display",
@@ -109,6 +122,7 @@ class NoteAdmin(admin.ModelAdmin):
         "owner__email",
         "collaborators__username",
         "collaborators__email",
+        "todolists__name",
     )
     autocomplete_fields = ("workspace", "owner", "collaborators", "created_by")
     readonly_fields = ("created_at", "updated_at")
@@ -124,8 +138,12 @@ class NoteAdmin(admin.ModelAdmin):
             super()
             .get_queryset(request)
             .select_related("workspace", "owner", "created_by")
-            .prefetch_related("collaborators")
+            .prefetch_related("collaborators", "todolists")
         )
+
+    @admin.display(description="Todo Lists")
+    def todolists_display(self, obj):
+        return _summarize_items(obj.todolists.all())
 
     @admin.display(description="Collaborators")
     def collaborators_display(self, obj):
