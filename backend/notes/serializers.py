@@ -98,7 +98,9 @@ class NoteSerializer(serializers.ModelSerializer):
                 )
 
         # For updates, the note's workspace is immutable, so always validate against the instance workspace.
-        effective_workspace = instance_workspace if self.instance is not None else workspace
+        effective_workspace = (
+            instance_workspace if self.instance is not None else workspace
+        )
 
         # Creation requires scope. Updates can omit scope as long as the instance already has it.
         if todo_list is None and workspace is None:
