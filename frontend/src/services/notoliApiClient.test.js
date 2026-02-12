@@ -15,14 +15,14 @@ import {
   createNote,
   updateNote,
   deleteNote,
-} from './backendClient';
-import { apiFetch } from './apiClient';
+} from './notoliApiClient';
+import { apiFetch } from './requestClient';
 
-jest.mock('./apiClient', () => ({
+jest.mock('./requestClient', () => ({
   apiFetch: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
-describe('backendClient', () => {
+describe('notoliApiClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });

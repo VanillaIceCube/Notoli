@@ -10,6 +10,7 @@ import Notes from './pages/notes/Notes';
 import MyAppBar from './components/MyAppBar';
 import MySnackbar from './components/MySnackbar';
 import MyDrawer from './components/MyDrawer';
+import NavigationBridge from './components/NavigationBridge';
 
 function App() {
   // App Bar
@@ -40,6 +41,7 @@ function App() {
   return (
     <React.Fragment>
       <Router basename={routerBasename}>
+        <NavigationBridge />
         <MyAppBar appBarHeader={appBarHeader} setDrawerOpen={setDrawerOpen} />
         <MyDrawer
           open={drawerOpen}

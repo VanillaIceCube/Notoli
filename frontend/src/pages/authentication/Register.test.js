@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-utils';
 import Register from './Register';
-import { register } from '../../services/backendClient';
+import { register } from '../../services/notoliApiClient';
 import { useNavigate } from 'react-router-dom';
 
 jest.mock('react-router-dom', () => ({
@@ -10,7 +10,7 @@ jest.mock('react-router-dom', () => ({
   useNavigate: jest.fn(),
 }));
 
-jest.mock('../../services/backendClient', () => ({
+jest.mock('../../services/notoliApiClient', () => ({
   register: jest.fn(),
 }));
 
@@ -37,6 +37,8 @@ describe('Register', () => {
       ok: true,
       json: async () => ({
         message: 'User created successfully.',
+        username: 'test_username',
+        email: 'test_email@example.com',
         access: 'access-token',
         refresh: 'refresh-token',
         workspace_id: 12,

@@ -9,7 +9,7 @@ import {
   deleteWorkspace,
   fetchWorkspaces as fetchWorkspacesApi,
   updateWorkspace,
-} from '../../services/backendClient';
+} from '../../services/notoliApiClient';
 
 const mockNavigate = jest.fn();
 
@@ -18,7 +18,7 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 
-jest.mock('../../services/backendClient', () => ({
+jest.mock('../../services/notoliApiClient', () => ({
   createWorkspace: jest.fn(),
   deleteWorkspace: jest.fn(),
   fetchWorkspaces: jest.fn(),
