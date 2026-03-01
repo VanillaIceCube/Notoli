@@ -19,7 +19,19 @@ export function clearAuthSession() {
 }
 
 export function redirectToLogin() {
-  navigate('/login', { replace: true });
+  const didNavigate = navigate('/login', { replace: true });
+
+  if (didNavigate || typeof window === 'undefined') return;
+
+  const publicUrl = process.env.PUBLIC_URL || '';
+  const normalizedBase = publicUrl.replace(/\/+$/, '');
+  const loginPath = normalizedBase ? `${normalizedBase}/login` : '/login';
+  const loginUrl = `${window.location?.origin ?? ''}${loginPath.startsWith('/') ? '' : '/'}${loginPath}`;
+  if (window.location?.replace) {
+    window.location.replace(loginUrl);
+  } else {
+    window.location.href = loginUrl;
+  }
 }
 
 export function logout() {
