@@ -67,6 +67,16 @@ class RegistrationTests(APITestCase):
             "User created successfully.",
             f"Unexpected response body: {response.data}",
         )
+        self.assertEqual(
+            response.data.get("username"),
+            "test_email",
+            f"Expected username in response: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("email"),
+            "test_email@example.com",
+            f"Expected email in response: {response.data}",
+        )
         self.assertTrue(
             response.data.get("access"),
             f"Expected access token in response: {response.data}",

@@ -1,6 +1,6 @@
 const originalEnv = process.env;
 
-describe('apiClient', () => {
+describe('requestClient', () => {
   beforeEach(() => {
     jest.resetModules();
     process.env = { ...originalEnv };
@@ -16,7 +16,7 @@ describe('apiClient', () => {
 
   test('when REACT_APP_API_BASE_URL is set, it prefixes the base URL', async () => {
     process.env.REACT_APP_API_BASE_URL = 'https://api.example.com';
-    const { apiFetch } = await import('./apiClient');
+    const { apiFetch } = await import('./requestClient');
 
     await apiFetch('/path', { method: 'GET' });
 
@@ -25,7 +25,7 @@ describe('apiClient', () => {
 
   test('when REACT_APP_API_BASE_URL is not set, it uses the default base URL', async () => {
     delete process.env.REACT_APP_API_BASE_URL;
-    const { apiFetch } = await import('./apiClient');
+    const { apiFetch } = await import('./requestClient');
 
     await apiFetch('/path', { method: 'GET' });
 
@@ -39,7 +39,7 @@ describe('apiClient', () => {
       body: JSON.stringify({ ok: true }),
     };
     delete process.env.REACT_APP_API_BASE_URL;
-    const { apiFetch } = await import('./apiClient');
+    const { apiFetch } = await import('./requestClient');
 
     await apiFetch('/path', options);
 
@@ -48,14 +48,17 @@ describe('apiClient', () => {
 
   test('when a non-auth endpoint returns 401, it clears tokens and redirects to /login', async () => {
     delete process.env.REACT_APP_API_BASE_URL;
-    process.env.PUBLIC_URL = '/apps/notoli';
     global.fetch = jest.fn(() => Promise.resolve({ ok: false, status: 401 }));
 
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
-    window.history.replaceState({}, '', '/apps/notoli/workspace/1');
+    window.history.replaceState({}, '', '/workspace/1');
 
-    const { apiFetch } = await import('./apiClient');
+    const { setNavigate } = await import('./navigationService');
+    const mockNavigate = jest.fn();
+    setNavigate(mockNavigate);
+
+    const { apiFetch } = await import('./requestClient');
 
     await apiFetch('/api/workspaces/', { method: 'GET' });
 
@@ -65,24 +68,55 @@ describe('apiClient', () => {
       severity: 'error',
       message: 'Your session expired. Please log in again.',
     });
-    expect(window.location.pathname).toBe('/apps/notoli/login');
+    expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 
   test('when /auth/login/ returns 401, it does not redirect or clear tokens', async () => {
     delete process.env.REACT_APP_API_BASE_URL;
-    process.env.PUBLIC_URL = '/apps/notoli';
     global.fetch = jest.fn(() => Promise.resolve({ ok: false, status: 401 }));
 
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
-    window.history.replaceState({}, '', '/apps/notoli/login');
+    window.history.replaceState({}, '', '/login');
 
-    const { apiFetch } = await import('./apiClient');
+    const { setNavigate } = await import('./navigationService');
+    const mockNavigate = jest.fn();
+    setNavigate(mockNavigate);
+
+    const { apiFetch } = await import('./requestClient');
 
     await apiFetch('/auth/login/', { method: 'POST' });
 
     expect(sessionStorage.getItem('accessToken')).toBe('ACCESS');
     expect(sessionStorage.getItem('refreshToken')).toBe('REFRESH');
-    expect(window.location.pathname).toBe('/apps/notoli/login');
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  test('when logout() is called, it clears tokens/profile and redirects to /login', async () => {
+    delete process.env.REACT_APP_API_BASE_URL;
+
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    sessionStorage.setItem('refreshToken', 'REFRESH');
+    sessionStorage.setItem('username', 'judea');
+    sessionStorage.setItem('email', 'judea@example.com');
+    window.history.replaceState({}, '', '/workspace/1');
+
+    const { setNavigate } = await import('./navigationService');
+    const mockNavigate = jest.fn();
+    setNavigate(mockNavigate);
+
+    const { logout } = await import('./requestClient');
+
+    logout();
+
+    expect(sessionStorage.getItem('accessToken')).toBeNull();
+    expect(sessionStorage.getItem('refreshToken')).toBeNull();
+    expect(sessionStorage.getItem('username')).toBeNull();
+    expect(sessionStorage.getItem('email')).toBeNull();
+    expect(JSON.parse(sessionStorage.getItem('pendingSnackbar'))).toEqual({
+      severity: 'success',
+      message: 'Logout Successful :)',
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 });

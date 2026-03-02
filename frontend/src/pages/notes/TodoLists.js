@@ -22,7 +22,7 @@ import {
   deleteTodoList,
   fetchTodoLists as fetchTodoListsApi,
   updateTodoList,
-} from '../../services/backendClient';
+} from '../../services/notoliApiClient';
 
 export default function TodoLists({ setAppBarHeader }) {
   // Misc

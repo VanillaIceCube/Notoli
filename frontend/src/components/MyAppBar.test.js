@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import MyAppBar from './MyAppBar';
 import { renderWithProviders } from '../test-utils';
 import { goBackToParent } from '../utils/Navigation';
+import { setNavigate } from '../services/navigationService';
 
 const mockNavigate = jest.fn();
 const mockUseLocation = jest.fn();
@@ -23,6 +24,8 @@ describe('MyAppBar', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    sessionStorage.clear();
+    setNavigate(mockNavigate);
     mockUseLocation.mockReturnValue({ pathname: '/' });
   });
 
@@ -78,5 +81,51 @@ describe('MyAppBar', () => {
     expect(setDrawerOpen).toHaveBeenCalled();
     const [updater] = setDrawerOpen.mock.calls[0];
     expect(typeof updater).toBe('function');
+  });
+
+  test('when the user profile icon is clicked, it opens the profile menu', async () => {
+    sessionStorage.setItem('username', 'judea');
+    sessionStorage.setItem('email', 'judea@example.com');
+
+    renderWithProviders(<MyAppBar appBarHeader="Workspace" setDrawerOpen={setDrawerOpen} />);
+
+    await userEvent.click(screen.getByLabelText('user profile'));
+
+    expect(screen.getByTestId('menu')).toBeInTheDocument();
+    expect(screen.getByText('Logout')).toBeInTheDocument();
+    expect(screen.getByText('judea')).toBeInTheDocument();
+    expect(screen.getByText('judea@example.com')).toBeInTheDocument();
+  });
+
+  test('when no profile info exists, it falls back to username + username@gmail.com', async () => {
+    renderWithProviders(<MyAppBar appBarHeader="Workspace" setDrawerOpen={setDrawerOpen} />);
+
+    await userEvent.click(screen.getByLabelText('user profile'));
+
+    expect(screen.getByText('username')).toBeInTheDocument();
+    expect(screen.getByText('username@gmail.com')).toBeInTheDocument();
+  });
+
+  test('when Logout is clicked, it clears tokens and redirects to /login', async () => {
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    sessionStorage.setItem('refreshToken', 'REFRESH');
+    sessionStorage.setItem('username', 'judea');
+    sessionStorage.setItem('email', 'judea@example.com');
+    window.history.replaceState({}, '', '/');
+
+    renderWithProviders(<MyAppBar appBarHeader="Workspace" setDrawerOpen={setDrawerOpen} />);
+
+    await userEvent.click(screen.getByLabelText('user profile'));
+    await userEvent.click(screen.getByRole('menuitem', { name: /logout/i }));
+
+    expect(sessionStorage.getItem('accessToken')).toBeNull();
+    expect(sessionStorage.getItem('refreshToken')).toBeNull();
+    expect(sessionStorage.getItem('username')).toBeNull();
+    expect(sessionStorage.getItem('email')).toBeNull();
+    expect(JSON.parse(sessionStorage.getItem('pendingSnackbar'))).toEqual({
+      severity: 'success',
+      message: 'Logout Successful :)',
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 });

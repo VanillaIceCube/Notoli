@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { register } from '../../services/backendClient';
+import { register } from '../../services/notoliApiClient';
+import { persistAuthSession, readOkJson } from '../../services/authSession';
 
 export default function Register({ showSnackbar }) {
   const [email, setEmail] = useState('');
@@ -13,29 +14,8 @@ export default function Register({ showSnackbar }) {
   const handleRegister = async () => {
     try {
       const response = await register({ email, username, password });
-
-      if (!response.ok) {
-        let message = 'Registration failed :(';
-        try {
-          const data = await response.json();
-          message = data?.error || data?.detail || message;
-        } catch {
-          // ignore json parsing errors
-        }
-        throw new Error(message);
-      }
-
-      let data = {};
-      try {
-        data = await response.json();
-      } catch {
-        // ignore json parsing errors
-      }
-
-      if (data?.access && data?.refresh) {
-        sessionStorage.setItem('accessToken', data.access);
-        sessionStorage.setItem('refreshToken', data.refresh);
-      }
+      const data = await readOkJson(response, 'Registration failed :(');
+      persistAuthSession(data);
 
       showSnackbar('success', 'Account created! Welcome to Notoli!');
       if (data?.workspace_id) {
