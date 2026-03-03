@@ -119,4 +119,26 @@ describe('requestClient', () => {
     });
     expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
+
+  test('when logout() is called before navigate is registered, it still redirects', async () => {
+    delete process.env.REACT_APP_API_BASE_URL;
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    sessionStorage.setItem('refreshToken', 'REFRESH');
+
+    const originalLocation = window.location;
+    const replaceSpy = jest.fn();
+    delete window.location;
+    window.location = { ...originalLocation, replace: replaceSpy };
+
+    const { clearNavigate } = await import('./navigationService');
+    clearNavigate();
+    const { logout } = await import('./requestClient');
+
+    expect(() => logout()).not.toThrow();
+    expect(sessionStorage.getItem('accessToken')).toBeNull();
+    expect(sessionStorage.getItem('refreshToken')).toBeNull();
+    expect(replaceSpy).toHaveBeenCalled();
+
+    window.location = originalLocation;
+  });
 });

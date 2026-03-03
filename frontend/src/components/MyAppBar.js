@@ -18,6 +18,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { goBackToParent } from '../utils/Navigation';
 import { logout } from '../services/requestClient';
 
+function safeGetSessionItem(key) {
+  try {
+    return sessionStorage.getItem(key) || '';
+  } catch (_err) {
+    return '';
+  }
+}
+
 export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -26,8 +34,8 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
   const [profileAnchorEl, setProfileAnchorEl] = useState(null);
   const profileMenuOpen = Boolean(profileAnchorEl);
 
-  const profileUsername = sessionStorage.getItem('username') || '';
-  const profileEmail = sessionStorage.getItem('email') || '';
+  const profileUsername = safeGetSessionItem('username');
+  const profileEmail = safeGetSessionItem('email');
   const profilePrimary = profileUsername || profileEmail.split?.('@')?.[0] || 'username';
   const profileSecondary =
     profileEmail || (profilePrimary === 'username' ? 'username@gmail.com' : null);

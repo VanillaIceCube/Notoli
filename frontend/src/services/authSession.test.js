@@ -133,14 +133,14 @@ describe('authSession', () => {
       expect(sessionStorage.getItem('email')).toBeNull();
     });
 
-    test('when sessionStorage throws, it does not throw', () => {
+    test('when sessionStorage throws, it surfaces a storage error', () => {
       const setItem = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('blocked');
       });
 
       expect(() =>
         persistAuthSession({ access: 'A', refresh: 'R', username: 'u', email: 'e@example.com' }),
-      ).not.toThrow();
+      ).toThrow('Unable to access browser session storage.');
 
       setItem.mockRestore();
     });
