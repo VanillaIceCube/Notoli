@@ -46,10 +46,7 @@ describe('ForgotPassword', () => {
       expect(forgotPassword).toHaveBeenCalledWith({ email: 'test@example.com' });
     });
     await waitFor(() => {
-      expect(showSnackbar).toHaveBeenCalledWith(
-        'success',
-        'Password reset link has been sent!',
-      );
+      expect(showSnackbar).toHaveBeenCalledWith('success', 'Password reset link has been sent!');
     });
     expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
