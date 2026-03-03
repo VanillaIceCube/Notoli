@@ -8,10 +8,16 @@ export default function Register({ showSnackbar }) {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const navigate = useNavigate();
 
   const handleRegister = async () => {
+    if (!password || password !== confirmPassword) {
+      showSnackbar('error', 'Passwords do not match.');
+      return;
+    }
+
     try {
       const response = await register({ email, username, password });
       const data = await readOkJson(response, 'Registration failed :(');
@@ -86,6 +92,14 @@ export default function Register({ showSnackbar }) {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+          />
+          <TextField
+            fullWidth
+            sx={{ background: 'white' }}
+            label="Confirm Password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
           />
           <Button
             fullWidth

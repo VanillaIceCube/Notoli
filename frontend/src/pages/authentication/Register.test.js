@@ -28,7 +28,8 @@ describe('Register', () => {
 
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Password')).toBeInTheDocument();
+    expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /register/i })).toBeInTheDocument();
   });
 
@@ -51,7 +52,8 @@ describe('Register', () => {
 
     await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
-    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    await userEvent.type(screen.getByLabelText('Password'), 'test_password');
+    await userEvent.type(screen.getByLabelText(/confirm password/i), 'test_password');
     await userEvent.click(screen.getByRole('button', { name: /register/i }));
 
     await waitFor(() => {
@@ -88,7 +90,8 @@ describe('Register', () => {
       renderWithProviders(<Register showSnackbar={showSnackbar} />);
 
       await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+      await userEvent.type(screen.getByLabelText('Password'), 'test_password');
+      await userEvent.type(screen.getByLabelText(/confirm password/i), 'test_password');
       await userEvent.click(screen.getByRole('button', { name: /register/i }));
 
       await waitFor(() => {
@@ -109,7 +112,8 @@ describe('Register', () => {
       renderWithProviders(<Register showSnackbar={showSnackbar} />);
 
       await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+      await userEvent.type(screen.getByLabelText('Password'), 'test_password');
+      await userEvent.type(screen.getByLabelText(/confirm password/i), 'test_password');
       await userEvent.click(screen.getByRole('button', { name: /register/i }));
 
       await waitFor(() => {
@@ -118,5 +122,19 @@ describe('Register', () => {
     } finally {
       consoleError.mockRestore();
     }
+  });
+
+  test('when passwords do not match, it shows an error and does not call register', async () => {
+    const showSnackbar = jest.fn();
+
+    renderWithProviders(<Register showSnackbar={showSnackbar} />);
+
+    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
+    await userEvent.type(screen.getByLabelText('Password'), 'test_password');
+    await userEvent.type(screen.getByLabelText(/confirm password/i), 'different_password');
+    await userEvent.click(screen.getByRole('button', { name: /register/i }));
+
+    expect(register).not.toHaveBeenCalled();
+    expect(showSnackbar).toHaveBeenCalledWith('error', 'Passwords do not match.');
   });
 });
