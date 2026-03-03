@@ -38,6 +38,20 @@ export const register = ({ email, username, password }) => {
   });
 };
 
+export const forgotPassword = ({ email }) =>
+  apiFetch('/auth/forgot-password/', {
+    method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ email: email?.trim() }),
+  });
+
+export const resetPassword = ({ uid, token, password }) =>
+  apiFetch('/auth/reset-password/', {
+    method: 'POST',
+    headers: jsonHeaders(),
+    body: JSON.stringify({ uid, token, password }),
+  });
+
 export const fetchWorkspaces = (token) =>
   apiFetch('/api/workspaces/', {
     headers: authHeader(token),

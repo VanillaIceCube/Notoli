@@ -41,7 +41,14 @@ export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
     profileEmail || (profilePrimary === 'username' ? 'username@gmail.com' : null);
 
   // Don't render on auth pages
-  if (location.pathname === '/login' || location.pathname === '/register') return null;
+  if (
+    location.pathname === '/login' ||
+    location.pathname === '/register' ||
+    location.pathname === '/forgot-password' ||
+    location.pathname === '/reset-password'
+  ) {
+    return null;
+  }
 
   // Navigate backwards function
   const handleBack = () => {

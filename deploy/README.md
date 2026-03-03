@@ -99,6 +99,16 @@ Also set the usual origin/host allowlists:
 - `DJANGO_CORS_ALLOWED_ORIGINS`
 - `DJANGO_CSRF_TRUSTED_ORIGINS`
 
+Password reset email settings (Resend SMTP example):
+- `DJANGO_FRONTEND_BASE_URL=https://<your-domain>/apps/notoli`
+- `DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`
+- `DJANGO_EMAIL_HOST=smtp.resend.com`
+- `DJANGO_EMAIL_PORT=587`
+- `DJANGO_EMAIL_USE_TLS=1`
+- `DJANGO_EMAIL_HOST_USER=resend`
+- `DJANGO_EMAIL_HOST_PASSWORD=<your_resend_api_key>`
+- `DJANGO_DEFAULT_FROM_EMAIL=<from-address-on-your-domain>`
+
 ## Frontend API Base URL
 The frontend is static, so its backend URL is baked at build time:
 - `REACT_APP_API_BASE_URL` should be `https://<your-domain>/apps/notoli` in production.

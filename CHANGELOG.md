@@ -1,5 +1,15 @@
-﻿# Changelog
+# Changelog
 All notable changes to this project are documented in this file.
+
+## 2026-03-03
+### Added
+- Added backend password-reset endpoints: POST /auth/forgot-password/ and POST /auth/reset-password/.
+- Added frontend public auth pages/routes for forgot/reset password.
+- Added frontend and backend tests covering forgot/reset password flows.
+### Changed
+- Backend email configuration now supports Resend SMTP-compatible environment variables (DJANGO_EMAIL_*) and frontend reset-link base URL (DJANGO_FRONTEND_BASE_URL).
+- Frontend auth 401 redirect exclusions now include forgot/reset password endpoints.
+- Local backend runs now auto-load `backend/.env` via `python-dotenv` so `python backend/manage.py runserver` picks up `DJANGO_*` values.
 
 ## 2026-02-10
 ### Changed
@@ -108,7 +118,7 @@ All notable changes to this project are documented in this file.
 - Environment exports now always generate a minimal `environment.yml` and a separate `requirements.txt` for pip packages.
 - Pip dependencies are captured as top-level installs with pinned versions, excluding transitive dependencies.
 ### Removed
-- Removed unstable pip entries (e.g. `@ file:///â€¦`) to ensure portable, reproducible environments.
+- Removed unstable pip entries (e.g. `@ file:///…`) to ensure portable, reproducible environments.
 
 ## 2026-01-22
 ### Changed
@@ -560,6 +570,7 @@ All notable changes to this project are documented in this file.
 ## 2025-04-20
 ### Added
 - Initial repository with base README and LICENSE.
+
 
 
 

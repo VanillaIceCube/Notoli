@@ -145,6 +145,18 @@ export default function Login({ showSnackbar }) {
             variant="caption"
             sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
           >
+            <Box
+              component="span"
+              sx={{ textDecoration: 'underline', cursor: 'pointer', mr: 1 }}
+              onClick={() => navigate('/forgot-password')}
+            >
+              Forgot password?
+            </Box>
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
+          >
             Need an account?{' '}
             <Box
               component="span"

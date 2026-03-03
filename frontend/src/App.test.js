@@ -36,6 +36,8 @@ jest.mock('./pages/authentication/Login', () => ({ showSnackbar }) => (
   </button>
 ));
 jest.mock('./pages/authentication/Register', () => () => <div>RegisterPage</div>);
+jest.mock('./pages/authentication/ForgotPassword', () => () => <div>ForgotPasswordPage</div>);
+jest.mock('./pages/authentication/ResetPassword', () => () => <div>ResetPasswordPage</div>);
 jest.mock('./pages/notes/Workspaces', () => () => <div>WorkspacesPage</div>);
 jest.mock('./pages/notes/TodoLists', () => () => <div>TodoListsPage</div>);
 jest.mock('./pages/notes/Notes', () => () => <div>NotesPage</div>);
@@ -68,6 +70,18 @@ describe('App', () => {
     renderApp('/register');
 
     expect(document.body.textContent).toContain('RegisterPage');
+  });
+
+  test('when the route is /forgot-password, it renders ForgotPassword', () => {
+    renderApp('/forgot-password');
+
+    expect(document.body.textContent).toContain('ForgotPasswordPage');
+  });
+
+  test('when the route is /reset-password, it renders ResetPassword', () => {
+    renderApp('/reset-password?uid=abc&token=tok');
+
+    expect(document.body.textContent).toContain('ResetPasswordPage');
   });
 
   test('when the route is /, it renders Workspaces', () => {
