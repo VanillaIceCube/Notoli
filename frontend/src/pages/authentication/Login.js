@@ -146,34 +146,30 @@ export default function Login({ showSnackbar }) {
               mt: 0.5,
               pt: 1.5,
               borderTop: '1px solid rgba(0,0,0,0.2)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 1,
+              textAlign: 'center',
             }}
           >
             <Typography
               variant="caption"
               sx={{
                 color: 'var(--secondary-color)',
-                textDecoration: 'underline',
-                cursor: 'pointer',
+                width: '100%',
               }}
-              onClick={() => navigate('/forgot-password')}
             >
-              Forgot password?
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
-            >
-              Need an account?{' '}
+              <Box
+                component="span"
+                sx={{ textDecoration: 'underline', cursor: 'pointer' }}
+                onClick={() => navigate('/forgot-password')}
+              >
+                Forgot Password?
+              </Box>
+              {' | '}
               <Box
                 component="span"
                 sx={{ textDecoration: 'underline', cursor: 'pointer' }}
                 onClick={() => navigate('/register')}
               >
-                Register here!
+                Create Account!
               </Box>
             </Typography>
           </Box>
