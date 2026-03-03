@@ -97,19 +97,28 @@ export default function Register({ showSnackbar }) {
               Register
             </Typography>
           </Button>
-          <Typography
-            variant="caption"
-            sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
+          <Box
+            sx={{
+              mt: 0.25,
+              pt: 0.75,
+              borderTop: '1px solid rgba(0,0,0,0.2)',
+              textAlign: 'center',
+            }}
           >
-            Already have an account?{' '}
-            <Box
-              component="span"
-              sx={{ textDecoration: 'underline', cursor: 'pointer' }}
-              onClick={() => navigate('/login')}
+            <Typography
+              variant="caption"
+              sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
             >
-              Sign in now!
-            </Box>
-          </Typography>
+              Already have an account?{' '}
+              <Box
+                component="span"
+                sx={{ textDecoration: 'underline', cursor: 'pointer' }}
+                onClick={() => navigate('/login')}
+              >
+                Sign in now!
+              </Box>
+            </Typography>
+          </Box>
         </Box>
       </Paper>
     </Stack>

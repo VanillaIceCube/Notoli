@@ -79,19 +79,27 @@ export default function ForgotPassword({ showSnackbar }) {
               Send Reset Link
             </Typography>
           </Button>
-          <Typography
-            variant="caption"
-            sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
+          <Box
+            sx={{
+              mt: 0.25,
+              pt: 0.75,
+              borderTop: '1px solid rgba(0,0,0,0.2)',
+              textAlign: 'center',
+            }}
           >
-            Back to{' '}
-            <Box
-              component="span"
-              sx={{ textDecoration: 'underline', cursor: 'pointer' }}
-              onClick={() => navigate('/login')}
+            <Typography
+              variant="caption"
+              sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
             >
-              Login
-            </Box>
-          </Typography>
+              <Box
+                component="span"
+                sx={{ textDecoration: 'underline', cursor: 'pointer' }}
+                onClick={() => navigate('/login')}
+              >
+                Back to Login
+              </Box>
+            </Typography>
+          </Box>
         </Box>
       </Paper>
     </Stack>
