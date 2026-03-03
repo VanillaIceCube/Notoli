@@ -73,9 +73,6 @@ export default function ResetPassword({ showSnackbar }) {
             handleSubmit();
           }}
         >
-          <Typography sx={{ color: 'var(--secondary-color)', textAlign: 'center' }}>
-            Enter your new password.
-          </Typography>
           <TextField
             fullWidth
             sx={{ background: 'white' }}
