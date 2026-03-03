@@ -4,7 +4,12 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:800
 
 function shouldRedirectToLogin(path) {
   // Auth endpoints may legitimately return 401 (bad credentials) and should be handled by the UI.
-  return !path.startsWith('/auth/login') && !path.startsWith('/auth/register');
+  return (
+    !path.startsWith('/auth/login') &&
+    !path.startsWith('/auth/register') &&
+    !path.startsWith('/auth/forgot-password') &&
+    !path.startsWith('/auth/reset-password')
+  );
 }
 
 export function clearAuthSession() {
@@ -56,7 +61,14 @@ function handleUnauthorized() {
   if (typeof window === 'undefined') return;
 
   const currentPath = window.location?.pathname?.replace(/\/+$/, '') ?? '';
-  if (currentPath.endsWith('/login') || currentPath.endsWith('/register')) return;
+  if (
+    currentPath.endsWith('/login') ||
+    currentPath.endsWith('/register') ||
+    currentPath.endsWith('/forgot-password') ||
+    currentPath.endsWith('/reset-password')
+  ) {
+    return;
+  }
 
   // Let the login screen explain why the user got redirected.
   try {

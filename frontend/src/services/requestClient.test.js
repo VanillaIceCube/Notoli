@@ -92,6 +92,26 @@ describe('requestClient', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
+  test('when /auth/forgot-password/ returns 401, it does not redirect or clear tokens', async () => {
+    delete process.env.REACT_APP_API_BASE_URL;
+    global.fetch = jest.fn(() => Promise.resolve({ ok: false, status: 401 }));
+
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    sessionStorage.setItem('refreshToken', 'REFRESH');
+
+    const { setNavigate } = await import('./navigationService');
+    const mockNavigate = jest.fn();
+    setNavigate(mockNavigate);
+
+    const { apiFetch } = await import('./requestClient');
+
+    await apiFetch('/auth/forgot-password/', { method: 'POST' });
+
+    expect(sessionStorage.getItem('accessToken')).toBe('ACCESS');
+    expect(sessionStorage.getItem('refreshToken')).toBe('REFRESH');
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   test('when logout() is called, it clears tokens/profile and redirects to /login', async () => {
     delete process.env.REACT_APP_API_BASE_URL;
 

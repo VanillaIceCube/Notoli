@@ -47,6 +47,24 @@ describe('MyAppBar', () => {
     expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
   });
 
+  test('when the route is /forgot-password, it does not render the app bar', () => {
+    mockUseLocation.mockReturnValue({ pathname: '/forgot-password' });
+
+    renderWithProviders(<MyAppBar appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
+
+    expect(screen.queryByText('Header')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
+  });
+
+  test('when the route is /reset-password, it does not render the app bar', () => {
+    mockUseLocation.mockReturnValue({ pathname: '/reset-password' });
+
+    renderWithProviders(<MyAppBar appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
+
+    expect(screen.queryByText('Header')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
+  });
+
   test('when the path includes /todolist, it shows the back button', () => {
     mockUseLocation.mockReturnValue({ pathname: '/workspaces/1/todolist/2' });
 

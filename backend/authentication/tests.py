@@ -1,4 +1,9 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -33,6 +38,30 @@ class AuthMethodTests(APITestCase):
             response.status_code,
             status.HTTP_405_METHOD_NOT_ALLOWED,
             f"Expected 405 for GET /auth/refresh/, got {response.status_code}: {response.data}",
+        )
+
+    def test_forgot_password_get_not_allowed(self):
+        response = self.client.get("/auth/forgot-password/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_405_METHOD_NOT_ALLOWED,
+            (
+                "Expected 405 for GET /auth/forgot-password/, got "
+                f"{response.status_code}: {response.data}"
+            ),
+        )
+
+    def test_reset_password_get_not_allowed(self):
+        response = self.client.get("/auth/reset-password/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_405_METHOD_NOT_ALLOWED,
+            (
+                "Expected 405 for GET /auth/reset-password/, got "
+                f"{response.status_code}: {response.data}"
+            ),
         )
 
 
@@ -471,3 +500,129 @@ class RefreshTokenTests(APITestCase):
     def test_refresh_non_json_request(self):
         r = self.client.post("/auth/refresh/", "refresh=abc", content_type="text/plain")
         self.assertEqual(r.status_code, status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
+
+
+class PasswordResetTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="reset_user",
+            email="reset_user@example.com",
+            password="old_password_123",
+        )
+
+    @patch("authentication.views.send_mail")
+    def test_forgot_password_existing_email_sends_mail(self, mock_send_mail):
+        response = self.client.post(
+            "/auth/forgot-password/",
+            {"email": "reset_user@example.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(
+            response.data.get("message"),
+            "Password reset link has been sent!",
+        )
+        mock_send_mail.assert_called_once()
+        args = mock_send_mail.call_args[0]
+        self.assertEqual(args[0], "Reset your Notoli password")
+        self.assertIn("reset-password?uid=", args[1])
+        self.assertIn("token=", args[1])
+        self.assertEqual(args[3], ["reset_user@example.com"])
+
+    @patch("authentication.views.send_mail")
+    def test_forgot_password_unknown_email_is_generic_and_does_not_send_mail(
+        self, mock_send_mail
+    ):
+        response = self.client.post(
+            "/auth/forgot-password/",
+            {"email": "missing@example.com"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(
+            response.data.get("message"),
+            "Password reset link has been sent!",
+        )
+        mock_send_mail.assert_not_called()
+
+    def test_forgot_password_invalid_email(self):
+        response = self.client.post(
+            "/auth/forgot-password/",
+            {"email": "not-an-email"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+        )
+        self.assertEqual(response.data.get("error"), "Invalid email address.")
+
+    def test_reset_password_success(self):
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        token = default_token_generator.make_token(self.user)
+
+        response = self.client.post(
+            "/auth/reset-password/",
+            {"uid": uid, "token": token, "password": "new_password_123!"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data.get("message"), "Password reset successful.")
+
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("new_password_123!"))
+
+    def test_reset_password_invalid_token(self):
+        uid = urlsafe_base64_encode(force_bytes(self.user.pk))
+        response = self.client.post(
+            "/auth/reset-password/",
+            {"uid": uid, "token": "bad-token", "password": "new_password_123!"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+        )
+        self.assertEqual(response.data.get("error"), "Invalid or expired reset link.")
+
+    def test_reset_password_invalid_uid(self):
+        response = self.client.post(
+            "/auth/reset-password/",
+            {"uid": "invalid", "token": "whatever", "password": "new_password_123!"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+        )
+        self.assertEqual(response.data.get("error"), "Invalid or expired reset link.")
+
+    def test_reset_password_uid_must_be_string(self):
+        response = self.client.post(
+            "/auth/reset-password/",
+            {"uid": 12345, "token": "whatever", "password": "new_password_123!"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+        )
+        self.assertEqual(response.data.get("error"), "Invalid or expired reset link.")
+
+    def test_reset_password_missing_fields(self):
+        response = self.client.post(
+            "/auth/reset-password/",
+            {"uid": "abc"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+        )
+        self.assertEqual(
+            response.data.get("error"),
+            "uid, token, and password are required.",
+        )

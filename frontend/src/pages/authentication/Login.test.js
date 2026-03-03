@@ -47,6 +47,14 @@ describe('Login', () => {
     expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
   });
 
+  test('when forgot password is clicked, it navigates to /forgot-password', async () => {
+    renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+    await userEvent.click(screen.getByText(/forgot password\?/i));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/forgot-password');
+  });
+
   test('when a pending snackbar exists in sessionStorage, it shows it once on render', async () => {
     sessionStorage.setItem(
       'pendingSnackbar',
