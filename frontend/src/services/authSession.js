@@ -41,6 +41,6 @@ export function persistAuthSession(data) {
       sessionStorage.setItem('email', data.email);
     }
   } catch (_err) {
-    // ignore (storage may be blocked)
+    throw new Error('Unable to access browser session storage.');
   }
 }

@@ -2,6 +2,15 @@ import { navigate } from './navigationService';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
 
+function buildAppPath(path) {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const publicUrl = process.env.PUBLIC_URL || '';
+  const trimmedBase = publicUrl.replace(/\/+$/, '');
+  if (!trimmedBase || trimmedBase === '/') return normalizedPath;
+  const normalizedBase = trimmedBase.startsWith('/') ? trimmedBase : `/${trimmedBase}`;
+  return `${normalizedBase}${normalizedPath}`;
+}
+
 function shouldRedirectToLogin(path) {
   // Auth endpoints may legitimately return 401 (bad credentials) and should be handled by the UI.
   return !path.startsWith('/auth/login') && !path.startsWith('/auth/register');
@@ -19,7 +28,9 @@ export function clearAuthSession() {
 }
 
 export function redirectToLogin() {
-  navigate('/login', { replace: true });
+  const didNavigate = navigate('/login', { replace: true });
+  if (didNavigate || typeof window === 'undefined') return;
+  window.location.replace(buildAppPath('/login'));
 }
 
 export function logout() {

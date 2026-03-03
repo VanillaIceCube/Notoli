@@ -106,6 +106,21 @@ describe('MyAppBar', () => {
     expect(screen.getByText('username@gmail.com')).toBeInTheDocument();
   });
 
+  test('when sessionStorage read throws, app bar still renders fallback profile values', async () => {
+    const getItem = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+
+    renderWithProviders(<MyAppBar appBarHeader="Workspace" setDrawerOpen={setDrawerOpen} />);
+
+    await userEvent.click(screen.getByLabelText('user profile'));
+
+    expect(screen.getByText('username')).toBeInTheDocument();
+    expect(screen.getByText('username@gmail.com')).toBeInTheDocument();
+
+    getItem.mockRestore();
+  });
+
   test('when Logout is clicked, it clears tokens and redirects to /login', async () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
