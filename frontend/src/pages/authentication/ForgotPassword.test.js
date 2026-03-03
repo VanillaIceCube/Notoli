@@ -33,7 +33,7 @@ describe('ForgotPassword', () => {
     forgotPassword.mockResolvedValue({
       ok: true,
       json: async () => ({
-        message: 'If an account with that email exists, a password reset link has been sent.',
+        message: 'Password reset link has been sent!',
       }),
     });
     const showSnackbar = jest.fn();
@@ -48,7 +48,7 @@ describe('ForgotPassword', () => {
     await waitFor(() => {
       expect(showSnackbar).toHaveBeenCalledWith(
         'success',
-        'If an account with that email exists, a password reset link has been sent.',
+        'Password reset link has been sent!',
       );
     });
     expect(mockNavigate).toHaveBeenCalledWith('/login');

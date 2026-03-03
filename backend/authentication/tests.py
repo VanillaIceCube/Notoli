@@ -521,7 +521,7 @@ class PasswordResetTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         self.assertEqual(
             response.data.get("message"),
-            "If an account with that email exists, a password reset link has been sent.",
+            "Password reset link has been sent!",
         )
         mock_send_mail.assert_called_once()
         args = mock_send_mail.call_args[0]
@@ -543,7 +543,7 @@ class PasswordResetTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         self.assertEqual(
             response.data.get("message"),
-            "If an account with that email exists, a password reset link has been sent.",
+            "Password reset link has been sent!",
         )
         mock_send_mail.assert_not_called()
 

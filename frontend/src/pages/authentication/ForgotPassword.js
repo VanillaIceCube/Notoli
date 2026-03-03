@@ -59,9 +59,6 @@ export default function ForgotPassword({ showSnackbar }) {
             handleSubmit();
           }}
         >
-          <Typography sx={{ color: 'var(--secondary-color)', textAlign: 'center' }}>
-            Enter your account email and we will send a reset link.
-          </Typography>
           <TextField
             fullWidth
             sx={{ background: 'white' }}
