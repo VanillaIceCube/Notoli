@@ -1,10 +1,36 @@
-﻿# Changelog
+# Changelog
 All notable changes to this project are documented in this file.
+
+## 2026-03-03
+### Added
+- Deploy workflow now validates, exports, and writes backend email/password-reset environment variables to the server `.env` file (`DJANGO_FRONTEND_BASE_URL`, `DJANGO_EMAIL_*`, `DJANGO_DEFAULT_FROM_EMAIL`).
+### Changed
+- Renamed backend mail credential env var from `DJANGO_EMAIL_HOST_PASSWORD` to `DJANGO_EMAIL_HOST_KEY` across Django settings, deploy templates, CI/CD workflow inputs, and documentation.
+
+## 2026-03-03
+### Added
+- Added backend password-reset endpoints: POST /auth/forgot-password/ and POST /auth/reset-password/.
+- Added frontend public auth pages/routes for forgot/reset password.
+- Added frontend and backend tests covering forgot/reset password flows.
+### Changed
+- Backend email configuration now supports Resend SMTP-compatible environment variables (DJANGO_EMAIL_*) and frontend reset-link base URL (DJANGO_FRONTEND_BASE_URL).
+- Frontend auth 401 redirect exclusions now include forgot/reset password endpoints.
+- Local backend runs now auto-load `backend/.env` via `python-dotenv` so `python backend/manage.py runserver` picks up `DJANGO_*` values.
+
+## 2026-02-10
+### Changed
+- Renamed frontend service clients: `backendClient` -> `notoliApiClient`, `apiClient` -> `requestClient`.
+- Standardized frontend login/register response handling and session persistence via shared auth session helpers.
+- `POST /auth/register/` now returns `email` alongside `access`/`refresh` and `username`.
+- Frontend auth redirects now use React Router navigation (`useNavigate`) instead of `window.location` redirects.
+- Logout now shows a success snackbar on the login screen after redirect.
 
 ## 2026-02-09
 ### Added
 - Added API regression tests to prevent moving todo lists and notes across workspaces after creation.
 - `POST /auth/login/` now returns `username` and `email` alongside `access`/`refresh`.
+- Added an app bar profile popover menu (username/email header + logout).
+- Added frontend unit tests for shared auth session, navigation, request, and Notoli API clients.
 ### Fixed
 - Allowed partial note PATCH updates without requiring clients to re-send `workspace` or `todo_list`.
 - Note update validation now prioritizes `workspace` immutability errors over derived `todo_list` mismatch errors when both are provided.
@@ -98,7 +124,7 @@ All notable changes to this project are documented in this file.
 - Environment exports now always generate a minimal `environment.yml` and a separate `requirements.txt` for pip packages.
 - Pip dependencies are captured as top-level installs with pinned versions, excluding transitive dependencies.
 ### Removed
-- Removed unstable pip entries (e.g. `@ file:///â€¦`) to ensure portable, reproducible environments.
+- Removed unstable pip entries (e.g. `@ file:///…`) to ensure portable, reproducible environments.
 
 ## 2026-01-22
 ### Changed
@@ -550,3 +576,8 @@ All notable changes to this project are documented in this file.
 ## 2025-04-20
 ### Added
 - Initial repository with base README and LICENSE.
+
+
+
+
+

@@ -13,8 +13,11 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
@@ -37,6 +40,10 @@ if FORCE_SCRIPT_NAME:
     if not FORCE_SCRIPT_NAME.startswith("/"):
         FORCE_SCRIPT_NAME = f"/{FORCE_SCRIPT_NAME}"
     FORCE_SCRIPT_NAME = FORCE_SCRIPT_NAME.rstrip("/")
+
+FRONTEND_BASE_URL = os.getenv(
+    "DJANGO_FRONTEND_BASE_URL", "http://localhost:3000"
+).rstrip("/")
 
 
 # Application definition
@@ -174,3 +181,14 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Email (Resend SMTP-compatible)
+EMAIL_BACKEND = os.getenv(
+    "DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", "smtp.resend.com")
+EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.getenv("DJANGO_EMAIL_USE_TLS", "1") == "1"
+EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_HOST_USER", "resend")
+EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_HOST_KEY", "")
+DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "notoli@example.com")

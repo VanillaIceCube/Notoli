@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { fetchWorkspaces as fetchWorkspacesApi, login } from '../../services/backendClient';
+import { fetchWorkspaces as fetchWorkspacesApi, login } from '../../services/notoliApiClient';
+import { persistAuthSession, readOkJson } from '../../services/authSession';
 
 export default function Login({ showSnackbar }) {
   // Basics
@@ -52,15 +53,8 @@ export default function Login({ showSnackbar }) {
     try {
       const response = await login({ email: email.trim(), password });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Save tokens
-      sessionStorage.setItem('accessToken', data.access);
-      sessionStorage.setItem('refreshToken', data.refresh);
+      const data = await readOkJson(response, 'Login failed :(');
+      persistAuthSession(data);
 
       // Update Snackbar
       const welcomeName =
@@ -147,19 +141,38 @@ export default function Login({ showSnackbar }) {
               Login
             </Typography>
           </Button>
-          <Typography
-            variant="caption"
-            sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
+          <Box
+            sx={{
+              mt: 0.5,
+              pt: 1.5,
+              borderTop: '1px solid rgba(0,0,0,0.2)',
+              textAlign: 'center',
+            }}
           >
-            Need an account?{' '}
-            <Box
-              component="span"
-              sx={{ textDecoration: 'underline', cursor: 'pointer' }}
-              onClick={() => navigate('/register')}
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'var(--secondary-color)',
+                width: '100%',
+              }}
             >
-              Register here!
-            </Box>
-          </Typography>
+              <Box
+                component="span"
+                sx={{ textDecoration: 'underline', cursor: 'pointer' }}
+                onClick={() => navigate('/forgot-password')}
+              >
+                Forgot Password?
+              </Box>
+              {' | '}
+              <Box
+                component="span"
+                sx={{ textDecoration: 'underline', cursor: 'pointer' }}
+                onClick={() => navigate('/register')}
+              >
+                Create Account!
+              </Box>
+            </Typography>
+          </Box>
         </Box>
       </Paper>
     </Stack>

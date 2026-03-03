@@ -7,11 +7,13 @@ The Notoli frontend is a Create React App (CRA) single-page app with React Route
 - `/` shows workspaces
 - `/workspace/:workspaceId` shows todo lists for a workspace
 - `/workspace/:workspaceId/todolist/:todoListId` shows notes for a todo list
-- `/login` and `/register` are public; everything else requires auth
+- Public auth routes: `/login`, `/register`, `/forgot-password`, `/reset-password?uid=<...>&token=<...>`
+- Everything else requires auth
 
 Authentication tokens are stored in `sessionStorage` (`accessToken` and `refreshToken`).
 The refresh token is stored for later use, but the frontend currently does not auto-refresh access tokens.
 If an API request returns `401 Unauthorized` (expired/invalid token), the frontend clears stored tokens, redirects to `/login`, and shows an error snackbar explaining the logout.
+Auth endpoints (`/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password`) do not trigger the global 401 logout redirect.
 
 ## 🧩 Path-Based Hosting (`/apps/notoli`)
 
@@ -27,7 +29,7 @@ Important pieces:
 
 ## 🔌 API Base URL
 
-API calls go through `src/services/apiClient.js`.
+API calls go through `src/services/notoliApiClient.js` (endpoints) via `src/services/requestClient.js` (request wrapper).
 
 - `REACT_APP_API_BASE_URL` is used as a prefix for all backend requests.
 - Default is `http://localhost:8000` for local dev.

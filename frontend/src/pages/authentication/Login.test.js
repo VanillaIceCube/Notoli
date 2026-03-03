@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-utils';
 import Login from './Login';
-import { fetchWorkspaces, login } from '../../services/backendClient';
+import { fetchWorkspaces, login } from '../../services/notoliApiClient';
 import { useNavigate } from 'react-router-dom';
 
 jest.mock('react-router-dom', () => ({
@@ -10,7 +10,7 @@ jest.mock('react-router-dom', () => ({
   useNavigate: jest.fn(),
 }));
 
-jest.mock('../../services/backendClient', () => ({
+jest.mock('../../services/notoliApiClient', () => ({
   fetchWorkspaces: jest.fn(() =>
     Promise.resolve({
       ok: true,
@@ -20,7 +20,12 @@ jest.mock('../../services/backendClient', () => ({
   login: jest.fn(() =>
     Promise.resolve({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
     }),
   ),
 }));
@@ -40,6 +45,14 @@ describe('Login', () => {
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
+  });
+
+  test('when forgot password is clicked, it navigates to /forgot-password', async () => {
+    renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+    await userEvent.click(screen.getByText(/forgot password\?/i));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/forgot-password');
   });
 
   test('when a pending snackbar exists in sessionStorage, it shows it once on render', async () => {
@@ -69,7 +82,12 @@ describe('Login', () => {
     });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
     });
 
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
@@ -90,7 +108,12 @@ describe('Login', () => {
     });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
     });
 
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
@@ -127,6 +150,7 @@ describe('Login', () => {
         access: 'test_access_token',
         refresh: 'test_refresh_token',
         username: 'test_email',
+        email: 'test_email@example.com',
       }),
     });
 
@@ -160,7 +184,12 @@ describe('Login', () => {
     });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
     });
 
     const showSnackbar = jest.fn();
@@ -180,7 +209,12 @@ describe('Login', () => {
     fetchWorkspaces.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
     });
 
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
@@ -198,7 +232,12 @@ describe('Login', () => {
     fetchWorkspaces.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
     login.mockResolvedValue({
       ok: true,
-      json: async () => ({ access: 'ACCESS', refresh: 'REFRESH', username: 'test_email' }),
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
     });
 
     const showSnackbar = jest.fn();

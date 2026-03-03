@@ -4,12 +4,15 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import AuthenticatedRoute from './components/AuthenticatedRoute';
 import Login from './pages/authentication/Login';
 import Register from './pages/authentication/Register';
+import ForgotPassword from './pages/authentication/ForgotPassword';
+import ResetPassword from './pages/authentication/ResetPassword';
 import Workspaces from './pages/notes/Workspaces';
 import TodoLists from './pages/notes/TodoLists';
 import Notes from './pages/notes/Notes';
 import MyAppBar from './components/MyAppBar';
 import MySnackbar from './components/MySnackbar';
 import MyDrawer from './components/MyDrawer';
+import NavigationBridge from './components/NavigationBridge';
 
 function App() {
   // App Bar
@@ -40,6 +43,7 @@ function App() {
   return (
     <React.Fragment>
       <Router basename={routerBasename}>
+        <NavigationBridge />
         <MyAppBar appBarHeader={appBarHeader} setDrawerOpen={setDrawerOpen} />
         <MyDrawer
           open={drawerOpen}
@@ -50,6 +54,8 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login showSnackbar={showSnackbar} />} />
           <Route path="/register" element={<Register showSnackbar={showSnackbar} />} />
+          <Route path="/forgot-password" element={<ForgotPassword showSnackbar={showSnackbar} />} />
+          <Route path="/reset-password" element={<ResetPassword showSnackbar={showSnackbar} />} />
 
           <React.Fragment>
             <Route

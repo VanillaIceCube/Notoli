@@ -1,41 +1,29 @@
 import React, { useState } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { register } from '../../services/notoliApiClient';
-import { persistAuthSession, readOkJson } from '../../services/authSession';
+import { forgotPassword } from '../../services/notoliApiClient';
+import { readOkJson } from '../../services/authSession';
 
-export default function Register({ showSnackbar }) {
+export default function ForgotPassword({ showSnackbar }) {
   const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
   const navigate = useNavigate();
 
-  const handleRegister = async () => {
-    if (!password || password !== confirmPassword) {
-      showSnackbar('error', 'Passwords do not match.');
-      return;
-    }
-
+  const handleSubmit = async () => {
     try {
-      const response = await register({ email, username, password });
-      const data = await readOkJson(response, 'Registration failed :(');
-      persistAuthSession(data);
-
-      showSnackbar('success', 'Account created! Welcome to Notoli!');
-      if (data?.workspace_id) {
-        navigate(`/workspace/${data.workspace_id}`);
-      } else {
-        navigate('/');
-      }
+      const response = await forgotPassword({ email: email.trim() });
+      const data = await readOkJson(response, 'Password reset request failed :(');
+      showSnackbar(
+        'success',
+        data?.message || 'If that account exists, we sent a password reset link.',
+      );
+      navigate('/login');
     } catch (err) {
       const isNetworkError =
         err instanceof TypeError ||
         (typeof err?.message === 'string' && err.message.toLowerCase().includes('network'));
       showSnackbar(
         'error',
-        isNetworkError ? 'Network error :(' : err?.message || 'Registration failed :(',
+        isNetworkError ? 'Network error :(' : err?.message || 'Password reset request failed :(',
       );
       console.error(err);
     }
@@ -64,10 +52,11 @@ export default function Register({ showSnackbar }) {
       >
         <Box
           component="form"
+          autoComplete="on"
           sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
           onSubmit={(e) => {
             e.preventDefault();
-            handleRegister();
+            handleSubmit();
           }}
         >
           <TextField
@@ -75,31 +64,10 @@ export default function Register({ showSnackbar }) {
             sx={{ background: 'white' }}
             label="Email"
             type="email"
+            name="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            sx={{ background: 'white' }}
-            label="Username (optional)"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            sx={{ background: 'white' }}
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            sx={{ background: 'white' }}
-            label="Confirm Password"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
           />
           <Button
             fullWidth
@@ -107,8 +75,8 @@ export default function Register({ showSnackbar }) {
             type="submit"
             variant="contained"
           >
-            <Typography variant="h5" align="center">
-              Register
+            <Typography variant="h6" align="center">
+              Send Reset Link
             </Typography>
           </Button>
           <Box
@@ -123,13 +91,12 @@ export default function Register({ showSnackbar }) {
               variant="caption"
               sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
             >
-              Already have an account?{' '}
               <Box
                 component="span"
                 sx={{ textDecoration: 'underline', cursor: 'pointer' }}
                 onClick={() => navigate('/login')}
               >
-                Sign in now!
+                Back to Login
               </Box>
             </Typography>
           </Box>

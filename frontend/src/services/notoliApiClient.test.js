@@ -1,6 +1,8 @@
 import {
   login,
   register,
+  forgotPassword,
+  resetPassword,
   fetchWorkspaces,
   fetchWorkspace,
   createWorkspace,
@@ -15,14 +17,14 @@ import {
   createNote,
   updateNote,
   deleteNote,
-} from './backendClient';
-import { apiFetch } from './apiClient';
+} from './notoliApiClient';
+import { apiFetch } from './requestClient';
 
-jest.mock('./apiClient', () => ({
+jest.mock('./requestClient', () => ({
   apiFetch: jest.fn(() => Promise.resolve({ ok: true })),
 }));
 
-describe('backendClient', () => {
+describe('notoliApiClient', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -84,6 +86,26 @@ describe('backendClient', () => {
     });
     const [, options] = apiFetch.mock.calls[0];
     expect(JSON.parse(options.body)).toEqual({ email: 'user@example.com', password: 'secret' });
+  });
+
+  test('when forgotPassword is called, it posts trimmed email', () => {
+    forgotPassword({ email: ' user@example.com ' });
+
+    expect(apiFetch).toHaveBeenCalledWith('/auth/forgot-password/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'user@example.com' }),
+    });
+  });
+
+  test('when resetPassword is called, it posts uid/token/password', () => {
+    resetPassword({ uid: 'abc', token: 'tok', password: 'secret' });
+
+    expect(apiFetch).toHaveBeenCalledWith('/auth/reset-password/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid: 'abc', token: 'tok', password: 'secret' }),
+    });
   });
 
   test('when fetching workspaces with a token, it sends the auth header', () => {

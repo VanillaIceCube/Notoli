@@ -6,6 +6,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 ## ✨ Features
 - **Workspaces -> TodoLists -> Notes** hierarchy
 - **JWT auth** (register/login/refresh) with an email-first login flow
+- **Password reset by email** via secure tokenized reset links
 - **Sane defaults**: new accounts get a default workspace automatically
 - **Fast CRUD UI**: add, edit, and delete items inline
 - **Access scoping**: the API limits objects by `owner`/`created_by`/`collaborators`
