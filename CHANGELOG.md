@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 ## 2026-03-03
 ### Added
 - Deploy workflow now validates, exports, and writes backend email/password-reset environment variables to the server `.env` file (`DJANGO_FRONTEND_BASE_URL`, `DJANGO_EMAIL_*`, `DJANGO_DEFAULT_FROM_EMAIL`).
+### Fixed
+- Backend startup no longer crashes when `DJANGO_EMAIL_PORT` is defined but blank; empty values now fall back to the default SMTP port `587`.
 ### Changed
 - Renamed backend mail credential env var from `DJANGO_EMAIL_HOST_PASSWORD` to `DJANGO_EMAIL_HOST_KEY` across Django settings, deploy templates, CI/CD workflow inputs, and documentation.
 
