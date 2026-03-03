@@ -1,3 +1,4 @@
+from binascii import Error as BinasciiError
 from urllib.parse import urlencode
 
 from django.conf import settings
@@ -166,10 +167,23 @@ class ResetPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if not isinstance(uid, str):
+            return Response(
+                {"error": "Invalid or expired reset link."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
             user_id = force_str(urlsafe_base64_decode(uid))
             user = User.objects.get(pk=user_id)
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        except (
+            BinasciiError,
+            TypeError,
+            UnicodeDecodeError,
+            ValueError,
+            OverflowError,
+            User.DoesNotExist,
+        ):
             user = None
 
         if not user or not default_token_generator.check_token(user, token):

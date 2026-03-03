@@ -190,5 +190,5 @@ EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", "smtp.resend.com")
 EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("DJANGO_EMAIL_USE_TLS", "1") == "1"
 EMAIL_HOST_USER = os.getenv("DJANGO_EMAIL_HOST_USER", "resend")
-EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_HOST_PASSWORD", "")
+EMAIL_HOST_PASSWORD = os.getenv("DJANGO_EMAIL_HOST_KEY", "")
 DEFAULT_FROM_EMAIL = os.getenv("DJANGO_DEFAULT_FROM_EMAIL", "notoli@example.com")

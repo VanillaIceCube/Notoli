@@ -39,7 +39,7 @@ Infra: Production runs behind Cloudflare (DNS/proxy) on a DigitalOcean VM. If yo
 - Cloudflare DNS/proxy settings and any Redirect/WAF/Caching rules
 - Origin reverse-proxy config: `deploy/nginx-proxy.conf`
 - Deploy-time env/vars: `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `REACT_APP_API_BASE_URL`
-  - Password reset mail vars: `DJANGO_FRONTEND_BASE_URL`, `DJANGO_EMAIL_BACKEND`, `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_PASSWORD`, `DJANGO_DEFAULT_FROM_EMAIL`
+  - Password reset mail vars: `DJANGO_FRONTEND_BASE_URL`, `DJANGO_EMAIL_BACKEND`, `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_KEY`, `DJANGO_DEFAULT_FROM_EMAIL`
 
 ## Setup (local dev with Conda)
 1) Create or update the Conda environment:
@@ -63,7 +63,7 @@ Infra: Production runs behind Cloudflare (DNS/proxy) on a DigitalOcean VM. If yo
    - `DJANGO_EMAIL_PORT` (default: `587`)
    - `DJANGO_EMAIL_USE_TLS` (default: `1`)
    - `DJANGO_EMAIL_HOST_USER` (default: `resend`)
-   - `DJANGO_EMAIL_HOST_PASSWORD` (Resend API key when using SMTP backend)
+   - `DJANGO_EMAIL_HOST_KEY` (Resend API key when using SMTP backend)
    - `DJANGO_DEFAULT_FROM_EMAIL` (default: `notoli@example.com`)
 5) Run backend migrations: `python backend/manage.py migrate`
 6) Start backend: `python backend/manage.py runserver 8000`

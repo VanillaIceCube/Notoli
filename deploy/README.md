@@ -106,7 +106,7 @@ Password reset email settings (Resend SMTP example):
 - `DJANGO_EMAIL_PORT=587`
 - `DJANGO_EMAIL_USE_TLS=1`
 - `DJANGO_EMAIL_HOST_USER=resend`
-- `DJANGO_EMAIL_HOST_PASSWORD=<your_resend_api_key>`
+- `DJANGO_EMAIL_HOST_KEY=<your_resend_api_key>`
 - `DJANGO_DEFAULT_FROM_EMAIL=<from-address-on-your-domain>`
 
 ## Frontend API Base URL

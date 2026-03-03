@@ -600,6 +600,18 @@ class PasswordResetTests(APITestCase):
         )
         self.assertEqual(response.data.get("error"), "Invalid or expired reset link.")
 
+    def test_reset_password_uid_must_be_string(self):
+        response = self.client.post(
+            "/auth/reset-password/",
+            {"uid": 12345, "token": "whatever", "password": "new_password_123!"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+        )
+        self.assertEqual(response.data.get("error"), "Invalid or expired reset link.")
+
     def test_reset_password_missing_fields(self):
         response = self.client.post(
             "/auth/reset-password/",

@@ -86,7 +86,7 @@ Key environment variables (see `backend/backend/settings.py` for defaults):
 - `DJANGO_FRONTEND_BASE_URL` (base URL used in password-reset links, for example `https://judeandrewalaba.com/apps/notoli`)
 - `DJANGO_EMAIL_BACKEND` (default `django.core.mail.backends.console.EmailBackend`)
 - `DJANGO_EMAIL_HOST` / `DJANGO_EMAIL_PORT` / `DJANGO_EMAIL_USE_TLS`
-- `DJANGO_EMAIL_HOST_USER` / `DJANGO_EMAIL_HOST_PASSWORD` (Resend SMTP supports `DJANGO_EMAIL_HOST=smtp.resend.com`, `DJANGO_EMAIL_HOST_USER=resend`, `DJANGO_EMAIL_HOST_PASSWORD=<RESEND_API_KEY>`)
+- `DJANGO_EMAIL_HOST_USER` / `DJANGO_EMAIL_HOST_KEY` (Resend SMTP supports `DJANGO_EMAIL_HOST=smtp.resend.com`, `DJANGO_EMAIL_HOST_USER=resend`, `DJANGO_EMAIL_HOST_KEY=<RESEND_API_KEY>`)
 - `DJANGO_DEFAULT_FROM_EMAIL`
 
 Proxy / HTTPS:
