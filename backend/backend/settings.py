@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -40,9 +41,9 @@ if FORCE_SCRIPT_NAME:
         FORCE_SCRIPT_NAME = f"/{FORCE_SCRIPT_NAME}"
     FORCE_SCRIPT_NAME = FORCE_SCRIPT_NAME.rstrip("/")
 
-FRONTEND_BASE_URL = os.getenv("DJANGO_FRONTEND_BASE_URL", "http://localhost:3000").rstrip(
-    "/"
-)
+FRONTEND_BASE_URL = os.getenv(
+    "DJANGO_FRONTEND_BASE_URL", "http://localhost:3000"
+).rstrip("/")
 
 
 # Application definition

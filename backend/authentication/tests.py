@@ -554,7 +554,9 @@ class PasswordResetTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+        )
         self.assertEqual(response.data.get("error"), "Invalid email address.")
 
     def test_reset_password_success(self):
@@ -581,7 +583,9 @@ class PasswordResetTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+        )
         self.assertEqual(response.data.get("error"), "Invalid or expired reset link.")
 
     def test_reset_password_invalid_uid(self):
@@ -591,7 +595,9 @@ class PasswordResetTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+        )
         self.assertEqual(response.data.get("error"), "Invalid or expired reset link.")
 
     def test_reset_password_missing_fields(self):
@@ -601,7 +607,9 @@ class PasswordResetTests(APITestCase):
             format="json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+        )
         self.assertEqual(
             response.data.get("error"),
             "uid, token, and password are required.",
