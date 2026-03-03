@@ -1,4 +1,4 @@
-import { apiFetch } from './apiClient';
+import { apiFetch } from './requestClient';
 
 const authHeader = (token) => (token ? { Authorization: `Bearer ${token}` } : {});
 const jsonHeaders = (token) => ({

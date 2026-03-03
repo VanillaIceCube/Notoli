@@ -23,7 +23,7 @@ If you deploy behind a path prefix like `/apps/notoli`, these become:
 JWT auth is provided by `djangorestframework-simplejwt`.
 
 Common endpoints:
-- `POST /auth/register/` -> creates a user; returns `access`, `refresh`, `username`, and `workspace_id`
+- `POST /auth/register/` -> creates a user; returns `access`, `refresh`, `username`, `email`, and `workspace_id`
 - `POST /auth/login/` -> accepts `email` (preferred) or `username`, plus `password`; returns `access`, `refresh`, `username`, and `email`
 - `POST /auth/refresh/` -> exchanges `refresh` for a new `access`
 

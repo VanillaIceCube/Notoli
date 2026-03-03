@@ -77,6 +77,7 @@ class RegisterView(APIView):
             {
                 "message": "User created successfully.",
                 "username": user.username,
+                "email": user.email,
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
                 "workspace_id": workspace.id if workspace else None,

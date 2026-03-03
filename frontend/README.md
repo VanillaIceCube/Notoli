@@ -27,7 +27,7 @@ Important pieces:
 
 ## 🔌 API Base URL
 
-API calls go through `src/services/apiClient.js`.
+API calls go through `src/services/notoliApiClient.js` (endpoints) via `src/services/requestClient.js` (request wrapper).
 
 - `REACT_APP_API_BASE_URL` is used as a prefix for all backend requests.
 - Default is `http://localhost:8000` for local dev.

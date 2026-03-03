@@ -28,7 +28,7 @@ import {
   fetchWorkspace as fetchWorkspaceApi,
   fetchWorkspaces as fetchWorkspacesApi,
   updateWorkspace,
-} from '../services/backendClient';
+} from '../services/notoliApiClient';
 
 export default function MyDrawer({
   open,

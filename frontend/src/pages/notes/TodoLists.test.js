@@ -9,7 +9,7 @@ import {
   deleteTodoList,
   fetchTodoLists as fetchTodoListsApi,
   updateTodoList,
-} from '../../services/backendClient';
+} from '../../services/notoliApiClient';
 
 const mockNavigate = jest.fn();
 const mockUseParams = jest.fn();
@@ -20,7 +20,7 @@ jest.mock('react-router-dom', () => ({
   useParams: () => mockUseParams(),
 }));
 
-jest.mock('../../services/backendClient', () => ({
+jest.mock('../../services/notoliApiClient', () => ({
   createTodoList: jest.fn(),
   deleteTodoList: jest.fn(),
   fetchTodoLists: jest.fn(),

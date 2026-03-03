@@ -21,7 +21,7 @@ import {
   deleteWorkspace,
   fetchWorkspaces as fetchWorkspacesApi,
   updateWorkspace,
-} from '../../services/backendClient';
+} from '../../services/notoliApiClient';
 
 export default function Workspaces({ setAppBarHeader }) {
   // Misc
