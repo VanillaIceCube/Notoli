@@ -141,31 +141,42 @@ export default function Login({ showSnackbar }) {
               Login
             </Typography>
           </Button>
-          <Typography
-            variant="caption"
-            sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
+          <Box
+            sx={{
+              mt: 0.5,
+              pt: 1.5,
+              borderTop: '1px solid rgba(0,0,0,0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 1,
+            }}
           >
-            <Box
-              component="span"
-              sx={{ textDecoration: 'underline', cursor: 'pointer', mr: 1 }}
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'var(--secondary-color)',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+              }}
               onClick={() => navigate('/forgot-password')}
             >
               Forgot password?
-            </Box>
-          </Typography>
-          <Typography
-            variant="caption"
-            sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
-          >
-            Need an account?{' '}
-            <Box
-              component="span"
-              sx={{ textDecoration: 'underline', cursor: 'pointer' }}
-              onClick={() => navigate('/register')}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
             >
-              Register here!
-            </Box>
-          </Typography>
+              Need an account?{' '}
+              <Box
+                component="span"
+                sx={{ textDecoration: 'underline', cursor: 'pointer' }}
+                onClick={() => navigate('/register')}
+              >
+                Register here!
+              </Box>
+            </Typography>
+          </Box>
         </Box>
       </Paper>
     </Stack>
