@@ -128,6 +128,8 @@ Infra: Production runs behind Cloudflare (DNS/proxy) on a DigitalOcean VM. If yo
   - Forgot/reset password endpoints:
     - `POST /auth/forgot-password/` accepts `email` and always returns a generic success message.
     - `POST /auth/reset-password/` accepts `uid`, `token`, and `password`.
+  - Profile endpoint:
+    - `PATCH /auth/profile/` (authenticated) updates the current user's `username`.
 
 ## Maintenance
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`

@@ -3,6 +3,7 @@ import {
   register,
   forgotPassword,
   resetPassword,
+  updateProfileUsername,
   fetchWorkspaces,
   fetchWorkspace,
   createWorkspace,
@@ -105,6 +106,16 @@ describe('notoliApiClient', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ uid: 'abc', token: 'tok', password: 'secret' }),
+    });
+  });
+
+  test('when updateProfileUsername is called, it patches username with auth', () => {
+    updateProfileUsername(' updated_name ', 'token');
+
+    expect(apiFetch).toHaveBeenCalledWith('/auth/profile/', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
+      body: JSON.stringify({ username: 'updated_name' }),
     });
   });
 

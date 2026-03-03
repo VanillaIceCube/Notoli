@@ -197,3 +197,39 @@ class ResetPasswordView(APIView):
             {"message": "Password reset successful."},
             status=status.HTTP_200_OK,
         )
+
+
+class ProfileView(APIView):
+    def patch(self, request):
+        username = request.data.get("username")
+        username = username.strip() if isinstance(username, str) else None
+
+        if not username:
+            return Response(
+                {"error": "Username is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(username) > 150:
+            return Response(
+                {"error": "Username must be 150 characters or fewer."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if User.objects.filter(username=username).exclude(pk=request.user.pk).exists():
+            return Response(
+                {"error": "Username already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        request.user.username = username
+        request.user.save(update_fields=["username"])
+
+        return Response(
+            {
+                "message": "Username updated successfully.",
+                "username": request.user.username,
+                "email": request.user.email,
+            },
+            status=status.HTTP_200_OK,
+        )

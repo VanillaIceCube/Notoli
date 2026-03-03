@@ -64,6 +64,18 @@ class AuthMethodTests(APITestCase):
             ),
         )
 
+    def test_profile_get_requires_auth(self):
+        response = self.client.get("/auth/profile/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_401_UNAUTHORIZED,
+            (
+                "Expected 401 for GET /auth/profile/ without auth, got "
+                f"{response.status_code}: {response.data}"
+            ),
+        )
+
 
 class RegistrationTests(APITestCase):
     def test_register_success(self):
@@ -606,3 +618,73 @@ class PasswordResetTests(APITestCase):
             response.data.get("error"),
             "uid, token, and password are required.",
         )
+
+
+class ProfileTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="current_user",
+            email="current_user@example.com",
+            password="test_password",
+        )
+        self.other_user = User.objects.create_user(
+            username="taken_name",
+            email="taken_name@example.com",
+            password="test_password",
+        )
+
+    def _auth_headers(self):
+        response = self.client.post(
+            "/auth/login/",
+            {"email": "current_user@example.com", "password": "test_password"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        return {"HTTP_AUTHORIZATION": f"Bearer {response.data['access']}"}
+
+    def test_profile_patch_success(self):
+        response = self.client.patch(
+            "/auth/profile/",
+            {"username": "updated_user"},
+            format="json",
+            **self._auth_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(
+            response.data.get("message"),
+            "Username updated successfully.",
+        )
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.username, "updated_user")
+
+    def test_profile_patch_duplicate_username(self):
+        response = self.client.patch(
+            "/auth/profile/",
+            {"username": "taken_name"},
+            format="json",
+            **self._auth_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(response.data.get("error"), "Username already exists.")
+
+    def test_profile_patch_missing_username(self):
+        response = self.client.patch(
+            "/auth/profile/",
+            {"username": "   "},
+            format="json",
+            **self._auth_headers(),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, response.data)
+        self.assertEqual(response.data.get("error"), "Username is required.")
+
+    def test_profile_patch_requires_auth(self):
+        response = self.client.patch(
+            "/auth/profile/",
+            {"username": "updated_user"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED, response.data)

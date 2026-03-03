@@ -52,6 +52,13 @@ export const resetPassword = ({ uid, token, password }) =>
     body: JSON.stringify({ uid, token, password }),
   });
 
+export const updateProfileUsername = (username, token) =>
+  apiFetch('/auth/profile/', {
+    method: 'PATCH',
+    headers: jsonHeaders(token),
+    body: JSON.stringify({ username: username?.trim() }),
+  });
+
 export const fetchWorkspaces = (token) =>
   apiFetch('/api/workspaces/', {
     headers: authHeader(token),

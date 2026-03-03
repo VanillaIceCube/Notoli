@@ -15,6 +15,10 @@ The refresh token is stored for later use, but the frontend currently does not a
 If an API request returns `401 Unauthorized` (expired/invalid token), the frontend clears stored tokens, redirects to `/login`, and shows an error snackbar explaining the logout.
 Auth endpoints (`/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password`) do not trigger the global 401 logout redirect.
 
+Profile menu:
+- The app bar profile popover includes a triple-dot options menu with `Edit username`.
+- Username updates call authenticated `PATCH /auth/profile/` and refresh the stored `username` in `sessionStorage`.
+
 ## 🧩 Path-Based Hosting (`/apps/notoli`)
 
 This app is designed to be hosted under a subpath (not at `/`), for example:

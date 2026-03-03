@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 - Added backend password-reset endpoints: POST /auth/forgot-password/ and POST /auth/reset-password/.
 - Added frontend public auth pages/routes for forgot/reset password.
 - Added frontend and backend tests covering forgot/reset password flows.
+- Added authenticated profile endpoint `PATCH /auth/profile/` and app-bar profile menu option to edit username.
 ### Changed
 - Backend email configuration now supports Resend SMTP-compatible environment variables (DJANGO_EMAIL_*) and frontend reset-link base URL (DJANGO_FRONTEND_BASE_URL).
 - Frontend auth 401 redirect exclusions now include forgot/reset password endpoints.

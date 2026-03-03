@@ -1,10 +1,11 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import MyAppBar from './MyAppBar';
 import { renderWithProviders } from '../test-utils';
 import { goBackToParent } from '../utils/Navigation';
 import { setNavigate } from '../services/navigationService';
+import { updateProfileUsername } from '../services/notoliApiClient';
 
 const mockNavigate = jest.fn();
 const mockUseLocation = jest.fn();
@@ -17,6 +18,15 @@ jest.mock('react-router-dom', () => ({
 
 jest.mock('../utils/Navigation', () => ({
   goBackToParent: jest.fn(),
+}));
+
+jest.mock('../services/notoliApiClient', () => ({
+  updateProfileUsername: jest.fn(() =>
+    Promise.resolve({
+      ok: true,
+      json: async () => ({ username: 'updated_name', email: 'judea@example.com' }),
+    }),
+  ),
 }));
 
 describe('MyAppBar', () => {
@@ -160,5 +170,32 @@ describe('MyAppBar', () => {
       message: 'Logout Successful :)',
     });
     expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
+  });
+
+  test('when edit username is saved from profile options, it updates stored username', async () => {
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    sessionStorage.setItem('username', 'judea');
+    sessionStorage.setItem('email', 'judea@example.com');
+    updateProfileUsername.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ username: 'updated_name', email: 'judea@example.com' }),
+    });
+
+    renderWithProviders(<MyAppBar appBarHeader="Workspace" setDrawerOpen={setDrawerOpen} />);
+
+    await userEvent.click(screen.getByLabelText('user profile'));
+    await userEvent.click(screen.getByRole('menuitem', { name: /edit username/i }));
+    const input = screen.getByLabelText('Username');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'updated_name');
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => {
+      expect(updateProfileUsername).toHaveBeenCalledWith('updated_name', 'ACCESS');
+    });
+    await waitFor(() => {
+      expect(sessionStorage.getItem('username')).toBe('updated_name');
+    });
   });
 });

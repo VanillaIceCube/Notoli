@@ -28,6 +28,7 @@ Common endpoints:
 - `POST /auth/refresh/` -> exchanges `refresh` for a new `access`
 - `POST /auth/forgot-password/` -> accepts `email`; sends a reset link if the account exists and returns a generic success message
 - `POST /auth/reset-password/` -> accepts `uid`, `token`, and `password`; sets a new password when the token is valid
+- `PATCH /auth/profile/` -> authenticated endpoint to update the current user's `username`
 
 New users get a default workspace (`"My Workspace"`) created automatically via a post-save signal in `notes/signals.py`.
 
