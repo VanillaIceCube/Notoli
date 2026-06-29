@@ -2,6 +2,10 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-06-29
+### Changed
+- Renamed the Django project package from `backend/backend` to `backend/app` and updated settings, WSGI/ASGI, Docker, and documentation references.
+
+## 2026-06-29
 ### Added
 - Added a Resend HTTPS API email backend for password-reset delivery on hosts where outbound SMTP is blocked.
 ### Fixed
