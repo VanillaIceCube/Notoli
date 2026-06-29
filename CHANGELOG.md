@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-06-29
+### Added
+- Added a Resend HTTPS API email backend for password-reset delivery on hosts where outbound SMTP is blocked.
+### Changed
+- Expanded local Docker setup documentation with local TLS cert generation, SQLite bind-mount repair, local image rebuild steps, migration commands, URL checks, and the `DJANGO_EMAIL_HOST_KEY` env var note.
+- Added a default email timeout and deploy/env documentation for `DJANGO_EMAIL_TIMEOUT`.
+
 ## 2026-03-03
 ### Added
 - Deploy workflow now validates, exports, and writes backend email/password-reset environment variables to the server `.env` file (`DJANGO_FRONTEND_BASE_URL`, `DJANGO_EMAIL_*`, `DJANGO_DEFAULT_FROM_EMAIL`).

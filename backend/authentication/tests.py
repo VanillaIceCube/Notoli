@@ -1,7 +1,10 @@
-from unittest.mock import patch
+import json
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import EmailMessage, get_connection
+from django.test import override_settings
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
@@ -626,3 +629,64 @@ class PasswordResetTests(APITestCase):
             response.data.get("error"),
             "uid, token, and password are required.",
         )
+
+
+class ResendApiEmailBackendTests(APITestCase):
+    @override_settings(
+        EMAIL_BACKEND="authentication.email_backends.ResendApiEmailBackend",
+        EMAIL_HOST_PASSWORD="resend-api-key",
+        EMAIL_TIMEOUT=7,
+        DEFAULT_FROM_EMAIL="notoli@example.com",
+    )
+    @patch("authentication.email_backends.request.urlopen")
+    def test_send_messages_posts_to_resend_api(self, mock_urlopen):
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.getcode.return_value = 200
+        mock_urlopen.return_value = response
+
+        connection = get_connection()
+        sent_count = connection.send_messages(
+            [
+                EmailMessage(
+                    "Reset your Notoli password",
+                    "Use this link.",
+                    None,
+                    ["reset_user@example.com"],
+                )
+            ]
+        )
+
+        self.assertEqual(sent_count, 1)
+        request_arg = mock_urlopen.call_args.args[0]
+        self.assertEqual(request_arg.full_url, "https://api.resend.com/emails")
+        self.assertEqual(
+            request_arg.get_header("Authorization"),
+            "Bearer resend-api-key",
+        )
+        self.assertEqual(mock_urlopen.call_args.kwargs.get("timeout"), 7)
+
+        payload = json.loads(request_arg.data.decode("utf-8"))
+        self.assertEqual(payload["from"], "notoli@example.com")
+        self.assertEqual(payload["to"], ["reset_user@example.com"])
+        self.assertEqual(payload["subject"], "Reset your Notoli password")
+        self.assertEqual(payload["text"], "Use this link.")
+
+    @override_settings(
+        EMAIL_BACKEND="authentication.email_backends.ResendApiEmailBackend",
+        EMAIL_HOST_PASSWORD="",
+    )
+    def test_send_messages_requires_api_key(self):
+        connection = get_connection()
+
+        with self.assertRaises(ValueError):
+            connection.send_messages(
+                [
+                    EmailMessage(
+                        "Subject",
+                        "Body",
+                        "notoli@example.com",
+                        ["reset_user@example.com"],
+                    )
+                ]
+            )
