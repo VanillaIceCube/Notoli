@@ -86,8 +86,21 @@ Key environment variables (see `backend/backend/settings.py` for defaults):
 - `DJANGO_FRONTEND_BASE_URL` (base URL used in password-reset links, for example `https://judeandrewalaba.com/apps/notoli`)
 - `DJANGO_EMAIL_BACKEND` (default `django.core.mail.backends.console.EmailBackend`)
 - `DJANGO_EMAIL_HOST` / `DJANGO_EMAIL_PORT` / `DJANGO_EMAIL_USE_TLS`
-- `DJANGO_EMAIL_HOST_USER` / `DJANGO_EMAIL_HOST_KEY` (Resend SMTP supports `DJANGO_EMAIL_HOST=smtp.resend.com`, `DJANGO_EMAIL_HOST_USER=resend`, `DJANGO_EMAIL_HOST_KEY=<RESEND_API_KEY>`)
+- `DJANGO_EMAIL_HOST_USER` / `DJANGO_EMAIL_HOST_KEY`
+- `DJANGO_EMAIL_TIMEOUT` (default `10`)
 - `DJANGO_DEFAULT_FROM_EMAIL`
+
+Production email recommendation:
+- Use `DJANGO_EMAIL_BACKEND=authentication.email_backends.ResendApiEmailBackend` to send through Resend's HTTPS API on port `443`.
+- Keep `DJANGO_EMAIL_HOST_KEY=<RESEND_API_KEY>` and `DJANGO_DEFAULT_FROM_EMAIL=<verified-from-address>`.
+
+SMTP alternative:
+- `DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`
+- `DJANGO_EMAIL_HOST=smtp.resend.com`
+- `DJANGO_EMAIL_PORT=587`
+- `DJANGO_EMAIL_USE_TLS=1`
+- `DJANGO_EMAIL_HOST_USER=resend`
+- `DJANGO_EMAIL_HOST_KEY=<RESEND_API_KEY>`
 
 Proxy / HTTPS:
 - Django trusts `X-Forwarded-Proto` (`SECURE_PROXY_SSL_HEADER`) and uses forwarded hosts (`USE_X_FORWARDED_HOST=True`).
