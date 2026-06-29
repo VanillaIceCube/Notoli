@@ -4,6 +4,9 @@ All notable changes to this project are documented in this file.
 ## 2026-06-29
 ### Added
 - Added a Resend HTTPS API email backend for password-reset delivery on hosts where outbound SMTP is blocked.
+### Fixed
+- Added JSON accept and application user-agent headers to Resend API email requests so production requests are not rejected by Resend's Cloudflare layer.
+- Preserved CC and BCC fields separately when building Resend API email payloads.
 ### Changed
 - Expanded local Docker setup documentation with local TLS cert generation, SQLite bind-mount repair, local image rebuild steps, migration commands, URL checks, and the `DJANGO_EMAIL_HOST_KEY` env var note.
 - Added a default email timeout and deploy/env documentation for `DJANGO_EMAIL_TIMEOUT`.

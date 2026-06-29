@@ -664,6 +664,11 @@ class ResendApiEmailBackendTests(APITestCase):
             request_arg.get_header("Authorization"),
             "Bearer resend-api-key",
         )
+        self.assertEqual(request_arg.get_header("Accept"), "application/json")
+        self.assertEqual(
+            request_arg.get_header("User-agent"),
+            "Notoli/1.0 (+https://judeandrewalaba.com/apps/notoli)",
+        )
         self.assertEqual(mock_urlopen.call_args.kwargs.get("timeout"), 7)
 
         payload = json.loads(request_arg.data.decode("utf-8"))
@@ -671,6 +676,36 @@ class ResendApiEmailBackendTests(APITestCase):
         self.assertEqual(payload["to"], ["reset_user@example.com"])
         self.assertEqual(payload["subject"], "Reset your Notoli password")
         self.assertEqual(payload["text"], "Use this link.")
+
+    @override_settings(
+        EMAIL_BACKEND="authentication.email_backends.ResendApiEmailBackend",
+        EMAIL_HOST_PASSWORD="resend-api-key",
+        DEFAULT_FROM_EMAIL="notoli@example.com",
+    )
+    @patch("authentication.email_backends.request.urlopen")
+    def test_send_messages_preserves_cc_and_bcc(self, mock_urlopen):
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.getcode.return_value = 200
+        mock_urlopen.return_value = response
+
+        message = EmailMessage(
+            "Subject",
+            "Body",
+            None,
+            ["to@example.com"],
+            cc=["cc@example.com"],
+            bcc=["bcc@example.com"],
+        )
+
+        connection = get_connection()
+        connection.send_messages([message])
+
+        request_arg = mock_urlopen.call_args.args[0]
+        payload = json.loads(request_arg.data.decode("utf-8"))
+        self.assertEqual(payload["to"], ["to@example.com"])
+        self.assertEqual(payload["cc"], ["cc@example.com"])
+        self.assertEqual(payload["bcc"], ["bcc@example.com"])
 
     @override_settings(
         EMAIL_BACKEND="authentication.email_backends.ResendApiEmailBackend",
