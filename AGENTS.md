@@ -41,6 +41,30 @@ Infra: Production runs behind Cloudflare (DNS/proxy) on a DigitalOcean VM. If yo
 - Deploy-time env/vars: `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `REACT_APP_API_BASE_URL`
   - Password reset mail vars: `DJANGO_FRONTEND_BASE_URL`, `DJANGO_EMAIL_BACKEND`, `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_KEY`, `DJANGO_EMAIL_TIMEOUT`, `DJANGO_DEFAULT_FROM_EMAIL`
 
+## Codex cloud environment
+Use this description in the Codex environment settings:
+
+```text
+Notoli
+A Notion-inspired to-do list app with a Django REST backend and React frontend. Includes JWT auth, path-based production routing under /apps/notoli, Docker/Nginx deployment support, and local setup via Python requirements plus npm.
+```
+
+Use this setup script in Codex cloud environments:
+
+```bash
+set -euo pipefail
+
+cd /workspace/Notoli
+
+python -m pip install --upgrade pip
+python -m pip install -r backend/requirements.txt
+
+cd frontend
+npm ci
+```
+
+Use the same script as the Codex maintenance script so cached containers refresh backend and frontend dependencies after checkout.
+
 ## Setup (local dev with Conda)
 1) Create or update the Conda environment:
    - create: `conda env create -f backend/environment.yml`

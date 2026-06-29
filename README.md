@@ -25,7 +25,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 **CI/CD & Workflows:** GitHub Actions
 
 ## 📚 Documentation
-- Setup, env vars, and common commands: [`AGENTS.md`](AGENTS.md)
+- Setup, Codex cloud environment settings, env vars, and common commands: [`AGENTS.md`](AGENTS.md)
 - Backend (API, auth, data model): [`backend/README.md`](backend/README.md)
 - Frontend (routing, API base URL): [`frontend/README.md`](frontend/README.md)
 - Deployment (Docker + Nginx): [`deploy/README.md`](deploy/README.md)
