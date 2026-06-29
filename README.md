@@ -15,14 +15,14 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **Dockerized deployment**: frontend + backend + Nginx reverse proxy
 
 ## 🚀 Tech Stack
-**Backend:** Django
-**Frontend:** React + Material UI
-**Environment Management:** Conda
-**Deployment:** Docker
-**Hosting:** DigitalOcean
-**DNS/Proxy:** Cloudflare
-**TLS:** Cloudflare Full (strict) to origin (Cloudflare Origin Certificate)
-**CI/CD & Workflows:** GitHub Actions
+- **Backend:** Django
+- **Frontend:** React + Material UI
+- **Environment Management:** Conda
+- **Deployment:** Docker
+- **Hosting:** DigitalOcean
+- **DNS/Proxy:** Cloudflare
+- **TLS:** Cloudflare Full (strict) to origin (Cloudflare Origin Certificate)
+- **CI/CD & Workflows:** GitHub Actions
 
 ## 📚 Documentation
 - Setup, Codex cloud environment settings, env vars, and common commands: [`AGENTS.md`](AGENTS.md)
