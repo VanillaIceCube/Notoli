@@ -11,7 +11,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **Fast CRUD UI**: add, edit, and delete items inline
 - **Access scoping**: the API limits objects by `owner`/`created_by`/`collaborators`
 - **Flexible organization**: notes can appear in multiple todo lists (many-to-many)
-- **Path-based hosting**: designed to run under a subpath like `/apps/notoli`
+- **Subdomain hosting**: designed to run at `https://notoli.judeandrewalaba.com`
 - **Dockerized deployment**: frontend + backend + Nginx reverse proxy
 
 ## 🚀 Tech Stack

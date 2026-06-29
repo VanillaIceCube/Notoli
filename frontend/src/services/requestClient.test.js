@@ -23,6 +23,15 @@ describe('requestClient', () => {
     expect(global.fetch).toHaveBeenCalledWith('https://api.example.com/path', { method: 'GET' });
   });
 
+  test('when REACT_APP_API_BASE_URL is blank, it uses same-origin relative URLs', async () => {
+    process.env.REACT_APP_API_BASE_URL = '';
+    const { apiFetch } = await import('./requestClient');
+
+    await apiFetch('/api/workspaces/', { method: 'GET' });
+
+    expect(global.fetch).toHaveBeenCalledWith('/api/workspaces/', { method: 'GET' });
+  });
+
   test('when REACT_APP_API_BASE_URL is not set, it uses the default base URL', async () => {
     delete process.env.REACT_APP_API_BASE_URL;
     const { apiFetch } = await import('./requestClient');
