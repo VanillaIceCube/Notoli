@@ -15,26 +15,26 @@ The refresh token is stored for later use, but the frontend currently does not a
 If an API request returns `401 Unauthorized` (expired/invalid token), the frontend clears stored tokens, redirects to `/login`, and shows an error snackbar explaining the logout.
 Auth endpoints (`/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password`) do not trigger the global 401 logout redirect.
 
-## 🧩 Path-Based Hosting (`/apps/notoli`)
+## 🌐 Subdomain Hosting (`notoli.judeandrewalaba.com`)
 
-This app is designed to be hosted under a subpath (not at `/`), for example:
+Production is hosted at the subdomain root:
 
-- `https://<your-domain>/apps/notoli`
+- `https://notoli.judeandrewalaba.com`
 
 Important pieces:
 
-- `frontend/package.json` sets `homepage` to `/apps/notoli`
-- `src/App.js` uses `process.env.PUBLIC_URL` as the React Router basename
-- The container’s Nginx config (`frontend/nginx.conf`) serves `index.html` for deep links (`try_files ... /index.html`)
+- `frontend/package.json` does not set a CRA `homepage`, so production assets resolve from `/`.
+- `src/App.js` still uses `process.env.PUBLIC_URL` as the React Router basename, which is empty for the subdomain build and remains useful for specialized local builds.
+- The container’s Nginx config (`frontend/nginx.conf`) serves `index.html` for deep links (`try_files ... /index.html`).
 
 ## 🔌 API Base URL
 
 API calls go through `src/services/notoliApiClient.js` (endpoints) via `src/services/requestClient.js` (request wrapper).
 
 - `REACT_APP_API_BASE_URL` is used as a prefix for all backend requests.
-- Default is `http://localhost:8000` for local dev.
-- For production behind `/apps/notoli`, set:
-  - `REACT_APP_API_BASE_URL=https://<your-domain>/apps/notoli`
+- Default is `http://localhost:8000` for local dev when `REACT_APP_API_BASE_URL` is unset.
+- In production, leave `REACT_APP_API_BASE_URL` blank/unset so calls use relative paths like `/api/...` on `https://notoli.judeandrewalaba.com`.
+- If an absolute URL is required, set `REACT_APP_API_BASE_URL=https://notoli.judeandrewalaba.com`.
 
 Note: in the Docker image, `REACT_APP_API_BASE_URL` is a build-time value (it’s baked into the static build).
 

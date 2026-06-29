@@ -48,7 +48,6 @@ jobs:
           [ -z "$DJANGO_ALLOWED_HOSTS" ] && missing+=("DJANGO_ALLOWED_HOSTS")
           [ -z "$DJANGO_CORS_ALLOWED_ORIGINS" ] && missing+=("DJANGO_CORS_ALLOWED_ORIGINS")
           [ -z "$DJANGO_CSRF_TRUSTED_ORIGINS" ] && missing+=("DJANGO_CSRF_TRUSTED_ORIGINS")
-          [ -z "$DJANGO_FORCE_SCRIPT_NAME" ] && missing+=("DJANGO_FORCE_SCRIPT_NAME")
           [ -z "$DJANGO_FRONTEND_BASE_URL" ] && missing+=("DJANGO_FRONTEND_BASE_URL")
           [ -z "$DJANGO_EMAIL_BACKEND" ] && missing+=("DJANGO_EMAIL_BACKEND")
           [ -z "$DJANGO_EMAIL_HOST_KEY" ] && missing+=("DJANGO_EMAIL_HOST_KEY")
@@ -210,7 +209,7 @@ jobs:
             cd "${{ vars.DEPLOY_PATH }}"
             : "${DJANGO_DEBUG:=0}"
             : "${DJANGO_SQLITE_PATH:=/backend/db.sqlite3}"
-            : "${DJANGO_FORCE_SCRIPT_NAME:=/apps/notoli}"
+            : "${DJANGO_FORCE_SCRIPT_NAME:=}"
 
             # TLS certs are uploaded as files (via SCP) to avoid multi-line env var issues.
             if [ ! -f certs/origin.pem ] || [ ! -f certs/origin.key ]; then

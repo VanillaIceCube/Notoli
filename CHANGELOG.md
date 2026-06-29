@@ -12,6 +12,8 @@ All notable changes to this project are documented in this file.
 - Added JSON accept and application user-agent headers to Resend API email requests so production requests are not rejected by Resend's Cloudflare layer.
 - Preserved CC and BCC fields separately when building Resend API email payloads.
 ### Changed
+- Moved production routing from the `/apps/notoli` path prefix to the `https://notoli.judeandrewalaba.com` subdomain.
+- Updated Nginx, deploy workflow defaults, frontend build metadata, and documentation for subdomain-root hosting.
 - Documented the Codex cloud environment description and setup/maintenance script.
 - Expanded local Docker setup documentation with local TLS cert generation, SQLite bind-mount repair, local image rebuild steps, migration commands, URL checks, and the `DJANGO_EMAIL_HOST_KEY` env var note.
 - Added a default email timeout and deploy/env documentation for `DJANGO_EMAIL_TIMEOUT`.

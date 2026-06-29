@@ -36,7 +36,7 @@ What it does:
   - `notoli-backend` (from `backend/Dockerfile`)
   - `notoli-frontend` (from `frontend/Dockerfile`)
 - Uploads `deploy/docker-compose.yml` and `deploy/nginx-proxy.conf` to the server
-- SSHes into the server, writes a `.env` file next to the compose file, then:
+- SSHes into the server, writes a `.env` file next to the compose file (leaving `DJANGO_FORCE_SCRIPT_NAME` blank by default for subdomain-root routing), then:
   - Prunes Docker images (`docker system prune -af`)
   - Pulls images + recreates containers
   - Runs Django migrations inside the backend container
@@ -51,9 +51,9 @@ Deploy inputs (GitHub repo vars / secrets):
 - Backend config:
   - Secret: `DJANGO_SECRET_KEY`
   - Secret: `DJANGO_EMAIL_HOST_KEY`
-  - Vars: `DJANGO_DEBUG`, `DJANGO_SQLITE_PATH`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `DJANGO_FORCE_SCRIPT_NAME`, `DJANGO_FRONTEND_BASE_URL`, `DJANGO_EMAIL_BACKEND`, `DJANGO_EMAIL_TIMEOUT`, `DJANGO_DEFAULT_FROM_EMAIL`
+  - Vars: `DJANGO_DEBUG`, `DJANGO_SQLITE_PATH`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, optional `DJANGO_FORCE_SCRIPT_NAME` (blank for subdomain-root deploys), `DJANGO_FRONTEND_BASE_URL`, `DJANGO_EMAIL_BACKEND`, `DJANGO_EMAIL_TIMEOUT`, `DJANGO_DEFAULT_FROM_EMAIL`
   - SMTP-only vars when `DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`: `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_HOST_USER`
-- Frontend build arg: `REACT_APP_API_BASE_URL`
+- Frontend build arg: optional `REACT_APP_API_BASE_URL` (leave blank/unset for same-origin subdomain calls on `https://notoli.judeandrewalaba.com`; use `https://notoli.judeandrewalaba.com` only if an absolute URL is required)
 
 ## 📦 Flow 3: Dependabot (`.github/dependabot.yml` + CI/Auto Merge)
 Dependabot configuration:

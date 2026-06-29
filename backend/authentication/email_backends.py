@@ -8,7 +8,7 @@ from django.core.mail.message import EmailMultiAlternatives
 
 class ResendApiEmailBackend(BaseEmailBackend):
     api_url = "https://api.resend.com/emails"
-    user_agent = "Notoli/1.0 (+https://judeandrewalaba.com/apps/notoli)"
+    user_agent = "Notoli/1.0 (+https://notoli.judeandrewalaba.com)"
 
     def send_messages(self, email_messages):
         if not email_messages:

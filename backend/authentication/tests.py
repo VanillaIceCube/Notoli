@@ -667,7 +667,7 @@ class ResendApiEmailBackendTests(APITestCase):
         self.assertEqual(request_arg.get_header("Accept"), "application/json")
         self.assertEqual(
             request_arg.get_header("User-agent"),
-            "Notoli/1.0 (+https://judeandrewalaba.com/apps/notoli)",
+            "Notoli/1.0 (+https://notoli.judeandrewalaba.com)",
         )
         self.assertEqual(mock_urlopen.call_args.kwargs.get("timeout"), 7)
 
