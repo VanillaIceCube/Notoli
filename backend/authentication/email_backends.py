@@ -8,6 +8,7 @@ from django.core.mail.message import EmailMultiAlternatives
 
 class ResendApiEmailBackend(BaseEmailBackend):
     api_url = "https://api.resend.com/emails"
+    user_agent = "Notoli/1.0 (+https://judeandrewalaba.com/apps/notoli)"
 
     def send_messages(self, email_messages):
         if not email_messages:
@@ -33,10 +34,14 @@ class ResendApiEmailBackend(BaseEmailBackend):
     def _send_message(self, message, api_key):
         payload = {
             "from": message.from_email or settings.DEFAULT_FROM_EMAIL,
-            "to": message.recipients(),
+            "to": message.to,
             "subject": message.subject,
             "text": message.body,
         }
+        if message.cc:
+            payload["cc"] = message.cc
+        if message.bcc:
+            payload["bcc"] = message.bcc
 
         html_body = self._get_html_body(message)
         if html_body:
@@ -47,7 +52,9 @@ class ResendApiEmailBackend(BaseEmailBackend):
             data=json.dumps(payload).encode("utf-8"),
             headers={
                 "Authorization": f"Bearer {api_key}",
+                "Accept": "application/json",
                 "Content-Type": "application/json",
+                "User-Agent": self.user_agent,
             },
             method="POST",
         )
