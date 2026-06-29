@@ -3,7 +3,7 @@
 The Notoli backend is a Django + Django REST Framework API, served by Gunicorn in production.
 
 ## 🧭 What Lives Here
-- `backend/backend/`: Django project settings/urls (`settings.py`, `urls.py`)
+- `backend/app/`: Django project settings/urls (`settings.py`, `urls.py`)
 - `backend/authentication/`: custom user model + JWT auth endpoints
 - `backend/notes/`: workspaces, todo lists, and notes (DRF viewsets)
 - `backend/manage.py`: Django management entrypoint
@@ -72,7 +72,7 @@ ruff format --check .
 ```
 
 ## ⚙️ Configuration
-Key environment variables (see `backend/backend/settings.py` for defaults):
+Key environment variables (see `backend/app/settings.py` for defaults):
 - `DJANGO_SECRET_KEY`
 - `DJANGO_DEBUG` (`1`/`0`)
 - `DJANGO_SQLITE_PATH`

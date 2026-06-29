@@ -9,7 +9,7 @@ RUN conda env create -f environment.yml && conda clean --all -y
 
 # Use the conda env by default
 ENV PATH="/opt/conda/envs/notoli_env/bin:$PATH" \
-    DJANGO_SETTINGS_MODULE=backend.settings \
+    DJANGO_SETTINGS_MODULE=app.settings \
     PYTHONUNBUFFERED=1
 
 # all commands below now use the conda env
@@ -25,4 +25,4 @@ RUN python manage.py collectstatic --noinput
 EXPOSE 8000
 
 # Run Django server
-CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1"]
+CMD ["gunicorn", "app.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1"]
