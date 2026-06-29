@@ -1,3 +1,4 @@
+import logging
 from binascii import Error as BinasciiError
 from urllib.parse import urlencode
 
@@ -22,6 +23,7 @@ from notes.models import Workspace
 from .serializers import EmailTokenObtainPairSerializer
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def _build_unique_username(base_username):
@@ -144,7 +146,7 @@ class ForgotPasswordView(APIView):
                 )
             except Exception:
                 # Keep response generic to avoid account enumeration.
-                pass
+                logger.exception("Password reset email failed for user_id=%s", user.id)
 
         return Response(
             {"message": ("Password reset link has been sent!")},
