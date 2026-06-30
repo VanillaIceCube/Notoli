@@ -85,6 +85,9 @@ class NoteSerializer(serializers.ModelSerializer):
                     todo_list.owner_id == user.id
                     or todo_list.created_by_id == user.id
                     or todo_list.collaborators.filter(id=user.id).exists()
+                    or todo_list.workspace.owner_id == user.id
+                    or todo_list.workspace.created_by_id == user.id
+                    or todo_list.workspace.collaborators.filter(id=user.id).exists()
                 )
                 if not has_todolist_access:
                     raise PermissionDenied("You cannot add notes to this todo-list.")
