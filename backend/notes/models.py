@@ -34,6 +34,7 @@ class Workspace(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    position = models.PositiveIntegerField(default=0)
 
     objects = WorkspaceQuerySet.as_manager()
 
@@ -43,6 +44,7 @@ class Workspace(models.Model):
     class Meta:
         verbose_name = "Workspace"
         verbose_name_plural = "Workspaces"
+        ordering = ["position", "created_at", "id"]
 
 
 # TodoList: A singular TodoList within the Workspace
@@ -75,6 +77,7 @@ class TodoList(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    position = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return self.name
@@ -82,6 +85,7 @@ class TodoList(models.Model):
     class Meta:
         verbose_name = "Todo List"
         verbose_name_plural = "Todo Lists"
+        ordering = ["position", "created_at", "id"]
 
 
 # Note: The actual TodoList item
@@ -109,6 +113,7 @@ class Note(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    position = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return self.note
@@ -116,3 +121,4 @@ class Note(models.Model):
     class Meta:
         verbose_name = "Note"
         verbose_name_plural = "Notes"
+        ordering = ["position", "created_at", "id"]

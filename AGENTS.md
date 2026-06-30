@@ -160,6 +160,14 @@ Use the same script as the Codex maintenance script so cached containers refresh
     - `POST /auth/forgot-password/` accepts `email` and always returns a generic success message.
     - `POST /auth/reset-password/` accepts `uid`, `token`, and `password`.
 
+## Screenshot / visual verification standard
+- Future frontend/UI changes should include browser-based screenshots whenever screenshots are useful or necessary to verify the change.
+- Prefer Playwright with Chrome/Chromium and a fixed desktop viewport; Chromium is acceptable for CI, while branded Google Chrome may be used through the Playwright Chrome channel when matching local Chrome matters.
+- Frontend screenshot evidence should usually include before/after screenshots. For saved-state UI features, include a post-refresh or post-navigation screenshot showing the state persisted.
+- Backend work should include screenshots or other visual/test artifacts where applicable, such as API response evidence, admin-page evidence, network-request evidence, logs, or test output.
+- Avoid OS-level screenshot tools unless there is a specific reason they are required.
+- Save screenshots and related verification outputs as test artifacts/evidence when practical.
+
 ## Maintenance
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
 - Update Conda env: `conda env update --file backend/environment.yml --prune`

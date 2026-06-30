@@ -15,6 +15,10 @@ The refresh token is stored for later use, but the frontend currently does not a
 If an API request returns `401 Unauthorized` (expired/invalid token), the frontend clears stored tokens, redirects to `/login`, and shows an error snackbar explaining the logout.
 Auth endpoints (`/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password`) do not trigger the global 401 logout redirect.
 
+## 🧲 List Reordering
+
+Workspace, todo-list, and note rows include a right-side drag handle. Dragging starts from the handle only; dropping on another row updates the visible order immediately and persists it through the matching `/api/*/reorder/` endpoint. If persistence fails, the UI reverts and shows a clear error message.
+
 ## 🌐 Subdomain Hosting (`notoli.judeandrewalaba.com`)
 
 Production is hosted at the subdomain root:
