@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-06-30
+### Fixed
+- Made shared workspace membership sufficient to retrieve newly created child todo lists and notes while preserving item-level collaborator access as additive sharing.
+
 ## 2026-06-29
 ### Changed
 - Renamed the Django project package from `backend/backend` to `backend/app` and updated settings, WSGI/ASGI, Docker, and documentation references.
