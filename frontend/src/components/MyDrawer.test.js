@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import MyDrawer from './MyDrawer';
@@ -34,8 +34,8 @@ jest.mock('../services/notoliApiClient', () => ({
 }));
 
 const defaultWorkspaces = [
-  { id: 1, name: 'test_workspace_01' },
-  { id: 2, name: 'test_workspace_02' },
+  { id: 1, name: 'test_workspace_01', position: 1 },
+  { id: 2, name: 'test_workspace_02', position: 2 },
 ];
 
 async function renderDrawer({
@@ -208,6 +208,32 @@ describe('MyDrawer', () => {
       );
     });
     expect(await screen.findByText('test_workspace_01 Updated')).toBeInTheDocument();
+  });
+
+
+  test('when workspace order is edited, it saves the dragged order after confirmation', async () => {
+    updateWorkspace.mockResolvedValue({ ok: true });
+
+    await renderDrawer();
+
+    await openWorkspaceList();
+    await userEvent.click(screen.getByRole('button', { name: /edit order/i }));
+
+    const firstWorkspace = await screen.findByRole('button', { name: /test_workspace_01/i });
+    const secondWorkspace = screen.getByRole('button', { name: /test_workspace_02/i });
+
+    fireEvent.dragStart(firstWorkspace);
+    fireEvent.dragOver(secondWorkspace);
+    fireEvent.dragEnd(secondWorkspace);
+
+    await userEvent.click(screen.getByRole('button', { name: /confirm order/i }));
+
+    await waitFor(() => {
+      expect(updateWorkspace).toHaveBeenCalledTimes(2);
+    });
+    expect(updateWorkspace).toHaveBeenCalledWith(2, { position: 1 }, 'token');
+    expect(updateWorkspace).toHaveBeenCalledWith(1, { position: 2 }, 'token');
+    expect(screen.queryByRole('button', { name: /confirm order/i })).not.toBeInTheDocument();
   });
 
   test('when Delete is selected from the menu, it removes the workspace', async () => {

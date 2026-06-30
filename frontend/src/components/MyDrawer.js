@@ -15,6 +15,7 @@ import {
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
 import MoreVert from '@mui/icons-material/MoreVert';
+import DragHandle from '@mui/icons-material/DragHandle';
 import Divider from '@mui/material/Divider';
 import { getWorkspaceId } from '../utils/Navigation';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -73,6 +74,10 @@ export default function MyDrawer({
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isOrdering, setIsOrdering] = useState(false);
+  const [orderedWorkspaces, setOrderedWorkspaces] = useState([]);
+  const [draggedWorkspaceIndex, setDraggedWorkspaceIndex] = useState(null);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   const fetchWorkspaces = useCallback(async () => {
     setLoading(true);
@@ -81,13 +86,14 @@ export default function MyDrawer({
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setWorkspaces(data);
+      if (!isOrdering) setOrderedWorkspaces(data);
       setError(null);
     } catch (err) {
       setError(err.toString());
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, isOrdering]);
 
   useEffect(() => {
     fetchWorkspaces();
@@ -114,6 +120,7 @@ export default function MyDrawer({
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const created = await response.json();
       setWorkspaces((prev) => [...prev, created]);
+      setOrderedWorkspaces((prev) => [...prev, created]);
 
       setIsAdding(false);
       setNewWorkspaceName('');
@@ -167,6 +174,9 @@ export default function MyDrawer({
       setWorkspaces((prev) =>
         prev.map((workspace) => (workspace.id === updated.id ? updated : workspace)),
       );
+      setOrderedWorkspaces((prev) =>
+        prev.map((workspace) => (workspace.id === updated.id ? updated : workspace)),
+      );
 
       closeEdit();
     } catch (err) {
@@ -190,6 +200,7 @@ export default function MyDrawer({
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       setWorkspaces((prev) => prev.filter((workspace) => workspace.id !== id));
+      setOrderedWorkspaces((prev) => prev.filter((workspace) => workspace.id !== id));
     } catch (err) {
       setError(err.toString());
     } finally {
@@ -197,14 +208,71 @@ export default function MyDrawer({
     }
   };
 
+  // Reorder Workspaces
+  const startOrdering = () => {
+    setOrderedWorkspaces(workspaces);
+    setIsOrdering(true);
+    setIsAdding(false);
+    closeEdit();
+    setError(null);
+  };
+
+  const cancelOrdering = () => {
+    setOrderedWorkspaces(workspaces);
+    setDraggedWorkspaceIndex(null);
+    setIsOrdering(false);
+  };
+
+  const moveWorkspace = (fromIndex, toIndex) => {
+    if (fromIndex === null || fromIndex === toIndex || toIndex < 0) return;
+    setOrderedWorkspaces((prev) => {
+      if (toIndex >= prev.length) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+    setDraggedWorkspaceIndex(toIndex);
+  };
+
+  const saveWorkspaceOrder = async () => {
+    const updatedWorkspaces = orderedWorkspaces.map((workspace, index) => ({
+      ...workspace,
+      position: index + 1,
+    }));
+    setSavingOrder(true);
+    setError(null);
+
+    try {
+      const responses = await Promise.all(
+        updatedWorkspaces.map((workspace) =>
+          updateWorkspace(workspace.id, { position: workspace.position }, token),
+        ),
+      );
+      if (responses.some((response) => !response.ok)) {
+        throw new Error('Unable to save reordered workspaces.');
+      }
+      setWorkspaces(updatedWorkspaces);
+      setOrderedWorkspaces(updatedWorkspaces);
+      setIsOrdering(false);
+    } catch (err) {
+      setError(err.toString());
+    } finally {
+      setSavingOrder(false);
+      setDraggedWorkspaceIndex(null);
+    }
+  };
+
+  const visibleWorkspaces = isOrdering ? orderedWorkspaces : workspaces;
+
   // Manage Drawer
   const [workspaceDrawerOpen, setWorkspaceDrawerOpen] = useState(false);
   const toggleWorkspaceDrawer = () => setWorkspaceDrawerOpen((prev) => !prev);
   const [drawerWidth, setDrawerWidth] = useState(180);
 
   useEffect(() => {
-    setDrawerWidth(isAdding || isEditing ? 300 : 200);
-  }, [isAdding, isEditing]);
+    setDrawerWidth(isAdding || isEditing || isOrdering ? 320 : 200);
+  }, [isAdding, isEditing, isOrdering]);
 
   return (
     <Drawer
@@ -288,7 +356,7 @@ export default function MyDrawer({
                 {/* Data */}
                 {!error &&
                   !loading &&
-                  workspaces.map((workspace, i) => (
+                  visibleWorkspaces.map((workspace, i) => (
                     <React.Fragment key={workspace.id}>
                       {i !== 0 && (
                         <Divider
@@ -357,13 +425,33 @@ export default function MyDrawer({
                           {/* Normal Mode */}
                           <ListItemButton
                             dense
-                            sx={{ pl: 3, py: 0.75 }}
+                            draggable={isOrdering}
+                            onDragStart={() => setDraggedWorkspaceIndex(i)}
+                            onDragOver={(event) => {
+                              event.preventDefault();
+                              moveWorkspace(draggedWorkspaceIndex, i);
+                            }}
+                            onDragEnd={() => setDraggedWorkspaceIndex(null)}
+                            sx={{
+                              pl: 3,
+                              py: 0.75,
+                              cursor: isOrdering ? 'grab' : 'pointer',
+                              opacity: draggedWorkspaceIndex === i ? 0.65 : 1,
+                            }}
                             onClick={() => {
-                              navigate(`/workspace/${workspace.id}`);
+                              if (!isOrdering) navigate(`/workspace/${workspace.id}`);
                             }}
                           >
+                            {isOrdering && (
+                              <DragHandle
+                                aria-label={`Drag ${workspace.name} to reorder`}
+                                sx={{ mr: 1, cursor: 'grab' }}
+                              />
+                            )}
                             <ListItemText primary={workspace.name} />
-                            <MoreVert onClick={(event) => handleTripleDotClick(event, workspace)} />
+                            {!isOrdering && (
+                              <MoreVert onClick={(event) => handleTripleDotClick(event, workspace)} />
+                            )}
                           </ListItemButton>
                         </React.Fragment>
                       )}
@@ -382,8 +470,41 @@ export default function MyDrawer({
                 }}
               />
 
+              {!isOrdering ? (
+                <Button
+                  sx={{
+                    pl: 3,
+                    pt: 1.5,
+                    pb: 0.75,
+                    mr: 1,
+                    fontWeight: 'bold',
+                    background: 'var(--secondary-background-color)',
+                    color: 'var(--secondary-color)',
+                  }}
+                  startIcon={<DragHandle sx={{ fontSize: 20 }} />}
+                  onClick={startOrdering}
+                  disabled={loading || Boolean(error) || workspaces.length < 2}
+                >
+                  Edit Order
+                </Button>
+              ) : (
+                <Box sx={{ display: 'flex', gap: 1, px: 2, py: 1 }}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={saveWorkspaceOrder}
+                    disabled={savingOrder}
+                  >
+                    Confirm Order
+                  </Button>
+                  <Button size="small" onClick={cancelOrdering} disabled={savingOrder}>
+                    Cancel
+                  </Button>
+                </Box>
+              )}
+
               {/* Add New */}
-              {!isAdding ? (
+              {!isOrdering && !isAdding ? (
                 <Button
                   sx={{
                     pl: 3,
@@ -398,7 +519,7 @@ export default function MyDrawer({
                 >
                   Add New
                 </Button>
-              ) : (
+              ) : !isOrdering ? (
                 <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
                   <TextField
                     autoFocus
@@ -434,7 +555,7 @@ export default function MyDrawer({
                     <Close />
                   </IconButton>
                 </Box>
-              )}
+              ) : null}
             </Collapse>
           </List>
           <Divider

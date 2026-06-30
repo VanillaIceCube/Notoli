@@ -8,7 +8,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **JWT auth** (register/login/refresh) with an email-first login flow
 - **Password reset by email** via secure tokenized reset links
 - **Sane defaults**: new accounts get a default workspace automatically
-- **Fast CRUD UI**: add, edit, delete, and reorder items inline
+- **Fast CRUD UI**: add, edit, delete, and persist custom workspace order from the sidebar
 - **Access scoping**: the API limits objects by `owner`/`created_by`/`collaborators`
 - **Flexible organization**: notes can appear in multiple todo lists (many-to-many)
 - **Path-based hosting**: designed to run under a subpath like `/apps/notoli`

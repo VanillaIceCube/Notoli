@@ -17,7 +17,7 @@ Auth endpoints (`/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth
 
 ## ↕️ Reordering
 
-Workspace, todo-list, and note rows include up/down controls. The UI updates the visible order immediately and persists the changed `position` values with `PATCH` calls through `src/services/notoliApiClient.js`.
+The sidebar workspace section includes an **Edit Order** mode. In that mode, drag the handle beside each workspace to rearrange the sidebar list, then choose **Confirm Order** to persist the changed `position` values with `PATCH` calls through `src/services/notoliApiClient.js`.
 
 ## 🧩 Path-Based Hosting (`/apps/notoli`)
 

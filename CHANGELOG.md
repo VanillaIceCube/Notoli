@@ -1,3 +1,7 @@
+## 2026-06-30
+### Changed
+- Replaced inline reorder arrows with a sidebar Edit Order mode that uses drag handles and a Confirm Order action for workspace ordering.
+
 # Changelog
 All notable changes to this project are documented in this file.
 
