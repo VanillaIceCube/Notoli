@@ -1,4 +1,4 @@
-from django.db.models import Q
+from django.db.models import Max, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound, PermissionDenied
@@ -53,10 +53,22 @@ class WorkspaceViewSet(viewsets.ModelViewSet):
     serializer_class = WorkspaceSerializer
 
     def get_queryset(self):
-        return Workspace.objects.accessible_to(self.request.user)
+        return Workspace.objects.accessible_to(self.request.user).order_by(
+            "position", "created_at", "id"
+        )
 
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user, created_by=self.request.user)
+        next_position = (
+            Workspace.objects.accessible_to(self.request.user).aggregate(
+                Max("position")
+            )["position__max"]
+            or 0
+        ) + 1
+        serializer.save(
+            owner=self.request.user,
+            created_by=self.request.user,
+            position=next_position,
+        )
 
 
 class TodoListViewSet(viewsets.ModelViewSet):
@@ -77,7 +89,7 @@ class TodoListViewSet(viewsets.ModelViewSet):
             _require_workspace_filter_access(user, workspace_id, queryset)
             queryset = queryset.filter(workspace_id=workspace_id)
 
-        return queryset.distinct()
+        return queryset.distinct().order_by("position", "created_at", "id")
 
     def perform_create(self, serializer):
         # Require workspace upon creation
@@ -91,8 +103,17 @@ class TodoListViewSet(viewsets.ModelViewSet):
         ):
             raise PermissionDenied("You cannot add todo-lists to this workspace.")
 
+        next_position = (
+            TodoList.objects.filter(workspace=workspace).aggregate(Max("position"))[
+                "position__max"
+            ]
+            or 0
+        ) + 1
         serializer.save(
-            owner=self.request.user, created_by=self.request.user, workspace=workspace
+            owner=self.request.user,
+            created_by=self.request.user,
+            workspace=workspace,
+            position=next_position,
         )
 
 
@@ -119,7 +140,7 @@ class NoteViewSet(viewsets.ModelViewSet):
         if todo_list_id:
             queryset = queryset.filter(todolists__id=todo_list_id)
 
-        return queryset.distinct()
+        return queryset.distinct().order_by("position", "created_at", "id")
 
     def perform_create(self, serializer):
         todo_list = serializer.validated_data.get("todo_list")
@@ -141,4 +162,19 @@ class NoteViewSet(viewsets.ModelViewSet):
             ):
                 raise PermissionDenied("You cannot add notes to this workspace.")
 
-        serializer.save(owner=self.request.user, created_by=self.request.user)
+        if todo_list is not None:
+            note_scope = Note.objects.filter(todolists=todo_list)
+        elif workspace is not None:
+            note_scope = Note.objects.filter(workspace=workspace)
+        else:
+            note_scope = Note.objects.none()
+
+        next_position = (
+            note_scope.aggregate(Max("position"))["position__max"] or 0
+        ) + 1
+
+        serializer.save(
+            owner=self.request.user,
+            created_by=self.request.user,
+            position=next_position,
+        )

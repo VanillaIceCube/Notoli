@@ -35,12 +35,13 @@ All `/api/*` endpoints require:
 - Header: `Authorization: Bearer <accessToken>`
 
 ## 🧱 Data Model (High Level)
-- Workspace: top-level container for organizing todo lists
-- TodoList: belongs to a workspace; associates notes via a many-to-many relation
-- Note: a single item (`note` + optional `description`); can be linked into multiple todo lists
+- Workspace: top-level container for organizing todo lists; includes a `position` field for custom ordering
+- TodoList: belongs to a workspace; associates notes via a many-to-many relation; includes a `position` field for custom ordering inside its workspace
+- Note: a single item (`note` + optional `description`); can be linked into multiple todo lists and includes a `position` field for custom ordering
 
 Access scoping:
 - The API filters objects by `owner`/`created_by`/`collaborators` so users only see what they have access to.
+- List endpoints return records by `position`, then creation time/id. Clients can persist reordering with `PATCH` requests that update `position`.
 
 ## 💻 Local Development
 Full setup (Conda, env vars) lives in [`AGENTS.md`](../AGENTS.md). Common commands:

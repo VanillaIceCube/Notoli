@@ -995,3 +995,79 @@ class NoteApiTests(APITestCase):
             response.data,
             f"Expected workspace error to be raised first: {response.data}",
         )
+
+
+class ReorderApiTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="reorder_owner",
+            email="reorder_owner@example.com",
+            password="owner-password",
+        )
+        self.workspace = Workspace.objects.create(
+            name="Workspace A", owner=self.owner, created_by=self.owner, position=2
+        )
+        self.workspace_b = Workspace.objects.create(
+            name="Workspace B", owner=self.owner, created_by=self.owner, position=1
+        )
+        self.todo_list = TodoList.objects.create(
+            name="List A",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=2,
+        )
+        self.todo_list_b = TodoList.objects.create(
+            name="List B",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=1,
+        )
+        self.note = Note.objects.create(
+            note="Note A",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=2,
+        )
+        self.note_b = Note.objects.create(
+            note="Note B",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=1,
+        )
+        self.todo_list.notes.add(self.note, self.note_b)
+
+    def test_lists_return_in_position_order(self):
+        self.client.force_authenticate(user=self.owner)
+
+        workspaces_response = self.client.get("/api/workspaces/")
+        todolists_response = self.client.get(
+            f"/api/todolists/?workspace={self.workspace.id}"
+        )
+        notes_response = self.client.get(f"/api/notes/?todo_list={self.todo_list.id}")
+
+        workspace_ids = [item["id"] for item in workspaces_response.data]
+        self.assertLess(
+            workspace_ids.index(self.workspace_b.id),
+            workspace_ids.index(self.workspace.id),
+        )
+        self.assertEqual(
+            [item["id"] for item in todolists_response.data],
+            [self.todo_list_b.id, self.todo_list.id],
+        )
+        self.assertEqual(
+            [item["id"] for item in notes_response.data], [self.note_b.id, self.note.id]
+        )
+
+    def test_position_can_be_updated(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            f"/api/workspaces/{self.workspace.id}/", {"position": 0}, format="json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.workspace.refresh_from_db()
+        self.assertEqual(self.workspace.position, 0)

@@ -14,6 +14,8 @@ import {
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
 import MoreVert from '@mui/icons-material/MoreVert';
+import ArrowUpward from '@mui/icons-material/ArrowUpward';
+import ArrowDownward from '@mui/icons-material/ArrowDownward';
 import Divider from '@mui/material/Divider';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -137,6 +139,40 @@ export default function Workspaces({ setAppBarHeader }) {
     setEditWorkspaceName('');
   };
 
+  // Reorder Workspace
+  const moveItem = async (index, direction) => {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= lists.length) return;
+
+    const reorderedLists = [...lists];
+    [reorderedLists[index], reorderedLists[targetIndex]] = [
+      reorderedLists[targetIndex],
+      reorderedLists[index],
+    ];
+
+    const updatedPositions = reorderedLists.map((item, positionIndex) => ({
+      ...item,
+      position: positionIndex + 1,
+    }));
+    setLists(updatedPositions);
+    setError(null);
+
+    try {
+      const first = updatedPositions[index];
+      const second = updatedPositions[targetIndex];
+      const responses = await Promise.all([
+        updateWorkspace(first.id, { position: first.position }, token),
+        updateWorkspace(second.id, { position: second.position }, token),
+      ]);
+      if (responses.some((response) => !response.ok)) {
+        throw new Error('Unable to save reordered items.');
+      }
+    } catch (err) {
+      setLists(lists);
+      setError(err.toString());
+    }
+  };
+
   // Delete Workspace
   const onDelete = async (id) => {
     setError(null);
@@ -190,7 +226,7 @@ export default function Workspaces({ setAppBarHeader }) {
         {!loading && !error && (
           <Stack spacing={1}>
             {lists.length ? (
-              lists.map((list) => (
+              lists.map((list, index) => (
                 <React.Fragment key={list.id}>
                   {editingWorkspaceId === list.id ? (
                     <React.Fragment>
@@ -237,6 +273,7 @@ export default function Workspaces({ setAppBarHeader }) {
                     <React.Fragment>
                       {/* Normal Mode */}
                       <Button
+                        component="div"
                         variant="text"
                         sx={{
                           display: 'flex',
@@ -254,7 +291,28 @@ export default function Workspaces({ setAppBarHeader }) {
                         >
                           {list.name}
                         </Typography>
-                        <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center' }}
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <IconButton
+                            size="small"
+                            aria-label={`Move ${list.name || list.note} up`}
+                            disabled={index === 0}
+                            onClick={() => moveItem(index, -1)}
+                          >
+                            <ArrowUpward fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            aria-label={`Move ${list.name || list.note} down`}
+                            disabled={index === lists.length - 1}
+                            onClick={() => moveItem(index, 1)}
+                          >
+                            <ArrowDownward fontSize="small" />
+                          </IconButton>
+                          <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
+                        </Box>
                       </Button>
                     </React.Fragment>
                   )}

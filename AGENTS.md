@@ -65,6 +65,10 @@ npm ci
 
 Use the same script as the Codex maintenance script so cached containers refresh backend and frontend dependencies after checkout.
 
+## Browser screenshots
+- When a task needs screenshots, use Google Chrome (`google-chrome` / `google-chrome-stable`) in headless mode rather than another browser.
+- If Chrome is missing in the environment, install Google Chrome or clearly report the limitation before falling back.
+
 ## Setup (local dev with Conda)
 1) Create or update the Conda environment:
    - create: `conda env create -f backend/environment.yml`
