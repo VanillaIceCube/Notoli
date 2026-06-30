@@ -11,21 +11,21 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **Fast CRUD UI**: add, edit, and delete items inline
 - **Access scoping**: the API limits objects by `owner`/`created_by`/`collaborators`
 - **Flexible organization**: notes can appear in multiple todo lists (many-to-many)
-- **Path-based hosting**: designed to run under a subpath like `/apps/notoli`
+- **Subdomain hosting**: designed to run at `https://notoli.judeandrewalaba.com`
 - **Dockerized deployment**: frontend + backend + Nginx reverse proxy
 
 ## 🚀 Tech Stack
-**Backend:** Django
-**Frontend:** React + Material UI
-**Environment Management:** Conda
-**Deployment:** Docker
-**Hosting:** DigitalOcean
-**DNS/Proxy:** Cloudflare
-**TLS:** Cloudflare Full (strict) to origin (Cloudflare Origin Certificate)
-**CI/CD & Workflows:** GitHub Actions
+- **Backend:** Django
+- **Frontend:** React + Material UI
+- **Environment Management:** Conda
+- **Deployment:** Docker
+- **Hosting:** DigitalOcean
+- **DNS/Proxy:** Cloudflare
+- **TLS:** Cloudflare Full (strict) to origin (Cloudflare Origin Certificate)
+- **CI/CD & Workflows:** GitHub Actions
 
 ## 📚 Documentation
-- Setup, env vars, and common commands: [`AGENTS.md`](AGENTS.md)
+- Setup, Codex cloud environment settings, env vars, and common commands: [`AGENTS.md`](AGENTS.md)
 - Backend (API, auth, data model): [`backend/README.md`](backend/README.md)
 - Frontend (routing, API base URL): [`frontend/README.md`](frontend/README.md)
 - Deployment (Docker + Nginx): [`deploy/README.md`](deploy/README.md)

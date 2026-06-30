@@ -2,12 +2,19 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-06-29
+### Changed
+- Renamed the Django project package from `backend/backend` to `backend/app` and updated settings, WSGI/ASGI, Docker, and documentation references.
+
+## 2026-06-29
 ### Added
 - Added a Resend HTTPS API email backend for password-reset delivery on hosts where outbound SMTP is blocked.
 ### Fixed
 - Added JSON accept and application user-agent headers to Resend API email requests so production requests are not rejected by Resend's Cloudflare layer.
 - Preserved CC and BCC fields separately when building Resend API email payloads.
 ### Changed
+- Moved production routing from the `/apps/notoli` path prefix to the `https://notoli.judeandrewalaba.com` subdomain.
+- Updated Nginx, deploy workflow defaults, frontend build metadata, and documentation for subdomain-root hosting.
+- Documented the Codex cloud environment description and setup/maintenance script.
 - Expanded local Docker setup documentation with local TLS cert generation, SQLite bind-mount repair, local image rebuild steps, migration commands, URL checks, and the `DJANGO_EMAIL_HOST_KEY` env var note.
 - Added a default email timeout and deploy/env documentation for `DJANGO_EMAIL_TIMEOUT`.
 

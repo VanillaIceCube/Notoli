@@ -1,6 +1,8 @@
 import { navigate } from './navigationService';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL ??
+  (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8000');
 
 function shouldRedirectToLogin(path) {
   // Auth endpoints may legitimately return 401 (bad credentials) and should be handled by the UI.

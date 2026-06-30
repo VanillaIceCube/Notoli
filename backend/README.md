@@ -3,7 +3,7 @@
 The Notoli backend is a Django + Django REST Framework API, served by Gunicorn in production.
 
 ## 🧭 What Lives Here
-- `backend/backend/`: Django project settings/urls (`settings.py`, `urls.py`)
+- `backend/app/`: Django project settings/urls (`settings.py`, `urls.py`)
 - `backend/authentication/`: custom user model + JWT auth endpoints
 - `backend/notes/`: workspaces, todo lists, and notes (DRF viewsets)
 - `backend/manage.py`: Django management entrypoint
@@ -14,10 +14,7 @@ Top-level routes (without any path prefix):
 - API: `/api/` (workspaces/todolists/notes)
 - Admin: `/admin/`
 
-If you deploy behind a path prefix like `/apps/notoli`, these become:
-- `/apps/notoli/auth/`
-- `/apps/notoli/api/`
-- `/apps/notoli/admin/`
+Production serves these routes from the subdomain root at `https://notoli.judeandrewalaba.com`.
 
 ## 🔐 Authentication
 JWT auth is provided by `djangorestframework-simplejwt`.
@@ -75,15 +72,15 @@ ruff format --check .
 ```
 
 ## ⚙️ Configuration
-Key environment variables (see `backend/backend/settings.py` for defaults):
+Key environment variables (see `backend/app/settings.py` for defaults):
 - `DJANGO_SECRET_KEY`
 - `DJANGO_DEBUG` (`1`/`0`)
 - `DJANGO_SQLITE_PATH`
 - `DJANGO_ALLOWED_HOSTS` (comma-separated)
 - `DJANGO_CORS_ALLOWED_ORIGINS` (comma-separated)
 - `DJANGO_CSRF_TRUSTED_ORIGINS` (comma-separated)
-- `DJANGO_FORCE_SCRIPT_NAME` (set to `/apps/notoli` for path-based hosting)
-- `DJANGO_FRONTEND_BASE_URL` (base URL used in password-reset links, for example `https://judeandrewalaba.com/apps/notoli`)
+- `DJANGO_FORCE_SCRIPT_NAME` (leave unset/blank for subdomain-root hosting)
+- `DJANGO_FRONTEND_BASE_URL` (base URL used in password-reset links, for example `https://notoli.judeandrewalaba.com`)
 - `DJANGO_EMAIL_BACKEND` (default `django.core.mail.backends.console.EmailBackend`)
 - `DJANGO_EMAIL_HOST` / `DJANGO_EMAIL_PORT` / `DJANGO_EMAIL_USE_TLS`
 - `DJANGO_EMAIL_HOST_USER` / `DJANGO_EMAIL_HOST_KEY`
@@ -107,4 +104,4 @@ Proxy / HTTPS:
 
 Static files:
 - Collected during the Docker build (`python manage.py collectstatic --noinput`)
-- When `DJANGO_FORCE_SCRIPT_NAME` is set, `STATIC_URL` is generated under `<prefix>/static/` (required for admin assets under a subpath).
+- With subdomain-root hosting, `DJANGO_FORCE_SCRIPT_NAME` should stay blank so `STATIC_URL` remains `/static/`. If a future deployment uses a path prefix, `STATIC_URL` is generated under `<prefix>/static/`.
