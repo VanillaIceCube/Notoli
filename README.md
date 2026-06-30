@@ -9,6 +9,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **Password reset by email** via secure tokenized reset links
 - **Sane defaults**: new accounts get a default workspace automatically
 - **Fast CRUD UI**: add, edit, and delete items inline
+- **Manual ordering**: drag rows by their handles to persist custom workspace, todo-list, and note ordering
 - **Access scoping**: the API limits objects by `owner`/`created_by`/`collaborators`
 - **Flexible organization**: notes can appear in multiple todo lists (many-to-many)
 - **Subdomain hosting**: designed to run at `https://notoli.judeandrewalaba.com`

@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-06-30
+### Added
+- Added drag-handle reordering for workspaces, todo lists, and notes with persisted backend order.
+- Added reorder API endpoints for workspaces, todo lists, and notes.
+- Documented the future Playwright browser screenshot/evidence standard for UI and applicable backend changes.
+### Changed
+- Drag reordering now previews row movement continuously while the user drags over the list instead of only updating after drop.
+
 ## 2026-06-29
 ### Changed
 - Renamed the Django project package from `backend/backend` to `backend/app` and updated settings, WSGI/ASGI, Docker, and documentation references.

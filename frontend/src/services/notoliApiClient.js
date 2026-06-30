@@ -82,6 +82,13 @@ export const deleteWorkspace = (workspaceId, token) =>
     headers: jsonHeaders(token),
   });
 
+export const reorderWorkspaces = (orderedIds, token) =>
+  apiFetch('/api/workspaces/reorder/', {
+    method: 'PATCH',
+    headers: jsonHeaders(token),
+    body: JSON.stringify({ ordered_ids: orderedIds }),
+  });
+
 export const fetchTodoLists = (workspaceId, token) =>
   apiFetch(`/api/todolists/?workspace=${workspaceId}`, {
     headers: authHeader(token),
@@ -112,6 +119,13 @@ export const deleteTodoList = (todoListId, token) =>
     headers: jsonHeaders(token),
   });
 
+export const reorderTodoLists = (workspaceId, orderedIds, token) =>
+  apiFetch('/api/todolists/reorder/', {
+    method: 'PATCH',
+    headers: jsonHeaders(token),
+    body: JSON.stringify({ workspace: workspaceId, ordered_ids: orderedIds }),
+  });
+
 export const fetchNotes = (todoListId, token) =>
   apiFetch(`/api/notes/?todo_list=${todoListId}`, {
     headers: authHeader(token),
@@ -135,4 +149,11 @@ export const deleteNote = (noteId, token) =>
   apiFetch(`/api/notes/${noteId}/`, {
     method: 'DELETE',
     headers: jsonHeaders(token),
+  });
+
+export const reorderNotes = (todoListId, orderedIds, token) =>
+  apiFetch('/api/notes/reorder/', {
+    method: 'PATCH',
+    headers: jsonHeaders(token),
+    body: JSON.stringify({ todo_list: todoListId, ordered_ids: orderedIds }),
   });

@@ -19,6 +19,12 @@ Production serves these routes from the subdomain root at `https://notoli.judean
 ## 🔐 Authentication
 JWT auth is provided by `djangorestframework-simplejwt`.
 
+Ordering endpoints:
+- `PATCH /api/workspaces/reorder/` with `ordered_ids` saves the current user's workspace order.
+- `PATCH /api/todolists/reorder/` with `workspace` and `ordered_ids` saves todo-list order within that workspace.
+- `PATCH /api/notes/reorder/` with `todo_list` and `ordered_ids` saves note order within that todo list.
+- Default list responses return saved order (`position`, then creation/id tie-breakers).
+
 Common endpoints:
 - `POST /auth/register/` -> creates a user; returns `access`, `refresh`, `username`, `email`, and `workspace_id`
 - `POST /auth/login/` -> accepts `email` (preferred) or `username`, plus `password`; returns `access`, `refresh`, `username`, and `email`

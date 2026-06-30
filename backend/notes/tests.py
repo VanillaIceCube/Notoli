@@ -995,3 +995,108 @@ class NoteApiTests(APITestCase):
             response.data,
             f"Expected workspace error to be raised first: {response.data}",
         )
+
+
+class ReorderApiTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="reorder_owner",
+            email="reorder_owner@example.com",
+            password="owner-password",
+        )
+        self.workspace = Workspace.objects.create(
+            name="Workspace A",
+            description="",
+            owner=self.owner,
+            created_by=self.owner,
+            position=0,
+        )
+        self.other_workspace = Workspace.objects.create(
+            name="Workspace B",
+            description="",
+            owner=self.owner,
+            created_by=self.owner,
+            position=1,
+        )
+        self.todo_one = TodoList.objects.create(
+            name="List One",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=0,
+        )
+        self.todo_two = TodoList.objects.create(
+            name="List Two",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=1,
+        )
+        self.other_todo = TodoList.objects.create(
+            name="Other List",
+            workspace=self.other_workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=0,
+        )
+        self.note_one = Note.objects.create(
+            note="Note One",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=0,
+        )
+        self.note_two = Note.objects.create(
+            note="Note Two",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=1,
+        )
+        self.todo_one.notes.add(self.note_one, self.note_two)
+        self.client.force_authenticate(user=self.owner)
+
+    def test_reorder_todolists_is_scoped_to_workspace(self):
+        response = self.client.patch(
+            "/api/todolists/reorder/",
+            {
+                "workspace": self.workspace.id,
+                "ordered_ids": [self.todo_two.id, self.todo_one.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        ordered_ids = list(
+            TodoList.objects.filter(workspace=self.workspace).values_list(
+                "id", flat=True
+            )
+        )
+        self.assertEqual(ordered_ids, [self.todo_two.id, self.todo_one.id])
+
+        response = self.client.patch(
+            "/api/todolists/reorder/",
+            {
+                "workspace": self.workspace.id,
+                "ordered_ids": [self.other_todo.id, self.todo_one.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_reorder_notes_persists_for_todo_list(self):
+        response = self.client.patch(
+            "/api/notes/reorder/",
+            {
+                "todo_list": self.todo_one.id,
+                "ordered_ids": [self.note_two.id, self.note_one.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        response = self.client.get(f"/api/notes/?todo_list={self.todo_one.id}")
+        self.assertEqual(
+            [item["id"] for item in response.data], [self.note_two.id, self.note_one.id]
+        )

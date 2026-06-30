@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
+import DragIndicator from '@mui/icons-material/DragIndicator';
 import MoreVert from '@mui/icons-material/MoreVert';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
@@ -21,8 +22,10 @@ import {
   createTodoList,
   deleteTodoList,
   fetchTodoLists as fetchTodoListsApi,
+  reorderTodoLists,
   updateTodoList,
 } from '../../services/notoliApiClient';
+import { useReorderableList } from './reorderUtils';
 
 export default function TodoLists({ setAppBarHeader }) {
   // Misc
@@ -62,6 +65,15 @@ export default function TodoLists({ setAppBarHeader }) {
       fetchTodoLists();
     }
   }, [workspaceId, fetchTodoLists]);
+
+  const persistOrder = (orderedIds) => reorderTodoLists(workspaceId, orderedIds, token);
+
+  const { getHandleProps, getRowProps } = useReorderableList({
+    lists,
+    setLists,
+    persistOrder,
+    setError,
+  });
 
   // Triple Dot Menu Functions
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
@@ -243,6 +255,7 @@ export default function TodoLists({ setAppBarHeader }) {
                     <React.Fragment>
                       {/* Normal Mode */}
                       <Button
+                        component="div"
                         variant="text"
                         sx={{
                           display: 'flex',
@@ -252,6 +265,8 @@ export default function TodoLists({ setAppBarHeader }) {
                           color: 'var(--secondary-color)',
                         }}
                         onClick={() => navigate(`/workspace/${workspaceId}/todolist/${list.id}`)}
+                        data-testid={`todolist-row-${list.id}`}
+                        {...getRowProps(list.id)}
                       >
                         <Typography
                           variant="body1"
@@ -260,7 +275,19 @@ export default function TodoLists({ setAppBarHeader }) {
                         >
                           {list.name}
                         </Typography>
-                        <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <IconButton
+                            aria-label={`Drag ${list.name ?? list.note}`}
+                            data-testid={`drag-handle-${list.id}`}
+                            size="small"
+                            sx={{ color: 'var(--secondary-color)', cursor: 'grab' }}
+                            onClick={(event) => event.stopPropagation()}
+                            {...getHandleProps(list.id)}
+                          >
+                            <DragIndicator />
+                          </IconButton>
+                          <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
+                        </Box>
                       </Button>
                     </React.Fragment>
                   )}
