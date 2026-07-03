@@ -8,6 +8,8 @@ All notable changes to this project are documented in this file.
 - Documented the future Playwright browser screenshot/evidence standard for UI and applicable backend changes.
 ### Changed
 - Drag handles now appear on the left side of reorderable rows, and drag reordering now animates rows as they switch places while the user drags over the list.
+### Fixed
+- Made shared workspace membership sufficient to retrieve newly created child todo lists and notes while preserving item-level collaborator access as additive sharing.
 
 ## 2026-06-29
 ### Changed
