@@ -6,7 +6,7 @@ WORKDIR /frontend
 
 # Copy package.json and package-lock.json and install Node.js dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copy your React project code
 COPY . .

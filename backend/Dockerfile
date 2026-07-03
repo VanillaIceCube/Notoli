@@ -1,4 +1,4 @@
-FROM continuumio/miniconda3
+FROM condaforge/miniforge3
 
 # Set working directory
 WORKDIR /backend
