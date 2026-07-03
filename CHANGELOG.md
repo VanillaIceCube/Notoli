@@ -7,7 +7,7 @@ All notable changes to this project are documented in this file.
 - Added reorder API endpoints for workspaces, todo lists, and notes.
 - Documented the future Playwright browser screenshot/evidence standard for UI and applicable backend changes.
 ### Changed
-- Drag reordering now previews row movement continuously while the user drags over the list instead of only updating after drop.
+- Drag handles now appear on the left side of reorderable rows, and drag reordering now animates rows as they switch places while the user drags over the list.
 
 ## 2026-06-29
 ### Changed

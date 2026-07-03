@@ -268,14 +268,7 @@ export default function TodoLists({ setAppBarHeader }) {
                         data-testid={`todolist-row-${list.id}`}
                         {...getRowProps(list.id)}
                       >
-                        <Typography
-                          variant="body1"
-                          fontWeight="bold"
-                          sx={{ fontSize: '1.1rem', textAlign: 'left' }}
-                        >
-                          {list.name}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
                           <IconButton
                             aria-label={`Drag ${list.name ?? list.note}`}
                             data-testid={`drag-handle-${list.id}`}
@@ -286,8 +279,15 @@ export default function TodoLists({ setAppBarHeader }) {
                           >
                             <DragIndicator />
                           </IconButton>
-                          <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
                         </Box>
+                        <Typography
+                          variant="body1"
+                          fontWeight="bold"
+                          sx={{ flexGrow: 1, fontSize: '1.1rem', textAlign: 'left' }}
+                        >
+                          {list.name}
+                        </Typography>
+                        <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
                       </Button>
                     </React.Fragment>
                   )}

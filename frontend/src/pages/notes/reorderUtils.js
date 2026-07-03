@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 
+const ROW_ANIMATION_MS = 160;
+
 export const reorderItems = (items, sourceId, targetId) => {
   const sourceIndex = items.findIndex((item) => String(item.id) === String(sourceId));
   const targetIndex = items.findIndex((item) => String(item.id) === String(targetId));
@@ -18,6 +20,7 @@ export const useReorderableList = ({ lists, setLists, persistOrder, setError }) 
   const draggedIdRef = useRef(null);
   const originalListsRef = useRef(null);
   const latestListsRef = useRef(lists);
+  const rowElementsRef = useRef(new Map());
 
   useEffect(() => {
     latestListsRef.current = lists;
@@ -26,6 +29,35 @@ export const useReorderableList = ({ lists, setLists, persistOrder, setError }) 
   const resetDragState = () => {
     draggedIdRef.current = null;
     originalListsRef.current = null;
+  };
+
+  const captureRowPositions = () => {
+    const positions = new Map();
+    rowElementsRef.current.forEach((element, itemId) => {
+      positions.set(itemId, element.getBoundingClientRect().top);
+    });
+    return positions;
+  };
+
+  const animateRowsFrom = (previousPositions) => {
+    requestAnimationFrame(() => {
+      rowElementsRef.current.forEach((element, itemId) => {
+        const previousTop = previousPositions.get(itemId);
+        if (previousTop === undefined) return;
+
+        const currentTop = element.getBoundingClientRect().top;
+        const deltaY = previousTop - currentTop;
+        if (!deltaY) return;
+
+        element.style.transition = 'none';
+        element.style.transform = `translateY(${deltaY}px)`;
+
+        requestAnimationFrame(() => {
+          element.style.transition = `transform ${ROW_ANIMATION_MS}ms ease`;
+          element.style.transform = '';
+        });
+      });
+    });
   };
 
   const getHandleProps = (itemId) => ({
@@ -43,6 +75,14 @@ export const useReorderableList = ({ lists, setLists, persistOrder, setError }) 
   });
 
   const getRowProps = (itemId) => ({
+    ref: (element) => {
+      const normalizedItemId = String(itemId);
+      if (element) {
+        rowElementsRef.current.set(normalizedItemId, element);
+      } else {
+        rowElementsRef.current.delete(normalizedItemId);
+      }
+    },
     onDragOver: (event) => {
       event.preventDefault();
       event.dataTransfer.dropEffect = 'move';
@@ -50,11 +90,13 @@ export const useReorderableList = ({ lists, setLists, persistOrder, setError }) 
       const sourceId = event.dataTransfer.getData('text/plain') || draggedIdRef.current;
       if (!sourceId) return;
 
+      const previousPositions = captureRowPositions();
       setLists((currentLists) => {
         const reordered = reorderItems(currentLists, sourceId, itemId);
         latestListsRef.current = reordered;
         return reordered;
       });
+      animateRowsFrom(previousPositions);
     },
     onDrop: async (event) => {
       event.preventDefault();

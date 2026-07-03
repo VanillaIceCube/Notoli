@@ -268,14 +268,7 @@ export default function Notes({ setAppBarHeader }) {
                           color: 'var(--secondary-color)',
                         }}
                       >
-                        <Typography
-                          variant="body1"
-                          fontWeight="bold"
-                          sx={{ fontSize: '1.1rem', textAlign: 'left' }}
-                        >
-                          {list.note}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
                           <IconButton
                             aria-label={`Drag ${list.name ?? list.note}`}
                             data-testid={`drag-handle-${list.id}`}
@@ -286,8 +279,15 @@ export default function Notes({ setAppBarHeader }) {
                           >
                             <DragIndicator />
                           </IconButton>
-                          <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
                         </Box>
+                        <Typography
+                          variant="body1"
+                          fontWeight="bold"
+                          sx={{ flexGrow: 1, fontSize: '1.1rem', textAlign: 'left' }}
+                        >
+                          {list.note}
+                        </Typography>
+                        <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
                       </Button>
                     </React.Fragment>
                   )}
