@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   Dialog,
-  DialogActions,
   DialogContent,
   DialogTitle,
   Divider,
@@ -254,11 +253,6 @@ export default function WorkspaceShareDialog({
           )}
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} sx={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}>
-          Close
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 }
