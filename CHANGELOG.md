@@ -3,6 +3,7 @@ All notable changes to this project are documented in this file.
 
 ## 2026-07-03
 ### Fixed
+- Restricted workspace update and delete API actions to workspace owners so shared collaborators cannot rename or delete shared workspaces.
 - Removed obsolete Docker Compose and Nginx HTTP/2 syntax warnings from local/proxy startup.
 - Switched the backend Docker image to the maintained `condaforge/miniforge3` base image.
 - Made frontend Prettier checks pass on Windows checkouts that use Git's default CRLF working-tree conversion.

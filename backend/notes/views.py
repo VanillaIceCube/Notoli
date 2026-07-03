@@ -63,6 +63,14 @@ class WorkspaceViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user, created_by=self.request.user)
 
+    def perform_update(self, serializer):
+        self._require_owner(serializer.instance)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        self._require_owner(instance)
+        instance.delete()
+
     def _require_owner(self, workspace):
         if workspace.owner_id != self.request.user.id:
             raise PermissionDenied("Only the workspace owner can manage access.")

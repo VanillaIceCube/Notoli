@@ -269,6 +269,23 @@ class WorkspaceApiTests(APITestCase):
             f"Expected 404 when outsider updates workspace, got {response.status_code}: {response.data}",
         )
 
+    def test_update_workspace_denied_for_collaborator(self):
+        self.workspace.collaborators.add(self.collaborator)
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.patch(
+            f"/api/workspaces/{self.workspace.id}/",
+            {"name": "Collaborator Rename"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+            f"Expected 403 when collaborator updates workspace, got {response.status_code}: {response.data}",
+        )
+        self.workspace.refresh_from_db()
+        self.assertEqual(self.workspace.name, "Owner Workspace")
+
     def test_delete_workspace_denied_for_outsider(self):
         self.client.force_authenticate(user=self.outsider)
         response = self.client.delete(f"/api/workspaces/{self.workspace.id}/")
@@ -278,6 +295,18 @@ class WorkspaceApiTests(APITestCase):
             status.HTTP_404_NOT_FOUND,
             f"Expected 404 when outsider deletes workspace, got {response.status_code}: {response.data}",
         )
+
+    def test_delete_workspace_denied_for_collaborator(self):
+        self.workspace.collaborators.add(self.collaborator)
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.delete(f"/api/workspaces/{self.workspace.id}/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+            f"Expected 403 when collaborator deletes workspace, got {response.status_code}: {response.data}",
+        )
+        self.assertTrue(Workspace.objects.filter(pk=self.workspace.pk).exists())
 
 
 class TodoListApiTests(APITestCase):
