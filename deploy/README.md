@@ -100,7 +100,7 @@ docker compose exec -T backend python manage.py migrate
 Local URLs:
 - Frontend (reverse-proxy subdomain): `https://notoli.judeandrewalaba.com`
 - Backend (direct): `http://localhost:8000`
-- Frontend (direct): `http://localhost:3000`
+- Frontend (direct): `http://localhost:3000` (the frontend container proxies same-origin `/api/*` and `/auth/*` requests to the backend service)
 
 The browser will warn about a local self-signed certificate. That is expected for local dev.
 
@@ -125,6 +125,8 @@ High level behavior on `notoli.judeandrewalaba.com`:
 - `/auth/*` -> `backend`
 - `/admin/*` -> `backend`
 - `/static/admin/*` and `/static/rest_framework/*` -> `backend` (admin/DRF assets)
+
+When using the direct frontend container URL (`http://localhost:3000`) in Docker Compose, `frontend/nginx.conf` mirrors the backend route proxying for `/api/*`, `/auth/*`, `/admin/*`, `/static/admin/*`, and `/static/rest_framework/*`. This keeps blank `REACT_APP_API_BASE_URL` builds usable without the TLS reverse proxy.
 
 Request flow (typical production setup):
 

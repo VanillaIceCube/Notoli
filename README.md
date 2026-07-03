@@ -14,6 +14,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **Flexible organization**: notes can appear in multiple todo lists (many-to-many)
 - **Subdomain hosting**: designed to run at `https://notoli.judeandrewalaba.com`
 - **Dockerized deployment**: frontend + backend + Nginx reverse proxy
+- **Docker local testing**: direct `http://localhost:3000` frontend requests proxy same-origin API/auth routes to the backend service
 
 ## 🚀 Tech Stack
 - **Backend:** Django

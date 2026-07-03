@@ -29,6 +29,7 @@ Important pieces:
 
 - `frontend/package.json` does not set a CRA `homepage`, so production assets resolve from `/`.
 - `src/App.js` still uses `process.env.PUBLIC_URL` as the React Router basename, which is empty for the subdomain build and remains useful for specialized local builds.
+- In Docker Compose, the frontend Nginx config also proxies `/api/*`, `/auth/*`, `/admin/*`, `/static/admin/*`, and `/static/rest_framework/*` to the `backend` service so direct `http://localhost:3000` testing works with same-origin API calls.
 - The container’s Nginx config (`frontend/nginx.conf`) serves `index.html` for deep links (`try_files ... /index.html`).
 
 ## 🔌 API Base URL
@@ -39,6 +40,7 @@ API calls go through `src/services/notoliApiClient.js` (endpoints) via `src/serv
 - Default is `http://localhost:8000` for local dev when `REACT_APP_API_BASE_URL` is unset.
 - In production, leave `REACT_APP_API_BASE_URL` blank/unset so calls use relative paths like `/api/...` on `https://notoli.judeandrewalaba.com`.
 - If an absolute URL is required, set `REACT_APP_API_BASE_URL=https://notoli.judeandrewalaba.com`.
+- For Docker builds with a blank API base, same-origin `/api/*` and `/auth/*` requests are handled by either the production reverse proxy or the frontend container's own Nginx API proxy.
 
 Note: in the Docker image, `REACT_APP_API_BASE_URL` is a build-time value (it’s baked into the static build).
 

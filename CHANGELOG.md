@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-03
+### Fixed
+- Fixed direct Docker frontend routing so `http://localhost:3000` proxies `/auth/*`, `/api/*`, admin, and Django admin/DRF static requests to the backend instead of returning Nginx `405` responses for auth POSTs.
+
 ## 2026-06-30
 ### Added
 - Added drag-handle reordering for workspaces, todo lists, and notes with persisted backend order.

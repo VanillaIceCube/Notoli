@@ -123,7 +123,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
 6) The included reverse proxy serves the production frontend at `https://notoli.judeandrewalaba.com/` when local DNS/hosts point that name at your machine. HTTP redirects to HTTPS.
    Backend is exposed on the direct port:
    - `http://localhost:8000`
-   Frontend is still available at `http://localhost:3000`.
+   Frontend is still available at `http://localhost:3000`; in Docker Compose, the frontend container proxies same-origin `/api/*` and `/auth/*` requests to the backend service.
 
 ## Production Routing Notes
 - Public URLs (subdomain-root):
