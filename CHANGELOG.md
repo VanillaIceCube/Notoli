@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-03
+### Fixed
+- Removed obsolete Docker Compose and Nginx HTTP/2 syntax warnings from local/proxy startup.
+- Switched the backend Docker image to the maintained `condaforge/miniforge3` base image.
+- Made frontend Prettier checks pass on Windows checkouts that use Git's default CRLF working-tree conversion.
+### Changed
+- Made frontend Docker builds use `npm ci` for lockfile-reproducible installs.
+- Applied existing backend Ruff and frontend Prettier formatting so local format checks pass.
+
 ## 2026-06-30
 ### Fixed
 - Made shared workspace membership sufficient to retrieve newly created child todo lists and notes while preserving item-level collaborator access as additive sharing.
