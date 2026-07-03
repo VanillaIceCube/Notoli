@@ -9,6 +9,8 @@ import {
   deleteWorkspace,
   fetchWorkspaces as fetchWorkspacesApi,
   updateWorkspace,
+  addWorkspaceCollaborator,
+  removeWorkspaceCollaborator,
 } from '../../services/notoliApiClient';
 
 const mockNavigate = jest.fn();
@@ -23,6 +25,8 @@ jest.mock('../../services/notoliApiClient', () => ({
   deleteWorkspace: jest.fn(),
   fetchWorkspaces: jest.fn(),
   updateWorkspace: jest.fn(),
+  addWorkspaceCollaborator: jest.fn(),
+  removeWorkspaceCollaborator: jest.fn(),
 }));
 
 async function renderWorkspaces() {
@@ -41,6 +45,8 @@ describe('Workspaces', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.setItem('accessToken', 'token');
+    sessionStorage.setItem('username', 'owner');
+    sessionStorage.setItem('email', 'owner@example.com');
     fetchWorkspacesApi.mockResolvedValue({
       ok: true,
       json: async () => workspaceFixtures,
@@ -247,6 +253,76 @@ describe('Workspaces', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
 
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
+  });
+
+  test('when Share is clicked, it opens the owner sharing modal with add and remove controls', async () => {
+    await renderWorkspaces();
+
+    await userEvent.click(screen.getByRole('button', { name: /share test_workspace_01/i }));
+
+    expect(screen.getByRole('heading', { name: /share test_workspace_01/i })).toBeInTheDocument();
+    expect(screen.getByText('Workspace owner')).toBeInTheDocument();
+    expect(screen.getByText('owner')).toBeInTheDocument();
+    expect(screen.getByText('collab')).toBeInTheDocument();
+    expect(screen.getByLabelText(/username or email/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /remove collab/i })).toBeInTheDocument();
+  });
+
+  test('when the owner adds a collaborator, the modal list updates', async () => {
+    addWorkspaceCollaborator.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        ...workspaceFixtures[1],
+        collaborators_details: [
+          { id: 3, username: 'new-user', email: 'new@example.com', display_name: 'new-user' },
+        ],
+      }),
+    });
+
+    await renderWorkspaces();
+
+    await userEvent.click(screen.getByRole('button', { name: /share test_workspace_02/i }));
+    await userEvent.type(screen.getByLabelText(/username or email/i), 'new@example.com');
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
+
+    await waitFor(() => {
+      expect(addWorkspaceCollaborator).toHaveBeenCalledWith(
+        2,
+        { identifier: 'new@example.com' },
+        'token',
+      );
+    });
+    expect(await screen.findByText('new-user')).toBeInTheDocument();
+  });
+
+  test('when the owner removes a collaborator, the modal list updates', async () => {
+    removeWorkspaceCollaborator.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ...workspaceFixtures[0], collaborators_details: [] }),
+    });
+
+    await renderWorkspaces();
+
+    await userEvent.click(screen.getByRole('button', { name: /share test_workspace_01/i }));
+    await userEvent.click(screen.getByRole('button', { name: /remove collab/i }));
+
+    await waitFor(() => {
+      expect(removeWorkspaceCollaborator).toHaveBeenCalledWith(1, 2, 'token');
+    });
+    expect(await screen.findByText(/no collaborators yet/i)).toBeInTheDocument();
+  });
+
+  test('when a non-owner opens Share, add and remove controls are hidden', async () => {
+    sessionStorage.setItem('username', 'collab');
+    sessionStorage.setItem('email', 'collab@example.com');
+
+    await renderWorkspaces();
+
+    await userEvent.click(screen.getByRole('button', { name: /share test_workspace_01/i }));
+
+    expect(screen.getByText(/only the workspace owner/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/username or email/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /remove collab/i })).not.toBeInTheDocument();
   });
 
   test('when an item is clicked, it navigates to the expected route', async () => {

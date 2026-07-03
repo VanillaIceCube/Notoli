@@ -14,6 +14,7 @@ import {
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
 import MoreVert from '@mui/icons-material/MoreVert';
+import Share from '@mui/icons-material/Share';
 import Divider from '@mui/material/Divider';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -22,6 +23,7 @@ import {
   fetchWorkspaces as fetchWorkspacesApi,
   updateWorkspace,
 } from '../../services/notoliApiClient';
+import WorkspaceShareDialog from '../../components/WorkspaceShareDialog';
 
 export default function Workspaces({ setAppBarHeader }) {
   // Misc
@@ -137,6 +139,23 @@ export default function Workspaces({ setAppBarHeader }) {
     setEditWorkspaceName('');
   };
 
+  // Share Workspace
+  const [sharingWorkspace, setSharingWorkspace] = useState(null);
+
+  const openShareDialog = (workspace) => {
+    setSharingWorkspace(workspace);
+    handleTripleDotClose();
+  };
+
+  const updateSharedWorkspace = (updatedWorkspace) => {
+    setLists((prev) =>
+      prev.map((workspace) =>
+        workspace.id === updatedWorkspace.id ? updatedWorkspace : workspace,
+      ),
+    );
+    setSharingWorkspace(updatedWorkspace);
+  };
+
   // Delete Workspace
   const onDelete = async (id) => {
     setError(null);
@@ -236,26 +255,45 @@ export default function Workspaces({ setAppBarHeader }) {
                   ) : (
                     <React.Fragment>
                       {/* Normal Mode */}
-                      <Button
-                        variant="text"
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          background: 'var(--secondary-background-color)',
-                          color: 'var(--secondary-color)',
-                        }}
-                        onClick={() => navigate(`/workspace/${list.id}`)}
-                      >
-                        <Typography
-                          variant="body1"
-                          fontWeight="bold"
-                          sx={{ fontSize: '1.1rem', textAlign: 'left' }}
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Button
+                          variant="text"
+                          sx={{
+                            flexGrow: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'flex-start',
+                            background: 'var(--secondary-background-color)',
+                            color: 'var(--secondary-color)',
+                          }}
+                          onClick={() => navigate(`/workspace/${list.id}`)}
                         >
-                          {list.name}
-                        </Typography>
-                        <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
-                      </Button>
+                          <Typography
+                            variant="body1"
+                            fontWeight="bold"
+                            sx={{ fontSize: '1.1rem', textAlign: 'left' }}
+                          >
+                            {list.name}
+                          </Typography>
+                        </Button>
+                        <IconButton
+                          size="small"
+                          aria-label={`Share ${list.name}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openShareDialog(list);
+                          }}
+                        >
+                          <Share />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          aria-label={`Workspace actions for ${list.name}`}
+                          onClick={(event) => handleTripleDotClick(event, list)}
+                        >
+                          <MoreVert />
+                        </IconButton>
+                      </Box>
                     </React.Fragment>
                   )}
                   <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
@@ -352,6 +390,16 @@ export default function Workspaces({ setAppBarHeader }) {
         >
           <MenuItem
             sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+            onClick={() => openShareDialog(selectedWorkspace)}
+          >
+            Share
+          </MenuItem>
+          <Divider
+            variant="middle"
+            sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+          />
+          <MenuItem
+            sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
             onClick={startEditing}
           >
             Edit
@@ -367,6 +415,13 @@ export default function Workspaces({ setAppBarHeader }) {
             Delete
           </MenuItem>
         </Menu>
+        <WorkspaceShareDialog
+          open={Boolean(sharingWorkspace)}
+          workspace={sharingWorkspace}
+          token={token}
+          onClose={() => setSharingWorkspace(null)}
+          onWorkspaceUpdated={updateSharedWorkspace}
+        />
       </Paper>
     </Container>
   );

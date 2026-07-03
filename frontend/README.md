@@ -27,6 +27,10 @@ Important pieces:
 - `src/App.js` still uses `process.env.PUBLIC_URL` as the React Router basename, which is empty for the subdomain build and remains useful for specialized local builds.
 - The container’s Nginx config (`frontend/nginx.conf`) serves `index.html` for deep links (`try_files ... /index.html`).
 
+## 🤝 Workspace Sharing
+
+The workspace list shows a Share button for each workspace. The Share dialog displays the workspace owner and collaborators. Owners can add collaborators by username/email and remove collaborators; non-owners can view access in read-only mode.
+
 ## 🔌 API Base URL
 
 API calls go through `src/services/notoliApiClient.js` (endpoints) via `src/services/requestClient.js` (request wrapper).

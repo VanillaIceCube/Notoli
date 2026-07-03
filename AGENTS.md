@@ -130,6 +130,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
   - Frontend: `https://notoli.judeandrewalaba.com`
   - Backend:
     - `https://notoli.judeandrewalaba.com/api`
+      - Workspace sharing uses `POST /api/workspaces/<id>/collaborators/` and `DELETE /api/workspaces/<id>/collaborators/<user_id>/`.
     - `https://notoli.judeandrewalaba.com/auth`
     - `https://notoli.judeandrewalaba.com/admin`
   - Frontend public auth routes:

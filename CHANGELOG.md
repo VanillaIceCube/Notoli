@@ -2,6 +2,9 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-06-30
+### Added
+- Added workspace sharing UI for viewing owners/collaborators and owner-only collaborator add/remove actions.
+- Added workspace collaborator API actions for adding users by username/email and removing collaborators.
 ### Fixed
 - Made shared workspace membership sufficient to retrieve newly created child todo lists and notes while preserving item-level collaborator access as additive sharing.
 

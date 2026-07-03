@@ -180,6 +180,71 @@ class WorkspaceApiTests(APITestCase):
             f"Unexpected outsider workspace included in list: {response.data}",
         )
 
+    def test_owner_can_add_workspace_collaborator_by_email(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace.id}/collaborators/",
+            {"identifier": self.collaborator.email},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertTrue(
+            self.workspace.collaborators.filter(pk=self.collaborator.pk).exists()
+        )
+        collaborator_ids = {
+            item["id"] for item in response.data["collaborators_details"]
+        }
+        self.assertIn(self.collaborator.id, collaborator_ids)
+
+    def test_non_owner_cannot_add_workspace_collaborator(self):
+        self.workspace.collaborators.add(self.collaborator)
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace.id}/collaborators/",
+            {"identifier": self.outsider.email},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 403, response.data)
+        self.assertFalse(
+            self.workspace.collaborators.filter(pk=self.outsider.pk).exists()
+        )
+
+    def test_owner_cannot_add_duplicate_workspace_collaborator(self):
+        self.workspace.collaborators.add(self.collaborator)
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace.id}/collaborators/",
+            {"identifier": self.collaborator.username},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertEqual(
+            self.workspace.collaborators.filter(pk=self.collaborator.pk).count(), 1
+        )
+
+    def test_owner_can_remove_workspace_collaborator(self):
+        self.workspace.collaborators.add(self.collaborator)
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(
+            f"/api/workspaces/{self.workspace.id}/collaborators/{self.collaborator.id}/"
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertFalse(
+            self.workspace.collaborators.filter(pk=self.collaborator.pk).exists()
+        )
+        collaborator_ids = {
+            item["id"] for item in response.data["collaborators_details"]
+        }
+        self.assertNotIn(self.collaborator.id, collaborator_ids)
+
+    def test_owner_cannot_remove_workspace_owner(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(
+            f"/api/workspaces/{self.workspace.id}/collaborators/{self.owner.id}/"
+        )
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertEqual(self.workspace.owner_id, self.owner.id)
+
     def test_retrieve_workspace_denied_for_outsider(self):
         self.client.force_authenticate(user=self.outsider)
         response = self.client.get(f"/api/workspaces/{self.workspace.id}/")

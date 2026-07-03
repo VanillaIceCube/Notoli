@@ -82,6 +82,19 @@ export const deleteWorkspace = (workspaceId, token) =>
     headers: jsonHeaders(token),
   });
 
+export const addWorkspaceCollaborator = (workspaceId, payload, token) =>
+  apiFetch(`/api/workspaces/${workspaceId}/collaborators/`, {
+    method: 'POST',
+    headers: jsonHeaders(token),
+    body: JSON.stringify(payload),
+  });
+
+export const removeWorkspaceCollaborator = (workspaceId, userId, token) =>
+  apiFetch(`/api/workspaces/${workspaceId}/collaborators/${userId}/`, {
+    method: 'DELETE',
+    headers: jsonHeaders(token),
+  });
+
 export const fetchTodoLists = (workspaceId, token) =>
   apiFetch(`/api/todolists/?workspace=${workspaceId}`, {
     headers: authHeader(token),

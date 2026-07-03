@@ -1,6 +1,20 @@
 export const workspaceFixtures = [
-  { id: 1, name: 'test_workspace_01' },
-  { id: 2, name: 'test_workspace_02' },
+  {
+    id: 1,
+    name: 'test_workspace_01',
+    owner: 1,
+    owner_details: { id: 1, username: 'owner', email: 'owner@example.com', display_name: 'owner' },
+    collaborators_details: [
+      { id: 2, username: 'collab', email: 'collab@example.com', display_name: 'collab' },
+    ],
+  },
+  {
+    id: 2,
+    name: 'test_workspace_02',
+    owner: 1,
+    owner_details: { id: 1, username: 'owner', email: 'owner@example.com', display_name: 'owner' },
+    collaborators_details: [],
+  },
 ];
 
 export const todoListFixtures = [
