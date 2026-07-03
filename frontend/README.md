@@ -2,9 +2,11 @@
 
 The Notoli frontend is a Create React App (CRA) single-page app with React Router and Material UI.
 
+UI styling conventions live in [`STYLE_GUIDE.md`](STYLE_GUIDE.md).
+
 ## 🧭 App Routes
 
-- `/` shows workspaces
+- `/` redirects authenticated users to their first workspace when one exists
 - `/workspace/:workspaceId` shows todo lists for a workspace
 - `/workspace/:workspaceId/todolist/:todoListId` shows notes for a todo list
 - Public auth routes: `/login`, `/register`, `/forgot-password`, `/reset-password?uid=<...>&token=<...>`
@@ -29,7 +31,7 @@ Important pieces:
 
 ## 🤝 Workspace Sharing
 
-The workspace list shows a Share button for each workspace. The Share dialog displays the workspace owner and collaborators. Owners can add collaborators by username/email and remove collaborators; non-owners can view access in read-only mode.
+Workspace management lives in the right sidebar. Open the Workspace list, use a workspace row's action menu, and choose Share. The Share dialog displays the workspace owner and collaborators. Owners can add collaborators by username/email and remove collaborators; non-owners can view access in read-only mode.
 
 ## 🔌 API Base URL
 

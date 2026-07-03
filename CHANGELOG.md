@@ -2,12 +2,19 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-07-03
+### Added
+- Added a frontend style guide with dialog divider guidance.
+- Moved workspace sharing access into the right sidebar workspace action menu.
 ### Fixed
+- Added matching icons to Edit and Delete workspace menu actions.
+- Moved workspace sharing add/remove errors to the app snackbar and refined sharing dialog member details.
 - Restricted workspace update and delete API actions to workspace owners so shared collaborators cannot rename or delete shared workspaces.
+- Styled the workspace sharing dialog with the app theme instead of the default white/gray Material UI surface.
 - Removed obsolete Docker Compose and Nginx HTTP/2 syntax warnings from local/proxy startup.
 - Switched the backend Docker image to the maintained `condaforge/miniforge3` base image.
 - Made frontend Prettier checks pass on Windows checkouts that use Git's default CRLF working-tree conversion.
 ### Changed
+- Removed the standalone Workspaces page; the root route now redirects authenticated users to their first workspace when possible.
 - Made frontend Docker builds use `npm ci` for lockfile-reproducible installs.
 - Applied existing backend Ruff and frontend Prettier formatting so local format checks pass.
 
