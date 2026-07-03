@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Note, TodoList, Workspace
+from .models import Note, TodoList, TodoListNotePosition, Workspace
 
 User = get_user_model()
 
@@ -994,4 +994,147 @@ class NoteApiTests(APITestCase):
             "todo_list",
             response.data,
             f"Expected workspace error to be raised first: {response.data}",
+        )
+
+
+class ReorderApiTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="reorder_owner",
+            email="reorder_owner@example.com",
+            password="owner-password",
+        )
+        self.workspace = Workspace.objects.create(
+            name="Workspace A",
+            description="",
+            owner=self.owner,
+            created_by=self.owner,
+            position=0,
+        )
+        self.other_workspace = Workspace.objects.create(
+            name="Workspace B",
+            description="",
+            owner=self.owner,
+            created_by=self.owner,
+            position=1,
+        )
+        self.todo_one = TodoList.objects.create(
+            name="List One",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=0,
+        )
+        self.todo_two = TodoList.objects.create(
+            name="List Two",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=1,
+        )
+        self.other_todo = TodoList.objects.create(
+            name="Other List",
+            workspace=self.other_workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=0,
+        )
+        self.note_one = Note.objects.create(
+            note="Note One",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=0,
+        )
+        self.note_two = Note.objects.create(
+            note="Note Two",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=1,
+        )
+        self.todo_one.notes.add(self.note_one, self.note_two)
+        TodoListNotePosition.objects.create(
+            todo_list=self.todo_one, note=self.note_one, position=0
+        )
+        TodoListNotePosition.objects.create(
+            todo_list=self.todo_one, note=self.note_two, position=1
+        )
+        self.client.force_authenticate(user=self.owner)
+
+    def test_reorder_todolists_is_scoped_to_workspace(self):
+        response = self.client.patch(
+            "/api/todolists/reorder/",
+            {
+                "workspace": self.workspace.id,
+                "ordered_ids": [self.todo_two.id, self.todo_one.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        ordered_ids = list(
+            TodoList.objects.filter(workspace=self.workspace).values_list(
+                "id", flat=True
+            )
+        )
+        self.assertEqual(ordered_ids, [self.todo_two.id, self.todo_one.id])
+
+        response = self.client.patch(
+            "/api/todolists/reorder/",
+            {
+                "workspace": self.workspace.id,
+                "ordered_ids": [self.other_todo.id, self.todo_one.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_reorder_notes_persists_for_todo_list(self):
+        response = self.client.patch(
+            "/api/notes/reorder/",
+            {
+                "todo_list": self.todo_one.id,
+                "ordered_ids": [self.note_two.id, self.note_one.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        response = self.client.get(f"/api/notes/?todo_list={self.todo_one.id}")
+        self.assertEqual(
+            [item["id"] for item in response.data], [self.note_two.id, self.note_one.id]
+        )
+
+    def test_reorder_notes_is_scoped_per_todo_list(self):
+        shared_list = TodoList.objects.create(
+            name="Shared List",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=2,
+        )
+        shared_list.notes.add(self.note_one, self.note_two)
+        TodoListNotePosition.objects.create(
+            todo_list=shared_list, note=self.note_one, position=0
+        )
+        TodoListNotePosition.objects.create(
+            todo_list=shared_list, note=self.note_two, position=1
+        )
+
+        response = self.client.patch(
+            "/api/notes/reorder/",
+            {
+                "todo_list": self.todo_one.id,
+                "ordered_ids": [self.note_two.id, self.note_one.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+        response = self.client.get(f"/api/notes/?todo_list={shared_list.id}")
+        self.assertEqual(
+            [item["id"] for item in response.data], [self.note_one.id, self.note_two.id]
         )

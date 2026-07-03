@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
+import DragIndicator from '@mui/icons-material/DragIndicator';
 import MoreVert from '@mui/icons-material/MoreVert';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
@@ -21,8 +22,10 @@ import {
   deleteNote,
   fetchNotes as fetchNotesApi,
   fetchTodoList as fetchTodoListApi,
+  reorderNotes,
   updateNote,
 } from '../../services/notoliApiClient';
+import { useReorderableList } from './reorderUtils';
 
 export default function Notes({ setAppBarHeader }) {
   // Pull Todolist ID
@@ -68,6 +71,15 @@ export default function Notes({ setAppBarHeader }) {
       fetchTodoListName();
     }
   }, [todoListId, fetchNotes, fetchTodoListName]);
+
+  const persistOrder = (orderedIds) => reorderNotes(todoListId, orderedIds, token);
+
+  const { getHandleProps, getRowProps } = useReorderableList({
+    lists,
+    setLists,
+    persistOrder,
+    setError,
+  });
 
   // Triple Dot Menu Functions
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
@@ -244,7 +256,10 @@ export default function Notes({ setAppBarHeader }) {
                     <React.Fragment>
                       {/* Normal Mode */}
                       <Button
+                        component="div"
                         variant="text"
+                        data-testid={`note-row-${list.id}`}
+                        {...getRowProps(list.id)}
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
@@ -253,10 +268,22 @@ export default function Notes({ setAppBarHeader }) {
                           color: 'var(--secondary-color)',
                         }}
                       >
+                        <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
+                          <IconButton
+                            aria-label={`Drag ${list.name ?? list.note}`}
+                            data-testid={`drag-handle-${list.id}`}
+                            size="small"
+                            sx={{ color: 'var(--secondary-color)', cursor: 'grab' }}
+                            onClick={(event) => event.stopPropagation()}
+                            {...getHandleProps(list.id)}
+                          >
+                            <DragIndicator />
+                          </IconButton>
+                        </Box>
                         <Typography
                           variant="body1"
                           fontWeight="bold"
-                          sx={{ fontSize: '1.1rem', textAlign: 'left' }}
+                          sx={{ flexGrow: 1, fontSize: '1.1rem', textAlign: 'left' }}
                         >
                           {list.note}
                         </Typography>

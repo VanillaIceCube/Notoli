@@ -1,6 +1,18 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-06-30
+### Added
+- Added drag-handle reordering for workspaces, todo lists, and notes with persisted backend order.
+- Added reorder API endpoints for workspaces, todo lists, and notes.
+### Fixed
+- Canceled drags now revert any previewed row order instead of leaving an unsaved order in the UI.
+- Note reordering is now scoped per todo list relationship so shared notes can have different order in different todo lists.
+### Changed
+- Drag handles now appear on the left side of reorderable rows, and drag reordering now animates rows as they switch places while the user drags over the list.
+### Removed
+- Removed screenshot verification standard documentation from this drag-and-drop change set.
+
 ## 2026-06-29
 ### Changed
 - Renamed the Django project package from `backend/backend` to `backend/app` and updated settings, WSGI/ASGI, Docker, and documentation references.

@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
+import DragIndicator from '@mui/icons-material/DragIndicator';
 import MoreVert from '@mui/icons-material/MoreVert';
 import Divider from '@mui/material/Divider';
 import { useNavigate } from 'react-router-dom';
@@ -20,8 +21,10 @@ import {
   createWorkspace,
   deleteWorkspace,
   fetchWorkspaces as fetchWorkspacesApi,
+  reorderWorkspaces,
   updateWorkspace,
 } from '../../services/notoliApiClient';
+import { useReorderableList } from './reorderUtils';
 
 export default function Workspaces({ setAppBarHeader }) {
   // Misc
@@ -52,6 +55,15 @@ export default function Workspaces({ setAppBarHeader }) {
     setAppBarHeader('');
     fetchWorkspaces();
   }, [fetchWorkspaces, setAppBarHeader]);
+
+  const persistOrder = (orderedIds) => reorderWorkspaces(orderedIds, token);
+
+  const { getHandleProps, getRowProps } = useReorderableList({
+    lists,
+    setLists,
+    persistOrder,
+    setError,
+  });
 
   // Triple Dot Menu Functions
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
@@ -237,6 +249,7 @@ export default function Workspaces({ setAppBarHeader }) {
                     <React.Fragment>
                       {/* Normal Mode */}
                       <Button
+                        component="div"
                         variant="text"
                         sx={{
                           display: 'flex',
@@ -246,11 +259,25 @@ export default function Workspaces({ setAppBarHeader }) {
                           color: 'var(--secondary-color)',
                         }}
                         onClick={() => navigate(`/workspace/${list.id}`)}
+                        data-testid={`workspace-row-${list.id}`}
+                        {...getRowProps(list.id)}
                       >
+                        <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
+                          <IconButton
+                            aria-label={`Drag ${list.name ?? list.note}`}
+                            data-testid={`drag-handle-${list.id}`}
+                            size="small"
+                            sx={{ color: 'var(--secondary-color)', cursor: 'grab' }}
+                            onClick={(event) => event.stopPropagation()}
+                            {...getHandleProps(list.id)}
+                          >
+                            <DragIndicator />
+                          </IconButton>
+                        </Box>
                         <Typography
                           variant="body1"
                           fontWeight="bold"
-                          sx={{ fontSize: '1.1rem', textAlign: 'left' }}
+                          sx={{ flexGrow: 1, fontSize: '1.1rem', textAlign: 'left' }}
                         >
                           {list.name}
                         </Typography>

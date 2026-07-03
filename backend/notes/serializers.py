@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
-from .models import Note, TodoList, Workspace
+from .models import Note, TodoList, TodoListNotePosition, Workspace
 
 
 class WorkspaceSerializer(serializers.ModelSerializer):
@@ -135,6 +135,15 @@ class NoteSerializer(serializers.ModelSerializer):
 
         if todo_list is not None:
             todo_list.notes.add(note)
+            TodoListNotePosition.objects.get_or_create(
+                todo_list=todo_list,
+                note=note,
+                defaults={
+                    "position": TodoListNotePosition.objects.filter(
+                        todo_list=todo_list
+                    ).count()
+                },
+            )
 
         return note
 
@@ -147,5 +156,14 @@ class NoteSerializer(serializers.ModelSerializer):
 
         if todo_list is not None:
             todo_list.notes.add(note)
+            TodoListNotePosition.objects.get_or_create(
+                todo_list=todo_list,
+                note=note,
+                defaults={
+                    "position": TodoListNotePosition.objects.filter(
+                        todo_list=todo_list
+                    ).count()
+                },
+            )
 
         return note
