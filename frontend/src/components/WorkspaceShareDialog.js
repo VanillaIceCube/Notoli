@@ -1,20 +1,20 @@
 import React, { useMemo, useState } from 'react';
 import {
   Alert,
+  Avatar,
   Box,
   Button,
+  Chip,
   Dialog,
   DialogContent,
   DialogTitle,
   Divider,
   IconButton,
-  List,
-  ListItem,
-  ListItemText,
   Stack,
   TextField,
   Typography,
 } from '@mui/material';
+import Close from '@mui/icons-material/Close';
 import Delete from '@mui/icons-material/Delete';
 import PersonAdd from '@mui/icons-material/PersonAdd';
 import { addWorkspaceCollaborator, removeWorkspaceCollaborator } from '../services/notoliApiClient';
@@ -22,6 +22,15 @@ import { getResponseErrorMessage } from '../services/authSession';
 
 const userLabel = (user) =>
   user?.display_name || user?.username || user?.email || `User ${user?.id}`;
+const userEmail = (user) => user?.email || '';
+const userInitials = (user) => {
+  const base = user?.display_name || user?.username || user?.email || '?';
+  const parts = base
+    .split(/[\s._@-]+/)
+    .filter(Boolean)
+    .slice(0, 2);
+  return (parts.length ? parts.map((part) => part[0]).join('') : base.slice(0, 2)).toUpperCase();
+};
 
 const alertStyles = {
   bgcolor: 'var(--background-color)',
@@ -32,60 +41,93 @@ const alertStyles = {
 const textFieldStyles = {
   '& .MuiInputBase-root': {
     color: 'var(--secondary-color)',
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    bgcolor: 'rgba(255, 255, 255, 0.72)',
+    borderRadius: 2,
   },
   '& .MuiInputLabel-root': { color: 'var(--secondary-color)' },
   '& .MuiOutlinedInput-notchedOutline': {
-    borderColor: 'var(--secondary-color)',
+    borderColor: 'rgba(85, 85, 85, 0.28)',
   },
   '&:hover .MuiOutlinedInput-notchedOutline': {
-    borderColor: 'var(--background-color)',
+    borderColor: 'var(--secondary-color)',
   },
 };
 
-const insetDividerStyles = {
-  borderBottomWidth: 2,
-  bgcolor: 'var(--secondary-color)',
-  mx: 3,
-};
+function AccessRow({ user, role, canRemove, removing, saving, onRemove }) {
+  const label = userLabel(user);
 
-function UserAccessSection({ title, users, emptyMessage, renderAction }) {
   return (
-    <Box>
-      <Typography variant="subtitle2" fontWeight="bold" sx={{ textTransform: 'uppercase' }}>
-        {title}
-      </Typography>
-      {users.length ? (
-        <List dense disablePadding sx={{ pt: 0.5 }}>
-          {users.map((user) => (
-            <ListItem
-              key={user?.id || title}
-              disableGutters
-              secondaryAction={renderAction?.(user)}
-              sx={{ alignItems: 'flex-start', py: 0.75 }}
-            >
-              <ListItemText
-                primary={userLabel(user)}
-                secondary={
-                  <Stack spacing={0.25} sx={{ mt: 0.5 }}>
-                    <Typography component="span" variant="caption" sx={{ color: 'inherit' }}>
-                      Username: {user?.username || 'Not set'}
-                    </Typography>
-                    <Typography component="span" variant="caption" sx={{ color: 'inherit' }}>
-                      Email: {user?.email || 'Not set'}
-                    </Typography>
-                  </Stack>
-                }
-                slotProps={{
-                  primary: { sx: { fontWeight: 'bold', color: 'var(--secondary-color)' } },
-                  secondary: { component: 'div', sx: { color: 'var(--secondary-color)' } },
-                }}
-              />
-            </ListItem>
-          ))}
-        </List>
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: '40px minmax(0, 1fr) auto auto',
+        alignItems: 'center',
+        columnGap: 1.5,
+        py: 1.25,
+      }}
+    >
+      <Avatar
+        sx={{
+          width: 36,
+          height: 36,
+          bgcolor: 'var(--secondary-color)',
+          color: 'var(--secondary-background-color)',
+          fontSize: '0.82rem',
+          fontWeight: 'bold',
+        }}
+      >
+        {userInitials(user)}
+      </Avatar>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: 'var(--secondary-color)',
+            fontWeight: 'bold',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {label}
+        </Typography>
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'rgba(85, 85, 85, 0.82)',
+            display: 'block',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {userEmail(user) || 'No email on file'}
+        </Typography>
+      </Box>
+      <Chip
+        label={role}
+        size="small"
+        variant={role === 'Owner' ? 'filled' : 'outlined'}
+        sx={{
+          borderColor: 'rgba(85, 85, 85, 0.38)',
+          bgcolor: role === 'Owner' ? 'rgba(85, 85, 85, 0.14)' : 'transparent',
+          color: 'var(--secondary-color)',
+          fontWeight: 'bold',
+          height: 24,
+        }}
+      />
+      {canRemove ? (
+        <IconButton
+          size="small"
+          aria-label={`Remove ${label}`}
+          onClick={onRemove}
+          disabled={removing || saving}
+          sx={{ color: 'var(--secondary-color)' }}
+        >
+          <Delete fontSize="small" />
+        </IconButton>
       ) : (
-        <Typography sx={{ py: 1, color: 'var(--secondary-color)' }}>{emptyMessage}</Typography>
+        <Box sx={{ width: 34 }} />
       )}
     </Box>
   );
@@ -112,6 +154,10 @@ export default function WorkspaceShareDialog({
     ((currentUsername && owner.username === currentUsername) ||
       (currentEmail && owner.email === currentEmail)),
   );
+  const people = [
+    ...(owner ? [{ user: owner, role: 'Owner' }] : []),
+    ...collaborators.map((collaborator) => ({ user: collaborator, role: 'Collaborator' })),
+  ];
 
   const showError = (message) => {
     showSnackbar?.('error', message);
@@ -119,7 +165,7 @@ export default function WorkspaceShareDialog({
 
   const handleAdd = async () => {
     const trimmed = identifier.trim();
-    if (!trimmed || !workspace) return;
+    if (!trimmed || !workspace || !isOwner) return;
 
     const duplicate = collaborators.some(
       (collaborator) =>
@@ -154,7 +200,7 @@ export default function WorkspaceShareDialog({
   };
 
   const handleRemove = async (collaborator) => {
-    if (!workspace || !collaborator?.id || collaborator.id === owner?.id) return;
+    if (!workspace || !collaborator?.id || collaborator.id === owner?.id || !isOwner) return;
 
     setRemovingUserId(collaborator.id);
     try {
@@ -175,69 +221,67 @@ export default function WorkspaceShareDialog({
       open={open}
       onClose={onClose}
       fullWidth
-      maxWidth="sm"
+      maxWidth={false}
       slotProps={{
         paper: {
           sx: {
-            backgroundColor: 'var(--secondary-background-color)',
+            width: 'min(480px, calc(100vw - 32px))',
+            bgcolor: '#fffaf0',
             color: 'var(--secondary-color)',
-            border: '2.5px solid var(--background-color)',
-            borderRadius: 1.5,
+            border: '1px solid rgba(85, 85, 85, 0.18)',
+            borderRadius: 2,
+            boxShadow: '0 18px 50px rgba(0,0,0,0.22)',
           },
         },
       }}
     >
-      <DialogTitle sx={{ fontWeight: 'bold', pb: 1 }}>Share {workspace?.name}</DialogTitle>
-      <Divider sx={insetDividerStyles} />
-      <DialogContent>
-        <Stack spacing={2} sx={{ pt: 1 }}>
-          <UserAccessSection
-            title="Workspace Owner"
-            users={owner ? [owner] : []}
-            emptyMessage="No owner found."
-          />
-
-          <Divider sx={insetDividerStyles} />
-
-          <UserAccessSection
-            title="Collaborators"
-            users={collaborators}
-            emptyMessage="No collaborators yet."
-            renderAction={(collaborator) =>
-              isOwner ? (
-                <IconButton
-                  edge="end"
-                  aria-label={`Remove ${userLabel(collaborator)}`}
-                  onClick={() => handleRemove(collaborator)}
-                  disabled={removingUserId === collaborator.id || savingAdd}
-                  sx={{ color: 'var(--secondary-color)' }}
-                >
-                  <Delete />
-                </IconButton>
-              ) : null
-            }
-          />
-
-          {isOwner ? (
+      <DialogTitle
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+          px: 3,
+          pt: 2.5,
+          pb: 1,
+          color: 'var(--secondary-color)',
+          fontWeight: 'bold',
+        }}
+      >
+        <Typography component="span" variant="h6" fontWeight="bold" noWrap>
+          Share “{workspace?.name}”
+        </Typography>
+        <IconButton aria-label="Close sharing dialog" onClick={onClose} size="small">
+          <Close fontSize="small" />
+        </IconButton>
+      </DialogTitle>
+      <DialogContent sx={{ px: 3, pt: 1.5, pb: 2.75 }}>
+        <Stack spacing={2.25}>
+          <Box>
+            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+              Invite a collaborator
+            </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
               <TextField
                 fullWidth
                 size="small"
-                label="Username or email"
+                label="Username or email address"
+                placeholder="Username or email address"
                 value={identifier}
                 onChange={(event) => setIdentifier(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') handleAdd();
                 }}
-                disabled={savingAdd || Boolean(removingUserId)}
+                disabled={!isOwner || savingAdd || Boolean(removingUserId)}
                 sx={textFieldStyles}
               />
               <Button
                 variant="contained"
                 startIcon={<PersonAdd />}
                 onClick={handleAdd}
-                disabled={!identifier.trim() || savingAdd || Boolean(removingUserId)}
+                disabled={!isOwner || !identifier.trim() || savingAdd || Boolean(removingUserId)}
                 sx={{
+                  minWidth: { xs: '100%', sm: 92 },
                   bgcolor: 'var(--secondary-color)',
                   color: 'var(--text-color)',
                   '&:hover': { bgcolor: 'var(--background-color)' },
@@ -246,11 +290,44 @@ export default function WorkspaceShareDialog({
                 {savingAdd ? 'Adding...' : 'Add'}
               </Button>
             </Stack>
-          ) : (
+          </Box>
+
+          <Box>
+            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+              People with access
+            </Typography>
+            <Divider sx={{ borderColor: 'rgba(85, 85, 85, 0.26)' }} />
+            {people.length ? (
+              <Box sx={{ py: 0.25 }}>
+                {people.map(({ user, role }) => (
+                  <AccessRow
+                    key={`${role}-${user?.id}`}
+                    user={user}
+                    role={role}
+                    saving={savingAdd}
+                    removing={removingUserId === user?.id}
+                    canRemove={role === 'Collaborator' && isOwner}
+                    onRemove={() => handleRemove(user)}
+                  />
+                ))}
+              </Box>
+            ) : (
+              <Typography sx={{ py: 1.25, color: 'var(--secondary-color)' }}>
+                No people have access yet.
+              </Typography>
+            )}
+            <Divider sx={{ borderColor: 'rgba(85, 85, 85, 0.26)' }} />
+          </Box>
+
+          {!isOwner && (
             <Alert severity="info" sx={alertStyles}>
               Only the workspace owner can add or remove collaborators.
             </Alert>
           )}
+
+          <Typography variant="caption" sx={{ color: 'rgba(85, 85, 85, 0.82)' }}>
+            Only owners can manage sharing.
+          </Typography>
         </Stack>
       </DialogContent>
     </Dialog>

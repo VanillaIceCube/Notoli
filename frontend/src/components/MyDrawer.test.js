@@ -242,16 +242,22 @@ describe('MyDrawer', () => {
     await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
     await userEvent.click(screen.getByRole('menuitem', { name: /share/i }));
 
-    expect(screen.getByRole('heading', { name: /share test_workspace_01/i })).toBeInTheDocument();
-    expect(screen.getByText('Workspace Owner')).toBeInTheDocument();
-    expect(screen.getByText('Username: owner')).toBeInTheDocument();
-    expect(screen.getByText('Email: owner@example.com')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /share.*test_workspace_01/i })).toBeInTheDocument();
+    expect(screen.getByText('Invite a collaborator')).toBeInTheDocument();
+    expect(screen.getByText('People with access')).toBeInTheDocument();
     expect(screen.getByText('owner')).toBeInTheDocument();
+    expect(screen.getByText('owner@example.com')).toBeInTheDocument();
+    expect(screen.getByText('Owner')).toBeInTheDocument();
     expect(screen.getByText('collab')).toBeInTheDocument();
-    expect(screen.getByText('Username: collab')).toBeInTheDocument();
-    expect(screen.getByText('Email: collab@example.com')).toBeInTheDocument();
-    expect(screen.getByLabelText(/username or email/i)).toBeInTheDocument();
+    expect(screen.getByText('collab@example.com')).toBeInTheDocument();
+    expect(screen.getByText('Collaborator')).toBeInTheDocument();
+    expect(screen.queryByText(/username:/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/email:/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/username or email address/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^add$/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /remove collab/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /remove owner/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /close sharing dialog/i })).toBeInTheDocument();
   });
 
   test('when the owner adds a collaborator from the drawer share modal, the modal list updates', async () => {
@@ -271,7 +277,7 @@ describe('MyDrawer', () => {
 
     await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[1]);
     await userEvent.click(screen.getByRole('menuitem', { name: /share/i }));
-    await userEvent.type(screen.getByLabelText(/username or email/i), 'new@example.com');
+    await userEvent.type(screen.getByLabelText(/username or email address/i), 'new@example.com');
     await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
 
     await waitFor(() => {
@@ -298,7 +304,10 @@ describe('MyDrawer', () => {
 
     await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[1]);
     await userEvent.click(screen.getByRole('menuitem', { name: /share/i }));
-    await userEvent.type(screen.getByLabelText(/username or email/i), 'missing@example.com');
+    await userEvent.type(
+      screen.getByLabelText(/username or email address/i),
+      'missing@example.com',
+    );
     await userEvent.click(screen.getByRole('button', { name: /^add$/i }));
 
     await waitFor(() => {
@@ -327,7 +336,10 @@ describe('MyDrawer', () => {
     await waitFor(() => {
       expect(removeWorkspaceCollaborator).toHaveBeenCalledWith(1, 2, 'token');
     });
-    expect(await screen.findByText(/no collaborators yet/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('collab')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('Owner')).toBeInTheDocument();
   });
 
   test('when a non-owner opens Share from the drawer, add and remove controls are hidden', async () => {
@@ -342,7 +354,8 @@ describe('MyDrawer', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: /share/i }));
 
     expect(screen.getByText(/only the workspace owner/i)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/username or email/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/username or email address/i)).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^add$/i })).toBeDisabled();
     expect(screen.queryByRole('button', { name: /remove collab/i })).not.toBeInTheDocument();
   });
 });
