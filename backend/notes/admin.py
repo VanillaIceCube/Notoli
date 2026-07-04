@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Note, TodoList, Workspace
+from .models import Note, TodoList, TodoListNote, Workspace
 
 
 def _summarize_users(users, limit: int = 3) -> str:
@@ -86,11 +86,11 @@ class TodoListAdmin(admin.ModelAdmin):
         "collaborators__username",
         "collaborators__email",
     )
-    autocomplete_fields = ("workspace", "notes", "owner", "collaborators", "created_by")
+    autocomplete_fields = ("workspace", "owner", "collaborators", "created_by")
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (
         (None, {"fields": ("name", "description")}),
-        ("Scope", {"fields": ("workspace", "notes")}),
+        ("Scope", {"fields": ("workspace",)}),
         ("Ownership", {"fields": ("owner", "collaborators")}),
         ("Metadata", {"fields": ("created_by", "created_at", "updated_at")}),
     )
@@ -106,6 +106,14 @@ class TodoListAdmin(admin.ModelAdmin):
     @admin.display(description="Collaborators")
     def collaborators_display(self, obj):
         return _summarize_users(obj.collaborators.all())
+
+
+@admin.register(TodoListNote)
+class TodoListNoteAdmin(admin.ModelAdmin):
+    list_display = ("todolist", "note", "position")
+    list_filter = ("todolist__workspace", "todolist")
+    search_fields = ("todolist__name", "note__note")
+    autocomplete_fields = ("todolist", "note")
 
 
 @admin.register(Note)

@@ -1,19 +1,36 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Typography,
-  Container,
-  Paper,
-  Stack,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
+  Box,
   Button,
+  Checkbox,
+  Container,
+  IconButton,
   Menu,
   MenuItem,
-  Box,
+  Paper,
+  Stack,
   TextField,
-  IconButton,
-  Checkbox,
+  Typography,
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
+import DragIndicator from '@mui/icons-material/DragIndicator';
 import MoreVert from '@mui/icons-material/MoreVert';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
@@ -22,6 +39,7 @@ import {
   deleteNote,
   fetchNotes as fetchNotesApi,
   fetchTodoList as fetchTodoListApi,
+  reorderNotes,
   updateNote,
 } from '../../services/notoliApiClient';
 
@@ -29,15 +47,40 @@ const NOTE_STATUS_NOT_STARTED = 'Not Started';
 const NOTE_STATUS_COMPLETE = 'Complete';
 const isNoteComplete = (note) => note.status === NOTE_STATUS_COMPLETE;
 
-export default function Notes({ setAppBarHeader }) {
-  // Pull Todolist ID
-  const { todoListId } = useParams();
+function SortableNoteRow({ note, children }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: note.id,
+  });
 
-  // Pull Note List
+  return (
+    <Box
+      ref={setNodeRef}
+      data-testid={`note-row-${note.id}`}
+      sx={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.78 : 1,
+        zIndex: isDragging ? 1 : 'auto',
+      }}
+    >
+      {children({ handleProps: { ...attributes, ...listeners } })}
+    </Box>
+  );
+}
+
+export default function Notes({ setAppBarHeader }) {
+  const { todoListId } = useParams();
   const token = sessionStorage.getItem('accessToken');
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isReordering, setIsReordering] = useState(false);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const fetchNotes = useCallback(async () => {
     setLoading(true);
@@ -54,7 +97,6 @@ export default function Notes({ setAppBarHeader }) {
     }
   }, [token, todoListId]);
 
-  // Fetch Todo List required for Title Header
   const fetchTodoListName = useCallback(async () => {
     if (!todoListId) return;
     try {
@@ -74,7 +116,25 @@ export default function Notes({ setAppBarHeader }) {
     }
   }, [todoListId, fetchNotes, fetchTodoListName]);
 
-  // Triple Dot Menu Functions
+  const [pageMenuAnchorElement, setPageMenuAnchorElement] = useState(null);
+  const pageMenuOpen = Boolean(pageMenuAnchorElement);
+
+  const handlePageMenuClose = () => {
+    setPageMenuAnchorElement(null);
+  };
+
+  const startReordering = () => {
+    closeEdit();
+    setIsAdding(false);
+    handleTripleDotClose();
+    handlePageMenuClose();
+    setIsReordering(true);
+  };
+
+  const stopReordering = () => {
+    setIsReordering(false);
+  };
+
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
   const [selectedNote, setSelectedNote] = useState(null);
   const open = Boolean(tripleDotAnchorElement);
@@ -89,7 +149,6 @@ export default function Notes({ setAppBarHeader }) {
     setSelectedNote(null);
   };
 
-  // Add New Note
   const [isAdding, setIsAdding] = useState(false);
   const [newNote, setNewNote] = useState('');
 
@@ -108,7 +167,6 @@ export default function Notes({ setAppBarHeader }) {
         token,
       );
 
-      // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const created = await response.json();
       setLists((prev) => [...prev, created]);
@@ -120,7 +178,6 @@ export default function Notes({ setAppBarHeader }) {
     }
   };
 
-  // Edit Note
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editNote, setEditNote] = useState('');
 
@@ -137,7 +194,6 @@ export default function Notes({ setAppBarHeader }) {
     try {
       const response = await updateNote(editingNoteId, { note: editNote }, token);
 
-      // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
       setLists((prev) =>
@@ -180,14 +236,12 @@ export default function Notes({ setAppBarHeader }) {
     setEditNote('');
   };
 
-  // Delete Note
   const onDelete = async (id) => {
     setError(null);
 
     try {
       const response = await deleteNote(id, token);
 
-      // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       setLists((prev) => prev.filter((note) => note.id !== id));
     } catch (err) {
@@ -195,6 +249,188 @@ export default function Notes({ setAppBarHeader }) {
     } finally {
       handleTripleDotClose();
     }
+  };
+
+  const onDragEnd = async ({ active, over }) => {
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = lists.findIndex((note) => note.id === active.id);
+    const newIndex = lists.findIndex((note) => note.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const previousNotes = lists;
+    const reorderedNotes = arrayMove(lists, oldIndex, newIndex);
+    setLists(reorderedNotes);
+    setError(null);
+
+    try {
+      const response = await reorderNotes(
+        todoListId,
+        reorderedNotes.map((note) => note.id),
+        token,
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const updatedNotes = await response.json();
+      setLists(updatedNotes);
+    } catch (err) {
+      setLists(previousNotes);
+      setError(err.toString());
+    }
+  };
+
+  const renderRowContent = (list, handleProps = null) => {
+    if (editingNoteId === list.id) {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
+          <TextField
+            autoFocus
+            variant="standard"
+            size="small"
+            sx={{
+              flexGrow: 1,
+              mr: 1,
+              justifyContent: 'space-between',
+              color: 'var(--secondary-color)',
+            }}
+            slotProps={{
+              input: {
+                sx: {
+                  color: 'var(--secondary-color)',
+                  '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                },
+              },
+            }}
+            value={editNote}
+            onChange={(event) => setEditNote(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') onEdit();
+              if (event.key === 'Escape') closeEdit();
+            }}
+          />
+          <IconButton size="small" onClick={onEdit} disabled={!editNote.trim()}>
+            <Add />
+          </IconButton>
+          <IconButton size="small" onClick={closeEdit}>
+            <Close />
+          </IconButton>
+        </Box>
+      );
+    }
+
+    const complete = isNoteComplete(list);
+    const rowSx = {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      background: 'var(--secondary-background-color)',
+      color: 'var(--secondary-color)',
+      borderRadius: 1,
+      width: '100%',
+      opacity: complete && !isReordering ? 0.72 : 1,
+    };
+
+    const rowContent = (
+      <>
+        {!isReordering && (
+          <Checkbox
+            checked={complete}
+            onClick={(event) => event.stopPropagation()}
+            onChange={(event) => onToggleStatus(event, list)}
+            inputProps={{ 'aria-label': `Mark ${list.note} complete` }}
+            sx={{
+              color: 'var(--secondary-color)',
+              p: 0.5,
+              mr: 1,
+              '&.Mui-checked': { color: 'var(--secondary-color)' },
+            }}
+          />
+        )}
+        <Typography
+          variant="body1"
+          fontWeight="bold"
+          sx={{
+            flexGrow: 1,
+            fontSize: '1.1rem',
+            textAlign: 'left',
+            textDecoration: complete && !isReordering ? 'line-through' : 'none',
+          }}
+        >
+          {list.note}
+        </Typography>
+        {isReordering ? (
+          <IconButton
+            size="small"
+            aria-label={`Drag ${list.note}`}
+            data-testid={`note-drag-handle-${list.id}`}
+            sx={{ color: 'var(--secondary-color)', cursor: 'grab' }}
+            {...handleProps}
+          >
+            <DragIndicator />
+          </IconButton>
+        ) : (
+          <IconButton
+            size="small"
+            aria-label={`Note actions for ${list.note}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleTripleDotClick(event, list);
+            }}
+            sx={{ color: 'var(--secondary-color)' }}
+          >
+            <MoreVert />
+          </IconButton>
+        )}
+      </>
+    );
+
+    if (isReordering) {
+      return (
+        <Box data-testid={`note-reorder-row-${list.id}`} sx={{ ...rowSx, px: 1, py: 0.5 }}>
+          {rowContent}
+        </Box>
+      );
+    }
+
+    return <Box sx={rowSx}>{rowContent}</Box>;
+  };
+
+  const renderListRows = () => {
+    if (!lists.length) {
+      return (
+        <Typography variant="body1" align="center" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+          No notes found.
+        </Typography>
+      );
+    }
+
+    if (isReordering) {
+      return (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext
+            items={lists.map((list) => list.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {lists.map((list) => (
+              <SortableNoteRow key={list.id} note={list}>
+                {({ handleProps }) => (
+                  <>
+                    {renderRowContent(list, handleProps)}
+                    <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
+                  </>
+                )}
+              </SortableNoteRow>
+            ))}
+          </SortableContext>
+        </DndContext>
+      );
+    }
+
+    return lists.map((list) => (
+      <React.Fragment key={list.id}>
+        {renderRowContent(list)}
+        <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
+      </React.Fragment>
+    ));
   };
 
   return (
@@ -206,199 +442,140 @@ export default function Notes({ setAppBarHeader }) {
         elevation={3}
         sx={{ px: 1.5, py: 1.5, width: '100%', background: 'var(--secondary-background-color)' }}
       >
-        {/* Header */}
-        <Typography
-          variant="h4"
-          align="center"
-          gutterBottom
-          sx={{ mt: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)' }}
+        <Box
+          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5 }}
         >
-          Notes
-        </Typography>
+          <Box sx={{ width: 40 }} />
+          <Typography
+            variant="h4"
+            align="center"
+            gutterBottom
+            sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
+          >
+            {isReordering ? 'Reorder Notes' : 'Notes'}
+          </Typography>
+          {isReordering ? (
+            <Button
+              variant="text"
+              size="small"
+              onClick={stopReordering}
+              sx={{ minWidth: 40, color: 'var(--secondary-color)', fontWeight: 'bold' }}
+            >
+              Done
+            </Button>
+          ) : (
+            <IconButton
+              size="small"
+              aria-label="Notes page actions"
+              onClick={(event) => setPageMenuAnchorElement(event.currentTarget)}
+              sx={{ color: 'var(--secondary-color)' }}
+            >
+              <MoreVert />
+            </IconButton>
+          )}
+        </Box>
 
-        {/* This is for loading */}
-        {loading && <Typography align="center"> Loading… </Typography>}
+        {loading && <Typography align="center"> Loading... </Typography>}
 
-        {/* This is for errors */}
         {error && (
           <Typography color="error" align="center">
             Error: {error}
           </Typography>
         )}
 
-        {/* If we're done loading and there are no errors */}
         <Divider
           sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }}
         />
         {!loading && !error && (
           <Stack spacing={1}>
-            {lists.length ? (
-              lists.map((list) => {
-                const complete = isNoteComplete(list);
-
-                return (
-                  <React.Fragment key={list.id}>
-                    {editingNoteId === list.id ? (
-                      <React.Fragment>
-                        {/* Editing Mode */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
-                          <TextField
-                            autoFocus
-                            variant="standard"
-                            size="small"
-                            sx={{
-                              flexGrow: 1,
-                              mr: 1,
-                              justifyContent: 'space-between',
-                              color: 'var(--secondary-color)',
-                            }}
-                            slotProps={{
-                              input: {
-                                sx: {
-                                  color: 'var(--secondary-color)',
-                                  '&:after': { borderBottomColor: 'var(--secondary-color)' },
-                                },
-                              },
-                            }}
-                            value={editNote}
-                            onChange={(event) => setEditNote(event.target.value)}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter') onEdit();
-                              if (event.key === 'Escape') closeEdit();
-                            }}
-                          />
-                          <IconButton size="small" onClick={onEdit} disabled={!editNote.trim()}>
-                            <Add />
-                          </IconButton>
-                          <IconButton size="small" onClick={closeEdit}>
-                            <Close />
-                          </IconButton>
-                        </Box>
-                      </React.Fragment>
-                    ) : (
-                      <React.Fragment>
-                        {/* Normal Mode */}
-                        <Button
-                          variant="text"
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            background: 'var(--secondary-background-color)',
-                            color: 'var(--secondary-color)',
-                            opacity: complete ? 0.72 : 1,
-                          }}
-                        >
-                          <Checkbox
-                            checked={complete}
-                            onClick={(event) => event.stopPropagation()}
-                            onChange={(event) => onToggleStatus(event, list)}
-                            inputProps={{ 'aria-label': `Mark ${list.note} complete` }}
-                            sx={{
-                              color: 'var(--secondary-color)',
-                              p: 0.5,
-                              mr: 1,
-                              '&.Mui-checked': { color: 'var(--secondary-color)' },
-                            }}
-                          />
-                          <Typography
-                            variant="body1"
-                            fontWeight="bold"
-                            sx={{
-                              flexGrow: 1,
-                              fontSize: '1.1rem',
-                              textAlign: 'left',
-                              textDecoration: complete ? 'line-through' : 'none',
-                            }}
-                          >
-                            {list.note}
-                          </Typography>
-                          <MoreVert
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleTripleDotClick(event, list);
-                            }}
-                          />
-                        </Button>
-                      </React.Fragment>
-                    )}
-                    <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
-                  </React.Fragment>
-                );
-              })
-            ) : (
-              <Typography
-                variant="body1"
-                align="center"
-                fontWeight="bold"
-                sx={{ fontSize: '1.1rem' }}
-              >
-                No notes found.
-              </Typography>
-            )}
-            {/* By default show the Add New button, otherwise show a TextField & save Note*/}
-            {!isAdding ? (
-              <Button
-                variant="text"
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'left',
-                  background: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)',
-                }}
-                startIcon={<Add />}
-                onClick={() => setIsAdding(true)}
-              >
-                <Typography
-                  variant="body1"
-                  align="center"
-                  fontWeight="bold"
-                  sx={{ fontSize: '1.1rem' }}
-                >
-                  Add New
-                </Typography>
-              </Button>
-            ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
-                <TextField
-                  autoFocus
-                  variant="standard"
-                  size="small"
+            {renderListRows()}
+            {!isReordering &&
+              (!isAdding ? (
+                <Button
+                  variant="text"
                   sx={{
-                    flexGrow: 1,
-                    mr: 1,
-                    justifyContent: 'space-between',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'left',
+                    background: 'var(--secondary-background-color)',
                     color: 'var(--secondary-color)',
                   }}
-                  slotProps={{
-                    input: {
-                      sx: {
-                        color: 'var(--secondary-color)',
-                        '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                  startIcon={<Add />}
+                  onClick={() => setIsAdding(true)}
+                >
+                  <Typography
+                    variant="body1"
+                    align="center"
+                    fontWeight="bold"
+                    sx={{ fontSize: '1.1rem' }}
+                  >
+                    Add New
+                  </Typography>
+                </Button>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
+                  <TextField
+                    autoFocus
+                    variant="standard"
+                    size="small"
+                    sx={{
+                      flexGrow: 1,
+                      mr: 1,
+                      justifyContent: 'space-between',
+                      color: 'var(--secondary-color)',
+                    }}
+                    slotProps={{
+                      input: {
+                        sx: {
+                          color: 'var(--secondary-color)',
+                          '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                        },
                       },
-                    },
-                  }}
-                  placeholder="New Note…"
-                  value={newNote}
-                  onChange={(event) => setNewNote(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') onAdd();
-                    if (event.key === 'Escape') setIsAdding(false);
-                  }}
-                />
-                <IconButton size="small" onClick={onAdd} disabled={!newNote.trim()}>
-                  <Add />
-                </IconButton>
-                <IconButton size="small" onClick={() => setIsAdding(false)}>
-                  <Close />
-                </IconButton>
-              </Box>
-            )}
+                    }}
+                    placeholder="New Note..."
+                    value={newNote}
+                    onChange={(event) => setNewNote(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') onAdd();
+                      if (event.key === 'Escape') setIsAdding(false);
+                    }}
+                  />
+                  <IconButton size="small" onClick={onAdd} disabled={!newNote.trim()}>
+                    <Add />
+                  </IconButton>
+                  <IconButton size="small" onClick={() => setIsAdding(false)}>
+                    <Close />
+                  </IconButton>
+                </Box>
+              ))}
           </Stack>
         )}
 
-        {/* Triple dot menu */}
+        <Menu
+          slotProps={{
+            paper: {
+              sx: {
+                backgroundColor: 'var(--secondary-background-color)',
+                color: 'var(--secondary-color)',
+                boxShadow: 3,
+                border: '2.5px solid var(--background-color)',
+                borderRadius: 1.5,
+              },
+            },
+          }}
+          anchorEl={pageMenuAnchorElement}
+          open={pageMenuOpen}
+          onClose={handlePageMenuClose}
+        >
+          <MenuItem
+            sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+            onClick={startReordering}
+            disabled={lists.length < 2}
+          >
+            Reorder notes
+          </MenuItem>
+        </Menu>
+
         <Menu
           slotProps={{
             paper: {

@@ -40,6 +40,9 @@ Access scoping:
 - The API filters objects by `owner`/`created_by`/`collaborators` so users only see what they have access to.
 - Workspace owners can manage workspace collaborators with `POST /api/workspaces/<id>/collaborators/` using `{ "identifier": "<username-or-email>" }` and `DELETE /api/workspaces/<id>/collaborators/<user_id>/`.
 - Workspace responses include `owner_details` and `collaborators_details` summaries for sharing/access UI.
+- Todo lists are returned in their saved workspace order. Persist a new workspace order with `PATCH /api/todolists/reorder/` and `{ "workspace": <id>, "ordered_ids": [<todo-list-id>, ...] }`.
+- Notes inside a todo list are returned in their saved list-membership order. Persist a new note order with `PATCH /api/notes/reorder/` and `{ "todo_list": <id>, "ordered_ids": [<note-id>, ...] }`.
+- Note order is stored on the `TodoListNote` membership table so the same note can appear in multiple todo lists with different positions.
 
 ## 💻 Local Development
 Full setup (Conda, env vars) lives in [`AGENTS.md`](../AGENTS.md). Common commands:

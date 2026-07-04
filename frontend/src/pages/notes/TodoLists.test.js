@@ -24,6 +24,7 @@ jest.mock('../../services/notoliApiClient', () => ({
   createTodoList: jest.fn(),
   deleteTodoList: jest.fn(),
   fetchTodoLists: jest.fn(),
+  reorderTodoLists: jest.fn(),
   updateTodoList: jest.fn(),
 }));
 
@@ -153,7 +154,9 @@ describe('TodoLists', () => {
   test('when edit is opened, it shows the edit input prefilled', async () => {
     await renderTodoLists();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(
+      await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
+    );
     await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
 
     const input = screen.getByRole('textbox');
@@ -168,7 +171,9 @@ describe('TodoLists', () => {
 
     await renderTodoLists();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(
+      await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
+    );
     await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
 
     const input = screen.getByRole('textbox');
@@ -190,7 +195,9 @@ describe('TodoLists', () => {
 
     await renderTodoLists();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(
+      await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
+    );
     await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
 
     const input = screen.getByRole('textbox');
@@ -203,7 +210,9 @@ describe('TodoLists', () => {
   test('when edit is opened and Escape is pressed, it closes the edit input', async () => {
     await renderTodoLists();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(
+      await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
+    );
     await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
 
     const input = screen.getByRole('textbox');
@@ -217,7 +226,9 @@ describe('TodoLists', () => {
 
     await renderTodoLists();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(
+      await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
+    );
     await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
 
     await waitFor(() => {
@@ -233,10 +244,31 @@ describe('TodoLists', () => {
 
     await renderTodoLists();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(
+      await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
+    );
     await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
 
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
+  });
+
+  test('when reorder mode is opened, it shows drag handles and hides row actions and add', async () => {
+    await renderTodoLists();
+
+    await userEvent.click(screen.getByRole('button', { name: /todo list page actions/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /reorder lists/i }));
+
+    expect(screen.getByRole('heading', { name: /reorder lists/i })).toBeInTheDocument();
+    expect(screen.getByTestId('todo-list-drag-handle-10')).toBeInTheDocument();
+    expect(screen.getByTestId('todo-list-drag-handle-11')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /todo list actions for test_todolist_01/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /add new/i })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /done/i }));
+
+    expect(screen.getByRole('heading', { name: /todolists/i })).toBeInTheDocument();
   });
 
   test('when an item is clicked, it navigates to the expected route', async () => {

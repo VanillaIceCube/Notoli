@@ -25,6 +25,7 @@ jest.mock('../../services/notoliApiClient', () => ({
   deleteNote: jest.fn(),
   fetchNotes: jest.fn(),
   fetchTodoList: jest.fn(),
+  reorderNotes: jest.fn(),
   updateNote: jest.fn(),
 }));
 
@@ -131,7 +132,9 @@ describe('Notes', () => {
   test('when edit is opened, it shows the edit input prefilled', async () => {
     await renderNotes();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
     await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
 
     const input = screen.getByRole('textbox');
@@ -146,7 +149,9 @@ describe('Notes', () => {
 
     await renderNotes();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
     await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
 
     const input = screen.getByRole('textbox');
@@ -182,7 +187,9 @@ describe('Notes', () => {
 
     await renderNotes();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
     await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
 
     await waitFor(() => {
@@ -200,6 +207,28 @@ describe('Notes', () => {
     await userEvent.click(await screen.findByText('test_note_01'));
 
     expect(screen.getByTestId('location')).toHaveTextContent(locationBefore);
+  });
+
+  test('when reorder mode is opened, it shows drag handles and hides note actions and add', async () => {
+    await renderNotes();
+
+    await userEvent.click(screen.getByRole('button', { name: /notes page actions/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /reorder notes/i }));
+
+    expect(screen.getByRole('heading', { name: /reorder notes/i })).toBeInTheDocument();
+    expect(screen.getByTestId('note-drag-handle-101')).toBeInTheDocument();
+    expect(screen.getByTestId('note-drag-handle-102')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /note actions for test_note_01/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /add new/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('checkbox', { name: /mark test_note_01 complete/i }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /done/i }));
+
+    expect(screen.getByRole('heading', { name: /^notes$/i })).toBeInTheDocument();
   });
 
   test('when the todo list fetch succeeds, it sets the app bar header', async () => {
@@ -251,7 +280,9 @@ describe('Notes', () => {
   test('when edit is opened and Escape is pressed, it closes the edit input', async () => {
     await renderNotes();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
     await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
 
     const input = screen.getByRole('textbox');
@@ -278,7 +309,9 @@ describe('Notes', () => {
 
     await renderNotes();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
     await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
 
     const input = screen.getByRole('textbox');
@@ -293,7 +326,9 @@ describe('Notes', () => {
 
     await renderNotes();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
     await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
 
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
