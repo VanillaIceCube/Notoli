@@ -212,8 +212,12 @@ describe('Notes', () => {
   test('when reorder mode is opened, it shows drag handles and hides note actions and add', async () => {
     await renderNotes();
 
-    await userEvent.click(screen.getByRole('button', { name: /notes page actions/i }));
-    await userEvent.click(screen.getByRole('menuitem', { name: /reorder notes/i }));
+    expect(screen.queryByRole('button', { name: /notes page actions/i })).not.toBeInTheDocument();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /^reorder$/i }));
 
     expect(screen.getByRole('heading', { name: /reorder notes/i })).toBeInTheDocument();
     expect(screen.getByTestId('note-drag-handle-101')).toBeInTheDocument();
@@ -222,12 +226,13 @@ describe('Notes', () => {
       screen.queryByRole('button', { name: /note actions for test_note_01/i }),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /add new/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /done reordering/i })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /mark test_note_01 complete/i })).not.toBeChecked();
     expect(screen.getByRole('checkbox', { name: /mark test_note_02 complete/i })).toBeChecked();
     expect(screen.getByText('test_note_02')).toHaveStyle('text-decoration: line-through');
     expect(screen.getByTestId('note-reorder-row-102')).toHaveStyle('opacity: 0.72');
 
-    await userEvent.click(screen.getByRole('button', { name: /done/i }));
+    await userEvent.click(screen.getByRole('button', { name: /done reordering/i }));
 
     expect(screen.getByRole('heading', { name: /^notes$/i })).toBeInTheDocument();
   });

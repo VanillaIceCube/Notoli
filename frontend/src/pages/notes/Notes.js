@@ -116,18 +116,10 @@ export default function Notes({ setAppBarHeader }) {
     }
   }, [todoListId, fetchNotes, fetchTodoListName]);
 
-  const [pageMenuAnchorElement, setPageMenuAnchorElement] = useState(null);
-  const pageMenuOpen = Boolean(pageMenuAnchorElement);
-
-  const handlePageMenuClose = () => {
-    setPageMenuAnchorElement(null);
-  };
-
   const startReordering = () => {
     closeEdit();
     setIsAdding(false);
     handleTripleDotClose();
-    handlePageMenuClose();
     setIsReordering(true);
   };
 
@@ -454,25 +446,7 @@ export default function Notes({ setAppBarHeader }) {
           >
             {isReordering ? 'Reorder Notes' : 'Notes'}
           </Typography>
-          {isReordering ? (
-            <Button
-              variant="text"
-              size="small"
-              onClick={stopReordering}
-              sx={{ minWidth: 40, color: 'var(--secondary-color)', fontWeight: 'bold' }}
-            >
-              Done
-            </Button>
-          ) : (
-            <IconButton
-              size="small"
-              aria-label="Notes page actions"
-              onClick={(event) => setPageMenuAnchorElement(event.currentTarget)}
-              sx={{ color: 'var(--secondary-color)' }}
-            >
-              <MoreVert />
-            </IconButton>
-          )}
+          <Box sx={{ width: 40 }} />
         </Box>
 
         {loading && <Typography align="center"> Loading... </Typography>}
@@ -491,8 +465,6 @@ export default function Notes({ setAppBarHeader }) {
             {renderListRows()}
             {isReordering ? (
               <Button
-                aria-hidden="true"
-                tabIndex={-1}
                 variant="text"
                 sx={{
                   display: 'flex',
@@ -500,10 +472,8 @@ export default function Notes({ setAppBarHeader }) {
                   justifyContent: 'left',
                   background: 'var(--secondary-background-color)',
                   color: 'var(--secondary-color)',
-                  visibility: 'hidden',
-                  pointerEvents: 'none',
                 }}
-                startIcon={<Add />}
+                onClick={stopReordering}
               >
                 <Typography
                   variant="body1"
@@ -511,7 +481,7 @@ export default function Notes({ setAppBarHeader }) {
                   fontWeight="bold"
                   sx={{ fontSize: '1.1rem' }}
                 >
-                  Add New
+                  Done Reordering
                 </Typography>
               </Button>
             ) : !isAdding ? (
@@ -587,31 +557,6 @@ export default function Notes({ setAppBarHeader }) {
               },
             },
           }}
-          anchorEl={pageMenuAnchorElement}
-          open={pageMenuOpen}
-          onClose={handlePageMenuClose}
-        >
-          <MenuItem
-            sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
-            onClick={startReordering}
-            disabled={lists.length < 2}
-          >
-            Reorder Notes
-          </MenuItem>
-        </Menu>
-
-        <Menu
-          slotProps={{
-            paper: {
-              sx: {
-                backgroundColor: 'var(--secondary-background-color)',
-                color: 'var(--secondary-color)',
-                boxShadow: 3,
-                border: '2.5px solid var(--background-color)',
-                borderRadius: 1.5,
-              },
-            },
-          }}
           anchorEl={tripleDotAnchorElement}
           open={open}
           onClose={handleTripleDotClose}
@@ -621,6 +566,17 @@ export default function Notes({ setAppBarHeader }) {
             onClick={startEditing}
           >
             Edit
+          </MenuItem>
+          <Divider
+            variant="middle"
+            sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+          />
+          <MenuItem
+            sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+            onClick={startReordering}
+            disabled={lists.length < 2}
+          >
+            Reorder
           </MenuItem>
           <Divider
             variant="middle"
