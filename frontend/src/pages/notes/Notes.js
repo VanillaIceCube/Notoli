@@ -26,8 +26,8 @@ import {
 } from '../../services/notoliApiClient';
 
 const NOTE_STATUS_NOT_STARTED = 'Not Started';
-const NOTE_STATUS_COMPLETED = 'Completed';
-const isNoteCompleted = (note) => note.status === NOTE_STATUS_COMPLETED;
+const NOTE_STATUS_COMPLETE = 'Complete';
+const isNoteComplete = (note) => note.status === NOTE_STATUS_COMPLETE;
 
 export default function Notes({ setAppBarHeader }) {
   // Pull Todolist ID
@@ -152,7 +152,7 @@ export default function Notes({ setAppBarHeader }) {
 
   const onToggleStatus = async (event, noteToToggle) => {
     event.stopPropagation();
-    const status = event.target.checked ? NOTE_STATUS_COMPLETED : NOTE_STATUS_NOT_STARTED;
+    const status = event.target.checked ? NOTE_STATUS_COMPLETE : NOTE_STATUS_NOT_STARTED;
     setError(null);
     setLists((prev) =>
       prev.map((note) => (note.id === noteToToggle.id ? { ...note, status } : note)),
@@ -234,7 +234,7 @@ export default function Notes({ setAppBarHeader }) {
           <Stack spacing={1}>
             {lists.length ? (
               lists.map((list) => {
-                const completed = isNoteCompleted(list);
+                const complete = isNoteComplete(list);
 
                 return (
                   <React.Fragment key={list.id}>
@@ -286,11 +286,11 @@ export default function Notes({ setAppBarHeader }) {
                             justifyContent: 'space-between',
                             background: 'var(--secondary-background-color)',
                             color: 'var(--secondary-color)',
-                            opacity: completed ? 0.72 : 1,
+                            opacity: complete ? 0.72 : 1,
                           }}
                         >
                           <Checkbox
-                            checked={completed}
+                            checked={complete}
                             onClick={(event) => event.stopPropagation()}
                             onChange={(event) => onToggleStatus(event, list)}
                             inputProps={{ 'aria-label': `Mark ${list.note} complete` }}
@@ -308,7 +308,7 @@ export default function Notes({ setAppBarHeader }) {
                               flexGrow: 1,
                               fontSize: '1.1rem',
                               textAlign: 'left',
-                              textDecoration: completed ? 'line-through' : 'none',
+                              textDecoration: complete ? 'line-through' : 'none',
                             }}
                           >
                             {list.note}

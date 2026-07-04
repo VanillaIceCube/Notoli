@@ -35,7 +35,7 @@ Workspace management lives in the right sidebar. Open the Workspace list, use a 
 
 ## Notes Checklist Items
 
-Notes in a todo list render as checklist rows. Checking a note updates its `status` to `Completed` through the notes API, immediately reflects the change in the UI, and shows completed note text with a strikethrough. Unchecked notes use `Not Started`.
+Notes in a todo list render as checklist rows. Checking a note updates its `status` to `Complete` through the notes API, immediately reflects the change in the UI, and shows complete note text with a strikethrough. Unchecked notes use `Not Started`, and the API also supports `In Progress`.
 
 ## 🔌 API Base URL
 

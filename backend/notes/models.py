@@ -87,10 +87,12 @@ class TodoList(models.Model):
 # Note: The actual TodoList item
 class Note(models.Model):
     STATUS_NOT_STARTED = "Not Started"
-    STATUS_COMPLETED = "Completed"
+    STATUS_IN_PROGRESS = "In Progress"
+    STATUS_COMPLETE = "Complete"
     STATUS_CHOICES = [
         (STATUS_NOT_STARTED, "Not Started"),
-        (STATUS_COMPLETED, "Completed"),
+        (STATUS_IN_PROGRESS, "In Progress"),
+        (STATUS_COMPLETE, "Complete"),
     ]
 
     # Attributes

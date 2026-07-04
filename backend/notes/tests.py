@@ -1100,7 +1100,7 @@ class NoteApiTests(APITestCase):
 
         update_response = self.client.patch(
             f"/api/notes/{self.note.id}/",
-            {"status": Note.STATUS_COMPLETED},
+            {"status": Note.STATUS_COMPLETE},
             format="json",
         )
 
@@ -1109,9 +1109,24 @@ class NoteApiTests(APITestCase):
             status.HTTP_200_OK,
             f"Expected 200 updating note status, got {update_response.status_code}: {update_response.data}",
         )
-        self.assertEqual(update_response.data.get("status"), Note.STATUS_COMPLETED)
+        self.assertEqual(update_response.data.get("status"), Note.STATUS_COMPLETE)
         self.note.refresh_from_db()
-        self.assertEqual(self.note.status, Note.STATUS_COMPLETED)
+        self.assertEqual(self.note.status, Note.STATUS_COMPLETE)
+
+    def test_note_status_allows_in_progress(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            f"/api/notes/{self.note.id}/",
+            {"status": Note.STATUS_IN_PROGRESS},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            f"Expected 200 updating note status to in progress, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(response.data.get("status"), Note.STATUS_IN_PROGRESS)
 
     def test_patch_note_todo_list_attaches_within_workspace(self):
         other_todo_list = TodoList.objects.create(

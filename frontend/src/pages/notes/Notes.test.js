@@ -162,7 +162,7 @@ describe('Notes', () => {
   test('when a checkbox is toggled, it updates the status immediately', async () => {
     updateNote.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ id: 101, note: 'test_note_01', status: 'Completed' }),
+      json: async () => ({ id: 101, note: 'test_note_01', status: 'Complete' }),
     });
 
     await renderNotes();
@@ -172,7 +172,7 @@ describe('Notes', () => {
 
     expect(checkbox).toBeChecked();
     await waitFor(() => {
-      expect(updateNote).toHaveBeenCalledWith(101, { status: 'Completed' }, 'token');
+      expect(updateNote).toHaveBeenCalledWith(101, { status: 'Complete' }, 'token');
     });
     expect(screen.getByText('test_note_01')).toHaveStyle('text-decoration: line-through');
   });

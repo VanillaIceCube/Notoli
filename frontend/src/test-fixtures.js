@@ -24,5 +24,5 @@ export const todoListFixtures = [
 
 export const noteFixtures = [
   { id: 101, note: 'test_note_01', status: 'Not Started' },
-  { id: 102, note: 'test_note_02', status: 'Completed' },
+  { id: 102, note: 'test_note_02', status: 'Complete' },
 ];
