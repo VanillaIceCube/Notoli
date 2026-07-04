@@ -86,9 +86,23 @@ class TodoList(models.Model):
 
 # Note: The actual TodoList item
 class Note(models.Model):
+    STATUS_NOT_STARTED = "Not Started"
+    STATUS_IN_PROGRESS = "In Progress"
+    STATUS_COMPLETE = "Complete"
+    STATUS_CHOICES = [
+        (STATUS_NOT_STARTED, "Not Started"),
+        (STATUS_IN_PROGRESS, "In Progress"),
+        (STATUS_COMPLETE, "Complete"),
+    ]
+
     # Attributes
     note = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_NOT_STARTED,
+    )
 
     # Scope
     workspace = models.ForeignKey(
