@@ -33,6 +33,10 @@ Important pieces:
 
 Workspace management lives in the right sidebar. Open the Workspace list, use a workspace row's action menu, and choose Share. The Share dialog displays the workspace owner and collaborators. Owners can add collaborators by username/email and remove collaborators; non-owners can view access in read-only mode.
 
+## Notes Checklist Items
+
+Notes in a todo list render as checklist rows. Checking a note updates its `status` to `Complete` through the notes API, immediately reflects the change in the UI, and shows complete note text with a strikethrough. Unchecked notes use `Not Started`, and the API also supports `In Progress`.
+
 ## 🔌 API Base URL
 
 API calls go through `src/services/notoliApiClient.js` (endpoints) via `src/services/requestClient.js` (request wrapper).

@@ -10,6 +10,7 @@ import {
   Box,
   TextField,
   IconButton,
+  Checkbox,
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
@@ -23,6 +24,10 @@ import {
   fetchTodoList as fetchTodoListApi,
   updateNote,
 } from '../../services/notoliApiClient';
+
+const NOTE_STATUS_NOT_STARTED = 'Not Started';
+const NOTE_STATUS_COMPLETE = 'Complete';
+const isNoteComplete = (note) => note.status === NOTE_STATUS_COMPLETE;
 
 export default function Notes({ setAppBarHeader }) {
   // Pull Todolist ID
@@ -135,10 +140,37 @@ export default function Notes({ setAppBarHeader }) {
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
-      setLists((prev) => prev.map((note) => (note.id === updated.id ? updated : note)));
+      setLists((prev) =>
+        prev.map((note) => (note.id === updated.id ? { ...note, ...updated } : note)),
+      );
 
       closeEdit();
     } catch (err) {
+      setError(err.toString());
+    }
+  };
+
+  const onToggleStatus = async (event, noteToToggle) => {
+    event.stopPropagation();
+    const status = event.target.checked ? NOTE_STATUS_COMPLETE : NOTE_STATUS_NOT_STARTED;
+    setError(null);
+    setLists((prev) =>
+      prev.map((note) => (note.id === noteToToggle.id ? { ...note, status } : note)),
+    );
+
+    try {
+      const response = await updateNote(noteToToggle.id, { status }, token);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const updated = await response.json();
+      setLists((prev) =>
+        prev.map((note) => (note.id === updated.id ? { ...note, ...updated } : note)),
+      );
+    } catch (err) {
+      setLists((prev) =>
+        prev.map((note) =>
+          note.id === noteToToggle.id ? { ...note, status: noteToToggle.status } : note,
+        ),
+      );
       setError(err.toString());
     }
   };
@@ -201,72 +233,99 @@ export default function Notes({ setAppBarHeader }) {
         {!loading && !error && (
           <Stack spacing={1}>
             {lists.length ? (
-              lists.map((list) => (
-                <React.Fragment key={list.id}>
-                  {editingNoteId === list.id ? (
-                    <React.Fragment>
-                      {/* Editing Mode */}
-                      <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
-                        <TextField
-                          autoFocus
-                          variant="standard"
-                          size="small"
-                          sx={{
-                            flexGrow: 1,
-                            mr: 1,
-                            justifyContent: 'space-between',
-                            color: 'var(--secondary-color)',
-                          }}
-                          slotProps={{
-                            input: {
-                              sx: {
-                                color: 'var(--secondary-color)',
-                                '&:after': { borderBottomColor: 'var(--secondary-color)' },
+              lists.map((list) => {
+                const complete = isNoteComplete(list);
+
+                return (
+                  <React.Fragment key={list.id}>
+                    {editingNoteId === list.id ? (
+                      <React.Fragment>
+                        {/* Editing Mode */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
+                          <TextField
+                            autoFocus
+                            variant="standard"
+                            size="small"
+                            sx={{
+                              flexGrow: 1,
+                              mr: 1,
+                              justifyContent: 'space-between',
+                              color: 'var(--secondary-color)',
+                            }}
+                            slotProps={{
+                              input: {
+                                sx: {
+                                  color: 'var(--secondary-color)',
+                                  '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                                },
                               },
-                            },
+                            }}
+                            value={editNote}
+                            onChange={(event) => setEditNote(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter') onEdit();
+                              if (event.key === 'Escape') closeEdit();
+                            }}
+                          />
+                          <IconButton size="small" onClick={onEdit} disabled={!editNote.trim()}>
+                            <Add />
+                          </IconButton>
+                          <IconButton size="small" onClick={closeEdit}>
+                            <Close />
+                          </IconButton>
+                        </Box>
+                      </React.Fragment>
+                    ) : (
+                      <React.Fragment>
+                        {/* Normal Mode */}
+                        <Button
+                          variant="text"
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            background: 'var(--secondary-background-color)',
+                            color: 'var(--secondary-color)',
+                            opacity: complete ? 0.72 : 1,
                           }}
-                          value={editNote}
-                          onChange={(event) => setEditNote(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') onEdit();
-                            if (event.key === 'Escape') closeEdit();
-                          }}
-                        />
-                        <IconButton size="small" onClick={onEdit} disabled={!editNote.trim()}>
-                          <Add />
-                        </IconButton>
-                        <IconButton size="small" onClick={closeEdit}>
-                          <Close />
-                        </IconButton>
-                      </Box>
-                    </React.Fragment>
-                  ) : (
-                    <React.Fragment>
-                      {/* Normal Mode */}
-                      <Button
-                        variant="text"
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          background: 'var(--secondary-background-color)',
-                          color: 'var(--secondary-color)',
-                        }}
-                      >
-                        <Typography
-                          variant="body1"
-                          fontWeight="bold"
-                          sx={{ fontSize: '1.1rem', textAlign: 'left' }}
                         >
-                          {list.note}
-                        </Typography>
-                        <MoreVert onClick={(event) => handleTripleDotClick(event, list)} />
-                      </Button>
-                    </React.Fragment>
-                  )}
-                  <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
-                </React.Fragment>
-              ))
+                          <Checkbox
+                            checked={complete}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={(event) => onToggleStatus(event, list)}
+                            inputProps={{ 'aria-label': `Mark ${list.note} complete` }}
+                            sx={{
+                              color: 'var(--secondary-color)',
+                              p: 0.5,
+                              mr: 1,
+                              '&.Mui-checked': { color: 'var(--secondary-color)' },
+                            }}
+                          />
+                          <Typography
+                            variant="body1"
+                            fontWeight="bold"
+                            sx={{
+                              flexGrow: 1,
+                              fontSize: '1.1rem',
+                              textAlign: 'left',
+                              textDecoration: complete ? 'line-through' : 'none',
+                            }}
+                          >
+                            {list.note}
+                          </Typography>
+                          <MoreVert
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleTripleDotClick(event, list);
+                            }}
+                          />
+                        </Button>
+                      </React.Fragment>
+                    )}
+                    <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
+                  </React.Fragment>
+                );
+              })
             ) : (
               <Typography
                 variant="body1"

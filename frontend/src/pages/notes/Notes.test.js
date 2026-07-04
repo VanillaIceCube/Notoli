@@ -85,6 +85,8 @@ describe('Notes', () => {
 
     expect(await screen.findByText('test_note_01')).toBeInTheDocument();
     expect(screen.getByText('test_note_02')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /mark test_note_01 complete/i })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /mark test_note_02 complete/i })).toBeChecked();
   });
 
   test('when the fetch fails, it shows an error message', async () => {
@@ -139,7 +141,7 @@ describe('Notes', () => {
   test('when a valid edit is submitted, it updates the item', async () => {
     updateNote.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ id: 101, note: 'test_note_01 Updated' }),
+      json: async () => ({ id: 101, note: 'test_note_01 Updated', status: 'Not Started' }),
     });
 
     await renderNotes();
@@ -155,6 +157,24 @@ describe('Notes', () => {
       expect(updateNote).toHaveBeenCalledWith(101, { note: 'test_note_01 Updated' }, 'token');
     });
     expect(await screen.findByText('test_note_01 Updated')).toBeInTheDocument();
+  });
+
+  test('when a checkbox is toggled, it updates the status immediately', async () => {
+    updateNote.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: 101, note: 'test_note_01', status: 'Complete' }),
+    });
+
+    await renderNotes();
+
+    const checkbox = screen.getByRole('checkbox', { name: /mark test_note_01 complete/i });
+    await userEvent.click(checkbox);
+
+    expect(checkbox).toBeChecked();
+    await waitFor(() => {
+      expect(updateNote).toHaveBeenCalledWith(101, { status: 'Complete' }, 'token');
+    });
+    expect(screen.getByText('test_note_01')).toHaveStyle('text-decoration: line-through');
   });
 
   test('when delete is confirmed, it removes the item', async () => {
