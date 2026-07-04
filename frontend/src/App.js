@@ -1,6 +1,5 @@
 import './App.css';
 import React, { useState } from 'react';
-import { GlobalStyles } from '@mui/material';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import AuthenticatedRoute from './components/AuthenticatedRoute';
 import Login from './pages/authentication/Login';
@@ -43,22 +42,6 @@ function App() {
 
   return (
     <React.Fragment>
-      <GlobalStyles
-        styles={{
-          '.MuiInputLabel-root.Mui-focused': {
-            color: 'var(--secondary-color)',
-          },
-          '.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: 'var(--secondary-color)',
-          },
-          '.MuiInput-underline:after': {
-            borderBottomColor: 'var(--secondary-color)',
-          },
-          '.MuiFilledInput-underline:after': {
-            borderBottomColor: 'var(--secondary-color)',
-          },
-        }}
-      />
       <Router basename={routerBasename}>
         <NavigationBridge />
         <MyAppBar appBarHeader={appBarHeader} setDrawerOpen={setDrawerOpen} />

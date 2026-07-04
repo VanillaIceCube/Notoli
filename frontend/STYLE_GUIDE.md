@@ -13,4 +13,4 @@
 - In member lists, show a display name plus one secondary identifier when possible instead of separate labeled username and email rows.
 - Sharing dialogs should use a single `People with access` list with consistent user rows, avatars, role labels, and owner-only management controls.
 - When a section heading already labels an input group, prefer placeholder text plus an accessible `aria-label` over a floating visual input label.
-- Text field focus states should use the Notoli secondary color globally, never the default Material UI blue.
+- Text field focus states should use the Notoli secondary color globally, never the default Material UI blue. Keep the global overrides in `src/App.css` covered by `notoliThemeStyles.test.js`.
