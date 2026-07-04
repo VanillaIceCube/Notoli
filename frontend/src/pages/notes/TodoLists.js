@@ -42,6 +42,7 @@ import {
 } from '../../services/notoliApiClient';
 
 const TODO_LIST_VERTICAL_GAP = '8px';
+const TODO_LIST_ROW_MIN_HEIGHT = 42;
 
 function SortableTodoListRow({ list, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -51,7 +52,7 @@ function SortableTodoListRow({ list, children }) {
   return (
     <Box
       ref={setNodeRef}
-      data-testid={`todo-list-row-${list.id}`}
+      data-testid={`todo-list-sortable-row-${list.id}`}
       sx={{
         transform: CSS.Transform.toString(transform),
         transition,
@@ -280,6 +281,7 @@ export default function TodoLists({ setAppBarHeader }) {
       color: 'var(--secondary-color)',
       borderRadius: 1,
       width: '100%',
+      minHeight: TODO_LIST_ROW_MIN_HEIGHT,
       boxSizing: 'border-box',
     };
 
@@ -307,7 +309,7 @@ export default function TodoLists({ setAppBarHeader }) {
     }
 
     return (
-      <Box sx={rowSx}>
+      <Box data-testid={`todo-list-row-${list.id}`} sx={rowSx}>
         <Button
           variant="text"
           sx={{
@@ -365,10 +367,17 @@ export default function TodoLists({ setAppBarHeader }) {
               {lists.map((list) => (
                 <SortableTodoListRow key={list.id} list={list}>
                   {({ handleProps }) => (
-                    <>
+                    <Box
+                      data-testid={`todo-list-reorder-item-${list.id}`}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: TODO_LIST_VERTICAL_GAP,
+                      }}
+                    >
                       {renderRowContent(list, handleProps)}
                       <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
-                    </>
+                    </Box>
                   )}
                 </SortableTodoListRow>
               ))}

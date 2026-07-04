@@ -2,8 +2,8 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import MyDrawer from './MyDrawer';
-import { renderWithProviders } from '../test-utils';
-import { workspaceFixtures } from '../test-fixtures';
+import { workspaceFixtures } from '../test-support/fixtures';
+import { renderWithProviders } from '../test-support/utils';
 import { getWorkspaceId } from '../utils/Navigation';
 import {
   addWorkspaceCollaborator,

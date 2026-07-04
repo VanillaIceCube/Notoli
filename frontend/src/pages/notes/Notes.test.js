@@ -3,8 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router-dom';
 
 import Notes from './Notes';
-import { createDeferred, renderWithProviders, waitForLoadingToFinish } from '../../test-utils';
-import { noteFixtures } from '../../test-fixtures';
+import { noteFixtures } from '../../test-support/fixtures';
+import { collectRowStartPixels } from '../../test-support/layout';
+import {
+  createDeferred,
+  renderWithProviders,
+  waitForLoadingToFinish,
+} from '../../test-support/utils';
 import {
   createNote,
   deleteNote,
@@ -214,6 +219,10 @@ describe('Notes', () => {
 
     expect(screen.queryByRole('button', { name: /notes page actions/i })).not.toBeInTheDocument();
     expect(screen.getByTestId('note-list')).toHaveStyle('gap: 8px');
+    const normalRowStartPixels = collectRowStartPixels(screen.getByTestId('note-list'), [
+      'note-row-101',
+      'note-row-102',
+    ]);
 
     await userEvent.click(
       await screen.findByRole('button', { name: /note actions for test_note_01/i }),
@@ -222,6 +231,14 @@ describe('Notes', () => {
 
     expect(screen.getByRole('heading', { name: /reorder notes/i })).toBeInTheDocument();
     expect(screen.getByTestId('note-reorder-list')).toHaveStyle('gap: 8px');
+    const reorderRowStartPixels = collectRowStartPixels(screen.getByTestId('note-reorder-list'), [
+      'note-reorder-row-101',
+      'note-reorder-row-102',
+    ]);
+    expect([
+      reorderRowStartPixels['note-reorder-row-101'],
+      reorderRowStartPixels['note-reorder-row-102'],
+    ]).toEqual([normalRowStartPixels['note-row-101'], normalRowStartPixels['note-row-102']]);
     expect(screen.getByTestId('note-drag-handle-101')).toBeInTheDocument();
     expect(screen.getByTestId('note-drag-handle-102')).toBeInTheDocument();
     expect(

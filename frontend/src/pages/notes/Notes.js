@@ -46,6 +46,7 @@ import {
 const NOTE_STATUS_NOT_STARTED = 'Not Started';
 const NOTE_STATUS_COMPLETE = 'Complete';
 const NOTE_LIST_VERTICAL_GAP = '8px';
+const NOTE_ROW_MIN_HEIGHT = 42;
 const isNoteComplete = (note) => note.status === NOTE_STATUS_COMPLETE;
 
 function SortableNoteRow({ note, children }) {
@@ -56,7 +57,7 @@ function SortableNoteRow({ note, children }) {
   return (
     <Box
       ref={setNodeRef}
-      data-testid={`note-row-${note.id}`}
+      data-testid={`note-sortable-row-${note.id}`}
       sx={{
         transform: CSS.Transform.toString(transform),
         transition,
@@ -319,6 +320,7 @@ export default function Notes({ setAppBarHeader }) {
       color: 'var(--secondary-color)',
       borderRadius: 1,
       width: '100%',
+      minHeight: NOTE_ROW_MIN_HEIGHT,
       boxSizing: 'border-box',
       opacity: complete ? 0.72 : 1,
     };
@@ -384,7 +386,11 @@ export default function Notes({ setAppBarHeader }) {
       );
     }
 
-    return <Box sx={{ ...rowSx, px: 1, py: 0.5 }}>{rowContent}</Box>;
+    return (
+      <Box data-testid={`note-row-${list.id}`} sx={{ ...rowSx, px: 1, py: 0.5 }}>
+        {rowContent}
+      </Box>
+    );
   };
 
   const renderListRows = () => {
@@ -414,10 +420,17 @@ export default function Notes({ setAppBarHeader }) {
               {lists.map((list) => (
                 <SortableNoteRow key={list.id} note={list}>
                   {({ handleProps }) => (
-                    <>
+                    <Box
+                      data-testid={`note-reorder-item-${list.id}`}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: NOTE_LIST_VERTICAL_GAP,
+                      }}
+                    >
                       {renderRowContent(list, handleProps)}
                       <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
-                    </>
+                    </Box>
                   )}
                 </SortableNoteRow>
               ))}

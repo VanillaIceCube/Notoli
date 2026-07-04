@@ -2,8 +2,13 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import TodoLists from './TodoLists';
-import { createDeferred, renderWithProviders, waitForLoadingToFinish } from '../../test-utils';
-import { todoListFixtures } from '../../test-fixtures';
+import { todoListFixtures } from '../../test-support/fixtures';
+import { collectRowStartPixels } from '../../test-support/layout';
+import {
+  createDeferred,
+  renderWithProviders,
+  waitForLoadingToFinish,
+} from '../../test-support/utils';
 import {
   createTodoList,
   deleteTodoList,
@@ -259,6 +264,10 @@ describe('TodoLists', () => {
       screen.queryByRole('button', { name: /todo list page actions/i }),
     ).not.toBeInTheDocument();
     expect(screen.getByTestId('todo-list-list')).toHaveStyle('gap: 8px');
+    const normalRowStartPixels = collectRowStartPixels(screen.getByTestId('todo-list-list'), [
+      'todo-list-row-10',
+      'todo-list-row-11',
+    ]);
 
     await userEvent.click(
       await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
@@ -267,6 +276,17 @@ describe('TodoLists', () => {
 
     expect(screen.getByRole('heading', { name: /reorder lists/i })).toBeInTheDocument();
     expect(screen.getByTestId('todo-list-reorder-list')).toHaveStyle('gap: 8px');
+    const reorderRowStartPixels = collectRowStartPixels(
+      screen.getByTestId('todo-list-reorder-list'),
+      ['todo-list-reorder-row-10', 'todo-list-reorder-row-11'],
+    );
+    expect([
+      reorderRowStartPixels['todo-list-reorder-row-10'],
+      reorderRowStartPixels['todo-list-reorder-row-11'],
+    ]).toEqual([
+      normalRowStartPixels['todo-list-row-10'],
+      normalRowStartPixels['todo-list-row-11'],
+    ]);
     expect(screen.getByTestId('todo-list-drag-handle-10')).toBeInTheDocument();
     expect(screen.getByTestId('todo-list-drag-handle-11')).toBeInTheDocument();
     expect(
