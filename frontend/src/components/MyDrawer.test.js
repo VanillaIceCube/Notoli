@@ -355,7 +355,7 @@ describe('MyDrawer', () => {
     await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
     await userEvent.click(screen.getByRole('menuitem', { name: /share/i }));
 
-    expect(screen.getByText(/only the workspace owner/i)).toBeInTheDocument();
+    expect(screen.getByText(/only owners can manage sharing/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/username or email address/i)).toBeDisabled();
     expect(screen.getByRole('button', { name: /^add$/i })).toBeDisabled();
     expect(screen.queryByRole('button', { name: /remove collab/i })).not.toBeInTheDocument();

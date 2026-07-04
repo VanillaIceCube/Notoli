@@ -12,3 +12,4 @@
 - Prefer compact sections or responsive two-column layouts when a dialog compares two related groups, such as owner and collaborators.
 - In member lists, show a display name plus one secondary identifier when possible instead of separate labeled username and email rows.
 - Sharing dialogs should use a single `People with access` list with consistent user rows, avatars, role labels, and owner-only management controls.
+- When a section heading already labels an input group, prefer placeholder text plus an accessible `aria-label` over a floating visual input label.

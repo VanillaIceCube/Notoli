@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Alert,
   Avatar,
   Box,
   Button,
@@ -28,24 +27,21 @@ const userInitials = (user) => {
   return (base || '?').slice(0, 2).toUpperCase();
 };
 
-const alertStyles = {
-  bgcolor: 'var(--background-color)',
-  color: 'var(--text-color)',
-  '& .MuiAlert-icon': { color: 'var(--primary-color)' },
-};
-
 const textFieldStyles = {
   '& .MuiInputBase-root': {
     color: 'var(--secondary-color)',
     bgcolor: 'rgba(255, 255, 255, 0.22)',
     borderRadius: 2,
   },
-  '& .MuiInputLabel-root': { color: 'var(--secondary-color)' },
   '& .MuiOutlinedInput-notchedOutline': {
     borderColor: 'var(--secondary-color)',
   },
   '&:hover .MuiOutlinedInput-notchedOutline': {
     borderColor: 'var(--secondary-color)',
+  },
+  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+    borderColor: 'var(--secondary-color)',
+    borderWidth: 2,
   },
 };
 
@@ -251,6 +247,7 @@ export default function WorkspaceShareDialog({
           <Close fontSize="small" />
         </IconButton>
       </DialogTitle>
+      <Divider sx={{ mx: 3, borderColor: 'var(--secondary-color)', opacity: 0.45 }} />
       <DialogContent sx={{ px: 3, pt: 1.5, pb: 2.75 }}>
         <Stack spacing={2.25}>
           <Box>
@@ -261,7 +258,6 @@ export default function WorkspaceShareDialog({
               <TextField
                 fullWidth
                 size="small"
-                label="Username or email address"
                 placeholder="Username or email address"
                 value={identifier}
                 onChange={(event) => setIdentifier(event.target.value)}
@@ -270,6 +266,11 @@ export default function WorkspaceShareDialog({
                 }}
                 disabled={!isOwner || savingAdd || Boolean(removingUserId)}
                 sx={textFieldStyles}
+                slotProps={{
+                  htmlInput: {
+                    'aria-label': 'Username or email address',
+                  },
+                }}
               />
               <Button
                 variant="contained"
@@ -314,12 +315,6 @@ export default function WorkspaceShareDialog({
             )}
             <Divider sx={{ borderColor: 'var(--secondary-color)', opacity: 0.45 }} />
           </Box>
-
-          {!isOwner && (
-            <Alert severity="info" sx={alertStyles}>
-              Only the workspace owner can add or remove collaborators.
-            </Alert>
-          )}
 
           <Typography variant="caption" sx={{ color: 'var(--secondary-color)' }}>
             Only owners can manage sharing.

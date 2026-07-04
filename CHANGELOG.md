@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 - Moved workspace sharing add/remove errors to the app snackbar and refined sharing dialog member details.
 - Condensed the workspace sharing dialog into compact owner/collaborator sections with less repeated identity text.
 - Reworked the workspace sharing dialog into a polished invite-first access list with avatars, role labels, and owner-only controls.
+- Added an inset title divider and removed the floating invite input label from the workspace sharing dialog.
 - Restricted workspace update and delete API actions to workspace owners so shared collaborators cannot rename or delete shared workspaces.
 - Styled the workspace sharing dialog with the app theme instead of the default white/gray Material UI surface.
 - Removed obsolete Docker Compose and Nginx HTTP/2 syntax warnings from local/proxy startup.
@@ -621,6 +622,5 @@ All notable changes to this project are documented in this file.
 ## 2025-04-20
 ### Added
 - Initial repository with base README and LICENSE.
-
 
 
