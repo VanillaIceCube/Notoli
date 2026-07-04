@@ -247,9 +247,11 @@ describe('MyDrawer', () => {
     expect(screen.getByText('People with access')).toBeInTheDocument();
     expect(screen.getByText('owner')).toBeInTheDocument();
     expect(screen.getByText('owner@example.com')).toBeInTheDocument();
+    expect(screen.getByText('OW')).toBeInTheDocument();
     expect(screen.getByText('Owner')).toBeInTheDocument();
     expect(screen.getByText('collab')).toBeInTheDocument();
     expect(screen.getByText('collab@example.com')).toBeInTheDocument();
+    expect(screen.getByText('CO')).toBeInTheDocument();
     expect(screen.getByText('Collaborator')).toBeInTheDocument();
     expect(screen.queryByText(/username:/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/email:/i)).not.toBeInTheDocument();

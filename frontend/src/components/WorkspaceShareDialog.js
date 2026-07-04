@@ -24,12 +24,8 @@ const userLabel = (user) =>
   user?.display_name || user?.username || user?.email || `User ${user?.id}`;
 const userEmail = (user) => user?.email || '';
 const userInitials = (user) => {
-  const base = user?.display_name || user?.username || user?.email || '?';
-  const parts = base
-    .split(/[\s._@-]+/)
-    .filter(Boolean)
-    .slice(0, 2);
-  return (parts.length ? parts.map((part) => part[0]).join('') : base.slice(0, 2)).toUpperCase();
+  const base = userLabel(user).trim();
+  return (base || '?').slice(0, 2).toUpperCase();
 };
 
 const alertStyles = {
@@ -41,12 +37,12 @@ const alertStyles = {
 const textFieldStyles = {
   '& .MuiInputBase-root': {
     color: 'var(--secondary-color)',
-    bgcolor: 'rgba(255, 255, 255, 0.72)',
+    bgcolor: 'rgba(255, 255, 255, 0.22)',
     borderRadius: 2,
   },
   '& .MuiInputLabel-root': { color: 'var(--secondary-color)' },
   '& .MuiOutlinedInput-notchedOutline': {
-    borderColor: 'rgba(85, 85, 85, 0.28)',
+    borderColor: 'var(--secondary-color)',
   },
   '&:hover .MuiOutlinedInput-notchedOutline': {
     borderColor: 'var(--secondary-color)',
@@ -94,7 +90,7 @@ function AccessRow({ user, role, canRemove, removing, saving, onRemove }) {
         <Typography
           variant="caption"
           sx={{
-            color: 'rgba(85, 85, 85, 0.82)',
+            color: 'var(--secondary-color)',
             display: 'block',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -109,8 +105,8 @@ function AccessRow({ user, role, canRemove, removing, saving, onRemove }) {
         size="small"
         variant={role === 'Owner' ? 'filled' : 'outlined'}
         sx={{
-          borderColor: 'rgba(85, 85, 85, 0.38)',
-          bgcolor: role === 'Owner' ? 'rgba(85, 85, 85, 0.14)' : 'transparent',
+          borderColor: 'var(--secondary-color)',
+          bgcolor: role === 'Owner' ? 'rgba(85, 85, 85, 0.16)' : 'transparent',
           color: 'var(--secondary-color)',
           fontWeight: 'bold',
           height: 24,
@@ -226,9 +222,9 @@ export default function WorkspaceShareDialog({
         paper: {
           sx: {
             width: 'min(480px, calc(100vw - 32px))',
-            bgcolor: '#fffaf0',
+            bgcolor: 'var(--secondary-background-color)',
             color: 'var(--secondary-color)',
-            border: '1px solid rgba(85, 85, 85, 0.18)',
+            border: '2.5px solid var(--background-color)',
             borderRadius: 2,
             boxShadow: '0 18px 50px rgba(0,0,0,0.22)',
           },
@@ -296,7 +292,7 @@ export default function WorkspaceShareDialog({
             <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
               People with access
             </Typography>
-            <Divider sx={{ borderColor: 'rgba(85, 85, 85, 0.26)' }} />
+            <Divider sx={{ borderColor: 'var(--secondary-color)', opacity: 0.45 }} />
             {people.length ? (
               <Box sx={{ py: 0.25 }}>
                 {people.map(({ user, role }) => (
@@ -316,7 +312,7 @@ export default function WorkspaceShareDialog({
                 No people have access yet.
               </Typography>
             )}
-            <Divider sx={{ borderColor: 'rgba(85, 85, 85, 0.26)' }} />
+            <Divider sx={{ borderColor: 'var(--secondary-color)', opacity: 0.45 }} />
           </Box>
 
           {!isOwner && (
@@ -325,7 +321,7 @@ export default function WorkspaceShareDialog({
             </Alert>
           )}
 
-          <Typography variant="caption" sx={{ color: 'rgba(85, 85, 85, 0.82)' }}>
+          <Typography variant="caption" sx={{ color: 'var(--secondary-color)' }}>
             Only owners can manage sharing.
           </Typography>
         </Stack>
