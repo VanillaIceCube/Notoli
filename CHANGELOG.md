@@ -12,6 +12,7 @@ All notable changes to this project are documented in this file.
 - Reworked the workspace sharing dialog into a polished invite-first access list with avatars, role labels, and owner-only controls.
 - Added an inset title divider and removed the floating invite input label from the workspace sharing dialog.
 - Applied CSS-level Notoli text field focus styles globally and added regression coverage to prevent default Material UI blue focus states from returning.
+- Prevented the workspace sharing dialog from briefly showing an empty access list while closing from a backdrop click.
 - Restricted workspace update and delete API actions to workspace owners so shared collaborators cannot rename or delete shared workspaces.
 - Styled the workspace sharing dialog with the app theme instead of the default white/gray Material UI surface.
 - Removed obsolete Docker Compose and Nginx HTTP/2 syntax warnings from local/proxy startup.

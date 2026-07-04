@@ -262,6 +262,23 @@ describe('MyDrawer', () => {
     expect(screen.getByRole('button', { name: /close sharing dialog/i })).toBeInTheDocument();
   });
 
+  test('when the share modal closes from the backdrop, it keeps the access list during exit', async () => {
+    await renderDrawer();
+
+    await openWorkspaceList();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /share/i }));
+
+    expect(screen.getByText('owner')).toBeInTheDocument();
+    expect(screen.getByText('collab')).toBeInTheDocument();
+
+    const backdrops = document.querySelectorAll('.MuiBackdrop-root');
+    await userEvent.click(backdrops[backdrops.length - 1]);
+
+    expect(screen.queryByText('No people have access yet.')).not.toBeInTheDocument();
+  });
+
   test('when the owner adds a collaborator from the drawer share modal, the modal list updates', async () => {
     addWorkspaceCollaborator.mockResolvedValueOnce({
       ok: true,

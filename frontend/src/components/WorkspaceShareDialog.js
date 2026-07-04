@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Avatar,
   Box,
@@ -136,9 +136,20 @@ export default function WorkspaceShareDialog({
   const [identifier, setIdentifier] = useState('');
   const [savingAdd, setSavingAdd] = useState(false);
   const [removingUserId, setRemovingUserId] = useState(null);
+  const [renderedWorkspace, setRenderedWorkspace] = useState(workspace);
 
-  const owner = workspace?.owner_details;
-  const collaborators = useMemo(() => workspace?.collaborators_details || [], [workspace]);
+  useEffect(() => {
+    if (workspace) {
+      setRenderedWorkspace(workspace);
+    }
+  }, [workspace]);
+
+  const activeWorkspace = workspace || renderedWorkspace;
+  const owner = activeWorkspace?.owner_details;
+  const collaborators = useMemo(
+    () => activeWorkspace?.collaborators_details || [],
+    [activeWorkspace],
+  );
   const currentUsername = sessionStorage.getItem('username');
   const currentEmail = sessionStorage.getItem('email');
   const isOwner = Boolean(
@@ -157,7 +168,7 @@ export default function WorkspaceShareDialog({
 
   const handleAdd = async () => {
     const trimmed = identifier.trim();
-    if (!trimmed || !workspace || !isOwner) return;
+    if (!trimmed || !activeWorkspace || !isOwner) return;
 
     const duplicate = collaborators.some(
       (collaborator) =>
@@ -178,7 +189,11 @@ export default function WorkspaceShareDialog({
 
     setSavingAdd(true);
     try {
-      const response = await addWorkspaceCollaborator(workspace.id, { identifier: trimmed }, token);
+      const response = await addWorkspaceCollaborator(
+        activeWorkspace.id,
+        { identifier: trimmed },
+        token,
+      );
       if (!response.ok)
         throw new Error(await getResponseErrorMessage(response, 'Unable to add collaborator.'));
       const updated = await response.json();
@@ -192,11 +207,15 @@ export default function WorkspaceShareDialog({
   };
 
   const handleRemove = async (collaborator) => {
-    if (!workspace || !collaborator?.id || collaborator.id === owner?.id || !isOwner) return;
+    if (!activeWorkspace || !collaborator?.id || collaborator.id === owner?.id || !isOwner) return;
 
     setRemovingUserId(collaborator.id);
     try {
-      const response = await removeWorkspaceCollaborator(workspace.id, collaborator.id, token);
+      const response = await removeWorkspaceCollaborator(
+        activeWorkspace.id,
+        collaborator.id,
+        token,
+      );
       if (!response.ok)
         throw new Error(await getResponseErrorMessage(response, 'Unable to remove collaborator.'));
       const updated = await response.json();
@@ -205,6 +224,12 @@ export default function WorkspaceShareDialog({
       showError(err.message || 'Unable to remove collaborator.');
     } finally {
       setRemovingUserId(null);
+    }
+  };
+
+  const handleExited = () => {
+    if (!open) {
+      setRenderedWorkspace(null);
     }
   };
 
@@ -225,6 +250,9 @@ export default function WorkspaceShareDialog({
             boxShadow: '0 18px 50px rgba(0,0,0,0.22)',
           },
         },
+        transition: {
+          onExited: handleExited,
+        },
       }}
     >
       <DialogTitle
@@ -241,7 +269,7 @@ export default function WorkspaceShareDialog({
         }}
       >
         <Typography component="span" variant="h6" fontWeight="bold" noWrap>
-          Share “{workspace?.name}”
+          Share “{activeWorkspace?.name}”
         </Typography>
         <IconButton aria-label="Close sharing dialog" onClick={onClose} size="small">
           <Close fontSize="small" />
