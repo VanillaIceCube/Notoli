@@ -286,6 +286,7 @@ export default function TodoLists({ setAppBarHeader }) {
       color: 'var(--secondary-color)',
       borderRadius: 1,
       width: '100%',
+      boxSizing: 'border-box',
     };
 
     if (isReordering) {

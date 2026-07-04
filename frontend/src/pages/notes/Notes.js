@@ -326,25 +326,25 @@ export default function Notes({ setAppBarHeader }) {
       color: 'var(--secondary-color)',
       borderRadius: 1,
       width: '100%',
+      boxSizing: 'border-box',
       opacity: complete && !isReordering ? 0.72 : 1,
     };
 
     const rowContent = (
       <>
-        {!isReordering && (
-          <Checkbox
-            checked={complete}
-            onClick={(event) => event.stopPropagation()}
-            onChange={(event) => onToggleStatus(event, list)}
-            inputProps={{ 'aria-label': `Mark ${list.note} complete` }}
-            sx={{
-              color: 'var(--secondary-color)',
-              p: 0.5,
-              mr: 1,
-              '&.Mui-checked': { color: 'var(--secondary-color)' },
-            }}
-          />
-        )}
+        <Checkbox
+          checked={complete}
+          onClick={(event) => event.stopPropagation()}
+          onChange={isReordering ? undefined : (event) => onToggleStatus(event, list)}
+          inputProps={{ 'aria-label': `Mark ${list.note} complete` }}
+          sx={{
+            color: 'var(--secondary-color)',
+            p: 0.5,
+            mr: 1,
+            pointerEvents: isReordering ? 'none' : 'auto',
+            '&.Mui-checked': { color: 'var(--secondary-color)' },
+          }}
+        />
         <Typography
           variant="body1"
           fontWeight="bold"
@@ -352,7 +352,7 @@ export default function Notes({ setAppBarHeader }) {
             flexGrow: 1,
             fontSize: '1.1rem',
             textAlign: 'left',
-            textDecoration: complete && !isReordering ? 'line-through' : 'none',
+            textDecoration: complete ? 'line-through' : 'none',
           }}
         >
           {list.note}
@@ -572,7 +572,7 @@ export default function Notes({ setAppBarHeader }) {
             onClick={startReordering}
             disabled={lists.length < 2}
           >
-            Reorder notes
+            Reorder Notes
           </MenuItem>
         </Menu>
 
