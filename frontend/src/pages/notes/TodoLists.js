@@ -41,6 +41,8 @@ import {
   updateTodoList,
 } from '../../services/notoliApiClient';
 
+const TODO_LIST_VERTICAL_GAP = '8px';
+
 function SortableTodoListRow({ list, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: list.id,
@@ -103,18 +105,10 @@ export default function TodoLists({ setAppBarHeader }) {
     }
   }, [workspaceId, fetchTodoLists]);
 
-  const [pageMenuAnchorElement, setPageMenuAnchorElement] = useState(null);
-  const pageMenuOpen = Boolean(pageMenuAnchorElement);
-
-  const handlePageMenuClose = () => {
-    setPageMenuAnchorElement(null);
-  };
-
   const startReordering = () => {
     closeEdit();
     setIsAdding(false);
     handleTripleDotClose();
-    handlePageMenuClose();
     setIsReordering(true);
   };
 
@@ -360,27 +354,47 @@ export default function TodoLists({ setAppBarHeader }) {
             items={lists.map((list) => list.id)}
             strategy={verticalListSortingStrategy}
           >
-            {lists.map((list) => (
-              <SortableTodoListRow key={list.id} list={list}>
-                {({ handleProps }) => (
-                  <>
-                    {renderRowContent(list, handleProps)}
-                    <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
-                  </>
-                )}
-              </SortableTodoListRow>
-            ))}
+            <Box
+              data-testid="todo-list-reorder-list"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: TODO_LIST_VERTICAL_GAP,
+              }}
+            >
+              {lists.map((list) => (
+                <SortableTodoListRow key={list.id} list={list}>
+                  {({ handleProps }) => (
+                    <>
+                      {renderRowContent(list, handleProps)}
+                      <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
+                    </>
+                  )}
+                </SortableTodoListRow>
+              ))}
+            </Box>
           </SortableContext>
         </DndContext>
       );
     }
 
-    return lists.map((list) => (
-      <React.Fragment key={list.id}>
-        {renderRowContent(list)}
-        <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
-      </React.Fragment>
-    ));
+    return (
+      <Box
+        data-testid="todo-list-list"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: TODO_LIST_VERTICAL_GAP,
+        }}
+      >
+        {lists.map((list) => (
+          <React.Fragment key={list.id}>
+            {renderRowContent(list)}
+            <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
+          </React.Fragment>
+        ))}
+      </Box>
+    );
   };
 
   return (
@@ -404,25 +418,7 @@ export default function TodoLists({ setAppBarHeader }) {
           >
             {isReordering ? 'Reorder Lists' : 'TodoLists'}
           </Typography>
-          {isReordering ? (
-            <Button
-              variant="text"
-              size="small"
-              onClick={stopReordering}
-              sx={{ minWidth: 40, color: 'var(--secondary-color)', fontWeight: 'bold' }}
-            >
-              Done
-            </Button>
-          ) : (
-            <IconButton
-              size="small"
-              aria-label="Todo list page actions"
-              onClick={(event) => setPageMenuAnchorElement(event.currentTarget)}
-              sx={{ color: 'var(--secondary-color)' }}
-            >
-              <MoreVert />
-            </IconButton>
-          )}
+          <Box sx={{ width: 40 }} />
         </Box>
 
         {loading && <Typography align="center"> Loading... </Typography>}
@@ -439,92 +435,87 @@ export default function TodoLists({ setAppBarHeader }) {
         {!loading && !error && (
           <Stack spacing={1}>
             {renderListRows()}
-            {!isReordering &&
-              (!isAdding ? (
-                <Button
-                  variant="text"
+            {isReordering ? (
+              <Button
+                variant="text"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'left',
+                  background: 'var(--secondary-background-color)',
+                  color: 'var(--secondary-color)',
+                }}
+                onClick={stopReordering}
+              >
+                <Typography
+                  variant="body1"
+                  align="center"
+                  fontWeight="bold"
+                  sx={{ fontSize: '1.1rem' }}
+                >
+                  Done Reordering
+                </Typography>
+              </Button>
+            ) : !isAdding ? (
+              <Button
+                variant="text"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'left',
+                  background: 'var(--secondary-background-color)',
+                  color: 'var(--secondary-color)',
+                }}
+                startIcon={<Add />}
+                onClick={() => setIsAdding(true)}
+              >
+                <Typography
+                  variant="body1"
+                  align="center"
+                  fontWeight="bold"
+                  sx={{ fontSize: '1.1rem' }}
+                >
+                  Add New
+                </Typography>
+              </Button>
+            ) : (
+              <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
+                <TextField
+                  autoFocus
+                  variant="standard"
+                  size="small"
                   sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'left',
-                    background: 'var(--secondary-background-color)',
+                    flexGrow: 1,
+                    mr: 1,
+                    justifyContent: 'space-between',
                     color: 'var(--secondary-color)',
                   }}
-                  startIcon={<Add />}
-                  onClick={() => setIsAdding(true)}
-                >
-                  <Typography
-                    variant="body1"
-                    align="center"
-                    fontWeight="bold"
-                    sx={{ fontSize: '1.1rem' }}
-                  >
-                    Add New
-                  </Typography>
-                </Button>
-              ) : (
-                <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
-                  <TextField
-                    autoFocus
-                    variant="standard"
-                    size="small"
-                    sx={{
-                      flexGrow: 1,
-                      mr: 1,
-                      justifyContent: 'space-between',
-                      color: 'var(--secondary-color)',
-                    }}
-                    slotProps={{
-                      input: {
-                        sx: {
-                          color: 'var(--secondary-color)',
-                          '&:after': { borderBottomColor: 'var(--secondary-color)' },
-                        },
+                  slotProps={{
+                    input: {
+                      sx: {
+                        color: 'var(--secondary-color)',
+                        '&:after': { borderBottomColor: 'var(--secondary-color)' },
                       },
-                    }}
-                    placeholder="New TodoList Name..."
-                    value={newTodoListName}
-                    onChange={(event) => setNewTodoListName(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') onAdd();
-                      if (event.key === 'Escape') setIsAdding(false);
-                    }}
-                  />
-                  <IconButton size="small" onClick={onAdd} disabled={!newTodoListName.trim()}>
-                    <Add />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => setIsAdding(false)}>
-                    <Close />
-                  </IconButton>
-                </Box>
-              ))}
+                    },
+                  }}
+                  placeholder="New TodoList Name..."
+                  value={newTodoListName}
+                  onChange={(event) => setNewTodoListName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') onAdd();
+                    if (event.key === 'Escape') setIsAdding(false);
+                  }}
+                />
+                <IconButton size="small" onClick={onAdd} disabled={!newTodoListName.trim()}>
+                  <Add />
+                </IconButton>
+                <IconButton size="small" onClick={() => setIsAdding(false)}>
+                  <Close />
+                </IconButton>
+              </Box>
+            )}
           </Stack>
         )}
-
-        <Menu
-          slotProps={{
-            paper: {
-              sx: {
-                backgroundColor: 'var(--secondary-background-color)',
-                color: 'var(--secondary-color)',
-                boxShadow: 3,
-                border: '2.5px solid var(--background-color)',
-                borderRadius: 1.5,
-              },
-            },
-          }}
-          anchorEl={pageMenuAnchorElement}
-          open={pageMenuOpen}
-          onClose={handlePageMenuClose}
-        >
-          <MenuItem
-            sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
-            onClick={startReordering}
-            disabled={lists.length < 2}
-          >
-            Reorder lists
-          </MenuItem>
-        </Menu>
 
         <Menu
           slotProps={{
@@ -546,7 +537,18 @@ export default function TodoLists({ setAppBarHeader }) {
             sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
             onClick={startEditing}
           >
-            Edit
+            Rename
+          </MenuItem>
+          <Divider
+            variant="middle"
+            sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+          />
+          <MenuItem
+            sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+            onClick={startReordering}
+            disabled={lists.length < 2}
+          >
+            Reorder
           </MenuItem>
           <Divider
             variant="middle"
@@ -556,7 +558,7 @@ export default function TodoLists({ setAppBarHeader }) {
             sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
             onClick={() => onDelete(selectedTodoList.id)}
           >
-            Delete
+            Remove
           </MenuItem>
         </Menu>
       </Paper>

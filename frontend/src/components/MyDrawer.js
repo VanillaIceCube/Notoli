@@ -143,7 +143,7 @@ export default function MyDrawer({
     setSelectedWorkspace(null);
   };
 
-  // Edit Workspace
+  // Rename workspace
   const [isEditing, setIsEditing] = useState(false);
   const [editingWorkspaceId, setEditingWorkspaceId] = useState(null);
   const [editWorkspaceName, setEditWorkspaceName] = useState('');
@@ -202,7 +202,7 @@ export default function MyDrawer({
     setSharingWorkspace(updatedWorkspace);
   };
 
-  // Delete Workspace
+  // Remove workspace
   const onDelete = async (id) => {
     setError(null);
 
@@ -497,7 +497,7 @@ export default function MyDrawer({
           onClick={startEditing}
         >
           <Edit sx={{ mr: 1, fontSize: 18 }} />
-          Edit
+          Rename
         </MenuItem>
         <Divider
           variant="middle"
@@ -508,7 +508,7 @@ export default function MyDrawer({
           onClick={() => onDelete(selectedWorkspace.id)}
         >
           <Delete sx={{ mr: 1, fontSize: 18 }} />
-          Delete
+          Remove
         </MenuItem>
       </Menu>
       <WorkspaceShareDialog

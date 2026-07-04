@@ -151,13 +151,13 @@ describe('TodoLists', () => {
     expect(screen.queryByPlaceholderText(/new todolist name/i)).not.toBeInTheDocument();
   });
 
-  test('when edit is opened, it shows the edit input prefilled', async () => {
+  test('when rename is opened, it shows the edit input prefilled', async () => {
     await renderTodoLists();
 
     await userEvent.click(
       await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     expect(input).toHaveValue('test_todolist_01');
@@ -174,7 +174,7 @@ describe('TodoLists', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
@@ -198,7 +198,7 @@ describe('TodoLists', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
@@ -207,13 +207,13 @@ describe('TodoLists', () => {
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
 
-  test('when edit is opened and Escape is pressed, it closes the edit input', async () => {
+  test('when rename is opened and Escape is pressed, it closes the edit input', async () => {
     await renderTodoLists();
 
     await userEvent.click(
       await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     await userEvent.type(input, '{Escape}');
@@ -229,7 +229,7 @@ describe('TodoLists', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /remove/i }));
 
     await waitFor(() => {
       expect(deleteTodoList).toHaveBeenCalledWith(10, 'token');
@@ -247,7 +247,7 @@ describe('TodoLists', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /remove/i }));
 
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
@@ -255,18 +255,27 @@ describe('TodoLists', () => {
   test('when reorder mode is opened, it shows drag handles and hides row actions and add', async () => {
     await renderTodoLists();
 
-    await userEvent.click(screen.getByRole('button', { name: /todo list page actions/i }));
-    await userEvent.click(screen.getByRole('menuitem', { name: /reorder lists/i }));
+    expect(
+      screen.queryByRole('button', { name: /todo list page actions/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId('todo-list-list')).toHaveStyle('gap: 8px');
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /^reorder$/i }));
 
     expect(screen.getByRole('heading', { name: /reorder lists/i })).toBeInTheDocument();
+    expect(screen.getByTestId('todo-list-reorder-list')).toHaveStyle('gap: 8px');
     expect(screen.getByTestId('todo-list-drag-handle-10')).toBeInTheDocument();
     expect(screen.getByTestId('todo-list-drag-handle-11')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /todo list actions for test_todolist_01/i }),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /add new/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /done reordering/i })).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: /done/i }));
+    await userEvent.click(screen.getByRole('button', { name: /done reordering/i }));
 
     expect(screen.getByRole('heading', { name: /todolists/i })).toBeInTheDocument();
   });

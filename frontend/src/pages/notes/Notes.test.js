@@ -129,13 +129,13 @@ describe('Notes', () => {
     expect(await screen.findByText('test_note_03')).toBeInTheDocument();
   });
 
-  test('when edit is opened, it shows the edit input prefilled', async () => {
+  test('when rename is opened, it shows the edit input prefilled', async () => {
     await renderNotes();
 
     await userEvent.click(
       await screen.findByRole('button', { name: /note actions for test_note_01/i }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     expect(input).toHaveValue('test_note_01');
@@ -152,7 +152,7 @@ describe('Notes', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: /note actions for test_note_01/i }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
@@ -190,7 +190,7 @@ describe('Notes', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: /note actions for test_note_01/i }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /remove/i }));
 
     await waitFor(() => {
       expect(deleteNote).toHaveBeenCalledWith(101, 'token');
@@ -213,6 +213,7 @@ describe('Notes', () => {
     await renderNotes();
 
     expect(screen.queryByRole('button', { name: /notes page actions/i })).not.toBeInTheDocument();
+    expect(screen.getByTestId('note-list')).toHaveStyle('gap: 8px');
 
     await userEvent.click(
       await screen.findByRole('button', { name: /note actions for test_note_01/i }),
@@ -220,6 +221,7 @@ describe('Notes', () => {
     await userEvent.click(screen.getByRole('menuitem', { name: /^reorder$/i }));
 
     expect(screen.getByRole('heading', { name: /reorder notes/i })).toBeInTheDocument();
+    expect(screen.getByTestId('note-reorder-list')).toHaveStyle('gap: 8px');
     expect(screen.getByTestId('note-drag-handle-101')).toBeInTheDocument();
     expect(screen.getByTestId('note-drag-handle-102')).toBeInTheDocument();
     expect(
@@ -283,13 +285,13 @@ describe('Notes', () => {
     expect(screen.queryByPlaceholderText(/new note/i)).not.toBeInTheDocument();
   });
 
-  test('when edit is opened and Escape is pressed, it closes the edit input', async () => {
+  test('when rename is opened and Escape is pressed, it closes the edit input', async () => {
     await renderNotes();
 
     await userEvent.click(
       await screen.findByRole('button', { name: /note actions for test_note_01/i }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     await userEvent.type(input, '{Escape}');
@@ -318,7 +320,7 @@ describe('Notes', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: /note actions for test_note_01/i }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
@@ -335,7 +337,7 @@ describe('Notes', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: /note actions for test_note_01/i }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /remove/i }));
 
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });

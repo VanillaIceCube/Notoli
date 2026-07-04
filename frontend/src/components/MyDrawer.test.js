@@ -177,13 +177,13 @@ describe('MyDrawer', () => {
     expect(await screen.findByText('Gamma')).toBeInTheDocument();
   });
 
-  test('when Edit is selected from the menu, it shows the edit input prefilled', async () => {
+  test('when Rename is selected from the menu, it shows the edit input prefilled', async () => {
     await renderDrawer();
 
     await openWorkspaceList();
 
     await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     expect(input).toHaveValue('test_workspace_01');
@@ -200,7 +200,7 @@ describe('MyDrawer', () => {
     await openWorkspaceList();
 
     await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
@@ -216,7 +216,7 @@ describe('MyDrawer', () => {
     expect(await screen.findByText('test_workspace_01 Updated')).toBeInTheDocument();
   });
 
-  test('when Delete is selected from the menu, it removes the workspace', async () => {
+  test('when Remove is selected from the menu, it removes the workspace', async () => {
     deleteWorkspace.mockResolvedValueOnce({ ok: true });
 
     await renderDrawer();
@@ -224,7 +224,7 @@ describe('MyDrawer', () => {
     await openWorkspaceList();
 
     await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
-    await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
+    await userEvent.click(screen.getByRole('menuitem', { name: /remove/i }));
 
     await waitFor(() => {
       expect(deleteWorkspace).toHaveBeenCalledWith(1, 'token');

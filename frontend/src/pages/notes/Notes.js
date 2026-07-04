@@ -45,6 +45,7 @@ import {
 
 const NOTE_STATUS_NOT_STARTED = 'Not Started';
 const NOTE_STATUS_COMPLETE = 'Complete';
+const NOTE_LIST_VERTICAL_GAP = '8px';
 const isNoteComplete = (note) => note.status === NOTE_STATUS_COMPLETE;
 
 function SortableNoteRow({ note, children }) {
@@ -402,27 +403,47 @@ export default function Notes({ setAppBarHeader }) {
             items={lists.map((list) => list.id)}
             strategy={verticalListSortingStrategy}
           >
-            {lists.map((list) => (
-              <SortableNoteRow key={list.id} note={list}>
-                {({ handleProps }) => (
-                  <>
-                    {renderRowContent(list, handleProps)}
-                    <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
-                  </>
-                )}
-              </SortableNoteRow>
-            ))}
+            <Box
+              data-testid="note-reorder-list"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: NOTE_LIST_VERTICAL_GAP,
+              }}
+            >
+              {lists.map((list) => (
+                <SortableNoteRow key={list.id} note={list}>
+                  {({ handleProps }) => (
+                    <>
+                      {renderRowContent(list, handleProps)}
+                      <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
+                    </>
+                  )}
+                </SortableNoteRow>
+              ))}
+            </Box>
           </SortableContext>
         </DndContext>
       );
     }
 
-    return lists.map((list) => (
-      <React.Fragment key={list.id}>
-        {renderRowContent(list)}
-        <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
-      </React.Fragment>
-    ));
+    return (
+      <Box
+        data-testid="note-list"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: NOTE_LIST_VERTICAL_GAP,
+        }}
+      >
+        {lists.map((list) => (
+          <React.Fragment key={list.id}>
+            {renderRowContent(list)}
+            <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
+          </React.Fragment>
+        ))}
+      </Box>
+    );
   };
 
   return (
@@ -565,7 +586,7 @@ export default function Notes({ setAppBarHeader }) {
             sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
             onClick={startEditing}
           >
-            Edit
+            Rename
           </MenuItem>
           <Divider
             variant="middle"
@@ -586,7 +607,7 @@ export default function Notes({ setAppBarHeader }) {
             sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
             onClick={() => onDelete(selectedNote.id)}
           >
-            Delete
+            Remove
           </MenuItem>
         </Menu>
       </Paper>
