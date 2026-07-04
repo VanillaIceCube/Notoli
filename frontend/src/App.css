@@ -29,3 +29,16 @@ body {
 .App-link {
   color: var(--primary-color);
 }
+
+.MuiInputLabel-root.Mui-focused {
+  color: var(--secondary-color) !important;
+}
+
+.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: var(--secondary-color) !important;
+}
+
+.MuiInput-underline::after,
+.MuiFilledInput-underline::after {
+  border-bottom-color: var(--secondary-color) !important;
+}
