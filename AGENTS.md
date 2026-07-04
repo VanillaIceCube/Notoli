@@ -12,6 +12,13 @@ Also update the relevant README(s):
 - CI/CD, Dependabot, workflows: `.github/README-WORKFLOWS.md`
 Also update `CHANGELOG.md`.
 
+## Verification evidence
+For frontend/UI changes, include browser-based screenshots whenever screenshots are useful or necessary to verify the change. Prefer before/after screenshots; for saved-state UI features, also capture a post-refresh screenshot showing the state persisted.
+
+For backend work, include screenshots or equivalent visual/test artifacts where applicable, such as API response evidence, admin-page evidence, network-request evidence, logs, or test output.
+
+The preferred screenshot method is Playwright with Chrome or Chromium and a fixed viewport. Branded Google Chrome may be used through the Playwright Chrome channel when matching the local browser matters; Chromium is acceptable and simpler for CI by default. Avoid OS-level screenshot tools unless there is a specific reason they are required. Save screenshots and related verification outputs as test artifacts/evidence when practical.
+
 ## Changelog format
 When updating `CHANGELOG.md`, add a new dated section at the top and group entries under:
 - `### Added`

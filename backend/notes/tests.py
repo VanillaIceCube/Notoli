@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from .models import Note, TodoList, Workspace
+from .models import Note, TodoList, TodoListNote, Workspace
 
 User = get_user_model()
 
@@ -470,6 +470,87 @@ class TodoListApiTests(APITestCase):
             1,
             f"Expected only one todolist in filtered response, got {response.data}",
         )
+
+    def test_list_todolists_returns_saved_workspace_order(self):
+        second_list = TodoList.objects.create(
+            name="Second List",
+            description="Second List Description",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=0,
+        )
+        self.todo_list.position = 1
+        self.todo_list.save(update_fields=["position"])
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(f"/api/todolists/?workspace={self.workspace.id}")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(
+            [item["id"] for item in response.data],
+            [second_list.id, self.todo_list.id],
+        )
+
+    def test_reorder_todolists_persists_workspace_order(self):
+        second_list = TodoList.objects.create(
+            name="Second List",
+            description="Second List Description",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+            position=1,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            "/api/todolists/reorder/",
+            {
+                "workspace": self.workspace.id,
+                "ordered_ids": [second_list.id, self.todo_list.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(
+            [item["id"] for item in response.data],
+            [second_list.id, self.todo_list.id],
+        )
+        self.todo_list.refresh_from_db()
+        second_list.refresh_from_db()
+        self.assertEqual(second_list.position, 0)
+        self.assertEqual(self.todo_list.position, 1)
+
+    def test_reorder_todolists_rejects_ids_outside_workspace(self):
+        other_workspace = Workspace.objects.create(
+            name="Other Workspace",
+            description="Other Workspace Description",
+            owner=self.owner,
+            created_by=self.owner,
+        )
+        other_list = TodoList.objects.create(
+            name="Other List",
+            description="Other List Description",
+            workspace=other_workspace,
+            owner=self.owner,
+            created_by=self.owner,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            "/api/todolists/reorder/",
+            {
+                "workspace": self.workspace.id,
+                "ordered_ids": [other_list.id, self.todo_list.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+        )
+        self.assertIn("ordered_ids", response.data)
 
     def test_list_todolists_filters_by_workspace_denied_for_outsider_workspace(self):
         other_workspace = Workspace.objects.create(
@@ -944,6 +1025,145 @@ class NoteApiTests(APITestCase):
             len(response_ids),
             1,
             f"Expected only one note in filtered response, got {response.data}",
+        )
+
+    def test_list_notes_returns_saved_todolist_membership_order(self):
+        second_note = Note.objects.create(
+            note="Second Note",
+            description="Second Note Description",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+        )
+        self.todo_list.notes.add(second_note)
+        TodoListNote.objects.filter(todolist=self.todo_list, note=self.note).update(
+            position=1
+        )
+        TodoListNote.objects.filter(todolist=self.todo_list, note=second_note).update(
+            position=0
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(f"/api/notes/?todo_list={self.todo_list.id}")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(
+            [item["id"] for item in response.data],
+            [second_note.id, self.note.id],
+        )
+
+    def test_reorder_notes_persists_todolist_membership_order(self):
+        second_note = Note.objects.create(
+            note="Second Note",
+            description="Second Note Description",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+        )
+        self.todo_list.notes.add(second_note)
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            "/api/notes/reorder/",
+            {
+                "todo_list": self.todo_list.id,
+                "ordered_ids": [second_note.id, self.note.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(
+            [item["id"] for item in response.data],
+            [second_note.id, self.note.id],
+        )
+        self.assertEqual(
+            TodoListNote.objects.get(
+                todolist=self.todo_list, note=second_note
+            ).position,
+            0,
+        )
+        self.assertEqual(
+            TodoListNote.objects.get(todolist=self.todo_list, note=self.note).position,
+            1,
+        )
+
+    def test_reorder_notes_rejects_ids_outside_todolist(self):
+        outside_note = Note.objects.create(
+            note="Outside Note",
+            description="Outside Note Description",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            "/api/notes/reorder/",
+            {
+                "todo_list": self.todo_list.id,
+                "ordered_ids": [outside_note.id, self.note.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+        )
+        self.assertIn("ordered_ids", response.data)
+
+    def test_same_note_can_have_different_positions_in_different_todolists(self):
+        second_note = Note.objects.create(
+            note="Second Note",
+            description="Second Note Description",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+        )
+        other_todo_list = TodoList.objects.create(
+            name="Other List",
+            description="Other List Description",
+            workspace=self.workspace,
+            owner=self.owner,
+            created_by=self.owner,
+        )
+        self.todo_list.notes.add(second_note)
+        other_todo_list.notes.add(self.note)
+        other_todo_list.notes.add(second_note)
+
+        self.client.force_authenticate(user=self.owner)
+        first_response = self.client.patch(
+            "/api/notes/reorder/",
+            {
+                "todo_list": self.todo_list.id,
+                "ordered_ids": [second_note.id, self.note.id],
+            },
+            format="json",
+        )
+        second_response = self.client.patch(
+            "/api/notes/reorder/",
+            {
+                "todo_list": other_todo_list.id,
+                "ordered_ids": [self.note.id, second_note.id],
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            first_response.status_code, status.HTTP_200_OK, first_response.data
+        )
+        self.assertEqual(
+            second_response.status_code,
+            status.HTTP_200_OK,
+            second_response.data,
+        )
+        self.assertEqual(
+            TodoListNote.objects.get(todolist=self.todo_list, note=self.note).position,
+            1,
+        )
+        self.assertEqual(
+            TodoListNote.objects.get(todolist=other_todo_list, note=self.note).position,
+            0,
         )
 
     def test_list_notes_filters_by_workspace_denied_for_outsider_workspace(self):

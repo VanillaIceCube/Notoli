@@ -3,10 +3,16 @@ All notable changes to this project are documented in this file.
 
 ## 2026-07-04
 ### Added
+- Added drag-and-drop reorder mode for workspace todo-list rows and todo-list note rows.
+- Added scoped reorder API endpoints for todo lists and notes.
+- Added per-workspace todo-list positions and per-todo-list note membership positions.
+- Added `@dnd-kit` sortable drag-and-drop dependencies for animated list reordering.
 - Added persisted `status` state to notes and exposed it through the notes API.
 - Added `In Progress` as a note status and renamed the checked-off value to `Complete`.
 - Added checkbox controls and completed-note strikethrough styling to todo item rows.
 - Added backend and frontend tests for note status behavior.
+### Changed
+- Documented browser-based screenshot evidence expectations for future UI and backend verification.
 
 ## 2026-07-03
 ### Added
