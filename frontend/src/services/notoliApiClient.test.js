@@ -13,10 +13,12 @@ import {
   createTodoList,
   updateTodoList,
   deleteTodoList,
+  reorderTodoLists,
   fetchNotes,
   createNote,
   updateNote,
   deleteNote,
+  reorderNotes,
 } from './notoliApiClient';
 import { apiFetch } from './requestClient';
 
@@ -206,6 +208,16 @@ describe('notoliApiClient', () => {
     });
   });
 
+  test('when reordering todo lists, it patches the reorder endpoint', () => {
+    reorderTodoLists(9, [11, 10], 'token');
+
+    expect(apiFetch).toHaveBeenCalledWith('/api/todolists/reorder/', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
+      body: JSON.stringify({ workspace: 9, ordered_ids: [11, 10] }),
+    });
+  });
+
   test('when fetching notes, it calls the todo list query endpoint', () => {
     fetchNotes(7, 'token');
 
@@ -240,6 +252,16 @@ describe('notoliApiClient', () => {
     expect(apiFetch).toHaveBeenCalledWith('/api/notes/2/', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
+    });
+  });
+
+  test('when reordering notes, it patches the reorder endpoint', () => {
+    reorderNotes(7, [102, 101], 'token');
+
+    expect(apiFetch).toHaveBeenCalledWith('/api/notes/reorder/', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
+      body: JSON.stringify({ todo_list: 7, ordered_ids: [102, 101] }),
     });
   });
 });

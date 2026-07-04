@@ -1,19 +1,36 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Typography,
-  Container,
-  Paper,
-  Stack,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
+  Box,
   Button,
+  Checkbox,
+  Container,
+  IconButton,
   Menu,
   MenuItem,
-  Box,
+  Paper,
+  Stack,
   TextField,
-  IconButton,
-  Checkbox,
+  Typography,
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
+import DragIndicator from '@mui/icons-material/DragIndicator';
 import MoreVert from '@mui/icons-material/MoreVert';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
@@ -22,22 +39,50 @@ import {
   deleteNote,
   fetchNotes as fetchNotesApi,
   fetchTodoList as fetchTodoListApi,
+  reorderNotes,
   updateNote,
 } from '../../services/notoliApiClient';
 
 const NOTE_STATUS_NOT_STARTED = 'Not Started';
 const NOTE_STATUS_COMPLETE = 'Complete';
+const NOTE_LIST_VERTICAL_GAP = '8px';
+const NOTE_ROW_MIN_HEIGHT = 42;
 const isNoteComplete = (note) => note.status === NOTE_STATUS_COMPLETE;
 
-export default function Notes({ setAppBarHeader }) {
-  // Pull Todolist ID
-  const { todoListId } = useParams();
+function SortableNoteRow({ note, children }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: note.id,
+  });
 
-  // Pull Note List
+  return (
+    <Box
+      ref={setNodeRef}
+      data-testid={`note-sortable-row-${note.id}`}
+      sx={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.78 : 1,
+        zIndex: isDragging ? 1 : 'auto',
+      }}
+    >
+      {children({ handleProps: { ...attributes, ...listeners } })}
+    </Box>
+  );
+}
+
+export default function Notes({ setAppBarHeader }) {
+  const { todoListId } = useParams();
   const token = sessionStorage.getItem('accessToken');
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isReordering, setIsReordering] = useState(false);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const fetchNotes = useCallback(async () => {
     setLoading(true);
@@ -54,7 +99,6 @@ export default function Notes({ setAppBarHeader }) {
     }
   }, [token, todoListId]);
 
-  // Fetch Todo List required for Title Header
   const fetchTodoListName = useCallback(async () => {
     if (!todoListId) return;
     try {
@@ -74,7 +118,17 @@ export default function Notes({ setAppBarHeader }) {
     }
   }, [todoListId, fetchNotes, fetchTodoListName]);
 
-  // Triple Dot Menu Functions
+  const startReordering = () => {
+    closeEdit();
+    setIsAdding(false);
+    handleTripleDotClose();
+    setIsReordering(true);
+  };
+
+  const stopReordering = () => {
+    setIsReordering(false);
+  };
+
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
   const [selectedNote, setSelectedNote] = useState(null);
   const open = Boolean(tripleDotAnchorElement);
@@ -89,7 +143,6 @@ export default function Notes({ setAppBarHeader }) {
     setSelectedNote(null);
   };
 
-  // Add New Note
   const [isAdding, setIsAdding] = useState(false);
   const [newNote, setNewNote] = useState('');
 
@@ -108,7 +161,6 @@ export default function Notes({ setAppBarHeader }) {
         token,
       );
 
-      // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const created = await response.json();
       setLists((prev) => [...prev, created]);
@@ -120,7 +172,6 @@ export default function Notes({ setAppBarHeader }) {
     }
   };
 
-  // Edit Note
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editNote, setEditNote] = useState('');
 
@@ -137,7 +188,6 @@ export default function Notes({ setAppBarHeader }) {
     try {
       const response = await updateNote(editingNoteId, { note: editNote }, token);
 
-      // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
       setLists((prev) =>
@@ -180,14 +230,12 @@ export default function Notes({ setAppBarHeader }) {
     setEditNote('');
   };
 
-  // Delete Note
   const onDelete = async (id) => {
     setError(null);
 
     try {
       const response = await deleteNote(id, token);
 
-      // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       setLists((prev) => prev.filter((note) => note.id !== id));
     } catch (err) {
@@ -195,6 +243,220 @@ export default function Notes({ setAppBarHeader }) {
     } finally {
       handleTripleDotClose();
     }
+  };
+
+  const onDragEnd = async ({ active, over }) => {
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = lists.findIndex((note) => note.id === active.id);
+    const newIndex = lists.findIndex((note) => note.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+
+    const previousNotes = lists;
+    const reorderedNotes = arrayMove(lists, oldIndex, newIndex);
+    setLists(reorderedNotes);
+    setError(null);
+
+    try {
+      const response = await reorderNotes(
+        todoListId,
+        reorderedNotes.map((note) => note.id),
+        token,
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const updatedNotes = await response.json();
+      setLists(updatedNotes);
+    } catch (err) {
+      setLists(previousNotes);
+      setError(err.toString());
+    }
+  };
+
+  const renderRowContent = (list, handleProps = null) => {
+    if (editingNoteId === list.id) {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
+          <TextField
+            autoFocus
+            variant="standard"
+            size="small"
+            sx={{
+              flexGrow: 1,
+              mr: 1,
+              justifyContent: 'space-between',
+              color: 'var(--secondary-color)',
+            }}
+            slotProps={{
+              input: {
+                sx: {
+                  color: 'var(--secondary-color)',
+                  '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                },
+              },
+            }}
+            value={editNote}
+            onChange={(event) => setEditNote(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') onEdit();
+              if (event.key === 'Escape') closeEdit();
+            }}
+          />
+          <IconButton size="small" onClick={onEdit} disabled={!editNote.trim()}>
+            <Add />
+          </IconButton>
+          <IconButton size="small" onClick={closeEdit}>
+            <Close />
+          </IconButton>
+        </Box>
+      );
+    }
+
+    const complete = isNoteComplete(list);
+    const rowSx = {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      background: 'var(--secondary-background-color)',
+      color: 'var(--secondary-color)',
+      borderRadius: 1,
+      width: '100%',
+      minHeight: NOTE_ROW_MIN_HEIGHT,
+      boxSizing: 'border-box',
+      opacity: complete ? 0.72 : 1,
+    };
+
+    const rowContent = (
+      <>
+        <Checkbox
+          checked={complete}
+          onClick={(event) => event.stopPropagation()}
+          onChange={isReordering ? undefined : (event) => onToggleStatus(event, list)}
+          inputProps={{ 'aria-label': `Mark ${list.note} complete` }}
+          sx={{
+            color: 'var(--secondary-color)',
+            p: 0.5,
+            mr: 1,
+            pointerEvents: isReordering ? 'none' : 'auto',
+            '&.Mui-checked': { color: 'var(--secondary-color)' },
+          }}
+        />
+        <Typography
+          variant="body1"
+          fontWeight="bold"
+          sx={{
+            flexGrow: 1,
+            fontSize: '1.1rem',
+            textAlign: 'left',
+            textDecoration: complete ? 'line-through' : 'none',
+          }}
+        >
+          {list.note}
+        </Typography>
+        {isReordering ? (
+          <IconButton
+            size="small"
+            aria-label={`Drag ${list.note}`}
+            data-testid={`note-drag-handle-${list.id}`}
+            sx={{ color: 'var(--secondary-color)', cursor: 'grab' }}
+            {...handleProps}
+          >
+            <DragIndicator />
+          </IconButton>
+        ) : (
+          <IconButton
+            size="small"
+            aria-label={`Note actions for ${list.note}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleTripleDotClick(event, list);
+            }}
+            sx={{ color: 'var(--secondary-color)' }}
+          >
+            <MoreVert />
+          </IconButton>
+        )}
+      </>
+    );
+
+    if (isReordering) {
+      return (
+        <Box data-testid={`note-reorder-row-${list.id}`} sx={{ ...rowSx, px: 1, py: 0.5 }}>
+          {rowContent}
+        </Box>
+      );
+    }
+
+    return (
+      <Box data-testid={`note-row-${list.id}`} sx={{ ...rowSx, px: 1, py: 0.5 }}>
+        {rowContent}
+      </Box>
+    );
+  };
+
+  const renderListRows = () => {
+    if (!lists.length) {
+      return (
+        <Typography variant="body1" align="center" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+          No notes found.
+        </Typography>
+      );
+    }
+
+    if (isReordering) {
+      return (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <SortableContext
+            items={lists.map((list) => list.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <Box
+              data-testid="note-reorder-list"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: NOTE_LIST_VERTICAL_GAP,
+              }}
+            >
+              {lists.map((list) => (
+                <SortableNoteRow key={list.id} note={list}>
+                  {({ handleProps }) => (
+                    <Box
+                      data-testid={`note-reorder-item-${list.id}`}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: NOTE_LIST_VERTICAL_GAP,
+                      }}
+                    >
+                      {renderRowContent(list, handleProps)}
+                      <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
+                    </Box>
+                  )}
+                </SortableNoteRow>
+              ))}
+            </Box>
+          </SortableContext>
+        </DndContext>
+      );
+    }
+
+    return (
+      <Box
+        data-testid="note-list"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: NOTE_LIST_VERTICAL_GAP,
+        }}
+      >
+        {lists.map((list) => (
+          <React.Fragment key={list.id}>
+            {renderRowContent(list)}
+            <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
+          </React.Fragment>
+        ))}
+      </Box>
+    );
   };
 
   return (
@@ -206,138 +468,57 @@ export default function Notes({ setAppBarHeader }) {
         elevation={3}
         sx={{ px: 1.5, py: 1.5, width: '100%', background: 'var(--secondary-background-color)' }}
       >
-        {/* Header */}
-        <Typography
-          variant="h4"
-          align="center"
-          gutterBottom
-          sx={{ mt: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)' }}
+        <Box
+          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5 }}
         >
-          Notes
-        </Typography>
+          <Box sx={{ width: 40 }} />
+          <Typography
+            variant="h4"
+            align="center"
+            gutterBottom
+            sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
+          >
+            {isReordering ? 'Reorder Notes' : 'Notes'}
+          </Typography>
+          <Box sx={{ width: 40 }} />
+        </Box>
 
-        {/* This is for loading */}
-        {loading && <Typography align="center"> Loading… </Typography>}
+        {loading && <Typography align="center"> Loading... </Typography>}
 
-        {/* This is for errors */}
         {error && (
           <Typography color="error" align="center">
             Error: {error}
           </Typography>
         )}
 
-        {/* If we're done loading and there are no errors */}
         <Divider
           sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }}
         />
         {!loading && !error && (
           <Stack spacing={1}>
-            {lists.length ? (
-              lists.map((list) => {
-                const complete = isNoteComplete(list);
-
-                return (
-                  <React.Fragment key={list.id}>
-                    {editingNoteId === list.id ? (
-                      <React.Fragment>
-                        {/* Editing Mode */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
-                          <TextField
-                            autoFocus
-                            variant="standard"
-                            size="small"
-                            sx={{
-                              flexGrow: 1,
-                              mr: 1,
-                              justifyContent: 'space-between',
-                              color: 'var(--secondary-color)',
-                            }}
-                            slotProps={{
-                              input: {
-                                sx: {
-                                  color: 'var(--secondary-color)',
-                                  '&:after': { borderBottomColor: 'var(--secondary-color)' },
-                                },
-                              },
-                            }}
-                            value={editNote}
-                            onChange={(event) => setEditNote(event.target.value)}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Enter') onEdit();
-                              if (event.key === 'Escape') closeEdit();
-                            }}
-                          />
-                          <IconButton size="small" onClick={onEdit} disabled={!editNote.trim()}>
-                            <Add />
-                          </IconButton>
-                          <IconButton size="small" onClick={closeEdit}>
-                            <Close />
-                          </IconButton>
-                        </Box>
-                      </React.Fragment>
-                    ) : (
-                      <React.Fragment>
-                        {/* Normal Mode */}
-                        <Button
-                          variant="text"
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            background: 'var(--secondary-background-color)',
-                            color: 'var(--secondary-color)',
-                            opacity: complete ? 0.72 : 1,
-                          }}
-                        >
-                          <Checkbox
-                            checked={complete}
-                            onClick={(event) => event.stopPropagation()}
-                            onChange={(event) => onToggleStatus(event, list)}
-                            inputProps={{ 'aria-label': `Mark ${list.note} complete` }}
-                            sx={{
-                              color: 'var(--secondary-color)',
-                              p: 0.5,
-                              mr: 1,
-                              '&.Mui-checked': { color: 'var(--secondary-color)' },
-                            }}
-                          />
-                          <Typography
-                            variant="body1"
-                            fontWeight="bold"
-                            sx={{
-                              flexGrow: 1,
-                              fontSize: '1.1rem',
-                              textAlign: 'left',
-                              textDecoration: complete ? 'line-through' : 'none',
-                            }}
-                          >
-                            {list.note}
-                          </Typography>
-                          <MoreVert
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleTripleDotClick(event, list);
-                            }}
-                          />
-                        </Button>
-                      </React.Fragment>
-                    )}
-                    <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
-                  </React.Fragment>
-                );
-              })
-            ) : (
-              <Typography
-                variant="body1"
-                align="center"
-                fontWeight="bold"
-                sx={{ fontSize: '1.1rem' }}
+            {renderListRows()}
+            {isReordering ? (
+              <Button
+                variant="text"
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'left',
+                  background: 'var(--secondary-background-color)',
+                  color: 'var(--secondary-color)',
+                }}
+                onClick={stopReordering}
               >
-                No notes found.
-              </Typography>
-            )}
-            {/* By default show the Add New button, otherwise show a TextField & save Note*/}
-            {!isAdding ? (
+                <Typography
+                  variant="body1"
+                  align="center"
+                  fontWeight="bold"
+                  sx={{ fontSize: '1.1rem' }}
+                >
+                  Done Reordering
+                </Typography>
+              </Button>
+            ) : !isAdding ? (
               <Button
                 variant="text"
                 sx={{
@@ -379,7 +560,7 @@ export default function Notes({ setAppBarHeader }) {
                       },
                     },
                   }}
-                  placeholder="New Note…"
+                  placeholder="New Note..."
                   value={newNote}
                   onChange={(event) => setNewNote(event.target.value)}
                   onKeyDown={(event) => {
@@ -398,7 +579,6 @@ export default function Notes({ setAppBarHeader }) {
           </Stack>
         )}
 
-        {/* Triple dot menu */}
         <Menu
           slotProps={{
             paper: {
@@ -419,7 +599,18 @@ export default function Notes({ setAppBarHeader }) {
             sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
             onClick={startEditing}
           >
-            Edit
+            Rename
+          </MenuItem>
+          <Divider
+            variant="middle"
+            sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+          />
+          <MenuItem
+            sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+            onClick={startReordering}
+            disabled={lists.length < 2}
+          >
+            Reorder
           </MenuItem>
           <Divider
             variant="middle"
@@ -429,7 +620,7 @@ export default function Notes({ setAppBarHeader }) {
             sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
             onClick={() => onDelete(selectedNote.id)}
           >
-            Delete
+            Remove
           </MenuItem>
         </Menu>
       </Paper>

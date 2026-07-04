@@ -1,8 +1,9 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Max
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
-from .models import Note, TodoList, Workspace
+from .models import Note, TodoList, TodoListNote, Workspace
 
 User = get_user_model()
 
@@ -34,6 +35,12 @@ class WorkspaceSerializer(serializers.ModelSerializer):
 
 
 class TodoListSerializer(serializers.ModelSerializer):
+    notes = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Note.objects.all(),
+        required=False,
+    )
+
     class Meta:
         model = TodoList
         fields = "__all__"
@@ -67,6 +74,29 @@ class TodoListSerializer(serializers.ModelSerializer):
                 )
 
         return attrs
+
+    def create(self, validated_data):
+        notes = validated_data.pop("notes", None)
+        todo_list = super().create(validated_data)
+        if notes is not None:
+            self._set_notes(todo_list, notes)
+        return todo_list
+
+    def update(self, instance, validated_data):
+        notes = validated_data.pop("notes", None)
+        todo_list = super().update(instance, validated_data)
+        if notes is not None:
+            self._set_notes(todo_list, notes)
+        return todo_list
+
+    def _set_notes(self, todo_list, notes):
+        TodoListNote.objects.filter(todolist=todo_list).delete()
+        TodoListNote.objects.bulk_create(
+            [
+                TodoListNote(todolist=todo_list, note=note, position=position)
+                for position, note in enumerate(notes)
+            ]
+        )
 
 
 class NoteSerializer(serializers.ModelSerializer):
@@ -156,7 +186,7 @@ class NoteSerializer(serializers.ModelSerializer):
         note = super().create(validated_data)
 
         if todo_list is not None:
-            todo_list.notes.add(note)
+            self._attach_note_to_todolist(todo_list, note)
 
         return note
 
@@ -168,6 +198,17 @@ class NoteSerializer(serializers.ModelSerializer):
         note = super().update(instance, validated_data)
 
         if todo_list is not None:
-            todo_list.notes.add(note)
+            self._attach_note_to_todolist(todo_list, note)
 
         return note
+
+    def _attach_note_to_todolist(self, todo_list, note):
+        max_position = TodoListNote.objects.filter(todolist=todo_list).aggregate(
+            Max("position")
+        )["position__max"]
+        next_position = (max_position if max_position is not None else -1) + 1
+        TodoListNote.objects.get_or_create(
+            todolist=todo_list,
+            note=note,
+            defaults={"position": next_position},
+        )

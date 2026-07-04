@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db import transaction
+from django.db.models import Max, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -7,7 +8,7 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Note, TodoList, Workspace
+from .models import Note, TodoList, TodoListNote, Workspace
 from .serializers import NoteSerializer, TodoListSerializer, WorkspaceSerializer
 
 User = get_user_model()
@@ -51,6 +52,31 @@ def _require_workspace_filter_access(user, workspace_id, base_queryset):
         return
 
     raise PermissionDenied("You do not have access to this workspace.")
+
+
+def _ordered_ids_from_request(request):
+    ordered_ids = request.data.get("ordered_ids")
+    if not isinstance(ordered_ids, list) or not ordered_ids:
+        return None, Response(
+            {"ordered_ids": ["Provide a non-empty list of ids."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        ordered_ids = [int(item_id) for item_id in ordered_ids]
+    except (TypeError, ValueError):
+        return None, Response(
+            {"ordered_ids": ["All ids must be integers."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if len(ordered_ids) != len(set(ordered_ids)):
+        return None, Response(
+            {"ordered_ids": ["Duplicate ids are not allowed."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return ordered_ids, None
 
 
 class WorkspaceViewSet(viewsets.ModelViewSet):
@@ -159,7 +185,7 @@ class TodoListViewSet(viewsets.ModelViewSet):
             _require_workspace_filter_access(user, workspace_id, queryset)
             queryset = queryset.filter(workspace_id=workspace_id)
 
-        return queryset.distinct()
+        return queryset.distinct().order_by("position", "created_at", "id")
 
     def perform_create(self, serializer):
         # Require workspace upon creation
@@ -174,9 +200,58 @@ class TodoListViewSet(viewsets.ModelViewSet):
         ):
             raise PermissionDenied("You cannot add todo-lists to this workspace.")
 
+        max_position = TodoList.objects.filter(workspace=workspace).aggregate(
+            Max("position")
+        )["position__max"]
+        next_position = (max_position if max_position is not None else -1) + 1
+
         serializer.save(
-            owner=self.request.user, created_by=self.request.user, workspace=workspace
+            owner=self.request.user,
+            created_by=self.request.user,
+            workspace=workspace,
+            position=next_position,
         )
+
+    @action(detail=False, methods=["patch"], url_path="reorder")
+    def reorder(self, request):
+        workspace_id = request.data.get("workspace")
+        if workspace_id is None:
+            return Response(
+                {"workspace": ["This field is required."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ordered_ids, error_response = _ordered_ids_from_request(request)
+        if error_response is not None:
+            return error_response
+
+        accessible_queryset = self.get_queryset()
+        _require_workspace_filter_access(
+            request.user, workspace_id, accessible_queryset
+        )
+        scoped_queryset = accessible_queryset.filter(workspace_id=workspace_id)
+        current_ids = list(scoped_queryset.values_list("id", flat=True))
+
+        if set(ordered_ids) != set(current_ids):
+            return Response(
+                {
+                    "ordered_ids": [
+                        "Ordered ids must include every accessible todo list in the workspace."
+                    ]
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            for position, todo_list_id in enumerate(ordered_ids):
+                TodoList.objects.filter(
+                    pk=todo_list_id, workspace_id=workspace_id
+                ).update(position=position)
+
+        serializer = self.get_serializer(
+            scoped_queryset.order_by("position", "created_at", "id"), many=True
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class NoteViewSet(viewsets.ModelViewSet):
@@ -205,7 +280,12 @@ class NoteViewSet(viewsets.ModelViewSet):
         # Adding additional querying capabilities by ?todolist=ID
         todo_list_id = self.request.query_params.get("todo_list")
         if todo_list_id:
-            queryset = queryset.filter(todolists__id=todo_list_id)
+            queryset = queryset.filter(todolist_memberships__todolist_id=todo_list_id)
+            return queryset.distinct().order_by(
+                "todolist_memberships__position",
+                "todolist_memberships__id",
+                "id",
+            )
 
         return queryset.distinct()
 
@@ -238,3 +318,61 @@ class NoteViewSet(viewsets.ModelViewSet):
                 raise PermissionDenied("You cannot add notes to this workspace.")
 
         serializer.save(owner=self.request.user, created_by=self.request.user)
+
+    @action(detail=False, methods=["patch"], url_path="reorder")
+    def reorder(self, request):
+        todo_list_id = request.data.get("todo_list")
+        if todo_list_id is None:
+            return Response(
+                {"todo_list": ["This field is required."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ordered_ids, error_response = _ordered_ids_from_request(request)
+        if error_response is not None:
+            return error_response
+
+        todo_list = get_object_or_404(TodoList, pk=todo_list_id)
+        has_todolist_access = (
+            TodoList.objects.filter(pk=todo_list.pk)
+            .filter(
+                Q(owner=request.user)
+                | Q(created_by=request.user)
+                | Q(collaborators=request.user)
+                | Q(workspace__owner=request.user)
+                | Q(workspace__created_by=request.user)
+                | Q(workspace__collaborators=request.user)
+            )
+            .exists()
+        )
+        if not has_todolist_access:
+            raise PermissionDenied("You do not have access to this todo-list.")
+
+        accessible_notes = self.get_queryset()
+        memberships = TodoListNote.objects.filter(
+            todolist=todo_list, note__in=accessible_notes
+        )
+        current_ids = list(
+            memberships.order_by("position", "id").values_list("note_id", flat=True)
+        )
+
+        if set(ordered_ids) != set(current_ids):
+            return Response(
+                {
+                    "ordered_ids": [
+                        "Ordered ids must include every accessible note in the todo list."
+                    ]
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            for position, note_id in enumerate(ordered_ids):
+                TodoListNote.objects.filter(todolist=todo_list, note_id=note_id).update(
+                    position=position
+                )
+
+        ordered_notes = list(Note.objects.filter(id__in=ordered_ids))
+        ordered_notes.sort(key=lambda note: ordered_ids.index(note.id))
+        serializer = self.get_serializer(ordered_notes, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

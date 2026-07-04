@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import MySnackbar from './MySnackbar';
-import { renderWithProviders } from '../test-utils';
+import { renderWithProviders } from '../test-support/utils';
 
 describe('MySnackbar', () => {
   test('when open is false, it does not render the message', () => {

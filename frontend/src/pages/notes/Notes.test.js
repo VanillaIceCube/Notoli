@@ -3,8 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router-dom';
 
 import Notes from './Notes';
-import { createDeferred, renderWithProviders, waitForLoadingToFinish } from '../../test-utils';
-import { noteFixtures } from '../../test-fixtures';
+import { noteFixtures } from '../../test-support/fixtures';
+import { collectRowStartPixels } from '../../test-support/layout';
+import {
+  createDeferred,
+  renderWithProviders,
+  waitForLoadingToFinish,
+} from '../../test-support/utils';
 import {
   createNote,
   deleteNote,
@@ -25,6 +30,7 @@ jest.mock('../../services/notoliApiClient', () => ({
   deleteNote: jest.fn(),
   fetchNotes: jest.fn(),
   fetchTodoList: jest.fn(),
+  reorderNotes: jest.fn(),
   updateNote: jest.fn(),
 }));
 
@@ -128,11 +134,13 @@ describe('Notes', () => {
     expect(await screen.findByText('test_note_03')).toBeInTheDocument();
   });
 
-  test('when edit is opened, it shows the edit input prefilled', async () => {
+  test('when rename is opened, it shows the edit input prefilled', async () => {
     await renderNotes();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     expect(input).toHaveValue('test_note_01');
@@ -146,8 +154,10 @@ describe('Notes', () => {
 
     await renderNotes();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
@@ -182,8 +192,10 @@ describe('Notes', () => {
 
     await renderNotes();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
-    await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /remove/i }));
 
     await waitFor(() => {
       expect(deleteNote).toHaveBeenCalledWith(101, 'token');
@@ -200,6 +212,48 @@ describe('Notes', () => {
     await userEvent.click(await screen.findByText('test_note_01'));
 
     expect(screen.getByTestId('location')).toHaveTextContent(locationBefore);
+  });
+
+  test('when reorder mode is opened, it shows drag handles and hides note actions and add', async () => {
+    await renderNotes();
+
+    expect(screen.queryByRole('button', { name: /notes page actions/i })).not.toBeInTheDocument();
+    expect(screen.getByTestId('note-list')).toHaveStyle('gap: 8px');
+    const normalRowStartPixels = collectRowStartPixels(screen.getByTestId('note-list'), [
+      'note-row-101',
+      'note-row-102',
+    ]);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /^reorder$/i }));
+
+    expect(screen.getByRole('heading', { name: /reorder notes/i })).toBeInTheDocument();
+    expect(screen.getByTestId('note-reorder-list')).toHaveStyle('gap: 8px');
+    const reorderRowStartPixels = collectRowStartPixels(screen.getByTestId('note-reorder-list'), [
+      'note-reorder-row-101',
+      'note-reorder-row-102',
+    ]);
+    expect([
+      reorderRowStartPixels['note-reorder-row-101'],
+      reorderRowStartPixels['note-reorder-row-102'],
+    ]).toEqual([normalRowStartPixels['note-row-101'], normalRowStartPixels['note-row-102']]);
+    expect(screen.getByTestId('note-drag-handle-101')).toBeInTheDocument();
+    expect(screen.getByTestId('note-drag-handle-102')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /note actions for test_note_01/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /add new/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /done reordering/i })).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /mark test_note_01 complete/i })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /mark test_note_02 complete/i })).toBeChecked();
+    expect(screen.getByText('test_note_02')).toHaveStyle('text-decoration: line-through');
+    expect(screen.getByTestId('note-reorder-row-102')).toHaveStyle('opacity: 0.72');
+
+    await userEvent.click(screen.getByRole('button', { name: /done reordering/i }));
+
+    expect(screen.getByRole('heading', { name: /^notes$/i })).toBeInTheDocument();
   });
 
   test('when the todo list fetch succeeds, it sets the app bar header', async () => {
@@ -248,11 +302,13 @@ describe('Notes', () => {
     expect(screen.queryByPlaceholderText(/new note/i)).not.toBeInTheDocument();
   });
 
-  test('when edit is opened and Escape is pressed, it closes the edit input', async () => {
+  test('when rename is opened and Escape is pressed, it closes the edit input', async () => {
     await renderNotes();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     await userEvent.type(input, '{Escape}');
@@ -278,8 +334,10 @@ describe('Notes', () => {
 
     await renderNotes();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
-    await userEvent.click(screen.getByRole('menuitem', { name: /edit/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
 
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
@@ -293,8 +351,10 @@ describe('Notes', () => {
 
     await renderNotes();
 
-    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
-    await userEvent.click(screen.getByRole('menuitem', { name: /delete/i }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /remove/i }));
 
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
