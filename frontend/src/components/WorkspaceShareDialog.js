@@ -315,10 +315,6 @@ export default function WorkspaceShareDialog({
             )}
             <Divider sx={{ borderColor: 'var(--secondary-color)', opacity: 0.45 }} />
           </Box>
-
-          <Typography variant="caption" sx={{ color: 'var(--secondary-color)' }}>
-            Only owners can manage sharing.
-          </Typography>
         </Stack>
       </DialogContent>
     </Dialog>
