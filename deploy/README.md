@@ -8,6 +8,9 @@ Docker Compose (`deploy/docker-compose.yml`) starts:
 - `backend`: Django/Gunicorn (port 8000)
 - `frontend`: Nginx serving the built SPA (port 3000)
 
+The compose file uses the current Compose Specification syntax without a top-level
+`version` field.
+
 ## TLS Certificates (Required For The Proxy)
 The reverse proxy expects these files to exist on the host:
 - `certs/origin.pem`
@@ -83,6 +86,10 @@ docker build -t ghcr.io/vanillaicecube/notoli-backend:latest ./backend
 docker build --build-arg REACT_APP_API_BASE_URL= \
   -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend
 ```
+
+The backend image builds from the maintained `condaforge/miniforge3` base image.
+The frontend image uses `npm ci`, so `frontend/package-lock.json` must stay in sync
+with `frontend/package.json`.
 
 5. Start the stack:
 

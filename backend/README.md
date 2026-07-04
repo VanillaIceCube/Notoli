@@ -38,6 +38,8 @@ All `/api/*` endpoints require:
 
 Access scoping:
 - The API filters objects by `owner`/`created_by`/`collaborators` so users only see what they have access to.
+- Workspace owners can manage workspace collaborators with `POST /api/workspaces/<id>/collaborators/` using `{ "identifier": "<username-or-email>" }` and `DELETE /api/workspaces/<id>/collaborators/<user_id>/`.
+- Workspace responses include `owner_details` and `collaborators_details` summaries for sharing/access UI.
 
 ## 💻 Local Development
 Full setup (Conda, env vars) lives in [`AGENTS.md`](../AGENTS.md). Common commands:

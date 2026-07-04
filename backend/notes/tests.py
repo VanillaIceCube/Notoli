@@ -180,6 +180,71 @@ class WorkspaceApiTests(APITestCase):
             f"Unexpected outsider workspace included in list: {response.data}",
         )
 
+    def test_owner_can_add_workspace_collaborator_by_email(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace.id}/collaborators/",
+            {"identifier": self.collaborator.email},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertTrue(
+            self.workspace.collaborators.filter(pk=self.collaborator.pk).exists()
+        )
+        collaborator_ids = {
+            item["id"] for item in response.data["collaborators_details"]
+        }
+        self.assertIn(self.collaborator.id, collaborator_ids)
+
+    def test_non_owner_cannot_add_workspace_collaborator(self):
+        self.workspace.collaborators.add(self.collaborator)
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace.id}/collaborators/",
+            {"identifier": self.outsider.email},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 403, response.data)
+        self.assertFalse(
+            self.workspace.collaborators.filter(pk=self.outsider.pk).exists()
+        )
+
+    def test_owner_cannot_add_duplicate_workspace_collaborator(self):
+        self.workspace.collaborators.add(self.collaborator)
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(
+            f"/api/workspaces/{self.workspace.id}/collaborators/",
+            {"identifier": self.collaborator.username},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertEqual(
+            self.workspace.collaborators.filter(pk=self.collaborator.pk).count(), 1
+        )
+
+    def test_owner_can_remove_workspace_collaborator(self):
+        self.workspace.collaborators.add(self.collaborator)
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(
+            f"/api/workspaces/{self.workspace.id}/collaborators/{self.collaborator.id}/"
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertFalse(
+            self.workspace.collaborators.filter(pk=self.collaborator.pk).exists()
+        )
+        collaborator_ids = {
+            item["id"] for item in response.data["collaborators_details"]
+        }
+        self.assertNotIn(self.collaborator.id, collaborator_ids)
+
+    def test_owner_cannot_remove_workspace_owner(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(
+            f"/api/workspaces/{self.workspace.id}/collaborators/{self.owner.id}/"
+        )
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertEqual(self.workspace.owner_id, self.owner.id)
+
     def test_retrieve_workspace_denied_for_outsider(self):
         self.client.force_authenticate(user=self.outsider)
         response = self.client.get(f"/api/workspaces/{self.workspace.id}/")
@@ -204,6 +269,23 @@ class WorkspaceApiTests(APITestCase):
             f"Expected 404 when outsider updates workspace, got {response.status_code}: {response.data}",
         )
 
+    def test_update_workspace_denied_for_collaborator(self):
+        self.workspace.collaborators.add(self.collaborator)
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.patch(
+            f"/api/workspaces/{self.workspace.id}/",
+            {"name": "Collaborator Rename"},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+            f"Expected 403 when collaborator updates workspace, got {response.status_code}: {response.data}",
+        )
+        self.workspace.refresh_from_db()
+        self.assertEqual(self.workspace.name, "Owner Workspace")
+
     def test_delete_workspace_denied_for_outsider(self):
         self.client.force_authenticate(user=self.outsider)
         response = self.client.delete(f"/api/workspaces/{self.workspace.id}/")
@@ -213,6 +295,18 @@ class WorkspaceApiTests(APITestCase):
             status.HTTP_404_NOT_FOUND,
             f"Expected 404 when outsider deletes workspace, got {response.status_code}: {response.data}",
         )
+
+    def test_delete_workspace_denied_for_collaborator(self):
+        self.workspace.collaborators.add(self.collaborator)
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.delete(f"/api/workspaces/{self.workspace.id}/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+            f"Expected 403 when collaborator deletes workspace, got {response.status_code}: {response.data}",
+        )
+        self.assertTrue(Workspace.objects.filter(pk=self.workspace.pk).exists())
 
 
 class TodoListApiTests(APITestCase):
@@ -521,6 +615,68 @@ class TodoListApiTests(APITestCase):
             "TodoList workspace unexpectedly changed.",
         )
 
+    def test_workspace_collaborator_can_retrieve_owner_created_todolist_without_item_share(
+        self,
+    ):
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.get(f"/api/todolists/{self.todo_list.id}/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            f"Expected workspace collaborator to retrieve owner-created list, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(response.data.get("id"), self.todo_list.id)
+
+    def test_owner_can_retrieve_collaborator_created_todolist_without_item_share(self):
+        collaborator_list = TodoList.objects.create(
+            name="Collaborator Created List",
+            description="Shared through workspace",
+            workspace=self.workspace,
+            owner=self.collaborator,
+            created_by=self.collaborator,
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(f"/api/todolists/{collaborator_list.id}/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            f"Expected workspace owner to retrieve collaborator-created list, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(response.data.get("id"), collaborator_list.id)
+
+    def test_workspace_membership_does_not_leak_todolists_from_other_workspaces(self):
+        other_member = User.objects.create_user(
+            username="other_member",
+            email="other_member@example.com",
+            password="other-member-password",
+        )
+        other_workspace = Workspace.objects.create(
+            name="Other Shared Workspace",
+            description="Separate sharing boundary",
+            owner=self.outsider,
+            created_by=self.outsider,
+        )
+        other_workspace.collaborators.add(other_member)
+        other_list = TodoList.objects.create(
+            name="Other Workspace List",
+            description="Should not leak",
+            workspace=other_workspace,
+            owner=self.outsider,
+            created_by=self.outsider,
+        )
+
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.get(f"/api/todolists/{other_list.id}/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+            f"Expected no access to another workspace's list, got {response.status_code}: {response.data}",
+        )
+
 
 class NoteApiTests(APITestCase):
     def setUp(self):
@@ -550,6 +706,7 @@ class NoteApiTests(APITestCase):
             owner=self.owner,
             created_by=self.owner,
         )
+        self.workspace.collaborators.add(self.collaborator)
         self.todo_list = TodoList.objects.create(
             name="Owner List",
             description="Owned List Description",
@@ -567,6 +724,95 @@ class NoteApiTests(APITestCase):
         )
         self.todo_list.notes.add(self.note)
         self.note.collaborators.add(self.note_only_collaborator)
+
+    def test_workspace_collaborator_can_retrieve_owner_created_note_without_item_share(
+        self,
+    ):
+        self.note.collaborators.clear()
+
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.get(f"/api/notes/{self.note.id}/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            f"Expected workspace collaborator to retrieve owner-created note, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(response.data.get("id"), self.note.id)
+
+    def test_owner_can_retrieve_collaborator_created_note_in_todolist_without_item_share(
+        self,
+    ):
+        collaborator_note = Note.objects.create(
+            note="Collaborator Created Note",
+            description="Shared through workspace list",
+            workspace=self.workspace,
+            owner=self.collaborator,
+            created_by=self.collaborator,
+        )
+        self.todo_list.notes.add(collaborator_note)
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(f"/api/notes/{collaborator_note.id}/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            f"Expected workspace owner to retrieve collaborator-created note, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(response.data.get("id"), collaborator_note.id)
+
+    def test_collaborator_can_create_note_directly_in_shared_workspace(self):
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.post(
+            "/api/notes/",
+            {
+                "note": "Workspace Scoped Note",
+                "description": "Created directly in shared workspace",
+                "workspace": self.workspace.id,
+            },
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+            f"Expected collaborator to create workspace-scoped note, got {response.status_code}: {response.data}",
+        )
+        note = Note.objects.get(id=response.data.get("id"))
+        self.assertEqual(note.workspace_id, self.workspace.id)
+
+        self.client.force_authenticate(user=self.owner)
+        retrieve_response = self.client.get(f"/api/notes/{note.id}/")
+        self.assertEqual(
+            retrieve_response.status_code,
+            status.HTTP_200_OK,
+            f"Expected owner to retrieve collaborator-created workspace note, got {retrieve_response.status_code}: {retrieve_response.data}",
+        )
+
+    def test_workspace_membership_does_not_leak_notes_from_other_workspaces(self):
+        other_workspace = Workspace.objects.create(
+            name="Other Shared Workspace",
+            description="Separate sharing boundary",
+            owner=self.outsider,
+            created_by=self.outsider,
+        )
+        other_note = Note.objects.create(
+            note="Other Workspace Note",
+            description="Should not leak",
+            workspace=other_workspace,
+            owner=self.outsider,
+            created_by=self.outsider,
+        )
+
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.get(f"/api/notes/{other_note.id}/")
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+            f"Expected no access to another workspace's note, got {response.status_code}: {response.data}",
+        )
 
     def test_create_note_as_collaborator(self):
         self.client.force_authenticate(user=self.collaborator)

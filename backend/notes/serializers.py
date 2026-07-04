@@ -1,10 +1,29 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
 from .models import Note, TodoList, Workspace
 
+User = get_user_model()
+
+
+class UserSummarySerializer(serializers.ModelSerializer):
+    display_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ("id", "username", "email", "display_name")
+
+    def get_display_name(self, obj):
+        return obj.get_full_name() or obj.get_username() or obj.email
+
 
 class WorkspaceSerializer(serializers.ModelSerializer):
+    owner_details = UserSummarySerializer(source="owner", read_only=True)
+    collaborators_details = UserSummarySerializer(
+        source="collaborators", many=True, read_only=True
+    )
+
     class Meta:
         model = Workspace
         fields = "__all__"
@@ -85,6 +104,9 @@ class NoteSerializer(serializers.ModelSerializer):
                     todo_list.owner_id == user.id
                     or todo_list.created_by_id == user.id
                     or todo_list.collaborators.filter(id=user.id).exists()
+                    or todo_list.workspace.owner_id == user.id
+                    or todo_list.workspace.created_by_id == user.id
+                    or todo_list.workspace.collaborators.filter(id=user.id).exists()
                 )
                 if not has_todolist_access:
                     raise PermissionDenied("You cannot add notes to this todo-list.")

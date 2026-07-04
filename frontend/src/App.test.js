@@ -38,7 +38,7 @@ jest.mock('./pages/authentication/Login', () => ({ showSnackbar }) => (
 jest.mock('./pages/authentication/Register', () => () => <div>RegisterPage</div>);
 jest.mock('./pages/authentication/ForgotPassword', () => () => <div>ForgotPasswordPage</div>);
 jest.mock('./pages/authentication/ResetPassword', () => () => <div>ResetPasswordPage</div>);
-jest.mock('./pages/notes/Workspaces', () => () => <div>WorkspacesPage</div>);
+jest.mock('./components/WorkspaceHomeRedirect', () => () => <div>WorkspaceHomeRedirect</div>);
 jest.mock('./pages/notes/TodoLists', () => () => <div>TodoListsPage</div>);
 jest.mock('./pages/notes/Notes', () => () => <div>NotesPage</div>);
 
@@ -84,11 +84,11 @@ describe('App', () => {
     expect(document.body.textContent).toContain('ResetPasswordPage');
   });
 
-  test('when the route is /, it renders Workspaces', () => {
+  test('when the route is /, it renders the workspace redirect', () => {
     sessionStorage.setItem('accessToken', 'token');
     renderApp('/');
 
-    expect(document.body.textContent).toContain('WorkspacesPage');
+    expect(document.body.textContent).toContain('WorkspaceHomeRedirect');
   });
 
   test('when the route is /workspace/:id, it renders TodoLists', () => {

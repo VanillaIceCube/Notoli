@@ -14,13 +14,17 @@ import {
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
+import Delete from '@mui/icons-material/Delete';
+import Edit from '@mui/icons-material/Edit';
 import MoreVert from '@mui/icons-material/MoreVert';
+import Share from '@mui/icons-material/Share';
 import Divider from '@mui/material/Divider';
 import { getWorkspaceId } from '../utils/Navigation';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
+import WorkspaceShareDialog from './WorkspaceShareDialog';
 
 import {
   createWorkspace,
@@ -35,6 +39,7 @@ export default function MyDrawer({
   setDrawerOpen,
   drawerWorkspacesLabel,
   setDrawerWorkspacesLabel,
+  showSnackbar,
 }) {
   // Navigate using Drawer
   const navigate = useNavigate();
@@ -178,6 +183,23 @@ export default function MyDrawer({
     setIsEditing(false);
     setEditingWorkspaceId(null);
     setEditWorkspaceName('');
+  };
+
+  // Share Workspace
+  const [sharingWorkspace, setSharingWorkspace] = useState(null);
+
+  const openShareDialog = (workspace) => {
+    setSharingWorkspace(workspace);
+    handleTripleDotClose();
+  };
+
+  const updateSharedWorkspace = (updatedWorkspace) => {
+    setWorkspaces((prev) =>
+      prev.map((workspace) =>
+        workspace.id === updatedWorkspace.id ? updatedWorkspace : workspace,
+      ),
+    );
+    setSharingWorkspace(updatedWorkspace);
   };
 
   // Delete Workspace
@@ -461,8 +483,20 @@ export default function MyDrawer({
       >
         <MenuItem
           sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+          onClick={() => openShareDialog(selectedWorkspace)}
+        >
+          <Share sx={{ mr: 1, fontSize: 18 }} />
+          Share
+        </MenuItem>
+        <Divider
+          variant="middle"
+          sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+        />
+        <MenuItem
+          sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
           onClick={startEditing}
         >
+          <Edit sx={{ mr: 1, fontSize: 18 }} />
           Edit
         </MenuItem>
         <Divider
@@ -473,9 +507,18 @@ export default function MyDrawer({
           sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
           onClick={() => onDelete(selectedWorkspace.id)}
         >
+          <Delete sx={{ mr: 1, fontSize: 18 }} />
           Delete
         </MenuItem>
       </Menu>
+      <WorkspaceShareDialog
+        open={Boolean(sharingWorkspace)}
+        workspace={sharingWorkspace}
+        token={token}
+        onClose={() => setSharingWorkspace(null)}
+        onWorkspaceUpdated={updateSharedWorkspace}
+        showSnackbar={showSnackbar}
+      />
     </Drawer>
   );
 }

@@ -6,13 +6,13 @@ import Login from './pages/authentication/Login';
 import Register from './pages/authentication/Register';
 import ForgotPassword from './pages/authentication/ForgotPassword';
 import ResetPassword from './pages/authentication/ResetPassword';
-import Workspaces from './pages/notes/Workspaces';
 import TodoLists from './pages/notes/TodoLists';
 import Notes from './pages/notes/Notes';
 import MyAppBar from './components/MyAppBar';
 import MySnackbar from './components/MySnackbar';
 import MyDrawer from './components/MyDrawer';
 import NavigationBridge from './components/NavigationBridge';
+import WorkspaceHomeRedirect from './components/WorkspaceHomeRedirect';
 
 function App() {
   // App Bar
@@ -50,6 +50,7 @@ function App() {
           setDrawerOpen={setDrawerOpen}
           drawerWorkspacesLabel={drawerWorkspacesLabel}
           setDrawerWorkspacesLabel={setDrawerWorkspacesLabel}
+          showSnackbar={showSnackbar}
         />
         <Routes>
           <Route path="/login" element={<Login showSnackbar={showSnackbar} />} />
@@ -62,7 +63,7 @@ function App() {
               path="/"
               element={
                 <AuthenticatedRoute>
-                  <Workspaces setAppBarHeader={setAppBarHeader} />
+                  <WorkspaceHomeRedirect />
                 </AuthenticatedRoute>
               }
             />

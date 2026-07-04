@@ -1,11 +1,16 @@
+from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from .models import Note, TodoList, Workspace
 from .serializers import NoteSerializer, TodoListSerializer, WorkspaceSerializer
+
+User = get_user_model()
 
 
 def _require_workspace_access(user, workspace_id):
@@ -58,6 +63,76 @@ class WorkspaceViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user, created_by=self.request.user)
 
+    def perform_update(self, serializer):
+        self._require_owner(serializer.instance)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        self._require_owner(instance)
+        instance.delete()
+
+    def _require_owner(self, workspace):
+        if workspace.owner_id != self.request.user.id:
+            raise PermissionDenied("Only the workspace owner can manage access.")
+
+    def _find_collaborator(self, identifier):
+        identifier = identifier.strip() if isinstance(identifier, str) else ""
+        if not identifier:
+            return None
+        return User.objects.filter(
+            Q(username__iexact=identifier) | Q(email__iexact=identifier)
+        ).first()
+
+    @action(detail=True, methods=["post"], url_path="collaborators")
+    def add_collaborator(self, request, pk=None):
+        workspace = self.get_object()
+        self._require_owner(workspace)
+        user = self._find_collaborator(request.data.get("identifier"))
+        if user is None:
+            return Response(
+                {"error": "No user found for that username or email."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        if user.id == workspace.owner_id:
+            return Response(
+                {"error": "The workspace owner already has access."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if workspace.collaborators.filter(pk=user.pk).exists():
+            return Response(
+                {"error": "That user is already a collaborator."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        workspace.collaborators.add(user)
+        serializer = self.get_serializer(workspace)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True, methods=["delete"], url_path="collaborators/(?P<user_id>[^/.]+)"
+    )
+    def remove_collaborator(self, request, pk=None, user_id=None):
+        workspace = self.get_object()
+        self._require_owner(workspace)
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            return Response(
+                {"error": "Invalid collaborator."}, status=status.HTTP_400_BAD_REQUEST
+            )
+        if user_id == workspace.owner_id:
+            return Response(
+                {"error": "The workspace owner cannot be removed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not workspace.collaborators.filter(pk=user_id).exists():
+            return Response(
+                {"error": "That user is not a collaborator."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        workspace.collaborators.remove(user_id)
+        serializer = self.get_serializer(workspace)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class TodoListViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -66,9 +141,16 @@ class TodoListViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
-        # Base queryset. Lists what the user owner/creator/collaborators on
+        # Workspace membership is sufficient to see child lists; item-level
+        # ownership/collaborators remain additive for lists shared outside the
+        # workspace.
         queryset = TodoList.objects.filter(
-            Q(owner=user) | Q(created_by=user) | Q(collaborators=user)
+            Q(owner=user)
+            | Q(created_by=user)
+            | Q(collaborators=user)
+            | Q(workspace__owner=user)
+            | Q(workspace__created_by=user)
+            | Q(workspace__collaborators=user)
         )
 
         # Adding additional querying capabilities by ?workspace=ID
@@ -85,9 +167,10 @@ class TodoListViewSet(viewsets.ModelViewSet):
         workspace = get_object_or_404(Workspace, pk=workspace_id)
 
         # Ensure user access to specified workspace
-        if not (
-            workspace.owner == self.request.user
-            or self.request.user in workspace.collaborators.all()
+        if (
+            not Workspace.objects.accessible_to(self.request.user)
+            .filter(pk=workspace.pk)
+            .exists()
         ):
             raise PermissionDenied("You cannot add todo-lists to this workspace.")
 
@@ -105,7 +188,12 @@ class NoteViewSet(viewsets.ModelViewSet):
         user = self.request.user
 
         queryset = Note.objects.filter(
-            Q(owner=user) | Q(created_by=user) | Q(collaborators=user)
+            Q(owner=user)
+            | Q(created_by=user)
+            | Q(collaborators=user)
+            | Q(workspace__owner=user)
+            | Q(workspace__created_by=user)
+            | Q(workspace__collaborators=user)
         )
 
         # Adding additional querying capabilities by ?workspace=ID
@@ -127,17 +215,25 @@ class NoteViewSet(viewsets.ModelViewSet):
 
         # Ensure user access to specified todo-list (when provided).
         if todo_list is not None:
-            if not (
-                todo_list.owner == self.request.user
-                or self.request.user in todo_list.collaborators.all()
-            ):
+            if not TodoList.objects.filter(
+                Q(pk=todo_list.pk)
+                & (
+                    Q(owner=self.request.user)
+                    | Q(created_by=self.request.user)
+                    | Q(collaborators=self.request.user)
+                    | Q(workspace__owner=self.request.user)
+                    | Q(workspace__created_by=self.request.user)
+                    | Q(workspace__collaborators=self.request.user)
+                )
+            ).exists():
                 raise PermissionDenied("You cannot add notes to this todo-list.")
 
         # Ensure user access to specified workspace (when creating a workspace-scoped note).
         if todo_list is None and workspace is not None:
-            if not (
-                workspace.owner == self.request.user
-                or self.request.user in workspace.collaborators.all()
+            if (
+                not Workspace.objects.accessible_to(self.request.user)
+                .filter(pk=workspace.pk)
+                .exists()
             ):
                 raise PermissionDenied("You cannot add notes to this workspace.")
 
