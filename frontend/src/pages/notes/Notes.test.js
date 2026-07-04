@@ -225,6 +225,7 @@ describe('Notes', () => {
     expect(screen.getByRole('checkbox', { name: /mark test_note_01 complete/i })).not.toBeChecked();
     expect(screen.getByRole('checkbox', { name: /mark test_note_02 complete/i })).toBeChecked();
     expect(screen.getByText('test_note_02')).toHaveStyle('text-decoration: line-through');
+    expect(screen.getByTestId('note-reorder-row-102')).toHaveStyle('opacity: 0.72');
 
     await userEvent.click(screen.getByRole('button', { name: /done/i }));
 
