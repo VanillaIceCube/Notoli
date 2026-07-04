@@ -34,7 +34,7 @@ All `/api/*` endpoints require:
 ## 🧱 Data Model (High Level)
 - Workspace: top-level container for organizing todo lists
 - TodoList: belongs to a workspace; associates notes via a many-to-many relation
-- Note: a single item (`note` + optional `description`); can be linked into multiple todo lists
+- Note: a single checklist item (`note` + optional `description` + `status`); can be linked into multiple todo lists
 
 Access scoping:
 - The API filters objects by `owner`/`created_by`/`collaborators` so users only see what they have access to.

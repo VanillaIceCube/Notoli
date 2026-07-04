@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-04
+### Added
+- Added persisted `status` state to notes and exposed it through the notes API.
+- Added checkbox controls and completed-note strikethrough styling to todo item rows.
+- Added backend and frontend tests for note status behavior.
+
 ## 2026-07-03
 ### Added
 - Added a frontend style guide with dialog divider guidance.

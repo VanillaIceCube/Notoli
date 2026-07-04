@@ -1087,6 +1087,32 @@ class NoteApiTests(APITestCase):
         self.note.refresh_from_db()
         self.assertEqual(self.note.description, "Updated Description")
 
+    def test_note_status_defaults_not_started_and_can_be_updated(self):
+        self.client.force_authenticate(user=self.owner)
+
+        retrieve_response = self.client.get(f"/api/notes/{self.note.id}/")
+        self.assertEqual(
+            retrieve_response.status_code,
+            status.HTTP_200_OK,
+            f"Expected 200 retrieving note, got {retrieve_response.status_code}: {retrieve_response.data}",
+        )
+        self.assertEqual(retrieve_response.data.get("status"), Note.STATUS_NOT_STARTED)
+
+        update_response = self.client.patch(
+            f"/api/notes/{self.note.id}/",
+            {"status": Note.STATUS_COMPLETED},
+            format="json",
+        )
+
+        self.assertEqual(
+            update_response.status_code,
+            status.HTTP_200_OK,
+            f"Expected 200 updating note status, got {update_response.status_code}: {update_response.data}",
+        )
+        self.assertEqual(update_response.data.get("status"), Note.STATUS_COMPLETED)
+        self.note.refresh_from_db()
+        self.assertEqual(self.note.status, Note.STATUS_COMPLETED)
+
     def test_patch_note_todo_list_attaches_within_workspace(self):
         other_todo_list = TodoList.objects.create(
             name="Secondary List",

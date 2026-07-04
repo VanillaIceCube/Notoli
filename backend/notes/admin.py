@@ -112,6 +112,7 @@ class TodoListAdmin(admin.ModelAdmin):
 class NoteAdmin(admin.ModelAdmin):
     list_display = (
         "note",
+        "status",
         "todolists_display",
         "workspace",
         "owner",
@@ -119,7 +120,7 @@ class NoteAdmin(admin.ModelAdmin):
         "created_at",
         "updated_at",
     )
-    list_filter = ("workspace", "owner", "created_at", "updated_at")
+    list_filter = ("status", "workspace", "owner", "created_at", "updated_at")
     search_fields = (
         "note",
         "description",
@@ -133,7 +134,7 @@ class NoteAdmin(admin.ModelAdmin):
     autocomplete_fields = ("workspace", "owner", "collaborators", "created_by")
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (
-        (None, {"fields": ("note", "description")}),
+        (None, {"fields": ("note", "description", "status")}),
         ("Scope", {"fields": ("workspace",)}),
         ("Ownership", {"fields": ("owner", "collaborators")}),
         ("Metadata", {"fields": ("created_by", "created_at", "updated_at")}),
