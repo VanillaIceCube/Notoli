@@ -41,6 +41,7 @@ import {
   reorderTodoLists,
   updateTodoList,
 } from '../../services/notoliApiClient';
+import { usePullToRefresh } from '../../hooks/useMobileGestures';
 
 const TODO_LIST_VERTICAL_GAP = '8px';
 const TODO_LIST_ROW_MIN_HEIGHT = 42;
@@ -204,6 +205,13 @@ export default function TodoLists({ setAppBarHeader }) {
     setEditingTodoListId(null);
     setEditTodoListName('');
   };
+
+  const pullToRefreshDisabled =
+    loading || isReordering || isAdding || Boolean(editingTodoListId) || open;
+  const { pullDistance, refreshReady, touchHandlers } = usePullToRefresh({
+    enabled: !pullToRefreshDisabled,
+    onRefresh: fetchTodoLists,
+  });
 
   const onDelete = async (id) => {
     setError(null);
@@ -427,6 +435,7 @@ export default function TodoLists({ setAppBarHeader }) {
 
   return (
     <Container
+      {...touchHandlers}
       maxWidth="sm"
       sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2, pt: 0.5 }}
     >
@@ -434,6 +443,21 @@ export default function TodoLists({ setAppBarHeader }) {
         elevation={3}
         sx={{ px: 1.5, py: 1.5, width: '100%', background: 'var(--secondary-background-color)' }}
       >
+        {pullDistance > 0 && (
+          <Typography
+            data-testid="pull-to-refresh-indicator"
+            variant="body2"
+            align="center"
+            sx={{
+              color: 'var(--secondary-color)',
+              fontWeight: 'bold',
+              mb: 0.75,
+              transform: `translateY(${Math.min(pullDistance / 4, 16)}px)`,
+            }}
+          >
+            {refreshReady ? 'Release to refresh' : 'Pull to refresh'}
+          </Typography>
+        )}
         <Box
           sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5 }}
         >

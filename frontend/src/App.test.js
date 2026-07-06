@@ -127,4 +127,5 @@ describe('App', () => {
 
     expect(screen.getByTestId('drawer')).toHaveTextContent('DrawerOpen');
   });
+
 });

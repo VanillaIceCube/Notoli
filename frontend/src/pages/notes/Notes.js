@@ -43,6 +43,7 @@ import {
   reorderNotes,
   updateNote,
 } from '../../services/notoliApiClient';
+import { usePullToRefresh } from '../../hooks/useMobileGestures';
 
 const NOTE_STATUS_NOT_STARTED = 'Not Started';
 const NOTE_STATUS_COMPLETE = 'Complete';
@@ -242,6 +243,13 @@ export default function Notes({ setAppBarHeader }) {
     setEditingNoteId(null);
     setEditNote('');
   };
+
+  const pullToRefreshDisabled =
+    loading || isReordering || isAdding || Boolean(editingNoteId) || open;
+  const { pullDistance, refreshReady, touchHandlers } = usePullToRefresh({
+    enabled: !pullToRefreshDisabled,
+    onRefresh: fetchNotes,
+  });
 
   const onDelete = async (id) => {
     setError(null);
@@ -480,6 +488,7 @@ export default function Notes({ setAppBarHeader }) {
 
   return (
     <Container
+      {...touchHandlers}
       maxWidth="sm"
       sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2, pt: 0.5 }}
     >
@@ -487,6 +496,21 @@ export default function Notes({ setAppBarHeader }) {
         elevation={3}
         sx={{ px: 1.5, py: 1.5, width: '100%', background: 'var(--secondary-background-color)' }}
       >
+        {pullDistance > 0 && (
+          <Typography
+            data-testid="pull-to-refresh-indicator"
+            variant="body2"
+            align="center"
+            sx={{
+              color: 'var(--secondary-color)',
+              fontWeight: 'bold',
+              mb: 0.75,
+              transform: `translateY(${Math.min(pullDistance / 4, 16)}px)`,
+            }}
+          >
+            {refreshReady ? 'Release to refresh' : 'Pull to refresh'}
+          </Typography>
+        )}
         <Box
           sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5 }}
         >
