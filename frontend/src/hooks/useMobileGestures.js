@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const MOBILE_MAX_WIDTH = 768;
 const MAX_HORIZONTAL_DRIFT_PX = 44;
@@ -31,9 +31,15 @@ function isInteractiveTarget(target) {
 
 export function usePullToRefresh({ enabled = true, onRefresh }) {
   const touchStartRef = useRef(null);
+  const pullDistanceRef = useRef(0);
   const [pullDistance, setPullDistance] = useState(0);
 
-  const resetPull = useCallback(() => setPullDistance(0), []);
+  const updatePullDistance = useCallback((distance) => {
+    pullDistanceRef.current = distance;
+    setPullDistance(distance);
+  }, []);
+
+  const resetPull = useCallback(() => updatePullDistance(0), [updatePullDistance]);
 
   const onTouchStart = useCallback(
     (event) => {
@@ -68,29 +74,38 @@ export function usePullToRefresh({ enabled = true, onRefresh }) {
         return;
       }
 
-      setPullDistance(Math.min(deltaY, PULL_REFRESH_PX));
+      event.preventDefault?.();
+      updatePullDistance(Math.min(deltaY, PULL_REFRESH_PX));
     },
-    [resetPull],
+    [resetPull, updatePullDistance],
   );
 
   const onTouchEnd = useCallback(() => {
-    const shouldRefresh = pullDistance >= PULL_REFRESH_PX;
+    const shouldRefresh = pullDistanceRef.current >= PULL_REFRESH_PX;
     touchStartRef.current = null;
     resetPull();
 
     if (shouldRefresh) {
       onRefresh();
     }
-  }, [onRefresh, pullDistance, resetPull]);
+  }, [onRefresh, resetPull]);
+
+  useEffect(() => {
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+      window.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [onTouchEnd, onTouchMove, onTouchStart]);
 
   return {
     pullDistance,
     refreshReady: pullDistance >= PULL_READY_PX,
-    touchHandlers: {
-      onTouchStart,
-      onTouchMove,
-      onTouchEnd,
-      onTouchCancel: onTouchEnd,
-    },
   };
 }

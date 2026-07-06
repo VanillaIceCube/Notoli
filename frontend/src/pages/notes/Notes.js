@@ -246,7 +246,7 @@ export default function Notes({ setAppBarHeader }) {
 
   const pullToRefreshDisabled =
     loading || isReordering || isAdding || Boolean(editingNoteId) || open;
-  const { pullDistance, refreshReady, touchHandlers } = usePullToRefresh({
+  const { pullDistance, refreshReady } = usePullToRefresh({
     enabled: !pullToRefreshDisabled,
     onRefresh: fetchNotes,
   });
@@ -488,7 +488,6 @@ export default function Notes({ setAppBarHeader }) {
 
   return (
     <Container
-      {...touchHandlers}
       maxWidth="sm"
       sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2, pt: 0.5 }}
     >

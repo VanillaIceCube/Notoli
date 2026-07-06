@@ -393,6 +393,19 @@ describe('Notes', () => {
     });
   });
 
+  test('when a mobile user pulls down from page whitespace, it refreshes the notes', async () => {
+    setMobilePullViewport();
+    await renderNotes();
+
+    fireEvent.touchStart(document.body, { touches: [{ clientX: 20, clientY: 20 }] });
+    fireEvent.touchMove(document.body, { touches: [{ clientX: 22, clientY: 112 }] });
+    fireEvent.touchEnd(document.body, { changedTouches: [{ clientX: 22, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchNotesApi).toHaveBeenCalledTimes(2);
+    });
+  });
+
   test('when editing a note, pull down does not refresh', async () => {
     setMobilePullViewport();
     await renderNotes();

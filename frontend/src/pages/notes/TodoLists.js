@@ -208,7 +208,7 @@ export default function TodoLists({ setAppBarHeader }) {
 
   const pullToRefreshDisabled =
     loading || isReordering || isAdding || Boolean(editingTodoListId) || open;
-  const { pullDistance, refreshReady, touchHandlers } = usePullToRefresh({
+  const { pullDistance, refreshReady } = usePullToRefresh({
     enabled: !pullToRefreshDisabled,
     onRefresh: fetchTodoLists,
   });
@@ -435,7 +435,6 @@ export default function TodoLists({ setAppBarHeader }) {
 
   return (
     <Container
-      {...touchHandlers}
       maxWidth="sm"
       sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', py: 2, pt: 0.5 }}
     >
