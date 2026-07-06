@@ -382,9 +382,7 @@ describe('Notes', () => {
     fireEvent.touchStart(list, { touches: [{ clientX: 120, clientY: 20 }] });
     fireEvent.touchMove(list, { touches: [{ clientX: 122, clientY: 112 }] });
 
-    expect(await screen.findByTestId('pull-to-refresh-indicator')).toHaveTextContent(
-      /release to refresh/i,
-    );
+    expect(await screen.findByRole('status', { name: /release to refresh/i })).toBeInTheDocument();
 
     fireEvent.touchEnd(list, { changedTouches: [{ clientX: 122, clientY: 112 }] });
 
@@ -423,6 +421,6 @@ describe('Notes', () => {
     await waitFor(() => {
       expect(fetchNotesApi).toHaveBeenCalledTimes(1);
     });
-    expect(screen.queryByTestId('pull-to-refresh-indicator')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });

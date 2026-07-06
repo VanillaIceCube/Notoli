@@ -33,6 +33,7 @@ export function usePullToRefresh({ enabled = true, onRefresh }) {
   const touchStartRef = useRef(null);
   const pullDistanceRef = useRef(0);
   const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const updatePullDistance = useCallback((distance) => {
     pullDistanceRef.current = distance;
@@ -86,7 +87,8 @@ export function usePullToRefresh({ enabled = true, onRefresh }) {
     resetPull();
 
     if (shouldRefresh) {
-      onRefresh();
+      setIsRefreshing(true);
+      Promise.resolve(onRefresh()).finally(() => setIsRefreshing(false));
     }
   }, [onRefresh, resetPull]);
 
@@ -105,6 +107,7 @@ export function usePullToRefresh({ enabled = true, onRefresh }) {
   }, [onTouchEnd, onTouchMove, onTouchStart]);
 
   return {
+    isRefreshing,
     pullDistance,
     refreshReady: pullDistance >= PULL_READY_PX,
   };

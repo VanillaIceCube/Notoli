@@ -35,6 +35,7 @@ import DragIndicator from '@mui/icons-material/DragIndicator';
 import MoreVert from '@mui/icons-material/MoreVert';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
+import PullToRefreshIndicator from '../../components/PullToRefreshIndicator';
 import {
   createNote,
   deleteNote,
@@ -246,10 +247,11 @@ export default function Notes({ setAppBarHeader }) {
 
   const pullToRefreshDisabled =
     loading || isReordering || isAdding || Boolean(editingNoteId) || open;
-  const { pullDistance, refreshReady } = usePullToRefresh({
+  const { isRefreshing, pullDistance, refreshReady } = usePullToRefresh({
     enabled: !pullToRefreshDisabled,
     onRefresh: fetchNotes,
   });
+  const pullContentOffset = isRefreshing ? 0 : Math.min(pullDistance / 2.5, 36);
 
   const onDelete = async (id) => {
     setError(null);
@@ -493,51 +495,53 @@ export default function Notes({ setAppBarHeader }) {
     >
       <Paper
         elevation={3}
-        sx={{ px: 1.5, py: 1.5, width: '100%', background: 'var(--secondary-background-color)' }}
+        sx={{
+          px: 1.5,
+          pt: 1.5,
+          pb: `calc(12px + ${pullContentOffset}px)`,
+          width: '100%',
+          background: 'var(--secondary-background-color)',
+        }}
       >
-        {pullDistance > 0 && (
-          <Typography
-            data-testid="pull-to-refresh-indicator"
-            variant="body2"
-            align="center"
-            sx={{
-              color: 'var(--secondary-color)',
-              fontWeight: 'bold',
-              mb: 0.75,
-              transform: `translateY(${Math.min(pullDistance / 4, 16)}px)`,
-            }}
-          >
-            {refreshReady ? 'Release to refresh' : 'Pull to refresh'}
-          </Typography>
-        )}
         <Box
-          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5 }}
+          sx={{
+            transform: `translateY(${pullContentOffset}px)`,
+            transition: pullDistance > 0 ? 'none' : 'transform 180ms ease-out',
+          }}
         >
-          <Box sx={{ width: 40 }} />
-          <Typography
-            variant="h4"
-            align="center"
-            gutterBottom
-            sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
+          <PullToRefreshIndicator
+            pullDistance={pullDistance}
+            refreshReady={refreshReady}
+            isRefreshing={isRefreshing}
+          />
+          <Box
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5 }}
           >
-            {isReordering ? 'Reorder Notes' : 'Notes'}
-          </Typography>
-          <Box sx={{ width: 40 }} />
-        </Box>
+            <Box sx={{ width: 40 }} />
+            <Typography
+              variant="h4"
+              align="center"
+              gutterBottom
+              sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
+            >
+              {isReordering ? 'Reorder Notes' : 'Notes'}
+            </Typography>
+            <Box sx={{ width: 40 }} />
+          </Box>
 
-        {loading && <Typography align="center"> Loading... </Typography>}
+          {loading && <Typography align="center"> Loading... </Typography>}
 
-        {error && (
-          <Typography color="error" align="center">
-            Error: {error}
-          </Typography>
-        )}
+          {error && (
+            <Typography color="error" align="center">
+              Error: {error}
+            </Typography>
+          )}
 
-        <Divider
-          sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }}
-        />
-        {!loading && !error && (
-          <Stack spacing={1}>
+          <Divider
+            sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }}
+          />
+          {!loading && !error && (
+            <Stack spacing={1}>
             {renderListRows()}
             {isReordering ? (
               <Button
@@ -618,8 +622,9 @@ export default function Notes({ setAppBarHeader }) {
                 </IconButton>
               </Box>
             )}
-          </Stack>
-        )}
+            </Stack>
+          )}
+        </Box>
 
         <Menu
           slotProps={{
