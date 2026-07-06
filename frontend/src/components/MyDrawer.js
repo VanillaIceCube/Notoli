@@ -235,7 +235,7 @@ export default function MyDrawer({
       onOpen={() => setDrawerOpen(true)}
       anchor="right"
       disableSwipeToOpen={false}
-      swipeAreaWidth={72}
+      swipeAreaWidth={10}
       hysteresis={0.08}
       minFlingVelocity={220}
       disableBackdropTransition
