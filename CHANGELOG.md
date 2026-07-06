@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-05
+### Fixed
+- Enabled mobile touch dragging from reorder handles for todo lists and notes.
+
 ## 2026-07-04
 ### Added
 - Added drag-and-drop reorder mode for workspace todo-list rows and todo-list note rows.
