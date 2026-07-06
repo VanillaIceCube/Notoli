@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   DndContext,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
@@ -47,6 +48,11 @@ const NOTE_STATUS_NOT_STARTED = 'Not Started';
 const NOTE_STATUS_COMPLETE = 'Complete';
 const NOTE_LIST_VERTICAL_GAP = '8px';
 const NOTE_ROW_MIN_HEIGHT = 42;
+const DRAG_HANDLE_TOUCH_STYLE = {
+  touchAction: 'none',
+  userSelect: 'none',
+  WebkitUserSelect: 'none',
+};
 const isNoteComplete = (note) => note.status === NOTE_STATUS_COMPLETE;
 
 function SortableNoteRow({ note, children }) {
@@ -78,7 +84,8 @@ export default function Notes({ setAppBarHeader }) {
   const [error, setError] = useState(null);
   const [isReordering, setIsReordering] = useState(false);
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(MouseSensor),
+    useSensor(TouchSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -358,6 +365,7 @@ export default function Notes({ setAppBarHeader }) {
             aria-label={`Drag ${list.note}`}
             data-testid={`note-drag-handle-${list.id}`}
             sx={{ color: 'var(--secondary-color)', cursor: 'grab' }}
+            style={DRAG_HANDLE_TOUCH_STYLE}
             {...handleProps}
           >
             <DragIndicator />

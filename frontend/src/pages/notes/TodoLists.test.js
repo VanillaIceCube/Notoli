@@ -288,6 +288,7 @@ describe('TodoLists', () => {
       normalRowStartPixels['todo-list-row-11'],
     ]);
     expect(screen.getByTestId('todo-list-drag-handle-10')).toBeInTheDocument();
+    expect(screen.getByTestId('todo-list-drag-handle-10').style.touchAction).toBe('none');
     expect(screen.getByTestId('todo-list-drag-handle-11')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /todo list actions for test_todolist_01/i }),
