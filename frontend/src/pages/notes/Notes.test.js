@@ -240,6 +240,7 @@ describe('Notes', () => {
       reorderRowStartPixels['note-reorder-row-102'],
     ]).toEqual([normalRowStartPixels['note-row-101'], normalRowStartPixels['note-row-102']]);
     expect(screen.getByTestId('note-drag-handle-101')).toBeInTheDocument();
+    expect(screen.getByTestId('note-drag-handle-101').style.touchAction).toBe('none');
     expect(screen.getByTestId('note-drag-handle-102')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /note actions for test_note_01/i }),

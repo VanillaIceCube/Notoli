@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   DndContext,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
@@ -43,6 +44,11 @@ import {
 
 const TODO_LIST_VERTICAL_GAP = '8px';
 const TODO_LIST_ROW_MIN_HEIGHT = 42;
+const DRAG_HANDLE_TOUCH_STYLE = {
+  touchAction: 'none',
+  userSelect: 'none',
+  WebkitUserSelect: 'none',
+};
 
 function SortableTodoListRow({ list, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -79,7 +85,8 @@ export default function TodoLists({ setAppBarHeader }) {
   const [error, setError] = useState(null);
   const [isReordering, setIsReordering] = useState(false);
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(MouseSensor),
+    useSensor(TouchSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -300,6 +307,7 @@ export default function TodoLists({ setAppBarHeader }) {
             aria-label={`Drag ${list.name}`}
             data-testid={`todo-list-drag-handle-${list.id}`}
             sx={{ color: 'var(--secondary-color)', cursor: 'grab' }}
+            style={DRAG_HANDLE_TOUCH_STYLE}
             {...handleProps}
           >
             <DragIndicator />
