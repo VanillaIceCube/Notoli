@@ -86,12 +86,7 @@ export default function TodoLists({ setAppBarHeader }) {
   const [isReordering, setIsReordering] = useState(false);
   const sensors = useSensors(
     useSensor(MouseSensor),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 150,
-        tolerance: 5,
-      },
-    }),
+    useSensor(TouchSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
