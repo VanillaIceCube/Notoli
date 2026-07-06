@@ -44,6 +44,12 @@ import {
 
 const TODO_LIST_VERTICAL_GAP = '8px';
 const TODO_LIST_ROW_MIN_HEIGHT = 42;
+const VERTICAL_REORDER_DRAG_MODIFIERS = [
+  ({ transform }) => ({
+    ...transform,
+    x: 0,
+  }),
+];
 const DRAG_HANDLE_TOUCH_STYLE = {
   touchAction: 'none',
   userSelect: 'none',
@@ -359,7 +365,12 @@ export default function TodoLists({ setAppBarHeader }) {
 
     if (isReordering) {
       return (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={VERTICAL_REORDER_DRAG_MODIFIERS}
+          onDragEnd={onDragEnd}
+        >
           <SortableContext
             items={lists.map((list) => list.id)}
             strategy={verticalListSortingStrategy}
