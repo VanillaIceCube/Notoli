@@ -44,6 +44,7 @@ import {
   deleteNote,
   fetchNotes as fetchNotesApi,
   fetchTodoList as fetchTodoListApi,
+  fetchWorkspace as fetchWorkspaceApi,
   reorderNotes,
   updateNote,
 } from '../../services/notoliApiClient';
@@ -88,8 +89,9 @@ function SortableNoteRow({ note, children }) {
 }
 
 export default function Notes({ setAppBarHeader }) {
-  const { todoListId } = useParams();
+  const { workspaceId, todoListId } = useParams();
   const token = sessionStorage.getItem('accessToken');
+  const [todoListName, setTodoListName] = useState('');
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -118,23 +120,45 @@ export default function Notes({ setAppBarHeader }) {
   }, [token, todoListId]);
 
   const fetchTodoListName = useCallback(async () => {
+    setTodoListName('');
+
     if (!todoListId) return;
     try {
       const response = await fetchTodoListApi(todoListId, token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const todoListData = await response.json();
-      setAppBarHeader(todoListData?.name ?? '');
+      setTodoListName(todoListData?.name ?? '');
     } catch (err) {
+      setTodoListName('');
       setError(err.toString());
     }
-  }, [todoListId, token, setAppBarHeader]);
+  }, [todoListId, token]);
+
+  const fetchWorkspaceName = useCallback(async () => {
+    setAppBarHeader('');
+
+    if (!workspaceId) {
+      return;
+    }
+
+    try {
+      const response = await fetchWorkspaceApi(workspaceId, token);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const workspaceData = await response.json();
+      setAppBarHeader(workspaceData?.name ?? '');
+    } catch (err) {
+      setAppBarHeader('');
+      setError(err.toString());
+    }
+  }, [workspaceId, token, setAppBarHeader]);
 
   useEffect(() => {
     if (todoListId) {
       fetchNotes();
       fetchTodoListName();
+      fetchWorkspaceName();
     }
-  }, [todoListId, fetchNotes, fetchTodoListName]);
+  }, [todoListId, fetchNotes, fetchTodoListName, fetchWorkspaceName]);
 
   const startReordering = () => {
     closeEdit();
@@ -527,7 +551,7 @@ export default function Notes({ setAppBarHeader }) {
               gutterBottom
               sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
             >
-              {isReordering ? 'Reorder Notes' : 'Notes'}
+              {isReordering ? 'Reorder Notes' : todoListName}
             </Typography>
             <Box sx={{ width: 40 }} />
           </Box>
