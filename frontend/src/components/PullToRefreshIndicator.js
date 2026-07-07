@@ -23,8 +23,10 @@ export default function PullToRefreshIndicator({ pullDistance, refreshReady, isR
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        height: 32,
-        mb: 1,
+        height: active ? 32 : 0,
+        mb: active ? 1 : 0,
+        overflow: 'hidden',
+        transition: 'height 120ms ease, margin-bottom 120ms ease',
       }}
     >
       <Box
