@@ -36,6 +36,7 @@ describe('Login', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.clear();
+    localStorage.clear();
     useNavigate.mockReturnValue(mockNavigate);
   });
 
@@ -98,6 +99,33 @@ describe('Login', () => {
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/workspace/3');
+    });
+  });
+
+  test('when login succeeds and the previous workspace is still accessible, it navigates there', async () => {
+    localStorage.setItem('notoli:lastWorkspaceByUser', JSON.stringify({ test_email: '12' }));
+    fetchWorkspaces.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 7 }, { id: 3 }, { id: 12 }],
+    });
+    login.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
+    });
+
+    renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
+    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/workspace/12');
     });
   });
 

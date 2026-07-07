@@ -3,6 +3,7 @@ import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material'
 import { useNavigate } from 'react-router-dom';
 import { fetchWorkspaces as fetchWorkspacesApi, login } from '../../services/notoliApiClient';
 import { persistAuthSession, readOkJson } from '../../services/authSession';
+import { getPreferredWorkspaceId } from '../../services/lastWorkspace';
 
 export default function Login({ showSnackbar }) {
   // Basics
@@ -66,8 +67,9 @@ export default function Login({ showSnackbar }) {
 
       // Navigate to first Workspace, if empty, navigate to root
       const workspaces = await fetchWorkspaces(data.access, true);
-      if (workspaces.length > 0) {
-        navigate(`/workspace/${Math.min(...workspaces.map((ws) => ws.id))}`);
+      const workspaceId = getPreferredWorkspaceId(workspaces);
+      if (workspaceId) {
+        navigate(`/workspace/${workspaceId}`);
       } else {
         navigate('/');
       }

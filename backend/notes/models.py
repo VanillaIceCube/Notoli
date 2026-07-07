@@ -37,6 +37,11 @@ class Workspace(models.Model):
 
     objects = WorkspaceQuerySet.as_manager()
 
+    def save(self, *args, **kwargs):
+        if self.owner_id is None and self.created_by_id is not None:
+            self.owner = self.created_by
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.name
 
@@ -62,16 +67,6 @@ class TodoList(models.Model):
         through="TodoListNote",
     )
     position = models.PositiveIntegerField(default=0)
-
-    # Ownership
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="owned_todolists",
-    )
-    collaborators = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, blank=True, related_name="collaborating_todolists"
-    )
 
     # Metadata
     created_by = models.ForeignKey(
@@ -114,14 +109,6 @@ class Note(models.Model):
     # Scope
     workspace = models.ForeignKey(
         Workspace, on_delete=models.CASCADE, related_name="notes"
-    )
-
-    # Ownership
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="owned_notes"
-    )
-    collaborators = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, blank=True, related_name="collaborating_notes"
     )
 
     # Metadata

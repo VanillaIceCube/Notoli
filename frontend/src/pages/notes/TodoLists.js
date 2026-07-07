@@ -46,6 +46,7 @@ import {
   reorderTodoLists,
   updateTodoList,
 } from '../../services/notoliApiClient';
+import { rememberLastWorkspace } from '../../services/lastWorkspace';
 import { usePullToRefresh } from '../../hooks/useMobileGestures';
 
 const TODO_LIST_VERTICAL_GAP = '8px';
@@ -140,6 +141,7 @@ export default function TodoLists({ setAppBarHeader }) {
 
   useEffect(() => {
     if (workspaceId) {
+      rememberLastWorkspace(workspaceId);
       fetchTodoLists();
       fetchWorkspaceName();
     }

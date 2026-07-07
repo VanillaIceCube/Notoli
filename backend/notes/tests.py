@@ -17,21 +17,18 @@ class ModelTests(APITestCase):
         self.workspace = Workspace.objects.create(
             name="Owner Workspace",
             description="Owner Workspace Description",
-            owner=self.owner,
             created_by=self.owner,
         )
         self.todo_list = TodoList.objects.create(
             name="Owner Todo List",
             description="Owner Todo List Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
         self.note = Note.objects.create(
             note="Owner Note",
             description="Owner Note Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
         self.todo_list.notes.add(self.note)
@@ -72,7 +69,6 @@ class WorkspaceApiTests(APITestCase):
         self.workspace = Workspace.objects.create(
             name="Owner Workspace",
             description="Owner Workspace Description",
-            owner=self.owner,
             created_by=self.owner,
         )
 
@@ -153,7 +149,6 @@ class WorkspaceApiTests(APITestCase):
         Workspace.objects.create(
             name="Outsider Workspace",
             description="Outsider Workspace Description",
-            owner=self.outsider,
             created_by=self.outsider,
         )
         self.workspace.collaborators.add(self.collaborator)
@@ -334,7 +329,6 @@ class TodoListApiTests(APITestCase):
         self.workspace = Workspace.objects.create(
             name="Owner Workspace",
             description="Owner Workspace Description",
-            owner=self.owner,
             created_by=self.owner,
         )
         self.workspace.collaborators.add(self.collaborator)
@@ -342,7 +336,6 @@ class TodoListApiTests(APITestCase):
             name="Owner List",
             description="Owner List Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
 
@@ -364,11 +357,6 @@ class TodoListApiTests(APITestCase):
             f"Expected 201 for collaborator todolist create, got {response.status_code}: {response.data}",
         )
         todo_list = TodoList.objects.get(id=response.data.get("id"))
-        self.assertEqual(
-            todo_list.owner,
-            self.collaborator,
-            f"Expected collaborator to be owner, got {todo_list.owner_id}",
-        )
         self.assertEqual(
             todo_list.created_by,
             self.collaborator,
@@ -440,14 +428,12 @@ class TodoListApiTests(APITestCase):
         other_workspace = Workspace.objects.create(
             name="Other Workspace",
             description="Other Workspace Description",
-            owner=self.owner,
             created_by=self.owner,
         )
         TodoList.objects.create(
             name="Other List",
             description="Other List Description",
             workspace=other_workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
 
@@ -476,7 +462,6 @@ class TodoListApiTests(APITestCase):
             name="Second List",
             description="Second List Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
             position=0,
         )
@@ -497,7 +482,6 @@ class TodoListApiTests(APITestCase):
             name="Second List",
             description="Second List Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
             position=1,
         )
@@ -526,14 +510,12 @@ class TodoListApiTests(APITestCase):
         other_workspace = Workspace.objects.create(
             name="Other Workspace",
             description="Other Workspace Description",
-            owner=self.owner,
             created_by=self.owner,
         )
         other_list = TodoList.objects.create(
             name="Other List",
             description="Other List Description",
             workspace=other_workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
 
@@ -556,7 +538,6 @@ class TodoListApiTests(APITestCase):
         other_workspace = Workspace.objects.create(
             name="Other Workspace",
             description="Other Workspace Description",
-            owner=self.outsider,
             created_by=self.outsider,
         )
 
@@ -569,31 +550,23 @@ class TodoListApiTests(APITestCase):
             f"Expected 403 when filtering by workspace without access, got {response.status_code}: {response.data}",
         )
 
-    def test_list_todolists_filters_by_workspace_allowed_for_list_only_collaborator(
+    def test_list_todolists_filters_by_workspace_denied_for_item_only_collaborator(
         self,
     ):
         list_in_workspace = TodoList.objects.create(
             name="Shared List",
-            description="List-level share only",
+            description="No item-level sharing remains",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
-        list_in_workspace.collaborators.add(self.list_only_collaborator)
 
         self.client.force_authenticate(user=self.list_only_collaborator)
         response = self.client.get(f"/api/todolists/?workspace={self.workspace.id}")
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_200_OK,
-            f"Expected 200 for list-only collaborator workspace filter, got {response.status_code}: {response.data}",
-        )
-        response_ids = {item["id"] for item in response.data}
-        self.assertIn(
-            list_in_workspace.id,
-            response_ids,
-            f"Expected shared todolist to be included in filtered response: {response.data}",
+            status.HTTP_403_FORBIDDEN,
+            f"Expected 403 for non-member workspace filter, got {response.status_code}: {response.data}",
         )
 
     def test_retrieve_todolist_denied_for_outsider(self):
@@ -634,14 +607,12 @@ class TodoListApiTests(APITestCase):
         other_workspace = Workspace.objects.create(
             name="Other Workspace",
             description="Other Workspace Description",
-            owner=self.owner,
             created_by=self.owner,
         )
         other_note = Note.objects.create(
             note="Cross Workspace Note",
             description="Should not be attachable across workspaces",
             workspace=other_workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
 
@@ -667,7 +638,6 @@ class TodoListApiTests(APITestCase):
         other_workspace = Workspace.objects.create(
             name="Second Workspace",
             description="Second Workspace Description",
-            owner=self.owner,
             created_by=self.owner,
         )
 
@@ -714,7 +684,6 @@ class TodoListApiTests(APITestCase):
             name="Collaborator Created List",
             description="Shared through workspace",
             workspace=self.workspace,
-            owner=self.collaborator,
             created_by=self.collaborator,
         )
 
@@ -737,7 +706,6 @@ class TodoListApiTests(APITestCase):
         other_workspace = Workspace.objects.create(
             name="Other Shared Workspace",
             description="Separate sharing boundary",
-            owner=self.outsider,
             created_by=self.outsider,
         )
         other_workspace.collaborators.add(other_member)
@@ -745,7 +713,6 @@ class TodoListApiTests(APITestCase):
             name="Other Workspace List",
             description="Should not leak",
             workspace=other_workspace,
-            owner=self.outsider,
             created_by=self.outsider,
         )
 
@@ -784,7 +751,6 @@ class NoteApiTests(APITestCase):
         self.workspace = Workspace.objects.create(
             name="Owner Workspace",
             description="Owner Workspace Description",
-            owner=self.owner,
             created_by=self.owner,
         )
         self.workspace.collaborators.add(self.collaborator)
@@ -792,25 +758,19 @@ class NoteApiTests(APITestCase):
             name="Owner List",
             description="Owned List Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
-        self.todo_list.collaborators.add(self.collaborator)
         self.note = Note.objects.create(
             note="Owner Note",
             description="Owner Note Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
         self.todo_list.notes.add(self.note)
-        self.note.collaborators.add(self.note_only_collaborator)
 
     def test_workspace_collaborator_can_retrieve_owner_created_note_without_item_share(
         self,
     ):
-        self.note.collaborators.clear()
-
         self.client.force_authenticate(user=self.collaborator)
         response = self.client.get(f"/api/notes/{self.note.id}/")
 
@@ -828,7 +788,6 @@ class NoteApiTests(APITestCase):
             note="Collaborator Created Note",
             description="Shared through workspace list",
             workspace=self.workspace,
-            owner=self.collaborator,
             created_by=self.collaborator,
         )
         self.todo_list.notes.add(collaborator_note)
@@ -875,14 +834,12 @@ class NoteApiTests(APITestCase):
         other_workspace = Workspace.objects.create(
             name="Other Shared Workspace",
             description="Separate sharing boundary",
-            owner=self.outsider,
             created_by=self.outsider,
         )
         other_note = Note.objects.create(
             note="Other Workspace Note",
             description="Should not leak",
             workspace=other_workspace,
-            owner=self.outsider,
             created_by=self.outsider,
         )
 
@@ -917,11 +874,6 @@ class NoteApiTests(APITestCase):
             note.workspace,
             self.workspace,
             f"Expected note workspace to match todo list workspace, got {note.workspace_id}",
-        )
-        self.assertEqual(
-            note.owner,
-            self.collaborator,
-            f"Expected collaborator to be owner, got {note.owner_id}",
         )
         self.assertEqual(
             note.created_by,
@@ -995,14 +947,12 @@ class NoteApiTests(APITestCase):
             name="Other List",
             description="Other List Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
         other_note = Note.objects.create(
             note="Other Note",
             description="Other Note Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
         other_todo_list.notes.add(other_note)
@@ -1032,7 +982,6 @@ class NoteApiTests(APITestCase):
             note="Second Note",
             description="Second Note Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
         self.todo_list.notes.add(second_note)
@@ -1057,7 +1006,6 @@ class NoteApiTests(APITestCase):
             note="Second Note",
             description="Second Note Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
         self.todo_list.notes.add(second_note)
@@ -1093,7 +1041,6 @@ class NoteApiTests(APITestCase):
             note="Outside Note",
             description="Outside Note Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
 
@@ -1117,14 +1064,12 @@ class NoteApiTests(APITestCase):
             note="Second Note",
             description="Second Note Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
         other_todo_list = TodoList.objects.create(
             name="Other List",
             description="Other List Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
         self.todo_list.notes.add(second_note)
@@ -1170,14 +1115,12 @@ class NoteApiTests(APITestCase):
         other_workspace = Workspace.objects.create(
             name="Other Workspace",
             description="Other Workspace Description",
-            owner=self.outsider,
             created_by=self.outsider,
         )
         Note.objects.create(
             note="Outsider Note",
             description="Should not be accessible",
             workspace=other_workspace,
-            owner=self.outsider,
             created_by=self.outsider,
         )
 
@@ -1190,20 +1133,14 @@ class NoteApiTests(APITestCase):
             f"Expected 403 when filtering notes by workspace without access, got {response.status_code}: {response.data}",
         )
 
-    def test_list_notes_filters_by_workspace_allowed_for_note_only_collaborator(self):
+    def test_list_notes_filters_by_workspace_denied_for_item_only_collaborator(self):
         self.client.force_authenticate(user=self.note_only_collaborator)
         response = self.client.get(f"/api/notes/?workspace={self.workspace.id}")
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_200_OK,
-            f"Expected 200 for note-only collaborator workspace filter, got {response.status_code}: {response.data}",
-        )
-        response_ids = {item["id"] for item in response.data}
-        self.assertIn(
-            self.note.id,
-            response_ids,
-            f"Expected shared note to be included in filtered response: {response.data}",
+            status.HTTP_403_FORBIDDEN,
+            f"Expected 403 for non-member workspace filter, got {response.status_code}: {response.data}",
         )
 
     def test_note_can_belong_to_multiple_todolists(self):
@@ -1211,7 +1148,6 @@ class NoteApiTests(APITestCase):
             name="Secondary List",
             description="Secondary List Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
         other_todo_list.notes.add(self.note)
@@ -1236,7 +1172,6 @@ class NoteApiTests(APITestCase):
             name="Secondary List",
             description="Secondary List Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
         other_todo_list.notes.add(self.note)
@@ -1353,7 +1288,6 @@ class NoteApiTests(APITestCase):
             name="Secondary List",
             description="Secondary List Description",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
 
@@ -1379,12 +1313,10 @@ class NoteApiTests(APITestCase):
             name="Private List",
             description="Not shared with note-only collaborator",
             workspace=self.workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
 
-        # User can edit the note (note collaborator) but should not be able to attach
-        # it to a todo list they don't have access to.
+        # Item-level note sharing no longer exists, so this user has no access.
         self.client.force_authenticate(user=self.note_only_collaborator)
         response = self.client.patch(
             f"/api/notes/{self.note.id}/",
@@ -1394,27 +1326,20 @@ class NoteApiTests(APITestCase):
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_403_FORBIDDEN,
-            f"Expected 403 when attaching to a todo list without access, got {response.status_code}: {response.data}",
-        )
-        self.assertEqual(
-            response.data.get("detail"),
-            "You cannot add notes to this todo-list.",
-            f"Unexpected error detail when access denied: {response.data}",
+            status.HTTP_404_NOT_FOUND,
+            f"Expected 404 when patching a note without access, got {response.status_code}: {response.data}",
         )
 
     def test_patch_note_todo_list_cross_workspace_rejected(self):
         other_workspace = Workspace.objects.create(
             name="Other Workspace",
             description="Other Workspace Description",
-            owner=self.owner,
             created_by=self.owner,
         )
         other_todo_list = TodoList.objects.create(
             name="Other List",
             description="Other List Description",
             workspace=other_workspace,
-            owner=self.owner,
             created_by=self.owner,
         )
 
@@ -1440,7 +1365,6 @@ class NoteApiTests(APITestCase):
         other_workspace = Workspace.objects.create(
             name="Second Workspace",
             description="Second Workspace Description",
-            owner=self.owner,
             created_by=self.owner,
         )
 
@@ -1473,7 +1397,6 @@ class NoteApiTests(APITestCase):
         other_workspace = Workspace.objects.create(
             name="Second Workspace",
             description="Second Workspace Description",
-            owner=self.owner,
             created_by=self.owner,
         )
 

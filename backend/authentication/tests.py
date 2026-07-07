@@ -88,7 +88,9 @@ class RegistrationTests(APITestCase):
         )
 
         user = User.objects.get(username="test_email")
-        workspace = Workspace.objects.filter(owner=user, name="My Workspace").first()
+        workspace = Workspace.objects.filter(
+            owner=user, name="test_email's workspace"
+        ).first()
         self.assertIsNotNone(
             workspace,
             "Default workspace was not created for the user.",
@@ -142,6 +144,16 @@ class RegistrationTests(APITestCase):
             "test_email",
             f"Unexpected username for default email: {created_user.username}",
         )
+
+    def test_default_workspace_name_falls_back_to_email_prefix(self):
+        user = User(username="", email="fallback@example.com")
+        user.set_password("test_password")
+        user.save()
+
+        workspace = Workspace.objects.filter(owner=user).first()
+
+        self.assertIsNotNone(workspace, "Default workspace was not created.")
+        self.assertEqual(workspace.name, "fallback's workspace")
 
     def test_register_missing_email(self):
         response = self.client.post(

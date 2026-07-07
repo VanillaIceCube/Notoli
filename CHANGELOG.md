@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-07
+### Added
+- Remembered the last accessible workspace per logged-in browser user and reopened it by default.
+### Changed
+- Named new users' default workspace after their username or email prefix.
+- Made workspace membership the source of truth for todo-list and note access, removing item-level owner and collaborator fields.
+
 ## 2026-07-06
 ### Added
 - Added mobile swipe gestures to open the right drawer and pull down to refresh note and todo-list pages.

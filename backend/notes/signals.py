@@ -14,8 +14,11 @@ def create_default_workspace(sender, instance, created, **kwargs):
         return
     if Workspace.objects.filter(owner=instance).exists():
         return
+    username = (instance.get_username() or "").strip()
+    fallback = (instance.email or "").split("@", 1)[0].strip()
+    base_name = username or fallback or "My"
     Workspace.objects.create(
-        name="My Workspace",
+        name=f"{base_name}'s workspace",
         owner=instance,
         created_by=instance,
     )

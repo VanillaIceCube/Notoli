@@ -29,13 +29,10 @@ def _require_workspace_access(user, workspace_id):
         raise PermissionDenied("You do not have access to this workspace.")
 
 
-def _require_workspace_filter_access(user, workspace_id, base_queryset):
+def _require_workspace_filter_access(user, workspace_id, _base_queryset=None):
     """
-    Workspace filters should not be stricter than item-level permissions.
-
-    Allow `?workspace=` if:
-    - The workspace exists AND the user is a workspace-level member (owner/creator/collaborator), OR
-    - The user has any item-level access within that workspace (e.g., note/todolist collaborator).
+    Allow `?workspace=` only when the workspace exists and the user is a
+    workspace-level member.
     """
     try:
         workspace_id = int(workspace_id)
@@ -46,9 +43,6 @@ def _require_workspace_filter_access(user, workspace_id, base_queryset):
         raise NotFound("Workspace not found.")
 
     if Workspace.objects.accessible_to(user).filter(pk=workspace_id).exists():
-        return
-
-    if base_queryset.filter(workspace_id=workspace_id).exists():
         return
 
     raise PermissionDenied("You do not have access to this workspace.")
@@ -167,13 +161,8 @@ class TodoListViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
-        # Workspace membership is sufficient to see child lists; item-level
-        # ownership/collaborators remain additive for lists shared outside the
-        # workspace.
         queryset = TodoList.objects.filter(
-            Q(owner=user)
-            | Q(created_by=user)
-            | Q(collaborators=user)
+            Q(created_by=user)
             | Q(workspace__owner=user)
             | Q(workspace__created_by=user)
             | Q(workspace__collaborators=user)
@@ -206,7 +195,6 @@ class TodoListViewSet(viewsets.ModelViewSet):
         next_position = (max_position if max_position is not None else -1) + 1
 
         serializer.save(
-            owner=self.request.user,
             created_by=self.request.user,
             workspace=workspace,
             position=next_position,
@@ -258,14 +246,11 @@ class NoteViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = NoteSerializer
 
-    # Base queryset. Lists what the user owner/creator/collaborators on
     def get_queryset(self):
         user = self.request.user
 
         queryset = Note.objects.filter(
-            Q(owner=user)
-            | Q(created_by=user)
-            | Q(collaborators=user)
+            Q(created_by=user)
             | Q(workspace__owner=user)
             | Q(workspace__created_by=user)
             | Q(workspace__collaborators=user)
@@ -298,9 +283,7 @@ class NoteViewSet(viewsets.ModelViewSet):
             if not TodoList.objects.filter(
                 Q(pk=todo_list.pk)
                 & (
-                    Q(owner=self.request.user)
-                    | Q(created_by=self.request.user)
-                    | Q(collaborators=self.request.user)
+                    Q(created_by=self.request.user)
                     | Q(workspace__owner=self.request.user)
                     | Q(workspace__created_by=self.request.user)
                     | Q(workspace__collaborators=self.request.user)
@@ -317,7 +300,7 @@ class NoteViewSet(viewsets.ModelViewSet):
             ):
                 raise PermissionDenied("You cannot add notes to this workspace.")
 
-        serializer.save(owner=self.request.user, created_by=self.request.user)
+        serializer.save(created_by=self.request.user)
 
     @action(detail=False, methods=["patch"], url_path="reorder")
     def reorder(self, request):
@@ -336,9 +319,7 @@ class NoteViewSet(viewsets.ModelViewSet):
         has_todolist_access = (
             TodoList.objects.filter(pk=todo_list.pk)
             .filter(
-                Q(owner=request.user)
-                | Q(created_by=request.user)
-                | Q(collaborators=request.user)
+                Q(created_by=request.user)
                 | Q(workspace__owner=request.user)
                 | Q(workspace__created_by=request.user)
                 | Q(workspace__collaborators=request.user)

@@ -48,6 +48,7 @@ import {
   reorderNotes,
   updateNote,
 } from '../../services/notoliApiClient';
+import { rememberLastWorkspace } from '../../services/lastWorkspace';
 import { usePullToRefresh } from '../../hooks/useMobileGestures';
 
 const NOTE_STATUS_NOT_STARTED = 'Not Started';
@@ -154,11 +155,12 @@ export default function Notes({ setAppBarHeader }) {
 
   useEffect(() => {
     if (todoListId) {
+      rememberLastWorkspace(workspaceId);
       fetchNotes();
       fetchTodoListName();
       fetchWorkspaceName();
     }
-  }, [todoListId, fetchNotes, fetchTodoListName, fetchWorkspaceName]);
+  }, [workspaceId, todoListId, fetchNotes, fetchTodoListName, fetchWorkspaceName]);
 
   const startReordering = () => {
     closeEdit();

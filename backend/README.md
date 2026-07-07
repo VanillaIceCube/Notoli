@@ -26,7 +26,7 @@ Common endpoints:
 - `POST /auth/forgot-password/` -> accepts `email`; sends a reset link if the account exists and returns a generic success message
 - `POST /auth/reset-password/` -> accepts `uid`, `token`, and `password`; sets a new password when the token is valid
 
-New users get a default workspace (`"My Workspace"`) created automatically via a post-save signal in `notes/signals.py`.
+New users get a default workspace named after their username, such as `"andrew's workspace"`, created automatically via a post-save signal in `notes/signals.py`. If a username is unavailable, the name falls back to the email prefix.
 
 All `/api/*` endpoints require:
 - Header: `Authorization: Bearer <accessToken>`
@@ -37,7 +37,8 @@ All `/api/*` endpoints require:
 - Note: a single checklist item (`note` + optional `description` + `status`); can be linked into multiple todo lists
 
 Access scoping:
-- The API filters objects by `owner`/`created_by`/`collaborators` so users only see what they have access to.
+- Workspace membership is the source of truth for access. `Workspace.owner` and `Workspace.collaborators` control access to child todo lists and notes.
+- Todo lists and notes keep `created_by` metadata, but do not have separate owner or collaborator fields.
 - Workspace owners can manage workspace collaborators with `POST /api/workspaces/<id>/collaborators/` using `{ "identifier": "<username-or-email>" }` and `DELETE /api/workspaces/<id>/collaborators/<user_id>/`.
 - Workspace responses include `owner_details` and `collaborators_details` summaries for sharing/access UI.
 - Todo lists are returned in their saved workspace order. Persist a new workspace order with `PATCH /api/todolists/reorder/` and `{ "workspace": <id>, "ordered_ids": [<todo-list-id>, ...] }`.

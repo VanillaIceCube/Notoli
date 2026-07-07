@@ -48,7 +48,6 @@ class TodoListSerializer(serializers.ModelSerializer):
         # this is placed here to allow you to not have to pass in owner & created_by
         # but still requires them on the database level
         extra_kwargs = {
-            "owner": {"required": False},
             "created_by": {"required": False},
         }
 
@@ -113,7 +112,6 @@ class NoteSerializer(serializers.ModelSerializer):
         # this is placed here to allow you to not have to pass in owner & created_by
         # but still requires them on the database level
         extra_kwargs = {
-            "owner": {"required": False},
             "created_by": {"required": False},
             "workspace": {"required": False},
         }
@@ -131,9 +129,7 @@ class NoteSerializer(serializers.ModelSerializer):
             user = getattr(request, "user", None)
             if user is not None and getattr(user, "is_authenticated", False):
                 has_todolist_access = (
-                    todo_list.owner_id == user.id
-                    or todo_list.created_by_id == user.id
-                    or todo_list.collaborators.filter(id=user.id).exists()
+                    todo_list.created_by_id == user.id
                     or todo_list.workspace.owner_id == user.id
                     or todo_list.workspace.created_by_id == user.id
                     or todo_list.workspace.collaborators.filter(id=user.id).exists()
