@@ -31,23 +31,35 @@ import {
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
+import Delete from '@mui/icons-material/Delete';
 import DragIndicator from '@mui/icons-material/DragIndicator';
+import Edit from '@mui/icons-material/Edit';
 import MoreVert from '@mui/icons-material/MoreVert';
+import Reorder from '@mui/icons-material/Reorder';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
+import PullToRefreshIndicator from '../../components/PullToRefreshIndicator';
 import {
   createNote,
   deleteNote,
   fetchNotes as fetchNotesApi,
   fetchTodoList as fetchTodoListApi,
+  fetchWorkspace as fetchWorkspaceApi,
   reorderNotes,
   updateNote,
 } from '../../services/notoliApiClient';
+import { usePullToRefresh } from '../../hooks/useMobileGestures';
 
 const NOTE_STATUS_NOT_STARTED = 'Not Started';
 const NOTE_STATUS_COMPLETE = 'Complete';
 const NOTE_LIST_VERTICAL_GAP = '8px';
 const NOTE_ROW_MIN_HEIGHT = 42;
+const VERTICAL_REORDER_DRAG_MODIFIERS = [
+  ({ transform }) => ({
+    ...transform,
+    x: 0,
+  }),
+];
 const DRAG_HANDLE_TOUCH_STYLE = {
   touchAction: 'none',
   userSelect: 'none',
@@ -77,8 +89,9 @@ function SortableNoteRow({ note, children }) {
 }
 
 export default function Notes({ setAppBarHeader }) {
-  const { todoListId } = useParams();
+  const { workspaceId, todoListId } = useParams();
   const token = sessionStorage.getItem('accessToken');
+  const [todoListName, setTodoListName] = useState('');
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -107,23 +120,45 @@ export default function Notes({ setAppBarHeader }) {
   }, [token, todoListId]);
 
   const fetchTodoListName = useCallback(async () => {
+    setTodoListName('');
+
     if (!todoListId) return;
     try {
       const response = await fetchTodoListApi(todoListId, token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const todoListData = await response.json();
-      setAppBarHeader(todoListData?.name ?? '');
+      setTodoListName(todoListData?.name ?? '');
     } catch (err) {
+      setTodoListName('');
       setError(err.toString());
     }
-  }, [todoListId, token, setAppBarHeader]);
+  }, [todoListId, token]);
+
+  const fetchWorkspaceName = useCallback(async () => {
+    setAppBarHeader('');
+
+    if (!workspaceId) {
+      return;
+    }
+
+    try {
+      const response = await fetchWorkspaceApi(workspaceId, token);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const workspaceData = await response.json();
+      setAppBarHeader(workspaceData?.name ?? '');
+    } catch (err) {
+      setAppBarHeader('');
+      setError(err.toString());
+    }
+  }, [workspaceId, token, setAppBarHeader]);
 
   useEffect(() => {
     if (todoListId) {
       fetchNotes();
       fetchTodoListName();
+      fetchWorkspaceName();
     }
-  }, [todoListId, fetchNotes, fetchTodoListName]);
+  }, [todoListId, fetchNotes, fetchTodoListName, fetchWorkspaceName]);
 
   const startReordering = () => {
     closeEdit();
@@ -236,6 +271,14 @@ export default function Notes({ setAppBarHeader }) {
     setEditingNoteId(null);
     setEditNote('');
   };
+
+  const pullToRefreshDisabled =
+    loading || isReordering || isAdding || Boolean(editingNoteId) || open;
+  const { isRefreshing, pullDistance, refreshReady } = usePullToRefresh({
+    enabled: !pullToRefreshDisabled,
+    onRefresh: fetchNotes,
+  });
+  const pullContentOffset = isRefreshing ? 0 : Math.min(pullDistance / 2.5, 36);
 
   const onDelete = async (id) => {
     setError(null);
@@ -412,7 +455,12 @@ export default function Notes({ setAppBarHeader }) {
 
     if (isReordering) {
       return (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={VERTICAL_REORDER_DRAG_MODIFIERS}
+          onDragEnd={onDragEnd}
+        >
           <SortableContext
             items={lists.map((list) => list.id)}
             strategy={verticalListSortingStrategy}
@@ -474,118 +522,136 @@ export default function Notes({ setAppBarHeader }) {
     >
       <Paper
         elevation={3}
-        sx={{ px: 1.5, py: 1.5, width: '100%', background: 'var(--secondary-background-color)' }}
+        sx={{
+          px: 1.5,
+          pt: 1.5,
+          pb: `calc(12px + ${pullContentOffset}px)`,
+          width: '100%',
+          background: 'var(--secondary-background-color)',
+        }}
       >
         <Box
-          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5 }}
+          sx={{
+            transform: `translateY(${pullContentOffset}px)`,
+            transition: pullDistance > 0 ? 'none' : 'transform 180ms ease-out',
+          }}
         >
-          <Box sx={{ width: 40 }} />
-          <Typography
-            variant="h4"
-            align="center"
-            gutterBottom
-            sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
+          <PullToRefreshIndicator
+            pullDistance={pullDistance}
+            refreshReady={refreshReady}
+            isRefreshing={isRefreshing}
+          />
+          <Box
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5 }}
           >
-            {isReordering ? 'Reorder Notes' : 'Notes'}
-          </Typography>
-          <Box sx={{ width: 40 }} />
-        </Box>
+            <Box sx={{ width: 40 }} />
+            <Typography
+              variant="h4"
+              align="center"
+              gutterBottom
+              sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
+            >
+              {isReordering ? 'Reorder Notes' : todoListName}
+            </Typography>
+            <Box sx={{ width: 40 }} />
+          </Box>
 
-        {loading && <Typography align="center"> Loading... </Typography>}
+          {loading && <Typography align="center"> Loading... </Typography>}
 
-        {error && (
-          <Typography color="error" align="center">
-            Error: {error}
-          </Typography>
-        )}
+          {error && (
+            <Typography color="error" align="center">
+              Error: {error}
+            </Typography>
+          )}
 
-        <Divider
-          sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }}
-        />
-        {!loading && !error && (
-          <Stack spacing={1}>
-            {renderListRows()}
-            {isReordering ? (
-              <Button
-                variant="text"
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'left',
-                  background: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)',
-                }}
-                onClick={stopReordering}
-              >
-                <Typography
-                  variant="body1"
-                  align="center"
-                  fontWeight="bold"
-                  sx={{ fontSize: '1.1rem' }}
-                >
-                  Done Reordering
-                </Typography>
-              </Button>
-            ) : !isAdding ? (
-              <Button
-                variant="text"
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'left',
-                  background: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)',
-                }}
-                startIcon={<Add />}
-                onClick={() => setIsAdding(true)}
-              >
-                <Typography
-                  variant="body1"
-                  align="center"
-                  fontWeight="bold"
-                  sx={{ fontSize: '1.1rem' }}
-                >
-                  Add New
-                </Typography>
-              </Button>
-            ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
-                <TextField
-                  autoFocus
-                  variant="standard"
-                  size="small"
+          <Divider
+            sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }}
+          />
+          {!loading && !error && (
+            <Stack spacing={1}>
+              {renderListRows()}
+              {isReordering ? (
+                <Button
+                  variant="text"
                   sx={{
-                    flexGrow: 1,
-                    mr: 1,
-                    justifyContent: 'space-between',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'left',
+                    background: 'var(--secondary-background-color)',
                     color: 'var(--secondary-color)',
                   }}
-                  slotProps={{
-                    input: {
-                      sx: {
-                        color: 'var(--secondary-color)',
-                        '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                  onClick={stopReordering}
+                >
+                  <Typography
+                    variant="body1"
+                    align="center"
+                    fontWeight="bold"
+                    sx={{ fontSize: '1.1rem' }}
+                  >
+                    Done Reordering
+                  </Typography>
+                </Button>
+              ) : !isAdding ? (
+                <Button
+                  variant="text"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'left',
+                    background: 'var(--secondary-background-color)',
+                    color: 'var(--secondary-color)',
+                  }}
+                  startIcon={<Add />}
+                  onClick={() => setIsAdding(true)}
+                >
+                  <Typography
+                    variant="body1"
+                    align="center"
+                    fontWeight="bold"
+                    sx={{ fontSize: '1.1rem' }}
+                  >
+                    Add New
+                  </Typography>
+                </Button>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
+                  <TextField
+                    autoFocus
+                    variant="standard"
+                    size="small"
+                    sx={{
+                      flexGrow: 1,
+                      mr: 1,
+                      justifyContent: 'space-between',
+                      color: 'var(--secondary-color)',
+                    }}
+                    slotProps={{
+                      input: {
+                        sx: {
+                          color: 'var(--secondary-color)',
+                          '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                        },
                       },
-                    },
-                  }}
-                  placeholder="New Note..."
-                  value={newNote}
-                  onChange={(event) => setNewNote(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') onAdd();
-                    if (event.key === 'Escape') setIsAdding(false);
-                  }}
-                />
-                <IconButton size="small" onClick={onAdd} disabled={!newNote.trim()}>
-                  <Add />
-                </IconButton>
-                <IconButton size="small" onClick={() => setIsAdding(false)}>
-                  <Close />
-                </IconButton>
-              </Box>
-            )}
-          </Stack>
-        )}
+                    }}
+                    placeholder="New Note..."
+                    value={newNote}
+                    onChange={(event) => setNewNote(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') onAdd();
+                      if (event.key === 'Escape') setIsAdding(false);
+                    }}
+                  />
+                  <IconButton size="small" onClick={onAdd} disabled={!newNote.trim()}>
+                    <Add />
+                  </IconButton>
+                  <IconButton size="small" onClick={() => setIsAdding(false)}>
+                    <Close />
+                  </IconButton>
+                </Box>
+              )}
+            </Stack>
+          )}
+        </Box>
 
         <Menu
           slotProps={{
@@ -607,6 +673,7 @@ export default function Notes({ setAppBarHeader }) {
             sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
             onClick={startEditing}
           >
+            <Edit sx={{ mr: 1, fontSize: 18 }} />
             Rename
           </MenuItem>
           <Divider
@@ -618,6 +685,7 @@ export default function Notes({ setAppBarHeader }) {
             onClick={startReordering}
             disabled={lists.length < 2}
           >
+            <Reorder sx={{ mr: 1, fontSize: 18 }} />
             Reorder
           </MenuItem>
           <Divider
@@ -628,6 +696,7 @@ export default function Notes({ setAppBarHeader }) {
             sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
             onClick={() => onDelete(selectedNote.id)}
           >
+            <Delete sx={{ mr: 1, fontSize: 18 }} />
             Remove
           </MenuItem>
         </Menu>

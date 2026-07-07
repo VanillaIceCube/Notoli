@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Drawer,
   Box,
   List,
   ListItemButton,
   ListItemText,
+  SwipeableDrawer,
   Typography,
   Button,
   TextField,
@@ -229,10 +229,16 @@ export default function MyDrawer({
   }, [isAdding, isEditing]);
 
   return (
-    <Drawer
+    <SwipeableDrawer
       open={open}
       onClose={() => setDrawerOpen(false)}
+      onOpen={() => setDrawerOpen(true)}
       anchor="right"
+      disableSwipeToOpen={false}
+      swipeAreaWidth={10}
+      hysteresis={0.08}
+      minFlingVelocity={220}
+      disableBackdropTransition
       ModalProps={{ keepMounted: true }}
       sx={{
         '& .MuiDrawer-paper': {
@@ -519,6 +525,6 @@ export default function MyDrawer({
         onWorkspaceUpdated={updateSharedWorkspace}
         showSnackbar={showSnackbar}
       />
-    </Drawer>
+    </SwipeableDrawer>
   );
 }

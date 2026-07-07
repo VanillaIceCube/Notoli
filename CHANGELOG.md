@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-06
+### Added
+- Added mobile swipe gestures to open the right drawer and pull down to refresh note and todo-list pages.
+### Fixed
+- Added matching edit, reorder, and delete icons to main todo-list and note row action menus.
+- Locked note and todo-list reorder drag previews to the vertical axis.
+### Changed
+- Removed verification evidence guidance from the agent instructions.
+
 ## 2026-07-05
 ### Fixed
 - Enabled mobile touch dragging from reorder handles for todo lists and notes.
@@ -15,8 +24,6 @@ All notable changes to this project are documented in this file.
 - Added `In Progress` as a note status and renamed the checked-off value to `Complete`.
 - Added checkbox controls and completed-note strikethrough styling to todo item rows.
 - Added backend and frontend tests for note status behavior.
-### Changed
-- Documented browser-based screenshot evidence expectations for future UI and backend verification.
 
 ## 2026-07-03
 ### Added

@@ -1,8 +1,8 @@
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import TodoLists from './TodoLists';
-import { todoListFixtures } from '../../test-support/fixtures';
+import { todoListFixtures, workspaceFixtures } from '../../test-support/fixtures';
 import { collectRowStartPixels } from '../../test-support/layout';
 import {
   createDeferred,
@@ -13,6 +13,7 @@ import {
   createTodoList,
   deleteTodoList,
   fetchTodoLists as fetchTodoListsApi,
+  fetchWorkspace as fetchWorkspaceApi,
   updateTodoList,
 } from '../../services/notoliApiClient';
 
@@ -29,6 +30,7 @@ jest.mock('../../services/notoliApiClient', () => ({
   createTodoList: jest.fn(),
   deleteTodoList: jest.fn(),
   fetchTodoLists: jest.fn(),
+  fetchWorkspace: jest.fn(),
   reorderTodoLists: jest.fn(),
   updateTodoList: jest.fn(),
 }));
@@ -45,6 +47,12 @@ async function renderTodoLists() {
   return { ...view, setAppBarHeader };
 }
 
+function setMobilePullViewport() {
+  Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+  Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+  Object.defineProperty(window.navigator, 'maxTouchPoints', { value: 1, configurable: true });
+}
+
 describe('TodoLists', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -53,6 +61,10 @@ describe('TodoLists', () => {
     fetchTodoListsApi.mockResolvedValue({
       ok: true,
       json: async () => todoListFixtures,
+    });
+    fetchWorkspaceApi.mockResolvedValue({
+      ok: true,
+      json: async () => workspaceFixtures[0],
     });
   });
 
@@ -63,9 +75,17 @@ describe('TodoLists', () => {
     renderWithProviders(<TodoLists setAppBarHeader={jest.fn()} />);
 
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /todolists/i })).not.toBeInTheDocument();
 
     deferred.resolve({ ok: true, json: async () => [] });
     expect(await screen.findByText(/no to-do lists found/i)).toBeInTheDocument();
+  });
+
+  test('when the workspace fetch succeeds, it shows the workspace name as the page title', async () => {
+    await renderTodoLists();
+
+    expect(fetchWorkspaceApi).toHaveBeenCalledWith('1', 'token');
+    expect(screen.getByRole('heading', { name: 'test_workspace_01' })).toBeInTheDocument();
   });
 
   test('when the fetch succeeds, it renders the list items', async () => {
@@ -166,6 +186,24 @@ describe('TodoLists', () => {
 
     const input = screen.getByRole('textbox');
     expect(input).toHaveValue('test_todolist_01');
+  });
+
+  test('when row actions are opened, edit, reorder, and delete actions include icons', async () => {
+    await renderTodoLists();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
+    );
+
+    expect(screen.getByRole('menuitem', { name: /rename/i })).toContainElement(
+      screen.getByTestId('EditIcon'),
+    );
+    expect(screen.getByRole('menuitem', { name: /reorder/i })).toContainElement(
+      screen.getByTestId('ReorderIcon'),
+    );
+    expect(screen.getByRole('menuitem', { name: /remove/i })).toContainElement(
+      screen.getByTestId('DeleteIcon'),
+    );
   });
 
   test('when a valid edit is submitted, it updates the item', async () => {
@@ -298,7 +336,7 @@ describe('TodoLists', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /done reordering/i }));
 
-    expect(screen.getByRole('heading', { name: /todolists/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'test_workspace_01' })).toBeInTheDocument();
   });
 
   test('when an item is clicked, it navigates to the expected route', async () => {
@@ -324,5 +362,55 @@ describe('TodoLists', () => {
     await waitFor(() => {
       expect(fetchTodoListsApi).toHaveBeenCalledWith('2', 'token');
     });
+  });
+
+  test('when a mobile user pulls down from the top, it refreshes the todo lists', async () => {
+    setMobilePullViewport();
+    await renderTodoLists();
+
+    const list = screen.getByTestId('todo-list-list');
+    fireEvent.touchStart(list, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(list, { touches: [{ clientX: 124, clientY: 112 }] });
+
+    expect(await screen.findByRole('status', { name: /release to refresh/i })).toBeInTheDocument();
+
+    fireEvent.touchEnd(list, { changedTouches: [{ clientX: 124, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchTodoListsApi).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('when a mobile user pulls down from page whitespace, it refreshes the todo lists', async () => {
+    setMobilePullViewport();
+    await renderTodoLists();
+
+    fireEvent.touchStart(document.body, { touches: [{ clientX: 20, clientY: 20 }] });
+    fireEvent.touchMove(document.body, { touches: [{ clientX: 22, clientY: 112 }] });
+    fireEvent.touchEnd(document.body, { changedTouches: [{ clientX: 22, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchTodoListsApi).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('when editing a todo list, pull down does not refresh', async () => {
+    setMobilePullViewport();
+    await renderTodoLists();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
+
+    const input = screen.getByRole('textbox');
+    fireEvent.touchStart(input, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(input, { touches: [{ clientX: 120, clientY: 120 }] });
+    fireEvent.touchEnd(input, { changedTouches: [{ clientX: 120, clientY: 120 }] });
+
+    await waitFor(() => {
+      expect(fetchTodoListsApi).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });

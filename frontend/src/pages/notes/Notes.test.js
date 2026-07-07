@@ -1,9 +1,9 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router-dom';
 
 import Notes from './Notes';
-import { noteFixtures } from '../../test-support/fixtures';
+import { noteFixtures, workspaceFixtures } from '../../test-support/fixtures';
 import { collectRowStartPixels } from '../../test-support/layout';
 import {
   createDeferred,
@@ -15,6 +15,7 @@ import {
   deleteNote,
   fetchNotes as fetchNotesApi,
   fetchTodoList as fetchTodoListApi,
+  fetchWorkspace as fetchWorkspaceApi,
   updateNote,
 } from '../../services/notoliApiClient';
 
@@ -30,6 +31,7 @@ jest.mock('../../services/notoliApiClient', () => ({
   deleteNote: jest.fn(),
   fetchNotes: jest.fn(),
   fetchTodoList: jest.fn(),
+  fetchWorkspace: jest.fn(),
   reorderNotes: jest.fn(),
   updateNote: jest.fn(),
 }));
@@ -57,11 +59,17 @@ async function renderNotes(routeEntries = ['/workspace/1/todolist/5']) {
   return { ...view, setAppBarHeader };
 }
 
+function setMobilePullViewport() {
+  Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+  Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+  Object.defineProperty(window.navigator, 'maxTouchPoints', { value: 1, configurable: true });
+}
+
 describe('Notes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.setItem('accessToken', 'token');
-    mockUseParams.mockReturnValue({ todoListId: '5' });
+    mockUseParams.mockReturnValue({ workspaceId: '1', todoListId: '5' });
     fetchNotesApi.mockResolvedValue({
       ok: true,
       json: async () => noteFixtures,
@@ -69,6 +77,10 @@ describe('Notes', () => {
     fetchTodoListApi.mockResolvedValue({
       ok: true,
       json: async () => ({ name: 'TodoList 5' }),
+    });
+    fetchWorkspaceApi.mockResolvedValue({
+      ok: true,
+      json: async () => workspaceFixtures[0],
     });
   });
 
@@ -81,9 +93,16 @@ describe('Notes', () => {
     });
 
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /^notes$/i })).not.toBeInTheDocument();
 
     deferred.resolve({ ok: true, json: async () => [] });
     expect(await screen.findByText(/no notes found/i)).toBeInTheDocument();
+  });
+
+  test('when the todo list fetch succeeds, it shows the todo list name as the page title', async () => {
+    await renderNotes();
+
+    expect(screen.getByRole('heading', { name: 'TodoList 5' })).toBeInTheDocument();
   });
 
   test('when the fetch succeeds, it renders the list items', async () => {
@@ -144,6 +163,24 @@ describe('Notes', () => {
 
     const input = screen.getByRole('textbox');
     expect(input).toHaveValue('test_note_01');
+  });
+
+  test('when row actions are opened, edit, reorder, and delete actions include icons', async () => {
+    await renderNotes();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
+
+    expect(screen.getByRole('menuitem', { name: /rename/i })).toContainElement(
+      screen.getByTestId('EditIcon'),
+    );
+    expect(screen.getByRole('menuitem', { name: /reorder/i })).toContainElement(
+      screen.getByTestId('ReorderIcon'),
+    );
+    expect(screen.getByRole('menuitem', { name: /remove/i })).toContainElement(
+      screen.getByTestId('DeleteIcon'),
+    );
   });
 
   test('when a valid edit is submitted, it updates the item', async () => {
@@ -254,10 +291,10 @@ describe('Notes', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /done reordering/i }));
 
-    expect(screen.getByRole('heading', { name: /^notes$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'TodoList 5' })).toBeInTheDocument();
   });
 
-  test('when the todo list fetch succeeds, it sets the app bar header', async () => {
+  test('when the workspace fetch succeeds, it sets the app bar header to the parent workspace', async () => {
     const setAppBarHeader = jest.fn();
 
     renderWithProviders(<Notes setAppBarHeader={setAppBarHeader} />, {
@@ -265,14 +302,14 @@ describe('Notes', () => {
     });
 
     await waitFor(() => {
-      expect(fetchTodoListApi).toHaveBeenCalledWith('5', 'token');
+      expect(fetchWorkspaceApi).toHaveBeenCalledWith('1', 'token');
     });
     await waitFor(() => {
-      expect(setAppBarHeader).toHaveBeenCalledWith('TodoList 5');
+      expect(setAppBarHeader).toHaveBeenCalledWith('test_workspace_01');
     });
   });
 
-  test('when the todo list fetch fails, it shows an error and does not set the header', async () => {
+  test('when the todo list fetch fails, it shows an error and does not show the old hardcoded title', async () => {
     const deferred = createDeferred();
     fetchNotesApi.mockReturnValueOnce(deferred.promise);
     fetchTodoListApi.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
@@ -284,7 +321,7 @@ describe('Notes', () => {
     });
 
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
-    expect(setAppBarHeader).not.toHaveBeenCalled();
+    expect(screen.queryByRole('heading', { name: /^notes$/i })).not.toBeInTheDocument();
 
     await act(async () => {
       deferred.resolve({ ok: true, json: async () => noteFixtures });
@@ -366,5 +403,55 @@ describe('Notes', () => {
     await renderNotes();
 
     expect(await screen.findByText(/no notes found/i)).toBeInTheDocument();
+  });
+
+  test('when a mobile user pulls down from the top, it refreshes the notes', async () => {
+    setMobilePullViewport();
+    await renderNotes();
+
+    const list = screen.getByTestId('note-list');
+    fireEvent.touchStart(list, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(list, { touches: [{ clientX: 122, clientY: 112 }] });
+
+    expect(await screen.findByRole('status', { name: /release to refresh/i })).toBeInTheDocument();
+
+    fireEvent.touchEnd(list, { changedTouches: [{ clientX: 122, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchNotesApi).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('when a mobile user pulls down from page whitespace, it refreshes the notes', async () => {
+    setMobilePullViewport();
+    await renderNotes();
+
+    fireEvent.touchStart(document.body, { touches: [{ clientX: 20, clientY: 20 }] });
+    fireEvent.touchMove(document.body, { touches: [{ clientX: 22, clientY: 112 }] });
+    fireEvent.touchEnd(document.body, { changedTouches: [{ clientX: 22, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchNotesApi).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('when editing a note, pull down does not refresh', async () => {
+    setMobilePullViewport();
+    await renderNotes();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
+
+    const input = screen.getByRole('textbox');
+    fireEvent.touchStart(input, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(input, { touches: [{ clientX: 120, clientY: 120 }] });
+    fireEvent.touchEnd(input, { changedTouches: [{ clientX: 120, clientY: 120 }] });
+
+    await waitFor(() => {
+      expect(fetchNotesApi).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
