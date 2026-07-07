@@ -515,70 +515,70 @@ export default function Lists({ setAppBarHeader }) {
           />
           {!loading && !error && (
             <Stack spacing={1}>
-            {renderListRows()}
-            {isReordering ? (
-              <Button
-                variant="text"
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'left',
-                  background: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)',
-                }}
-                onClick={stopReordering}
-              >
-                <Typography
-                  variant="body1"
-                  align="center"
-                  fontWeight="bold"
-                  sx={{ fontSize: '1.1rem' }}
-                >
-                  Done Reordering
-                </Typography>
-              </Button>
-            ) : !isAdding ? (
-              <Button
-                variant="text"
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'left',
-                  background: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)',
-                }}
-                startIcon={<Add />}
-                onClick={() => setIsAdding(true)}
-              >
-                <Typography
-                  variant="body1"
-                  align="center"
-                  fontWeight="bold"
-                  sx={{ fontSize: '1.1rem' }}
-                >
-                  Add New
-                </Typography>
-              </Button>
-            ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
-                <TextField
-                  autoFocus
-                  variant="standard"
-                  size="small"
+              {renderListRows()}
+              {isReordering ? (
+                <Button
+                  variant="text"
                   sx={{
-                    flexGrow: 1,
-                    mr: 1,
-                    justifyContent: 'space-between',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'left',
+                    background: 'var(--secondary-background-color)',
                     color: 'var(--secondary-color)',
                   }}
-                  slotProps={{
-                    input: {
-                      sx: {
-                        color: 'var(--secondary-color)',
-                        '&:after': { borderBottomColor: 'var(--secondary-color)' },
-                      },
-                    },
+                  onClick={stopReordering}
+                >
+                  <Typography
+                    variant="body1"
+                    align="center"
+                    fontWeight="bold"
+                    sx={{ fontSize: '1.1rem' }}
+                  >
+                    Done Reordering
+                  </Typography>
+                </Button>
+              ) : !isAdding ? (
+                <Button
+                  variant="text"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'left',
+                    background: 'var(--secondary-background-color)',
+                    color: 'var(--secondary-color)',
                   }}
+                  startIcon={<Add />}
+                  onClick={() => setIsAdding(true)}
+                >
+                  <Typography
+                    variant="body1"
+                    align="center"
+                    fontWeight="bold"
+                    sx={{ fontSize: '1.1rem' }}
+                  >
+                    Add New
+                  </Typography>
+                </Button>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
+                  <TextField
+                    autoFocus
+                    variant="standard"
+                    size="small"
+                    sx={{
+                      flexGrow: 1,
+                      mr: 1,
+                      justifyContent: 'space-between',
+                      color: 'var(--secondary-color)',
+                    }}
+                    slotProps={{
+                      input: {
+                        sx: {
+                          color: 'var(--secondary-color)',
+                          '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                        },
+                      },
+                    }}
                   placeholder="New List Name..."
                   value={newListName}
                   onChange={(event) => setNewListName(event.target.value)}
