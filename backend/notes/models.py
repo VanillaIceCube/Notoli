@@ -3,15 +3,15 @@ from django.db import models
 from django.db.models import Max, Q
 
 
-class WorkspaceQuerySet(models.QuerySet):
+class BoardQuerySet(models.QuerySet):
     def accessible_to(self, user):
         return self.filter(
             Q(owner=user) | Q(created_by=user) | Q(collaborators=user)
         ).distinct()
 
 
-# Workspace: A container or 'Master Todolist' containing all data
-class Workspace(models.Model):
+# Board: A container for lists and notes.
+class Board(models.Model):
     # Attributes
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
@@ -20,64 +20,57 @@ class Workspace(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="owned_workspaces",
+        related_name="owned_boards",
     )
     collaborators = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, blank=True, related_name="collaborating_workspaces"
+        settings.AUTH_USER_MODEL, blank=True, related_name="collaborating_boards"
     )
 
     # Metadata
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="created_workspaces",
+        related_name="created_boards",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    objects = WorkspaceQuerySet.as_manager()
+    objects = BoardQuerySet.as_manager()
+
+    def save(self, *args, **kwargs):
+        if self.owner_id is None and self.created_by_id is not None:
+            self.owner = self.created_by
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
 
     class Meta:
-        verbose_name = "Workspace"
-        verbose_name_plural = "Workspaces"
+        verbose_name = "Board"
+        verbose_name_plural = "Boards"
 
 
-# TodoList: A singular TodoList within the Workspace
-class TodoList(models.Model):
+# List: A singular List within the Board
+class List(models.Model):
     # Attributes
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
 
     # Scope
-    workspace = models.ForeignKey(
-        Workspace, on_delete=models.CASCADE, related_name="todolists"
-    )
+    board = models.ForeignKey(Board, on_delete=models.CASCADE, related_name="lists")
     notes = models.ManyToManyField(
         "Note",
         blank=True,
-        related_name="todolists",
-        through="TodoListNote",
+        related_name="lists",
+        through="ListNote",
     )
     position = models.PositiveIntegerField(default=0)
-
-    # Ownership
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="owned_todolists",
-    )
-    collaborators = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, blank=True, related_name="collaborating_todolists"
-    )
 
     # Metadata
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="created_todolists",
+        related_name="created_lists",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -86,12 +79,12 @@ class TodoList(models.Model):
         return self.name
 
     class Meta:
-        verbose_name = "Todo List"
-        verbose_name_plural = "Todo Lists"
+        verbose_name = "List"
+        verbose_name_plural = "Lists"
         ordering = ["position", "created_at", "id"]
 
 
-# Note: The actual TodoList item
+# Note: The actual List item
 class Note(models.Model):
     STATUS_NOT_STARTED = "Not Started"
     STATUS_IN_PROGRESS = "In Progress"
@@ -112,17 +105,7 @@ class Note(models.Model):
     )
 
     # Scope
-    workspace = models.ForeignKey(
-        Workspace, on_delete=models.CASCADE, related_name="notes"
-    )
-
-    # Ownership
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="owned_notes"
-    )
-    collaborators = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, blank=True, related_name="collaborating_notes"
-    )
+    board = models.ForeignKey(Board, on_delete=models.CASCADE, related_name="notes")
 
     # Metadata
     created_by = models.ForeignKey(
@@ -139,19 +122,19 @@ class Note(models.Model):
         verbose_name_plural = "Notes"
 
 
-class TodoListNote(models.Model):
-    todolist = models.ForeignKey(
-        TodoList, on_delete=models.CASCADE, related_name="note_memberships"
+class ListNote(models.Model):
+    list = models.ForeignKey(
+        List, on_delete=models.CASCADE, related_name="note_memberships"
     )
     note = models.ForeignKey(
-        Note, on_delete=models.CASCADE, related_name="todolist_memberships"
+        Note, on_delete=models.CASCADE, related_name="list_memberships"
     )
     position = models.PositiveIntegerField(default=0)
 
     def save(self, *args, **kwargs):
         if self._state.adding and self.position == 0:
             max_position = (
-                TodoListNote.objects.filter(todolist=self.todolist)
+                ListNote.objects.filter(list=self.list)
                 .exclude(note=self.note)
                 .aggregate(Max("position"))["position__max"]
             )
@@ -160,12 +143,12 @@ class TodoListNote(models.Model):
         super().save(*args, **kwargs)
 
     class Meta:
-        db_table = "notes_todolist_notes"
-        verbose_name = "Todo List Note"
-        verbose_name_plural = "Todo List Notes"
+        db_table = "notes_list_notes"
+        verbose_name = "List Note"
+        verbose_name_plural = "List Notes"
         ordering = ["position", "id"]
         constraints = [
             models.UniqueConstraint(
-                fields=["todolist", "note"], name="unique_todolist_note_membership"
+                fields=["list", "note"], name="unique_list_note_membership"
             )
         ]

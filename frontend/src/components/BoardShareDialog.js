@@ -16,7 +16,7 @@ import {
 import Close from '@mui/icons-material/Close';
 import Delete from '@mui/icons-material/Delete';
 import PersonAdd from '@mui/icons-material/PersonAdd';
-import { addWorkspaceCollaborator, removeWorkspaceCollaborator } from '../services/notoliApiClient';
+import { addBoardCollaborator, removeBoardCollaborator } from '../services/notoliApiClient';
 import { getResponseErrorMessage } from '../services/authSession';
 
 const userLabel = (user) =>
@@ -125,20 +125,20 @@ function AccessRow({ user, role, canRemove, removing, saving, onRemove }) {
   );
 }
 
-export default function WorkspaceShareDialog({
+export default function BoardShareDialog({
   open,
-  workspace,
+  board,
   token,
   onClose,
-  onWorkspaceUpdated,
+  onBoardUpdated,
   showSnackbar,
 }) {
   const [identifier, setIdentifier] = useState('');
   const [savingAdd, setSavingAdd] = useState(false);
   const [removingUserId, setRemovingUserId] = useState(null);
 
-  const owner = workspace?.owner_details;
-  const collaborators = useMemo(() => workspace?.collaborators_details || [], [workspace]);
+  const owner = board?.owner_details;
+  const collaborators = useMemo(() => board?.collaborators_details || [], [board]);
   const currentUsername = sessionStorage.getItem('username');
   const currentEmail = sessionStorage.getItem('email');
   const isOwner = Boolean(
@@ -157,7 +157,7 @@ export default function WorkspaceShareDialog({
 
   const handleAdd = async () => {
     const trimmed = identifier.trim();
-    if (!trimmed || !workspace || !isOwner) return;
+    if (!trimmed || !board || !isOwner) return;
 
     const duplicate = collaborators.some(
       (collaborator) =>
@@ -172,17 +172,17 @@ export default function WorkspaceShareDialog({
       owner?.username?.toLowerCase() === trimmed.toLowerCase() ||
       owner?.email?.toLowerCase() === trimmed.toLowerCase()
     ) {
-      showError('The workspace owner already has access.');
+      showError('The board owner already has access.');
       return;
     }
 
     setSavingAdd(true);
     try {
-      const response = await addWorkspaceCollaborator(workspace.id, { identifier: trimmed }, token);
+      const response = await addBoardCollaborator(board.id, { identifier: trimmed }, token);
       if (!response.ok)
         throw new Error(await getResponseErrorMessage(response, 'Unable to add collaborator.'));
       const updated = await response.json();
-      onWorkspaceUpdated(updated);
+      onBoardUpdated(updated);
       setIdentifier('');
     } catch (err) {
       showError(err.message || 'Unable to add collaborator.');
@@ -192,15 +192,15 @@ export default function WorkspaceShareDialog({
   };
 
   const handleRemove = async (collaborator) => {
-    if (!workspace || !collaborator?.id || collaborator.id === owner?.id || !isOwner) return;
+    if (!board || !collaborator?.id || collaborator.id === owner?.id || !isOwner) return;
 
     setRemovingUserId(collaborator.id);
     try {
-      const response = await removeWorkspaceCollaborator(workspace.id, collaborator.id, token);
+      const response = await removeBoardCollaborator(board.id, collaborator.id, token);
       if (!response.ok)
         throw new Error(await getResponseErrorMessage(response, 'Unable to remove collaborator.'));
       const updated = await response.json();
-      onWorkspaceUpdated(updated);
+      onBoardUpdated(updated);
     } catch (err) {
       showError(err.message || 'Unable to remove collaborator.');
     } finally {
@@ -241,7 +241,7 @@ export default function WorkspaceShareDialog({
         }}
       >
         <Typography component="span" variant="h6" fontWeight="bold" noWrap>
-          Share “{workspace?.name}”
+          Share "{board?.name}"
         </Typography>
         <IconButton aria-label="Close sharing dialog" onClick={onClose} size="small">
           <Close fontSize="small" />

@@ -3,17 +3,17 @@ import {
   register,
   forgotPassword,
   resetPassword,
-  fetchWorkspaces,
-  fetchWorkspace,
-  createWorkspace,
-  updateWorkspace,
-  deleteWorkspace,
-  fetchTodoLists,
-  fetchTodoList,
-  createTodoList,
-  updateTodoList,
-  deleteTodoList,
-  reorderTodoLists,
+  fetchBoards,
+  fetchBoard,
+  createBoard,
+  updateBoard,
+  deleteBoard,
+  fetchLists,
+  fetchList,
+  createList,
+  updateList,
+  deleteList,
+  reorderLists,
   fetchNotes,
   createNote,
   updateNote,
@@ -110,118 +110,118 @@ describe('notoliApiClient', () => {
     });
   });
 
-  test('when fetching workspaces with a token, it sends the auth header', () => {
-    fetchWorkspaces('token');
+  test('when fetching boards with a token, it sends the auth header', () => {
+    fetchBoards('token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/workspaces/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/boards/', {
       headers: { Authorization: 'Bearer token' },
     });
   });
 
-  test('when fetching workspaces without a token, it omits the auth header', () => {
-    fetchWorkspaces();
+  test('when fetching boards without a token, it omits the auth header', () => {
+    fetchBoards();
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/workspaces/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/boards/', {
       headers: {},
     });
   });
 
-  test('when fetching a workspace, it calls the workspace endpoint', () => {
-    fetchWorkspace(3, 'token');
+  test('when fetching a board, it calls the board endpoint', () => {
+    fetchBoard(3, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/workspaces/3/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/boards/3/', {
       headers: { Authorization: 'Bearer token' },
     });
   });
 
-  test('when creating a workspace, it posts JSON with auth', () => {
-    createWorkspace({ name: 'Alpha' }, 'token');
+  test('when creating a board, it posts JSON with auth', () => {
+    createBoard({ name: 'Alpha' }, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/workspaces/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/boards/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
       body: JSON.stringify({ name: 'Alpha' }),
     });
   });
 
-  test('when updating a workspace, it patches JSON with auth', () => {
-    updateWorkspace(3, { name: 'Beta' }, 'token');
+  test('when updating a board, it patches JSON with auth', () => {
+    updateBoard(3, { name: 'Beta' }, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/workspaces/3/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/boards/3/', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
       body: JSON.stringify({ name: 'Beta' }),
     });
   });
 
-  test('when deleting a workspace, it deletes with auth', () => {
-    deleteWorkspace(3, 'token');
+  test('when deleting a board, it deletes with auth', () => {
+    deleteBoard(3, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/workspaces/3/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/boards/3/', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
     });
   });
 
-  test('when fetching todo lists, it calls the workspace query endpoint', () => {
-    fetchTodoLists(9, 'token');
+  test('when fetching lists, it calls the board query endpoint', () => {
+    fetchLists(9, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/todolists/?workspace=9', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/lists/?board=9', {
       headers: { Authorization: 'Bearer token' },
     });
   });
 
-  test('when fetching a todo list, it calls the todo list endpoint', () => {
-    fetchTodoList(5, 'token');
+  test('when fetching a list, it calls the list endpoint', () => {
+    fetchList(5, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/todolists/5/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/lists/5/', {
       headers: { Authorization: 'Bearer token' },
     });
   });
 
-  test('when creating a todo list, it posts JSON with auth', () => {
-    createTodoList(9, { name: 'List' }, 'token');
+  test('when creating a list, it posts JSON with auth', () => {
+    createList(9, { name: 'List' }, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/todolists/?workspace=9', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/lists/?board=9', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
       body: JSON.stringify({ name: 'List' }),
     });
   });
 
-  test('when updating a todo list, it patches JSON with auth', () => {
-    updateTodoList(5, { name: 'Updated' }, 'token');
+  test('when updating a list, it patches JSON with auth', () => {
+    updateList(5, { name: 'Updated' }, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/todolists/5/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/lists/5/', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
       body: JSON.stringify({ name: 'Updated' }),
     });
   });
 
-  test('when deleting a todo list, it deletes with auth', () => {
-    deleteTodoList(5, 'token');
+  test('when deleting a list, it deletes with auth', () => {
+    deleteList(5, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/todolists/5/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/lists/5/', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
     });
   });
 
-  test('when reordering todo lists, it patches the reorder endpoint', () => {
-    reorderTodoLists(9, [11, 10], 'token');
+  test('when reordering lists, it patches the reorder endpoint', () => {
+    reorderLists(9, [11, 10], 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/todolists/reorder/', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/lists/reorder/', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
-      body: JSON.stringify({ workspace: 9, ordered_ids: [11, 10] }),
+      body: JSON.stringify({ board: 9, ordered_ids: [11, 10] }),
     });
   });
 
-  test('when fetching notes, it calls the todo list query endpoint', () => {
+  test('when fetching notes, it calls the list query endpoint', () => {
     fetchNotes(7, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/notes/?todo_list=7', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/notes/?list=7', {
       headers: { Authorization: 'Bearer token' },
     });
   });
@@ -229,7 +229,7 @@ describe('notoliApiClient', () => {
   test('when creating a note, it posts JSON with auth', () => {
     createNote(7, { note: 'Hello' }, 'token');
 
-    expect(apiFetch).toHaveBeenCalledWith('/api/notes/?todo_list=7', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/notes/?list=7', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
       body: JSON.stringify({ note: 'Hello' }),
@@ -261,7 +261,7 @@ describe('notoliApiClient', () => {
     expect(apiFetch).toHaveBeenCalledWith('/api/notes/reorder/', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
-      body: JSON.stringify({ todo_list: 7, ordered_ids: [102, 101] }),
+      body: JSON.stringify({ list: 7, ordered_ids: [102, 101] }),
     });
   });
 });

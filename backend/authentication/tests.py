@@ -10,7 +10,7 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from notes.models import Workspace
+from notes.models import Board
 
 User = get_user_model()
 
@@ -88,10 +88,10 @@ class RegistrationTests(APITestCase):
         )
 
         user = User.objects.get(username="test_email")
-        workspace = Workspace.objects.filter(owner=user, name="My Workspace").first()
+        board = Board.objects.filter(owner=user, name="test_email's board").first()
         self.assertIsNotNone(
-            workspace,
-            "Default workspace was not created for the user.",
+            board,
+            "Default board was not created for the user.",
         )
 
         self.assertEqual(
@@ -118,9 +118,9 @@ class RegistrationTests(APITestCase):
             f"Expected refresh token in response: {response.data}",
         )
         self.assertEqual(
-            response.data.get("workspace_id"),
-            workspace.id,
-            f"Unexpected workspace id in response: {response.data}",
+            response.data.get("board_id"),
+            board.id,
+            f"Unexpected board id in response: {response.data}",
         )
 
     def test_register_default_username(self):
@@ -142,6 +142,16 @@ class RegistrationTests(APITestCase):
             "test_email",
             f"Unexpected username for default email: {created_user.username}",
         )
+
+    def test_default_board_name_falls_back_to_email_prefix(self):
+        user = User(username="", email="fallback@example.com")
+        user.set_password("test_password")
+        user.save()
+
+        board = Board.objects.filter(owner=user).first()
+
+        self.assertIsNotNone(board, "Default board was not created.")
+        self.assertEqual(board.name, "fallback's board")
 
     def test_register_missing_email(self):
         response = self.client.post(

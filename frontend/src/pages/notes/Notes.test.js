@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router-dom';
 
 import Notes from './Notes';
-import { noteFixtures, workspaceFixtures } from '../../test-support/fixtures';
+import { noteFixtures, boardFixtures } from '../../test-support/fixtures';
 import { collectRowStartPixels } from '../../test-support/layout';
 import {
   createDeferred,
@@ -14,8 +14,8 @@ import {
   createNote,
   deleteNote,
   fetchNotes as fetchNotesApi,
-  fetchTodoList as fetchTodoListApi,
-  fetchWorkspace as fetchWorkspaceApi,
+  fetchList as fetchListApi,
+  fetchBoard as fetchBoardApi,
   updateNote,
 } from '../../services/notoliApiClient';
 
@@ -30,8 +30,8 @@ jest.mock('../../services/notoliApiClient', () => ({
   createNote: jest.fn(),
   deleteNote: jest.fn(),
   fetchNotes: jest.fn(),
-  fetchTodoList: jest.fn(),
-  fetchWorkspace: jest.fn(),
+  fetchList: jest.fn(),
+  fetchBoard: jest.fn(),
   reorderNotes: jest.fn(),
   updateNote: jest.fn(),
 }));
@@ -41,7 +41,7 @@ function LocationDisplay() {
   return <div data-testid="location">{location.pathname}</div>;
 }
 
-async function renderNotes(routeEntries = ['/workspace/1/todolist/5']) {
+async function renderNotes(routeEntries = ['/board/1/list/5']) {
   const setAppBarHeader = jest.fn();
   const view = renderWithProviders(
     <>
@@ -69,18 +69,18 @@ describe('Notes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.setItem('accessToken', 'token');
-    mockUseParams.mockReturnValue({ workspaceId: '1', todoListId: '5' });
+    mockUseParams.mockReturnValue({ boardId: '1', listId: '5' });
     fetchNotesApi.mockResolvedValue({
       ok: true,
       json: async () => noteFixtures,
     });
-    fetchTodoListApi.mockResolvedValue({
+    fetchListApi.mockResolvedValue({
       ok: true,
-      json: async () => ({ name: 'TodoList 5' }),
+      json: async () => ({ name: 'List 5' }),
     });
-    fetchWorkspaceApi.mockResolvedValue({
+    fetchBoardApi.mockResolvedValue({
       ok: true,
-      json: async () => workspaceFixtures[0],
+      json: async () => boardFixtures[0],
     });
   });
 
@@ -89,7 +89,7 @@ describe('Notes', () => {
     fetchNotesApi.mockReturnValueOnce(deferred.promise);
 
     renderWithProviders(<Notes setAppBarHeader={jest.fn()} />, {
-      routeEntries: ['/workspace/1/todolist/5'],
+      routeEntries: ['/board/1/list/5'],
     });
 
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
@@ -99,10 +99,10 @@ describe('Notes', () => {
     expect(await screen.findByText(/no notes found/i)).toBeInTheDocument();
   });
 
-  test('when the todo list fetch succeeds, it shows the todo list name as the page title', async () => {
+  test('when the list fetch succeeds, it shows the list name as the page title', async () => {
     await renderNotes();
 
-    expect(screen.getByRole('heading', { name: 'TodoList 5' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'List 5' })).toBeInTheDocument();
   });
 
   test('when the fetch succeeds, it renders the list items', async () => {
@@ -146,7 +146,7 @@ describe('Notes', () => {
     await waitFor(() => {
       expect(createNote).toHaveBeenCalledWith(
         '5',
-        { note: 'test_note_03', todo_list: '5', description: '' },
+        { note: 'test_note_03', list: '5', description: '' },
         'token',
       );
     });
@@ -291,33 +291,33 @@ describe('Notes', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /done reordering/i }));
 
-    expect(screen.getByRole('heading', { name: 'TodoList 5' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'List 5' })).toBeInTheDocument();
   });
 
-  test('when the workspace fetch succeeds, it sets the app bar header to the parent workspace', async () => {
+  test('when the board fetch succeeds, it sets the app bar header to the parent board', async () => {
     const setAppBarHeader = jest.fn();
 
     renderWithProviders(<Notes setAppBarHeader={setAppBarHeader} />, {
-      routeEntries: ['/workspace/1/todolist/5'],
+      routeEntries: ['/board/1/list/5'],
     });
 
     await waitFor(() => {
-      expect(fetchWorkspaceApi).toHaveBeenCalledWith('1', 'token');
+      expect(fetchBoardApi).toHaveBeenCalledWith('1', 'token');
     });
     await waitFor(() => {
-      expect(setAppBarHeader).toHaveBeenCalledWith('test_workspace_01');
+      expect(setAppBarHeader).toHaveBeenCalledWith('test_board_01');
     });
   });
 
-  test('when the todo list fetch fails, it shows an error and does not show the old hardcoded title', async () => {
+  test('when the list fetch fails, it shows an error and does not show the old hardcoded title', async () => {
     const deferred = createDeferred();
     fetchNotesApi.mockReturnValueOnce(deferred.promise);
-    fetchTodoListApi.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+    fetchListApi.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
 
     const setAppBarHeader = jest.fn();
 
     renderWithProviders(<Notes setAppBarHeader={setAppBarHeader} />, {
-      routeEntries: ['/workspace/1/todolist/5'],
+      routeEntries: ['/board/1/list/5'],
     });
 
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();

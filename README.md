@@ -1,17 +1,17 @@
 # 📝 Notoli
 **A Notion-Inspired To-Do List App**
-Notoli is my personalized take on a to-do list application, inspired by the flexibility of Notion databases.
+Notoli is my personalized take on a list application, inspired by the flexibility of Notion databases.
 It's designed to support **multiple views** of the same list, so my wife, Diana, and I can each use the app in the way that works best for us, whether that's a clean, simple Notes-style interface or a more detailed, database-like workflow.
 
 ## ✨ Features
-- **Workspaces -> TodoLists -> Notes** hierarchy
+- **Boards -> Lists -> Notes** hierarchy
 - **JWT auth** (register/login/refresh) with an email-first login flow
 - **Password reset by email** via secure tokenized reset links
-- **Sane defaults**: new accounts get a default workspace automatically
+- **Sane defaults**: new accounts get a default board automatically
 - **Fast CRUD UI**: add, edit, and delete items inline
-- **Manual ordering**: reorder todo lists and notes with an intentional drag-and-drop mode
+- **Manual ordering**: reorder lists and notes with an intentional drag-and-drop mode
 - **Access scoping**: the API limits objects by `owner`/`created_by`/`collaborators`
-- **Flexible organization**: notes can appear in multiple todo lists with per-list ordering
+- **Flexible organization**: notes can appear in multiple lists with per-list ordering
 - **Subdomain hosting**: designed to run at `https://notoli.judeandrewalaba.com`
 - **Dockerized deployment**: frontend + backend + Nginx reverse proxy
 

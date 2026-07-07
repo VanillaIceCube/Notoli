@@ -38,8 +38,8 @@ jest.mock('./pages/authentication/Login', () => ({ showSnackbar }) => (
 jest.mock('./pages/authentication/Register', () => () => <div>RegisterPage</div>);
 jest.mock('./pages/authentication/ForgotPassword', () => () => <div>ForgotPasswordPage</div>);
 jest.mock('./pages/authentication/ResetPassword', () => () => <div>ResetPasswordPage</div>);
-jest.mock('./components/WorkspaceHomeRedirect', () => () => <div>WorkspaceHomeRedirect</div>);
-jest.mock('./pages/notes/TodoLists', () => () => <div>TodoListsPage</div>);
+jest.mock('./components/BoardHomeRedirect', () => () => <div>BoardHomeRedirect</div>);
+jest.mock('./pages/notes/Lists', () => () => <div>ListsPage</div>);
 jest.mock('./pages/notes/Notes', () => () => <div>NotesPage</div>);
 
 const testTheme = createTheme();
@@ -84,23 +84,23 @@ describe('App', () => {
     expect(document.body.textContent).toContain('ResetPasswordPage');
   });
 
-  test('when the route is /, it renders the workspace redirect', () => {
+  test('when the route is /, it renders the board redirect', () => {
     sessionStorage.setItem('accessToken', 'token');
     renderApp('/');
 
-    expect(document.body.textContent).toContain('WorkspaceHomeRedirect');
+    expect(document.body.textContent).toContain('BoardHomeRedirect');
   });
 
-  test('when the route is /workspace/:id, it renders TodoLists', () => {
+  test('when the route is /board/:id, it renders Lists', () => {
     sessionStorage.setItem('accessToken', 'token');
-    renderApp('/workspace/1');
+    renderApp('/board/1');
 
-    expect(document.body.textContent).toContain('TodoListsPage');
+    expect(document.body.textContent).toContain('ListsPage');
   });
 
-  test('when the route is /workspace/:id/todolist/:id, it renders Notes', () => {
+  test('when the route is /board/:id/list/:id, it renders Notes', () => {
     sessionStorage.setItem('accessToken', 'token');
-    renderApp('/workspace/1/todolist/2');
+    renderApp('/board/1/list/2');
 
     expect(document.body.textContent).toContain('NotesPage');
   });
@@ -114,7 +114,7 @@ describe('App', () => {
   });
 
   test('when a protected route is visited without a token, it redirects to login', () => {
-    renderApp('/workspace/1');
+    renderApp('/board/1');
 
     expect(document.body.textContent).toContain('LoginRedirect');
   });

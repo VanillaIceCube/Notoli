@@ -33,7 +33,7 @@ describe('Register', () => {
     expect(screen.getByRole('button', { name: /register/i })).toBeInTheDocument();
   });
 
-  test('when registration succeeds, it stores tokens, navigates to workspace, and shows success', async () => {
+  test('when registration succeeds, it stores tokens, navigates to board, and shows success', async () => {
     register.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -42,7 +42,7 @@ describe('Register', () => {
         email: 'test_email@example.com',
         access: 'access-token',
         refresh: 'refresh-token',
-        workspace_id: 12,
+        board_id: 12,
       }),
     });
 
@@ -69,7 +69,7 @@ describe('Register', () => {
     });
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/workspace/12');
+      expect(mockNavigate).toHaveBeenCalledWith('/board/12');
     });
 
     expect(sessionStorage.getItem('accessToken')).toBe('access-token');

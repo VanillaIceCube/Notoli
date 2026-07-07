@@ -1,4 +1,4 @@
-﻿# AGENTS.md
+# AGENTS.md
 
 This repo uses manual setup steps so Codex does not assume Django or Node are installed.
 Follow one of the setup paths below before running the app.
@@ -46,7 +46,7 @@ Use this description in the Codex environment settings:
 
 ```text
 Notoli
-A Notion-inspired to-do list app with a Django REST backend and React frontend. Includes JWT auth, subdomain production routing at notoli.judeandrewalaba.com, Docker/Nginx deployment support, and local setup via Python requirements plus npm.
+A Notion-inspired list app with a Django REST backend and React frontend. Includes JWT auth, subdomain production routing at notoli.judeandrewalaba.com, Docker/Nginx deployment support, and local setup via Python requirements plus npm.
 ```
 
 Use this setup script in Codex cloud environments:
@@ -54,7 +54,7 @@ Use this setup script in Codex cloud environments:
 ```bash
 set -euo pipefail
 
-cd /workspace/Notoli
+cd /board/Notoli
 
 python -m pip install --upgrade pip
 python -m pip install -r backend/requirements.txt
@@ -132,7 +132,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
   - Frontend: `https://notoli.judeandrewalaba.com`
   - Backend:
     - `https://notoli.judeandrewalaba.com/api`
-      - Workspace sharing uses `POST /api/workspaces/<id>/collaborators/` and `DELETE /api/workspaces/<id>/collaborators/<user_id>/`.
+      - Board sharing uses `POST /api/boards/<id>/collaborators/` and `DELETE /api/boards/<id>/collaborators/<user_id>/`.
     - `https://notoli.judeandrewalaba.com/auth`
     - `https://notoli.judeandrewalaba.com/admin`
   - Frontend public auth routes:
