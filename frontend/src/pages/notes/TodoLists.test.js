@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import TodoLists from './TodoLists';
@@ -43,6 +43,12 @@ async function renderTodoLists() {
   await waitForLoadingToFinish();
 
   return { ...view, setAppBarHeader };
+}
+
+function setMobilePullViewport() {
+  Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+  Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+  Object.defineProperty(window.navigator, 'maxTouchPoints', { value: 1, configurable: true });
 }
 
 describe('TodoLists', () => {
@@ -324,5 +330,55 @@ describe('TodoLists', () => {
     await waitFor(() => {
       expect(fetchTodoListsApi).toHaveBeenCalledWith('2', 'token');
     });
+  });
+
+  test('when a mobile user pulls down from the top, it refreshes the todo lists', async () => {
+    setMobilePullViewport();
+    await renderTodoLists();
+
+    const list = screen.getByTestId('todo-list-list');
+    fireEvent.touchStart(list, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(list, { touches: [{ clientX: 124, clientY: 112 }] });
+
+    expect(await screen.findByRole('status', { name: /release to refresh/i })).toBeInTheDocument();
+
+    fireEvent.touchEnd(list, { changedTouches: [{ clientX: 124, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchTodoListsApi).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('when a mobile user pulls down from page whitespace, it refreshes the todo lists', async () => {
+    setMobilePullViewport();
+    await renderTodoLists();
+
+    fireEvent.touchStart(document.body, { touches: [{ clientX: 20, clientY: 20 }] });
+    fireEvent.touchMove(document.body, { touches: [{ clientX: 22, clientY: 112 }] });
+    fireEvent.touchEnd(document.body, { changedTouches: [{ clientX: 22, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchTodoListsApi).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('when editing a todo list, pull down does not refresh', async () => {
+    setMobilePullViewport();
+    await renderTodoLists();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
+
+    const input = screen.getByRole('textbox');
+    fireEvent.touchStart(input, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(input, { touches: [{ clientX: 120, clientY: 120 }] });
+    fireEvent.touchEnd(input, { changedTouches: [{ clientX: 120, clientY: 120 }] });
+
+    await waitFor(() => {
+      expect(fetchTodoListsApi).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });

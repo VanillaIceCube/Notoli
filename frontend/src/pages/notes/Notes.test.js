@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router-dom';
 
@@ -55,6 +55,12 @@ async function renderNotes(routeEntries = ['/workspace/1/todolist/5']) {
   await waitForLoadingToFinish();
 
   return { ...view, setAppBarHeader };
+}
+
+function setMobilePullViewport() {
+  Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+  Object.defineProperty(window, 'scrollY', { value: 0, configurable: true });
+  Object.defineProperty(window.navigator, 'maxTouchPoints', { value: 1, configurable: true });
 }
 
 describe('Notes', () => {
@@ -366,5 +372,55 @@ describe('Notes', () => {
     await renderNotes();
 
     expect(await screen.findByText(/no notes found/i)).toBeInTheDocument();
+  });
+
+  test('when a mobile user pulls down from the top, it refreshes the notes', async () => {
+    setMobilePullViewport();
+    await renderNotes();
+
+    const list = screen.getByTestId('note-list');
+    fireEvent.touchStart(list, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(list, { touches: [{ clientX: 122, clientY: 112 }] });
+
+    expect(await screen.findByRole('status', { name: /release to refresh/i })).toBeInTheDocument();
+
+    fireEvent.touchEnd(list, { changedTouches: [{ clientX: 122, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchNotesApi).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('when a mobile user pulls down from page whitespace, it refreshes the notes', async () => {
+    setMobilePullViewport();
+    await renderNotes();
+
+    fireEvent.touchStart(document.body, { touches: [{ clientX: 20, clientY: 20 }] });
+    fireEvent.touchMove(document.body, { touches: [{ clientX: 22, clientY: 112 }] });
+    fireEvent.touchEnd(document.body, { changedTouches: [{ clientX: 22, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchNotesApi).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('when editing a note, pull down does not refresh', async () => {
+    setMobilePullViewport();
+    await renderNotes();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
+
+    const input = screen.getByRole('textbox');
+    fireEvent.touchStart(input, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(input, { touches: [{ clientX: 120, clientY: 120 }] });
+    fireEvent.touchEnd(input, { changedTouches: [{ clientX: 120, clientY: 120 }] });
+
+    await waitFor(() => {
+      expect(fetchNotesApi).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });

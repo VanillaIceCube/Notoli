@@ -2,6 +2,8 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-07-06
+### Added
+- Added mobile swipe gestures to open the right drawer and pull down to refresh note and todo-list pages.
 ### Fixed
 - Locked note and todo-list reorder drag previews to the vertical axis.
 ### Changed

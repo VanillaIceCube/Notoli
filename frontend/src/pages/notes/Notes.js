@@ -35,6 +35,7 @@ import DragIndicator from '@mui/icons-material/DragIndicator';
 import MoreVert from '@mui/icons-material/MoreVert';
 import Divider from '@mui/material/Divider';
 import { useParams } from 'react-router-dom';
+import PullToRefreshIndicator from '../../components/PullToRefreshIndicator';
 import {
   createNote,
   deleteNote,
@@ -43,6 +44,7 @@ import {
   reorderNotes,
   updateNote,
 } from '../../services/notoliApiClient';
+import { usePullToRefresh } from '../../hooks/useMobileGestures';
 
 const NOTE_STATUS_NOT_STARTED = 'Not Started';
 const NOTE_STATUS_COMPLETE = 'Complete';
@@ -242,6 +244,14 @@ export default function Notes({ setAppBarHeader }) {
     setEditingNoteId(null);
     setEditNote('');
   };
+
+  const pullToRefreshDisabled =
+    loading || isReordering || isAdding || Boolean(editingNoteId) || open;
+  const { isRefreshing, pullDistance, refreshReady } = usePullToRefresh({
+    enabled: !pullToRefreshDisabled,
+    onRefresh: fetchNotes,
+  });
+  const pullContentOffset = isRefreshing ? 0 : Math.min(pullDistance / 2.5, 36);
 
   const onDelete = async (id) => {
     setError(null);
@@ -485,118 +495,136 @@ export default function Notes({ setAppBarHeader }) {
     >
       <Paper
         elevation={3}
-        sx={{ px: 1.5, py: 1.5, width: '100%', background: 'var(--secondary-background-color)' }}
+        sx={{
+          px: 1.5,
+          pt: 1.5,
+          pb: `calc(12px + ${pullContentOffset}px)`,
+          width: '100%',
+          background: 'var(--secondary-background-color)',
+        }}
       >
         <Box
-          sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5 }}
+          sx={{
+            transform: `translateY(${pullContentOffset}px)`,
+            transition: pullDistance > 0 ? 'none' : 'transform 180ms ease-out',
+          }}
         >
-          <Box sx={{ width: 40 }} />
-          <Typography
-            variant="h4"
-            align="center"
-            gutterBottom
-            sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
+          <PullToRefreshIndicator
+            pullDistance={pullDistance}
+            refreshReady={refreshReady}
+            isRefreshing={isRefreshing}
+          />
+          <Box
+            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5 }}
           >
-            {isReordering ? 'Reorder Notes' : 'Notes'}
-          </Typography>
-          <Box sx={{ width: 40 }} />
-        </Box>
+            <Box sx={{ width: 40 }} />
+            <Typography
+              variant="h4"
+              align="center"
+              gutterBottom
+              sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
+            >
+              {isReordering ? 'Reorder Notes' : 'Notes'}
+            </Typography>
+            <Box sx={{ width: 40 }} />
+          </Box>
 
-        {loading && <Typography align="center"> Loading... </Typography>}
+          {loading && <Typography align="center"> Loading... </Typography>}
 
-        {error && (
-          <Typography color="error" align="center">
-            Error: {error}
-          </Typography>
-        )}
+          {error && (
+            <Typography color="error" align="center">
+              Error: {error}
+            </Typography>
+          )}
 
-        <Divider
-          sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }}
-        />
-        {!loading && !error && (
-          <Stack spacing={1}>
-            {renderListRows()}
-            {isReordering ? (
-              <Button
-                variant="text"
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'left',
-                  background: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)',
-                }}
-                onClick={stopReordering}
-              >
-                <Typography
-                  variant="body1"
-                  align="center"
-                  fontWeight="bold"
-                  sx={{ fontSize: '1.1rem' }}
-                >
-                  Done Reordering
-                </Typography>
-              </Button>
-            ) : !isAdding ? (
-              <Button
-                variant="text"
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'left',
-                  background: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)',
-                }}
-                startIcon={<Add />}
-                onClick={() => setIsAdding(true)}
-              >
-                <Typography
-                  variant="body1"
-                  align="center"
-                  fontWeight="bold"
-                  sx={{ fontSize: '1.1rem' }}
-                >
-                  Add New
-                </Typography>
-              </Button>
-            ) : (
-              <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
-                <TextField
-                  autoFocus
-                  variant="standard"
-                  size="small"
+          <Divider
+            sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }}
+          />
+          {!loading && !error && (
+            <Stack spacing={1}>
+              {renderListRows()}
+              {isReordering ? (
+                <Button
+                  variant="text"
                   sx={{
-                    flexGrow: 1,
-                    mr: 1,
-                    justifyContent: 'space-between',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'left',
+                    background: 'var(--secondary-background-color)',
                     color: 'var(--secondary-color)',
                   }}
-                  slotProps={{
-                    input: {
-                      sx: {
-                        color: 'var(--secondary-color)',
-                        '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                  onClick={stopReordering}
+                >
+                  <Typography
+                    variant="body1"
+                    align="center"
+                    fontWeight="bold"
+                    sx={{ fontSize: '1.1rem' }}
+                  >
+                    Done Reordering
+                  </Typography>
+                </Button>
+              ) : !isAdding ? (
+                <Button
+                  variant="text"
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'left',
+                    background: 'var(--secondary-background-color)',
+                    color: 'var(--secondary-color)',
+                  }}
+                  startIcon={<Add />}
+                  onClick={() => setIsAdding(true)}
+                >
+                  <Typography
+                    variant="body1"
+                    align="center"
+                    fontWeight="bold"
+                    sx={{ fontSize: '1.1rem' }}
+                  >
+                    Add New
+                  </Typography>
+                </Button>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
+                  <TextField
+                    autoFocus
+                    variant="standard"
+                    size="small"
+                    sx={{
+                      flexGrow: 1,
+                      mr: 1,
+                      justifyContent: 'space-between',
+                      color: 'var(--secondary-color)',
+                    }}
+                    slotProps={{
+                      input: {
+                        sx: {
+                          color: 'var(--secondary-color)',
+                          '&:after': { borderBottomColor: 'var(--secondary-color)' },
+                        },
                       },
-                    },
-                  }}
-                  placeholder="New Note..."
-                  value={newNote}
-                  onChange={(event) => setNewNote(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') onAdd();
-                    if (event.key === 'Escape') setIsAdding(false);
-                  }}
-                />
-                <IconButton size="small" onClick={onAdd} disabled={!newNote.trim()}>
-                  <Add />
-                </IconButton>
-                <IconButton size="small" onClick={() => setIsAdding(false)}>
-                  <Close />
-                </IconButton>
-              </Box>
-            )}
-          </Stack>
-        )}
+                    }}
+                    placeholder="New Note..."
+                    value={newNote}
+                    onChange={(event) => setNewNote(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') onAdd();
+                      if (event.key === 'Escape') setIsAdding(false);
+                    }}
+                  />
+                  <IconButton size="small" onClick={onAdd} disabled={!newNote.trim()}>
+                    <Add />
+                  </IconButton>
+                  <IconButton size="small" onClick={() => setIsAdding(false)}>
+                    <Close />
+                  </IconButton>
+                </Box>
+              )}
+            </Stack>
+          )}
+        </Box>
 
         <Menu
           slotProps={{
