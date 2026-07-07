@@ -27,9 +27,9 @@ describe('requestClient', () => {
     process.env.REACT_APP_API_BASE_URL = '';
     const { apiFetch } = await import('./requestClient');
 
-    await apiFetch('/api/workspaces/', { method: 'GET' });
+    await apiFetch('/api/boards/', { method: 'GET' });
 
-    expect(global.fetch).toHaveBeenCalledWith('/api/workspaces/', { method: 'GET' });
+    expect(global.fetch).toHaveBeenCalledWith('/api/boards/', { method: 'GET' });
   });
 
   test('when REACT_APP_API_BASE_URL is not set, it uses the default base URL', async () => {
@@ -61,7 +61,7 @@ describe('requestClient', () => {
 
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
-    window.history.replaceState({}, '', '/workspace/1');
+    window.history.replaceState({}, '', '/board/1');
 
     const { setNavigate } = await import('./navigationService');
     const mockNavigate = jest.fn();
@@ -69,7 +69,7 @@ describe('requestClient', () => {
 
     const { apiFetch } = await import('./requestClient');
 
-    await apiFetch('/api/workspaces/', { method: 'GET' });
+    await apiFetch('/api/boards/', { method: 'GET' });
 
     expect(sessionStorage.getItem('accessToken')).toBeNull();
     expect(sessionStorage.getItem('refreshToken')).toBeNull();
@@ -128,7 +128,7 @@ describe('requestClient', () => {
     sessionStorage.setItem('refreshToken', 'REFRESH');
     sessionStorage.setItem('username', 'judea');
     sessionStorage.setItem('email', 'judea@example.com');
-    window.history.replaceState({}, '', '/workspace/1');
+    window.history.replaceState({}, '', '/board/1');
 
     const { setNavigate } = await import('./navigationService');
     const mockNavigate = jest.fn();

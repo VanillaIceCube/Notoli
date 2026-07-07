@@ -18,7 +18,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from notes.models import Workspace
+from notes.models import Board
 
 from .serializers import EmailTokenObtainPairSerializer
 
@@ -90,7 +90,7 @@ class RegisterView(APIView):
             username=username, email=email, password=password
         )
         refresh = RefreshToken.for_user(user)
-        workspace = Workspace.objects.filter(owner=user).order_by("id").first()
+        board = Board.objects.filter(owner=user).order_by("id").first()
         return Response(
             {
                 "message": "User created successfully.",
@@ -98,7 +98,7 @@ class RegisterView(APIView):
                 "email": user.email,
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
-                "workspace_id": workspace.id if workspace else None,
+                "board_id": board.id if board else None,
             },
             status=status.HTTP_201_CREATED,
         )

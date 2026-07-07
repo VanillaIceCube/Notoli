@@ -1,18 +1,18 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-support/utils';
-import WorkspaceShareDialog from './WorkspaceShareDialog';
+import BoardShareDialog from './BoardShareDialog';
 import {
-  addWorkspaceCollaborator,
-  removeWorkspaceCollaborator,
+  addBoardCollaborator,
+  removeBoardCollaborator,
 } from '../services/notoliApiClient';
 
 jest.mock('../services/notoliApiClient', () => ({
-  addWorkspaceCollaborator: jest.fn(),
-  removeWorkspaceCollaborator: jest.fn(),
+  addBoardCollaborator: jest.fn(),
+  removeBoardCollaborator: jest.fn(),
 }));
 
-const workspace = {
+const board = {
   id: 4,
   name: 'Home',
   owner_details: {
@@ -33,19 +33,19 @@ const workspace = {
 
 function renderDialog(props = {}) {
   return renderWithProviders(
-    <WorkspaceShareDialog
+    <BoardShareDialog
       open
-      workspace={workspace}
+      board={board}
       token="token"
       onClose={jest.fn()}
-      onWorkspaceUpdated={jest.fn()}
+      onBoardUpdated={jest.fn()}
       showSnackbar={jest.fn()}
       {...props}
     />,
   );
 }
 
-describe('WorkspaceShareDialog', () => {
+describe('BoardShareDialog', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.clear();
@@ -63,31 +63,31 @@ describe('WorkspaceShareDialog', () => {
   });
 
   test('allows the owner to add a collaborator', async () => {
-    const updatedWorkspace = {
-      ...workspace,
+    const updatedBoard = {
+      ...board,
       collaborators_details: [
-        ...workspace.collaborators_details,
+        ...board.collaborators_details,
         { id: 3, username: 'newuser', email: 'new@example.com' },
       ],
     };
-    const onWorkspaceUpdated = jest.fn();
-    addWorkspaceCollaborator.mockResolvedValueOnce({
+    const onBoardUpdated = jest.fn();
+    addBoardCollaborator.mockResolvedValueOnce({
       ok: true,
-      json: async () => updatedWorkspace,
+      json: async () => updatedBoard,
     });
 
-    renderDialog({ onWorkspaceUpdated });
+    renderDialog({ onBoardUpdated });
 
     await userEvent.type(screen.getByLabelText('Username or email address'), 'newuser');
     await userEvent.click(screen.getByRole('button', { name: /add/i }));
 
     await waitFor(() => {
-      expect(addWorkspaceCollaborator).toHaveBeenCalledWith(
+      expect(addBoardCollaborator).toHaveBeenCalledWith(
         4,
         { identifier: 'newuser' },
         'token',
       );
-      expect(onWorkspaceUpdated).toHaveBeenCalledWith(updatedWorkspace);
+      expect(onBoardUpdated).toHaveBeenCalledWith(updatedBoard);
     });
     expect(screen.getByLabelText('Username or email address')).toHaveValue('');
   });
@@ -99,25 +99,25 @@ describe('WorkspaceShareDialog', () => {
     await userEvent.type(screen.getByLabelText('Username or email address'), 'collab');
     await userEvent.click(screen.getByRole('button', { name: /add/i }));
 
-    expect(addWorkspaceCollaborator).not.toHaveBeenCalled();
+    expect(addBoardCollaborator).not.toHaveBeenCalled();
     expect(showSnackbar).toHaveBeenCalledWith('error', 'That user is already a collaborator.');
   });
 
   test('allows the owner to remove a collaborator', async () => {
-    const updatedWorkspace = { ...workspace, collaborators_details: [] };
-    const onWorkspaceUpdated = jest.fn();
-    removeWorkspaceCollaborator.mockResolvedValueOnce({
+    const updatedBoard = { ...board, collaborators_details: [] };
+    const onBoardUpdated = jest.fn();
+    removeBoardCollaborator.mockResolvedValueOnce({
       ok: true,
-      json: async () => updatedWorkspace,
+      json: async () => updatedBoard,
     });
 
-    renderDialog({ onWorkspaceUpdated });
+    renderDialog({ onBoardUpdated });
 
     await userEvent.click(screen.getByRole('button', { name: /remove collaborator user/i }));
 
     await waitFor(() => {
-      expect(removeWorkspaceCollaborator).toHaveBeenCalledWith(4, 2, 'token');
-      expect(onWorkspaceUpdated).toHaveBeenCalledWith(updatedWorkspace);
+      expect(removeBoardCollaborator).toHaveBeenCalledWith(4, 2, 'token');
+      expect(onBoardUpdated).toHaveBeenCalledWith(updatedBoard);
     });
   });
 

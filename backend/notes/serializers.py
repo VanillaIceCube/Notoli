@@ -3,7 +3,8 @@ from django.db.models import Max
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
-from .models import Note, TodoList, TodoListNote, Workspace
+from .models import Board, ListNote, Note
+from .models import List as NoteList
 
 User = get_user_model()
 
@@ -19,14 +20,14 @@ class UserSummarySerializer(serializers.ModelSerializer):
         return obj.get_full_name() or obj.get_username() or obj.email
 
 
-class WorkspaceSerializer(serializers.ModelSerializer):
+class BoardSerializer(serializers.ModelSerializer):
     owner_details = UserSummarySerializer(source="owner", read_only=True)
     collaborators_details = UserSummarySerializer(
         source="collaborators", many=True, read_only=True
     )
 
     class Meta:
-        model = Workspace
+        model = Board
         fields = "__all__"
         # perform_create in models.py automatically sets owner & created_by upon creation
         # this is placed here to allow you to not have to pass in owner & created_by
@@ -34,7 +35,7 @@ class WorkspaceSerializer(serializers.ModelSerializer):
         extra_kwargs = {"owner": {"required": False}, "created_by": {"required": False}}
 
 
-class TodoListSerializer(serializers.ModelSerializer):
+class ListSerializer(serializers.ModelSerializer):
     notes = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Note.objects.all(),
@@ -42,7 +43,7 @@ class TodoListSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        model = TodoList
+        model = NoteList
         fields = "__all__"
         # perform_create in models.py automatically sets owner & created_by upon creation
         # this is placed here to allow you to not have to pass in owner & created_by
@@ -52,22 +53,22 @@ class TodoListSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, attrs):
-        # Hard boundary: TodoLists cannot move between workspaces once created.
-        if self.instance is not None and "workspace" in attrs:
-            if attrs["workspace"].id != self.instance.workspace_id:
+        # Hard boundary: Lists cannot move between boards once created.
+        if self.instance is not None and "board" in attrs:
+            if attrs["board"].id != self.instance.board_id:
                 raise serializers.ValidationError(
-                    {"workspace": ["Cannot change workspace of a todo list."]}
+                    {"board": ["Cannot change board of a list."]}
                 )
 
-        workspace = attrs.get("workspace") or getattr(self.instance, "workspace", None)
+        board = attrs.get("board") or getattr(self.instance, "board", None)
         notes = attrs.get("notes")
-        if workspace is not None and notes is not None:
-            bad_note_ids = [n.id for n in notes if n.workspace_id != workspace.id]
+        if board is not None and notes is not None:
+            bad_note_ids = [n.id for n in notes if n.board_id != board.id]
             if bad_note_ids:
                 raise serializers.ValidationError(
                     {
                         "notes": [
-                            "All notes must belong to the same workspace as the todo list."
+                            "All notes must belong to the same board as the list."
                         ]
                     }
                 )
@@ -76,31 +77,31 @@ class TodoListSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         notes = validated_data.pop("notes", None)
-        todo_list = super().create(validated_data)
+        note_list = super().create(validated_data)
         if notes is not None:
-            self._set_notes(todo_list, notes)
-        return todo_list
+            self._set_notes(note_list, notes)
+        return note_list
 
     def update(self, instance, validated_data):
         notes = validated_data.pop("notes", None)
-        todo_list = super().update(instance, validated_data)
+        note_list = super().update(instance, validated_data)
         if notes is not None:
-            self._set_notes(todo_list, notes)
-        return todo_list
+            self._set_notes(note_list, notes)
+        return note_list
 
-    def _set_notes(self, todo_list, notes):
-        TodoListNote.objects.filter(todolist=todo_list).delete()
-        TodoListNote.objects.bulk_create(
+    def _set_notes(self, note_list, notes):
+        ListNote.objects.filter(list=note_list).delete()
+        ListNote.objects.bulk_create(
             [
-                TodoListNote(todolist=todo_list, note=note, position=position)
+                ListNote(list=note_list, note=note, position=position)
                 for position, note in enumerate(notes)
             ]
         )
 
 
 class NoteSerializer(serializers.ModelSerializer):
-    todo_list = serializers.PrimaryKeyRelatedField(
-        queryset=TodoList.objects.all(),
+    list = serializers.PrimaryKeyRelatedField(
+        queryset=NoteList.objects.all(),
         write_only=True,
         required=False,
     )
@@ -113,60 +114,60 @@ class NoteSerializer(serializers.ModelSerializer):
         # but still requires them on the database level
         extra_kwargs = {
             "created_by": {"required": False},
-            "workspace": {"required": False},
+            "board": {"required": False},
         }
 
     def validate(self, attrs):
-        todo_list = attrs.get("todo_list")
-        workspace = attrs.get("workspace")
+        note_list = attrs.get("list")
+        board = attrs.get("board")
 
-        instance_workspace = getattr(self.instance, "workspace", None)
+        instance_board = getattr(self.instance, "board", None)
 
-        # Enforce that attaching to a todo list via PATCH requires access to that list.
+        # Enforce that attaching to a list via PATCH requires access to that list.
         # Otherwise a user who can edit a note could inject it into a list they can't access.
-        if todo_list is not None:
+        if note_list is not None:
             request = self.context.get("request")
             user = getattr(request, "user", None)
             if user is not None and getattr(user, "is_authenticated", False):
-                has_todolist_access = (
-                    todo_list.created_by_id == user.id
-                    or todo_list.workspace.owner_id == user.id
-                    or todo_list.workspace.created_by_id == user.id
-                    or todo_list.workspace.collaborators.filter(id=user.id).exists()
+                has_list_access = (
+                    note_list.created_by_id == user.id
+                    or note_list.board.owner_id == user.id
+                    or note_list.board.created_by_id == user.id
+                    or note_list.board.collaborators.filter(id=user.id).exists()
                 )
-                if not has_todolist_access:
-                    raise PermissionDenied("You cannot add notes to this todo-list.")
+                if not has_list_access:
+                    raise PermissionDenied("You cannot add notes to this list.")
 
-        # Hard boundary: Notes cannot move between workspaces once created.
-        # Validate this first so clients get a clear immutability error even if they also send `todo_list`.
-        if self.instance is not None and "workspace" in attrs:
-            if attrs["workspace"].id != self.instance.workspace_id:
+        # Hard boundary: Notes cannot move between boards once created.
+        # Validate this first so clients get a clear immutability error even if they also send `list`.
+        if self.instance is not None and "board" in attrs:
+            if attrs["board"].id != self.instance.board_id:
                 raise serializers.ValidationError(
-                    {"workspace": ["Cannot change workspace of an existing note."]}
+                    {"board": ["Cannot change board of an existing note."]}
                 )
 
-        # For updates, the note's workspace is immutable, so always validate against the instance workspace.
-        effective_workspace = (
-            instance_workspace if self.instance is not None else workspace
+        # For updates, the note's board is immutable, so always validate against the instance board.
+        effective_board = (
+            instance_board if self.instance is not None else board
         )
 
         # Creation requires scope. Updates can omit scope as long as the instance already has it.
-        if todo_list is None and workspace is None:
-            if self.instance is None or instance_workspace is None:
+        if note_list is None and board is None:
+            if self.instance is None or instance_board is None:
                 raise serializers.ValidationError(
                     {
-                        "todo_list": [
-                            "This field is required when workspace is not provided."
+                        "list": [
+                            "This field is required when board is not provided."
                         ],
                     }
                 )
 
-        if todo_list is not None and effective_workspace is not None:
-            if todo_list.workspace_id != effective_workspace.id:
+        if note_list is not None and effective_board is not None:
+            if note_list.board_id != effective_board.id:
                 raise serializers.ValidationError(
                     {
-                        "todo_list": [
-                            "Todo list must be in the same workspace as the note."
+                        "list": [
+                            "List must be in the same board as the note."
                         ]
                     }
                 )
@@ -174,37 +175,37 @@ class NoteSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        todo_list = validated_data.pop("todo_list", None)
+        note_list = validated_data.pop("list", None)
 
-        if validated_data.get("workspace") is None and todo_list is not None:
-            validated_data["workspace"] = todo_list.workspace
+        if validated_data.get("board") is None and note_list is not None:
+            validated_data["board"] = note_list.board
 
         note = super().create(validated_data)
 
-        if todo_list is not None:
-            self._attach_note_to_todolist(todo_list, note)
+        if note_list is not None:
+            self._attach_note_to_list(note_list, note)
 
         return note
 
     def update(self, instance, validated_data):
-        # `todo_list` is an API convenience for attaching a note to a todo list.
+        # `list` is an API convenience for attaching a note to a list.
         # It is not a model field, so we must handle it explicitly on update.
-        todo_list = validated_data.pop("todo_list", None)
+        note_list = validated_data.pop("list", None)
 
         note = super().update(instance, validated_data)
 
-        if todo_list is not None:
-            self._attach_note_to_todolist(todo_list, note)
+        if note_list is not None:
+            self._attach_note_to_list(note_list, note)
 
         return note
 
-    def _attach_note_to_todolist(self, todo_list, note):
-        max_position = TodoListNote.objects.filter(todolist=todo_list).aggregate(
+    def _attach_note_to_list(self, note_list, note):
+        max_position = ListNote.objects.filter(list=note_list).aggregate(
             Max("position")
         )["position__max"]
         next_position = (max_position if max_position is not None else -1) + 1
-        TodoListNote.objects.get_or_create(
-            todolist=todo_list,
+        ListNote.objects.get_or_create(
+            list=note_list,
             note=note,
             defaults={"position": next_position},
         )

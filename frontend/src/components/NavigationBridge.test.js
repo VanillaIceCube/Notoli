@@ -17,8 +17,8 @@ describe('NavigationBridge', () => {
   test('registers the router navigate function while mounted', () => {
     renderWithProviders(<NavigationBridge />);
 
-    expect(navigate('/workspace/1', { replace: true })).toBe(true);
-    expect(mockNavigate).toHaveBeenCalledWith('/workspace/1', { replace: true });
+    expect(navigate('/board/1', { replace: true })).toBe(true);
+    expect(mockNavigate).toHaveBeenCalledWith('/board/1', { replace: true });
   });
 
   test('clears the router navigate function when unmounted', () => {
@@ -26,6 +26,6 @@ describe('NavigationBridge', () => {
 
     unmount();
 
-    expect(navigate('/workspace/1')).toBe(false);
+    expect(navigate('/board/1')).toBe(false);
   });
 });

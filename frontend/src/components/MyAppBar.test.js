@@ -65,34 +65,34 @@ describe('MyAppBar', () => {
     expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
   });
 
-  test('when the path includes /todolist, it shows the back button', () => {
-    mockUseLocation.mockReturnValue({ pathname: '/workspaces/1/todolist/2' });
+  test('when the path includes /list, it shows the back button', () => {
+    mockUseLocation.mockReturnValue({ pathname: '/boards/1/list/2' });
 
-    renderWithProviders(<MyAppBar appBarHeader="Workspace" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     expect(screen.getByLabelText('back button')).toBeInTheDocument();
   });
 
-  test('when the path does not include /todolist, it does not show the back button', () => {
-    mockUseLocation.mockReturnValue({ pathname: '/workspaces/1' });
+  test('when the path does not include /list, it does not show the back button', () => {
+    mockUseLocation.mockReturnValue({ pathname: '/boards/1' });
 
-    renderWithProviders(<MyAppBar appBarHeader="Workspace" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     expect(screen.queryByLabelText('back button')).not.toBeInTheDocument();
   });
 
   test('when the back button is clicked, it calls goBackToParent', async () => {
-    mockUseLocation.mockReturnValue({ pathname: '/workspaces/1/todolist/2' });
+    mockUseLocation.mockReturnValue({ pathname: '/boards/1/list/2' });
 
-    renderWithProviders(<MyAppBar appBarHeader="Workspace" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     await userEvent.click(screen.getByLabelText('back button'));
 
-    expect(goBackToParent).toHaveBeenCalledWith('/workspaces/1/todolist/2', mockNavigate);
+    expect(goBackToParent).toHaveBeenCalledWith('/boards/1/list/2', mockNavigate);
   });
 
   test('when the menu icon is clicked, it toggles setDrawerOpen', async () => {
-    renderWithProviders(<MyAppBar appBarHeader="Workspace" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     await userEvent.click(screen.getByLabelText('menu'));
 
@@ -105,7 +105,7 @@ describe('MyAppBar', () => {
     sessionStorage.setItem('username', 'judea');
     sessionStorage.setItem('email', 'judea@example.com');
 
-    renderWithProviders(<MyAppBar appBarHeader="Workspace" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     await userEvent.click(screen.getByLabelText('user profile'));
 
@@ -116,7 +116,7 @@ describe('MyAppBar', () => {
   });
 
   test('when no profile info exists, it falls back to username + username@gmail.com', async () => {
-    renderWithProviders(<MyAppBar appBarHeader="Workspace" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     await userEvent.click(screen.getByLabelText('user profile'));
 
@@ -129,7 +129,7 @@ describe('MyAppBar', () => {
       throw new Error('blocked');
     });
 
-    renderWithProviders(<MyAppBar appBarHeader="Workspace" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     await userEvent.click(screen.getByLabelText('user profile'));
 
@@ -146,7 +146,7 @@ describe('MyAppBar', () => {
     sessionStorage.setItem('email', 'judea@example.com');
     window.history.replaceState({}, '', '/');
 
-    renderWithProviders(<MyAppBar appBarHeader="Workspace" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     await userEvent.click(screen.getByLabelText('user profile'));
     await userEvent.click(screen.getByRole('menuitem', { name: /logout/i }));

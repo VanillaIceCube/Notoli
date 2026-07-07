@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { fetchWorkspaces as fetchWorkspacesApi, login } from '../../services/notoliApiClient';
+import { fetchBoards as fetchBoardsApi, login } from '../../services/notoliApiClient';
 import { persistAuthSession, readOkJson } from '../../services/authSession';
-import { getPreferredWorkspaceId } from '../../services/lastWorkspace';
+import { getPreferredBoardId } from '../../services/lastBoard';
 
 export default function Login({ showSnackbar }) {
   // Basics
@@ -30,18 +30,18 @@ export default function Login({ showSnackbar }) {
     }
   }, [showSnackbar]);
 
-  // Pull Workspace List
-  const fetchWorkspaces = useCallback(
+  // Pull Board List
+  const fetchBoards = useCallback(
     async (token, showError) => {
       try {
-        const response = await fetchWorkspacesApi(token);
+        const response = await fetchBoardsApi(token);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         return data;
       } catch (err) {
         if (showError) {
           const isHttpError = typeof err?.message === 'string' && err.message.startsWith('HTTP ');
-          showSnackbar('error', isHttpError ? 'Workspace load failed :(' : 'Network error :(');
+          showSnackbar('error', isHttpError ? 'Board load failed :(' : 'Network error :(');
         }
         return [];
       }
@@ -65,11 +65,11 @@ export default function Login({ showSnackbar }) {
         'there';
       showSnackbar('success', `Welcome ${welcomeName}!`);
 
-      // Navigate to first Workspace, if empty, navigate to root
-      const workspaces = await fetchWorkspaces(data.access, true);
-      const workspaceId = getPreferredWorkspaceId(workspaces);
-      if (workspaceId) {
-        navigate(`/workspace/${workspaceId}`);
+      // Navigate to first Board, if empty, navigate to root
+      const boards = await fetchBoards(data.access, true);
+      const boardId = getPreferredBoardId(boards);
+      if (boardId) {
+        navigate(`/board/${boardId}`);
       } else {
         navigate('/');
       }

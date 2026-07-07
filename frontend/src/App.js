@@ -6,13 +6,13 @@ import Login from './pages/authentication/Login';
 import Register from './pages/authentication/Register';
 import ForgotPassword from './pages/authentication/ForgotPassword';
 import ResetPassword from './pages/authentication/ResetPassword';
-import TodoLists from './pages/notes/TodoLists';
+import Lists from './pages/notes/Lists';
 import Notes from './pages/notes/Notes';
 import MyAppBar from './components/MyAppBar';
 import MySnackbar from './components/MySnackbar';
 import MyDrawer from './components/MyDrawer';
 import NavigationBridge from './components/NavigationBridge';
-import WorkspaceHomeRedirect from './components/WorkspaceHomeRedirect';
+import BoardHomeRedirect from './components/BoardHomeRedirect';
 
 function App() {
   // App Bar
@@ -20,7 +20,7 @@ function App() {
 
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerWorkspacesLabel, setDrawerWorkspacesLabel] = useState('');
+  const [drawerBoardsLabel, setDrawerBoardsLabel] = useState('');
 
   // Snackbar
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -48,8 +48,8 @@ function App() {
         <MyDrawer
           open={drawerOpen}
           setDrawerOpen={setDrawerOpen}
-          drawerWorkspacesLabel={drawerWorkspacesLabel}
-          setDrawerWorkspacesLabel={setDrawerWorkspacesLabel}
+          drawerBoardsLabel={drawerBoardsLabel}
+          setDrawerBoardsLabel={setDrawerBoardsLabel}
           showSnackbar={showSnackbar}
         />
         <Routes>
@@ -63,22 +63,22 @@ function App() {
               path="/"
               element={
                 <AuthenticatedRoute>
-                  <WorkspaceHomeRedirect />
+                  <BoardHomeRedirect />
                 </AuthenticatedRoute>
               }
             />
 
             <Route
-              path="/workspace/:workspaceId"
+              path="/board/:boardId"
               element={
                 <AuthenticatedRoute>
-                  <TodoLists setAppBarHeader={setAppBarHeader} />
+                  <Lists setAppBarHeader={setAppBarHeader} />
                 </AuthenticatedRoute>
               }
             />
 
             <Route
-              path="/workspace/:workspaceId/todolist/:todoListId"
+              path="/board/:boardId/list/:listId"
               element={
                 <AuthenticatedRoute>
                   <Notes setAppBarHeader={setAppBarHeader} />

@@ -52,93 +52,93 @@ export const resetPassword = ({ uid, token, password }) =>
     body: JSON.stringify({ uid, token, password }),
   });
 
-export const fetchWorkspaces = (token) =>
-  apiFetch('/api/workspaces/', {
+export const fetchBoards = (token) =>
+  apiFetch('/api/boards/', {
     headers: authHeader(token),
   });
 
-export const fetchWorkspace = (workspaceId, token) =>
-  apiFetch(`/api/workspaces/${workspaceId}/`, {
+export const fetchBoard = (boardId, token) =>
+  apiFetch(`/api/boards/${boardId}/`, {
     headers: authHeader(token),
   });
 
-export const createWorkspace = (payload, token) =>
-  apiFetch('/api/workspaces/', {
+export const createBoard = (payload, token) =>
+  apiFetch('/api/boards/', {
     method: 'POST',
     headers: jsonHeaders(token),
     body: JSON.stringify(payload),
   });
 
-export const updateWorkspace = (workspaceId, payload, token) =>
-  apiFetch(`/api/workspaces/${workspaceId}/`, {
+export const updateBoard = (boardId, payload, token) =>
+  apiFetch(`/api/boards/${boardId}/`, {
     method: 'PATCH',
     headers: jsonHeaders(token),
     body: JSON.stringify(payload),
   });
 
-export const deleteWorkspace = (workspaceId, token) =>
-  apiFetch(`/api/workspaces/${workspaceId}/`, {
+export const deleteBoard = (boardId, token) =>
+  apiFetch(`/api/boards/${boardId}/`, {
     method: 'DELETE',
     headers: jsonHeaders(token),
   });
 
-export const addWorkspaceCollaborator = (workspaceId, payload, token) =>
-  apiFetch(`/api/workspaces/${workspaceId}/collaborators/`, {
+export const addBoardCollaborator = (boardId, payload, token) =>
+  apiFetch(`/api/boards/${boardId}/collaborators/`, {
     method: 'POST',
     headers: jsonHeaders(token),
     body: JSON.stringify(payload),
   });
 
-export const removeWorkspaceCollaborator = (workspaceId, userId, token) =>
-  apiFetch(`/api/workspaces/${workspaceId}/collaborators/${userId}/`, {
+export const removeBoardCollaborator = (boardId, userId, token) =>
+  apiFetch(`/api/boards/${boardId}/collaborators/${userId}/`, {
     method: 'DELETE',
     headers: jsonHeaders(token),
   });
 
-export const fetchTodoLists = (workspaceId, token) =>
-  apiFetch(`/api/todolists/?workspace=${workspaceId}`, {
+export const fetchLists = (boardId, token) =>
+  apiFetch(`/api/lists/?board=${boardId}`, {
     headers: authHeader(token),
   });
 
-export const fetchTodoList = (todoListId, token) =>
-  apiFetch(`/api/todolists/${todoListId}/`, {
+export const fetchList = (listId, token) =>
+  apiFetch(`/api/lists/${listId}/`, {
     headers: authHeader(token),
   });
 
-export const createTodoList = (workspaceId, payload, token) =>
-  apiFetch(`/api/todolists/?workspace=${workspaceId}`, {
+export const createList = (boardId, payload, token) =>
+  apiFetch(`/api/lists/?board=${boardId}`, {
     method: 'POST',
     headers: jsonHeaders(token),
     body: JSON.stringify(payload),
   });
 
-export const updateTodoList = (todoListId, payload, token) =>
-  apiFetch(`/api/todolists/${todoListId}/`, {
+export const updateList = (listId, payload, token) =>
+  apiFetch(`/api/lists/${listId}/`, {
     method: 'PATCH',
     headers: jsonHeaders(token),
     body: JSON.stringify(payload),
   });
 
-export const deleteTodoList = (todoListId, token) =>
-  apiFetch(`/api/todolists/${todoListId}/`, {
+export const deleteList = (listId, token) =>
+  apiFetch(`/api/lists/${listId}/`, {
     method: 'DELETE',
     headers: jsonHeaders(token),
   });
 
-export const reorderTodoLists = (workspaceId, orderedIds, token) =>
-  apiFetch('/api/todolists/reorder/', {
+export const reorderLists = (boardId, orderedIds, token) =>
+  apiFetch('/api/lists/reorder/', {
     method: 'PATCH',
     headers: jsonHeaders(token),
-    body: JSON.stringify({ workspace: workspaceId, ordered_ids: orderedIds }),
+    body: JSON.stringify({ board: boardId, ordered_ids: orderedIds }),
   });
 
-export const fetchNotes = (todoListId, token) =>
-  apiFetch(`/api/notes/?todo_list=${todoListId}`, {
+export const fetchNotes = (listId, token) =>
+  apiFetch(`/api/notes/?list=${listId}`, {
     headers: authHeader(token),
   });
 
-export const createNote = (todoListId, payload, token) =>
-  apiFetch(`/api/notes/?todo_list=${todoListId}`, {
+export const createNote = (listId, payload, token) =>
+  apiFetch(`/api/notes/?list=${listId}`, {
     method: 'POST',
     headers: jsonHeaders(token),
     body: JSON.stringify(payload),
@@ -157,9 +157,9 @@ export const deleteNote = (noteId, token) =>
     headers: jsonHeaders(token),
   });
 
-export const reorderNotes = (todoListId, orderedIds, token) =>
+export const reorderNotes = (listId, orderedIds, token) =>
   apiFetch('/api/notes/reorder/', {
     method: 'PATCH',
     headers: jsonHeaders(token),
-    body: JSON.stringify({ todo_list: todoListId, ordered_ids: orderedIds }),
+    body: JSON.stringify({ list: listId, ordered_ids: orderedIds }),
   });

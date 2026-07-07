@@ -1,4 +1,4 @@
-﻿# Deploy (Docker + Nginx)
+# Deploy (Docker + Nginx)
 
 This repo deploys Notoli at the subdomain root `https://notoli.judeandrewalaba.com`.
 

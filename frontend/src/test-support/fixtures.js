@@ -1,7 +1,7 @@
-export const workspaceFixtures = [
+export const boardFixtures = [
   {
     id: 1,
-    name: 'test_workspace_01',
+    name: 'test_board_01',
     owner: 1,
     owner_details: { id: 1, username: 'owner', email: 'owner@example.com', display_name: 'owner' },
     collaborators_details: [
@@ -10,16 +10,16 @@ export const workspaceFixtures = [
   },
   {
     id: 2,
-    name: 'test_workspace_02',
+    name: 'test_board_02',
     owner: 1,
     owner_details: { id: 1, username: 'owner', email: 'owner@example.com', display_name: 'owner' },
     collaborators_details: [],
   },
 ];
 
-export const todoListFixtures = [
-  { id: 10, name: 'test_todolist_01' },
-  { id: 11, name: 'test_todolist_02' },
+export const listFixtures = [
+  { id: 10, name: 'test_list_01' },
+  { id: 11, name: 'test_list_02' },
 ];
 
 export const noteFixtures = [

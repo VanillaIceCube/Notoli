@@ -39,14 +39,14 @@ import Divider from '@mui/material/Divider';
 import { useNavigate, useParams } from 'react-router-dom';
 import PullToRefreshIndicator from '../../components/PullToRefreshIndicator';
 import {
-  createTodoList,
-  deleteTodoList,
-  fetchTodoLists as fetchTodoListsApi,
-  fetchWorkspace as fetchWorkspaceApi,
-  reorderTodoLists,
-  updateTodoList,
+  createList,
+  deleteList,
+  fetchLists as fetchListsApi,
+  fetchBoard as fetchBoardApi,
+  reorderLists,
+  updateList,
 } from '../../services/notoliApiClient';
-import { rememberLastWorkspace } from '../../services/lastWorkspace';
+import { rememberLastBoard } from '../../services/lastBoard';
 import { usePullToRefresh } from '../../hooks/useMobileGestures';
 
 const TODO_LIST_VERTICAL_GAP = '8px';
@@ -63,7 +63,7 @@ const DRAG_HANDLE_TOUCH_STYLE = {
   WebkitUserSelect: 'none',
 };
 
-function SortableTodoListRow({ list, children }) {
+function SortableListRow({ list, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: list.id,
   });
@@ -71,7 +71,7 @@ function SortableTodoListRow({ list, children }) {
   return (
     <Box
       ref={setNodeRef}
-      data-testid={`todo-list-sortable-row-${list.id}`}
+      data-testid={`list-sortable-row-${list.id}`}
       sx={{
         transform: CSS.Transform.toString(transform),
         transition,
@@ -84,16 +84,16 @@ function SortableTodoListRow({ list, children }) {
   );
 }
 
-export default function TodoLists({ setAppBarHeader }) {
+export default function Lists({ setAppBarHeader }) {
   const navigate = useNavigate();
 
   useEffect(() => {
     setAppBarHeader('');
   }, [setAppBarHeader]);
 
-  const { workspaceId } = useParams();
+  const { boardId } = useParams();
   const token = sessionStorage.getItem('accessToken');
-  const [workspaceName, setWorkspaceName] = useState('');
+  const [boardName, setBoardName] = useState('');
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -106,10 +106,10 @@ export default function TodoLists({ setAppBarHeader }) {
     }),
   );
 
-  const fetchTodoLists = useCallback(async () => {
+  const fetchLists = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetchTodoListsApi(workspaceId, token);
+      const response = await fetchListsApi(boardId, token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       setLists(data);
@@ -119,33 +119,33 @@ export default function TodoLists({ setAppBarHeader }) {
     } finally {
       setLoading(false);
     }
-  }, [token, workspaceId]);
+  }, [token, boardId]);
 
-  const fetchWorkspaceName = useCallback(async () => {
-    setWorkspaceName('');
+  const fetchBoardName = useCallback(async () => {
+    setBoardName('');
 
-    if (!workspaceId) {
+    if (!boardId) {
       return;
     }
 
     try {
-      const response = await fetchWorkspaceApi(workspaceId, token);
+      const response = await fetchBoardApi(boardId, token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-      setWorkspaceName(data?.name ?? '');
+      setBoardName(data?.name ?? '');
     } catch (err) {
-      setWorkspaceName('');
+      setBoardName('');
       setError(err.toString());
     }
-  }, [token, workspaceId]);
+  }, [token, boardId]);
 
   useEffect(() => {
-    if (workspaceId) {
-      rememberLastWorkspace(workspaceId);
-      fetchTodoLists();
-      fetchWorkspaceName();
+    if (boardId) {
+      rememberLastBoard(boardId);
+      fetchLists();
+      fetchBoardName();
     }
-  }, [workspaceId, fetchTodoLists, fetchWorkspaceName]);
+  }, [boardId, fetchLists, fetchBoardName]);
 
   const startReordering = () => {
     closeEdit();
@@ -159,33 +159,33 @@ export default function TodoLists({ setAppBarHeader }) {
   };
 
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
-  const [selectedTodoList, setSelectedTodoList] = useState(null);
+  const [selectedList, setSelectedList] = useState(null);
   const open = Boolean(tripleDotAnchorElement);
 
   const handleTripleDotClick = (event, list) => {
     event.stopPropagation();
     setTripleDotAnchorElement(event.currentTarget);
-    setSelectedTodoList(list);
+    setSelectedList(list);
   };
 
   const handleTripleDotClose = () => {
     setTripleDotAnchorElement(null);
-    setSelectedTodoList(null);
+    setSelectedList(null);
   };
 
   const [isAdding, setIsAdding] = useState(false);
-  const [newTodoListName, setNewTodoListName] = useState('');
+  const [newListName, setNewListName] = useState('');
 
   const onAdd = async () => {
-    if (!newTodoListName.trim()) return;
+    if (!newListName.trim()) return;
     setError(null);
 
     try {
-      const response = await createTodoList(
-        workspaceId,
+      const response = await createList(
+        boardId,
         {
-          name: newTodoListName,
-          workspace: workspaceId,
+          name: newListName,
+          board: boardId,
           description: '',
         },
         token,
@@ -196,31 +196,31 @@ export default function TodoLists({ setAppBarHeader }) {
       setLists((prev) => [...prev, created]);
 
       setIsAdding(false);
-      setNewTodoListName('');
+      setNewListName('');
     } catch (err) {
       setError(err.toString());
     }
   };
 
-  const [editingTodoListId, setEditingTodoListId] = useState(null);
-  const [editTodoListName, setEditTodoListName] = useState('');
+  const [editingListId, setEditingListId] = useState(null);
+  const [editListName, setEditListName] = useState('');
 
   const startEditing = () => {
-    setEditingTodoListId(selectedTodoList.id);
-    setEditTodoListName(selectedTodoList.name);
+    setEditingListId(selectedList.id);
+    setEditListName(selectedList.name);
     handleTripleDotClose();
   };
 
   const onEdit = async () => {
-    if (!editTodoListName.trim()) return;
+    if (!editListName.trim()) return;
     setError(null);
 
     try {
-      const response = await updateTodoList(editingTodoListId, { name: editTodoListName }, token);
+      const response = await updateList(editingListId, { name: editListName }, token);
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
-      setLists((prev) => prev.map((todolist) => (todolist.id === updated.id ? updated : todolist)));
+      setLists((prev) => prev.map((list) => (list.id === updated.id ? updated : list)));
 
       closeEdit();
     } catch (err) {
@@ -229,15 +229,15 @@ export default function TodoLists({ setAppBarHeader }) {
   };
 
   const closeEdit = () => {
-    setEditingTodoListId(null);
-    setEditTodoListName('');
+    setEditingListId(null);
+    setEditListName('');
   };
 
   const pullToRefreshDisabled =
-    loading || isReordering || isAdding || Boolean(editingTodoListId) || open;
+    loading || isReordering || isAdding || Boolean(editingListId) || open;
   const { isRefreshing, pullDistance, refreshReady } = usePullToRefresh({
     enabled: !pullToRefreshDisabled,
-    onRefresh: fetchTodoLists,
+    onRefresh: fetchLists,
   });
   const pullContentOffset = isRefreshing ? 0 : Math.min(pullDistance / 2.5, 36);
 
@@ -245,10 +245,10 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await deleteTodoList(id, token);
+      const response = await deleteList(id, token);
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      setLists((prev) => prev.filter((todolist) => todolist.id !== id));
+      setLists((prev) => prev.filter((list) => list.id !== id));
     } catch (err) {
       setError(err.toString());
     } finally {
@@ -269,8 +269,8 @@ export default function TodoLists({ setAppBarHeader }) {
     setError(null);
 
     try {
-      const response = await reorderTodoLists(
-        workspaceId,
+      const response = await reorderLists(
+        boardId,
         reorderedLists.map((list) => list.id),
         token,
       );
@@ -284,7 +284,7 @@ export default function TodoLists({ setAppBarHeader }) {
   };
 
   const renderRowContent = (list, handleProps = null) => {
-    if (editingTodoListId === list.id) {
+    if (editingListId === list.id) {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', px: 1, py: 0.5 }}>
           <TextField
@@ -305,14 +305,14 @@ export default function TodoLists({ setAppBarHeader }) {
                 },
               },
             }}
-            value={editTodoListName}
-            onChange={(event) => setEditTodoListName(event.target.value)}
+            value={editListName}
+            onChange={(event) => setEditListName(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter') onEdit();
               if (event.key === 'Escape') closeEdit();
             }}
           />
-          <IconButton size="small" onClick={onEdit} disabled={!editTodoListName.trim()}>
+          <IconButton size="small" onClick={onEdit} disabled={!editListName.trim()}>
             <Add />
           </IconButton>
           <IconButton size="small" onClick={closeEdit}>
@@ -336,7 +336,7 @@ export default function TodoLists({ setAppBarHeader }) {
 
     if (isReordering) {
       return (
-        <Box data-testid={`todo-list-reorder-row-${list.id}`} sx={{ ...rowSx, px: 1, py: 0.5 }}>
+        <Box data-testid={`list-reorder-row-${list.id}`} sx={{ ...rowSx, px: 1, py: 0.5 }}>
           <Typography
             variant="body1"
             fontWeight="bold"
@@ -347,7 +347,7 @@ export default function TodoLists({ setAppBarHeader }) {
           <IconButton
             size="small"
             aria-label={`Drag ${list.name}`}
-            data-testid={`todo-list-drag-handle-${list.id}`}
+            data-testid={`list-drag-handle-${list.id}`}
             sx={{ color: 'var(--secondary-color)', cursor: 'grab' }}
             style={DRAG_HANDLE_TOUCH_STYLE}
             {...handleProps}
@@ -359,7 +359,7 @@ export default function TodoLists({ setAppBarHeader }) {
     }
 
     return (
-      <Box data-testid={`todo-list-row-${list.id}`} sx={rowSx}>
+      <Box data-testid={`list-row-${list.id}`} sx={rowSx}>
         <Button
           variant="text"
           sx={{
@@ -368,7 +368,7 @@ export default function TodoLists({ setAppBarHeader }) {
             color: 'var(--secondary-color)',
             textTransform: 'none',
           }}
-          onClick={() => navigate(`/workspace/${workspaceId}/todolist/${list.id}`)}
+          onClick={() => navigate(`/board/${boardId}/list/${list.id}`)}
         >
           <Typography
             variant="body1"
@@ -380,7 +380,7 @@ export default function TodoLists({ setAppBarHeader }) {
         </Button>
         <IconButton
           size="small"
-          aria-label={`Todo list actions for ${list.name}`}
+          aria-label={`List actions for ${list.name}`}
           onClick={(event) => handleTripleDotClick(event, list)}
           sx={{ color: 'var(--secondary-color)' }}
         >
@@ -394,7 +394,7 @@ export default function TodoLists({ setAppBarHeader }) {
     if (!lists.length) {
       return (
         <Typography variant="body1" align="center" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
-          No to-do lists found.
+          No lists found.
         </Typography>
       );
     }
@@ -412,7 +412,7 @@ export default function TodoLists({ setAppBarHeader }) {
             strategy={verticalListSortingStrategy}
           >
             <Box
-              data-testid="todo-list-reorder-list"
+              data-testid="list-reorder-list"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -420,10 +420,10 @@ export default function TodoLists({ setAppBarHeader }) {
               }}
             >
               {lists.map((list) => (
-                <SortableTodoListRow key={list.id} list={list}>
+                <SortableListRow key={list.id} list={list}>
                   {({ handleProps }) => (
                     <Box
-                      data-testid={`todo-list-reorder-item-${list.id}`}
+                      data-testid={`list-reorder-item-${list.id}`}
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
@@ -434,7 +434,7 @@ export default function TodoLists({ setAppBarHeader }) {
                       <Divider sx={{ borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }} />
                     </Box>
                   )}
-                </SortableTodoListRow>
+                </SortableListRow>
               ))}
             </Box>
           </SortableContext>
@@ -444,7 +444,7 @@ export default function TodoLists({ setAppBarHeader }) {
 
     return (
       <Box
-        data-testid="todo-list-list"
+        data-testid="list-list"
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -497,7 +497,7 @@ export default function TodoLists({ setAppBarHeader }) {
               gutterBottom
               sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
             >
-              {isReordering ? 'Reorder Lists' : workspaceName}
+              {isReordering ? 'Reorder Lists' : boardName}
             </Typography>
             <Box sx={{ width: 40 }} />
           </Box>
@@ -579,15 +579,15 @@ export default function TodoLists({ setAppBarHeader }) {
                       },
                     },
                   }}
-                  placeholder="New TodoList Name..."
-                  value={newTodoListName}
-                  onChange={(event) => setNewTodoListName(event.target.value)}
+                  placeholder="New List Name..."
+                  value={newListName}
+                  onChange={(event) => setNewListName(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') onAdd();
                     if (event.key === 'Escape') setIsAdding(false);
                   }}
                 />
-                <IconButton size="small" onClick={onAdd} disabled={!newTodoListName.trim()}>
+                <IconButton size="small" onClick={onAdd} disabled={!newListName.trim()}>
                   <Add />
                 </IconButton>
                 <IconButton size="small" onClick={() => setIsAdding(false)}>
@@ -640,7 +640,7 @@ export default function TodoLists({ setAppBarHeader }) {
           />
           <MenuItem
             sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
-            onClick={() => onDelete(selectedTodoList.id)}
+            onClick={() => onDelete(selectedList.id)}
           >
             <Delete sx={{ mr: 1, fontSize: 18 }} />
             Remove

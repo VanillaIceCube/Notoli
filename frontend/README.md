@@ -6,9 +6,9 @@ UI styling conventions live in [`STYLE_GUIDE.md`](STYLE_GUIDE.md).
 
 ## 🧭 App Routes
 
-- `/` redirects authenticated users to their first workspace when one exists
-- `/workspace/:workspaceId` shows todo lists for a workspace
-- `/workspace/:workspaceId/todolist/:todoListId` shows notes for a todo list
+- `/` redirects authenticated users to their first board when one exists
+- `/board/:boardId` shows lists for a board
+- `/board/:boardId/list/:listId` shows notes for a list
 - Public auth routes: `/login`, `/register`, `/forgot-password`, `/reset-password?uid=<...>&token=<...>`
 - Everything else requires auth
 
@@ -27,19 +27,19 @@ Important pieces:
 
 - `frontend/package.json` does not set a CRA `homepage`, so production assets resolve from `/`.
 - `src/App.js` still uses `process.env.PUBLIC_URL` as the React Router basename, which is empty for the subdomain build and remains useful for specialized local builds.
-- The container’s Nginx config (`frontend/nginx.conf`) serves `index.html` for deep links (`try_files ... /index.html`).
+- The container's Nginx config (`frontend/nginx.conf`) serves `index.html` for deep links (`try_files ... /index.html`).
 
-## 🤝 Workspace Sharing
+## 🤝 Board Sharing
 
-Workspace management lives in the right sidebar. Open the Workspace list, use a workspace row's action menu, and choose Share. The Share dialog displays the workspace owner and collaborators. Owners can add collaborators by username/email and remove collaborators; non-owners can view access in read-only mode.
+Board management lives in the right sidebar. Open the Board list, use a board row's action menu, and choose Share. The Share dialog displays the board owner and collaborators. Owners can add collaborators by username/email and remove collaborators; non-owners can view access in read-only mode.
 
 ## Notes Checklist Items
 
-Notes in a todo list render as checklist rows. Checking a note updates its `status` to `Complete` through the notes API, immediately reflects the change in the UI, and shows complete note text with a strikethrough. Unchecked notes use `Not Started`, and the API also supports `In Progress`.
+Notes in a list render as checklist rows. Checking a note updates its `status` to `Complete` through the notes API, immediately reflects the change in the UI, and shows complete note text with a strikethrough. Unchecked notes use `Not Started`, and the API also supports `In Progress`.
 
 ## Drag-and-Drop Reordering
 
-Todo list and note pages include a top-right page action menu for entering reorder mode. Reorder mode hides row action menus, shows right-side drag handles, hides Add New, and exits through Done. Dragging only starts from the handle and persists the final order through the reorder API after drop.
+List and note pages include a top-right page action menu for entering reorder mode. Reorder mode hides row action menus, shows right-side drag handles, hides Add New, and exits through Done. Dragging only starts from the handle and persists the final order through the reorder API after drop.
 
 ## 🔌 API Base URL
 
@@ -49,9 +49,9 @@ API calls go through `src/services/notoliApiClient.js` (endpoints) via `src/serv
 - Default is `http://localhost:8000` for local dev when `REACT_APP_API_BASE_URL` is unset.
 - In production, leave `REACT_APP_API_BASE_URL` blank/unset so calls use relative paths like `/api/...` on `https://notoli.judeandrewalaba.com`.
 - If an absolute URL is required, set `REACT_APP_API_BASE_URL=https://notoli.judeandrewalaba.com`.
-- Reorder calls use `PATCH /api/todolists/reorder/` for workspace-scoped todo-list order and `PATCH /api/notes/reorder/` for todo-list-scoped note order.
+- Reorder calls use `PATCH /api/lists/reorder/` for board-scoped list order and `PATCH /api/notes/reorder/` for list-scoped note order.
 
-Note: in the Docker image, `REACT_APP_API_BASE_URL` is a build-time value (it’s baked into the static build).
+Note: in the Docker image, `REACT_APP_API_BASE_URL` is a build-time value (it's baked into the static build).
 
 ## 💻 Local Development
 

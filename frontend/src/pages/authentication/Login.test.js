@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-support/utils';
 import Login from './Login';
-import { fetchWorkspaces, login } from '../../services/notoliApiClient';
+import { fetchBoards, login } from '../../services/notoliApiClient';
 import { useNavigate } from 'react-router-dom';
 
 jest.mock('react-router-dom', () => ({
@@ -11,7 +11,7 @@ jest.mock('react-router-dom', () => ({
 }));
 
 jest.mock('../../services/notoliApiClient', () => ({
-  fetchWorkspaces: jest.fn(() =>
+  fetchBoards: jest.fn(() =>
     Promise.resolve({
       ok: true,
       json: async () => [],
@@ -76,8 +76,8 @@ describe('Login', () => {
     expect(sessionStorage.getItem('pendingSnackbar')).toBeNull();
   });
 
-  test('when login succeeds and workspaces exist, it navigates to the first workspace', async () => {
-    fetchWorkspaces.mockResolvedValueOnce({
+  test('when login succeeds and boards exist, it navigates to the first board', async () => {
+    fetchBoards.mockResolvedValueOnce({
       ok: true,
       json: async () => [{ id: 7 }, { id: 3 }, { id: 12 }],
     });
@@ -98,13 +98,13 @@ describe('Login', () => {
     await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/workspace/3');
+      expect(mockNavigate).toHaveBeenCalledWith('/board/3');
     });
   });
 
-  test('when login succeeds and the previous workspace is still accessible, it navigates there', async () => {
-    localStorage.setItem('notoli:lastWorkspaceByUser', JSON.stringify({ test_email: '12' }));
-    fetchWorkspaces.mockResolvedValueOnce({
+  test('when login succeeds and the previous board is still accessible, it navigates there', async () => {
+    localStorage.setItem('notoli:lastBoardByUser', JSON.stringify({ test_email: '12' }));
+    fetchBoards.mockResolvedValueOnce({
       ok: true,
       json: async () => [{ id: 7 }, { id: 3 }, { id: 12 }],
     });
@@ -125,12 +125,12 @@ describe('Login', () => {
     await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/workspace/12');
+      expect(mockNavigate).toHaveBeenCalledWith('/board/12');
     });
   });
 
-  test('when login succeeds and no workspaces exist, it navigates home', async () => {
-    fetchWorkspaces.mockResolvedValue({
+  test('when login succeeds and no boards exist, it navigates home', async () => {
+    fetchBoards.mockResolvedValue({
       ok: true,
       json: async () => [],
     });
@@ -161,14 +161,14 @@ describe('Login', () => {
       });
     });
 
-    // Confirm we navigated to the main page when no workspaces are returned
+    // Confirm we navigated to the main page when no boards are returned
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/');
     });
   });
 
   test('when login succeeds, it stores access/refresh tokens', async () => {
-    fetchWorkspaces.mockResolvedValue({
+    fetchBoards.mockResolvedValue({
       ok: true,
       json: async () => [],
     });
@@ -206,7 +206,7 @@ describe('Login', () => {
   });
 
   test('when login succeeds, it shows a success snackbar', async () => {
-    fetchWorkspaces.mockResolvedValue({
+    fetchBoards.mockResolvedValue({
       ok: true,
       json: async () => [],
     });
@@ -233,8 +233,8 @@ describe('Login', () => {
     });
   });
 
-  test('when workspace fetch fails after login, it navigates home', async () => {
-    fetchWorkspaces.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+  test('when board fetch fails after login, it navigates home', async () => {
+    fetchBoards.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
     login.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -256,8 +256,8 @@ describe('Login', () => {
     });
   });
 
-  test('when workspace fetch fails after login, it shows an error snackbar', async () => {
-    fetchWorkspaces.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+  test('when board fetch fails after login, it shows an error snackbar', async () => {
+    fetchBoards.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
     login.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -277,7 +277,7 @@ describe('Login', () => {
     await userEvent.click(screen.getByRole('button', { name: /login/i }));
 
     await waitFor(() => {
-      expect(showSnackbar).toHaveBeenCalledWith('error', 'Workspace load failed :(');
+      expect(showSnackbar).toHaveBeenCalledWith('error', 'Board load failed :(');
     });
   });
 
