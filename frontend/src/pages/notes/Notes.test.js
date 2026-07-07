@@ -152,6 +152,24 @@ describe('Notes', () => {
     expect(input).toHaveValue('test_note_01');
   });
 
+  test('when row actions are opened, edit, reorder, and delete actions include icons', async () => {
+    await renderNotes();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /note actions for test_note_01/i }),
+    );
+
+    expect(screen.getByRole('menuitem', { name: /rename/i })).toContainElement(
+      screen.getByTestId('EditIcon'),
+    );
+    expect(screen.getByRole('menuitem', { name: /reorder/i })).toContainElement(
+      screen.getByTestId('ReorderIcon'),
+    );
+    expect(screen.getByRole('menuitem', { name: /remove/i })).toContainElement(
+      screen.getByTestId('DeleteIcon'),
+    );
+  });
+
   test('when a valid edit is submitted, it updates the item', async () => {
     updateNote.mockResolvedValueOnce({
       ok: true,

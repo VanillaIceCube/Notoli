@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ### Added
 - Added mobile swipe gestures to open the right drawer and pull down to refresh note and todo-list pages.
 ### Fixed
+- Added matching edit, reorder, and delete icons to main todo-list and note row action menus.
 - Locked note and todo-list reorder drag previews to the vertical axis.
 ### Changed
 - Removed verification evidence guidance from the agent instructions.
