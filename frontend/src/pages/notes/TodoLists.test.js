@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import TodoLists from './TodoLists';
-import { todoListFixtures } from '../../test-support/fixtures';
+import { todoListFixtures, workspaceFixtures } from '../../test-support/fixtures';
 import { collectRowStartPixels } from '../../test-support/layout';
 import {
   createDeferred,
@@ -13,6 +13,7 @@ import {
   createTodoList,
   deleteTodoList,
   fetchTodoLists as fetchTodoListsApi,
+  fetchWorkspace as fetchWorkspaceApi,
   updateTodoList,
 } from '../../services/notoliApiClient';
 
@@ -29,6 +30,7 @@ jest.mock('../../services/notoliApiClient', () => ({
   createTodoList: jest.fn(),
   deleteTodoList: jest.fn(),
   fetchTodoLists: jest.fn(),
+  fetchWorkspace: jest.fn(),
   reorderTodoLists: jest.fn(),
   updateTodoList: jest.fn(),
 }));
@@ -60,6 +62,10 @@ describe('TodoLists', () => {
       ok: true,
       json: async () => todoListFixtures,
     });
+    fetchWorkspaceApi.mockResolvedValue({
+      ok: true,
+      json: async () => workspaceFixtures[0],
+    });
   });
 
   test('when the page loads, it shows a loading state', async () => {
@@ -69,9 +75,17 @@ describe('TodoLists', () => {
     renderWithProviders(<TodoLists setAppBarHeader={jest.fn()} />);
 
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /todolists/i })).not.toBeInTheDocument();
 
     deferred.resolve({ ok: true, json: async () => [] });
     expect(await screen.findByText(/no to-do lists found/i)).toBeInTheDocument();
+  });
+
+  test('when the workspace fetch succeeds, it shows the workspace name as the page title', async () => {
+    await renderTodoLists();
+
+    expect(fetchWorkspaceApi).toHaveBeenCalledWith('1', 'token');
+    expect(screen.getByRole('heading', { name: 'test_workspace_01' })).toBeInTheDocument();
   });
 
   test('when the fetch succeeds, it renders the list items', async () => {
@@ -322,7 +336,7 @@ describe('TodoLists', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /done reordering/i }));
 
-    expect(screen.getByRole('heading', { name: /todolists/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'test_workspace_01' })).toBeInTheDocument();
   });
 
   test('when an item is clicked, it navigates to the expected route', async () => {

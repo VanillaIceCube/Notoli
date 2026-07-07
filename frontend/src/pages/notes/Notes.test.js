@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router-dom';
 
 import Notes from './Notes';
-import { noteFixtures } from '../../test-support/fixtures';
+import { noteFixtures, workspaceFixtures } from '../../test-support/fixtures';
 import { collectRowStartPixels } from '../../test-support/layout';
 import {
   createDeferred,
@@ -15,6 +15,7 @@ import {
   deleteNote,
   fetchNotes as fetchNotesApi,
   fetchTodoList as fetchTodoListApi,
+  fetchWorkspace as fetchWorkspaceApi,
   updateNote,
 } from '../../services/notoliApiClient';
 
@@ -30,6 +31,7 @@ jest.mock('../../services/notoliApiClient', () => ({
   deleteNote: jest.fn(),
   fetchNotes: jest.fn(),
   fetchTodoList: jest.fn(),
+  fetchWorkspace: jest.fn(),
   reorderNotes: jest.fn(),
   updateNote: jest.fn(),
 }));
@@ -67,7 +69,7 @@ describe('Notes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.setItem('accessToken', 'token');
-    mockUseParams.mockReturnValue({ todoListId: '5' });
+    mockUseParams.mockReturnValue({ workspaceId: '1', todoListId: '5' });
     fetchNotesApi.mockResolvedValue({
       ok: true,
       json: async () => noteFixtures,
@@ -75,6 +77,10 @@ describe('Notes', () => {
     fetchTodoListApi.mockResolvedValue({
       ok: true,
       json: async () => ({ name: 'TodoList 5' }),
+    });
+    fetchWorkspaceApi.mockResolvedValue({
+      ok: true,
+      json: async () => workspaceFixtures[0],
     });
   });
 
@@ -87,9 +93,16 @@ describe('Notes', () => {
     });
 
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /^notes$/i })).not.toBeInTheDocument();
 
     deferred.resolve({ ok: true, json: async () => [] });
     expect(await screen.findByText(/no notes found/i)).toBeInTheDocument();
+  });
+
+  test('when the todo list fetch succeeds, it shows the todo list name as the page title', async () => {
+    await renderNotes();
+
+    expect(screen.getByRole('heading', { name: 'TodoList 5' })).toBeInTheDocument();
   });
 
   test('when the fetch succeeds, it renders the list items', async () => {
@@ -278,10 +291,10 @@ describe('Notes', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /done reordering/i }));
 
-    expect(screen.getByRole('heading', { name: /^notes$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'TodoList 5' })).toBeInTheDocument();
   });
 
-  test('when the todo list fetch succeeds, it sets the app bar header', async () => {
+  test('when the workspace fetch succeeds, it sets the app bar header to the parent workspace', async () => {
     const setAppBarHeader = jest.fn();
 
     renderWithProviders(<Notes setAppBarHeader={setAppBarHeader} />, {
@@ -289,14 +302,14 @@ describe('Notes', () => {
     });
 
     await waitFor(() => {
-      expect(fetchTodoListApi).toHaveBeenCalledWith('5', 'token');
+      expect(fetchWorkspaceApi).toHaveBeenCalledWith('1', 'token');
     });
     await waitFor(() => {
-      expect(setAppBarHeader).toHaveBeenCalledWith('TodoList 5');
+      expect(setAppBarHeader).toHaveBeenCalledWith('test_workspace_01');
     });
   });
 
-  test('when the todo list fetch fails, it shows an error and does not set the header', async () => {
+  test('when the todo list fetch fails, it shows an error and does not show the old hardcoded title', async () => {
     const deferred = createDeferred();
     fetchNotesApi.mockReturnValueOnce(deferred.promise);
     fetchTodoListApi.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
@@ -308,7 +321,7 @@ describe('Notes', () => {
     });
 
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
-    expect(setAppBarHeader).not.toHaveBeenCalled();
+    expect(screen.queryByRole('heading', { name: /^notes$/i })).not.toBeInTheDocument();
 
     await act(async () => {
       deferred.resolve({ ok: true, json: async () => noteFixtures });

@@ -42,6 +42,7 @@ import {
   createTodoList,
   deleteTodoList,
   fetchTodoLists as fetchTodoListsApi,
+  fetchWorkspace as fetchWorkspaceApi,
   reorderTodoLists,
   updateTodoList,
 } from '../../services/notoliApiClient';
@@ -91,6 +92,7 @@ export default function TodoLists({ setAppBarHeader }) {
 
   const { workspaceId } = useParams();
   const token = sessionStorage.getItem('accessToken');
+  const [workspaceName, setWorkspaceName] = useState('');
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -118,11 +120,30 @@ export default function TodoLists({ setAppBarHeader }) {
     }
   }, [token, workspaceId]);
 
+  const fetchWorkspaceName = useCallback(async () => {
+    setWorkspaceName('');
+
+    if (!workspaceId) {
+      return;
+    }
+
+    try {
+      const response = await fetchWorkspaceApi(workspaceId, token);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      setWorkspaceName(data?.name ?? '');
+    } catch (err) {
+      setWorkspaceName('');
+      setError(err.toString());
+    }
+  }, [token, workspaceId]);
+
   useEffect(() => {
     if (workspaceId) {
       fetchTodoLists();
+      fetchWorkspaceName();
     }
-  }, [workspaceId, fetchTodoLists]);
+  }, [workspaceId, fetchTodoLists, fetchWorkspaceName]);
 
   const startReordering = () => {
     closeEdit();
@@ -474,7 +495,7 @@ export default function TodoLists({ setAppBarHeader }) {
               gutterBottom
               sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
             >
-              {isReordering ? 'Reorder Lists' : 'TodoLists'}
+              {isReordering ? 'Reorder Lists' : workspaceName}
             </Typography>
             <Box sx={{ width: 40 }} />
           </Box>
