@@ -224,11 +224,7 @@ describe('Lists', () => {
     await userEvent.type(input, 'test_list_01 Updated{enter}');
 
     await waitFor(() => {
-      expect(updateList).toHaveBeenCalledWith(
-        10,
-        { name: 'test_list_01 Updated' },
-        'token',
-      );
+      expect(updateList).toHaveBeenCalledWith(10, { name: 'test_list_01 Updated' }, 'token');
     });
     expect(await screen.findByText('test_list_01 Updated')).toBeInTheDocument();
   });
@@ -298,9 +294,7 @@ describe('Lists', () => {
   test('when reorder mode is opened, it shows drag handles and hides row actions and add', async () => {
     await renderLists();
 
-    expect(
-      screen.queryByRole('button', { name: /list page actions/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /list page actions/i })).not.toBeInTheDocument();
     expect(screen.getByTestId('list-list')).toHaveStyle('gap: 8px');
     const normalRowStartPixels = collectRowStartPixels(screen.getByTestId('list-list'), [
       'list-row-10',
@@ -314,17 +308,14 @@ describe('Lists', () => {
 
     expect(screen.getByRole('heading', { name: /reorder lists/i })).toBeInTheDocument();
     expect(screen.getByTestId('list-reorder-list')).toHaveStyle('gap: 8px');
-    const reorderRowStartPixels = collectRowStartPixels(
-      screen.getByTestId('list-reorder-list'),
-      ['list-reorder-row-10', 'list-reorder-row-11'],
-    );
+    const reorderRowStartPixels = collectRowStartPixels(screen.getByTestId('list-reorder-list'), [
+      'list-reorder-row-10',
+      'list-reorder-row-11',
+    ]);
     expect([
       reorderRowStartPixels['list-reorder-row-10'],
       reorderRowStartPixels['list-reorder-row-11'],
-    ]).toEqual([
-      normalRowStartPixels['list-row-10'],
-      normalRowStartPixels['list-row-11'],
-    ]);
+    ]).toEqual([normalRowStartPixels['list-row-10'], normalRowStartPixels['list-row-11']]);
     expect(screen.getByTestId('list-drag-handle-10')).toBeInTheDocument();
     expect(screen.getByTestId('list-drag-handle-10').style.touchAction).toBe('none');
     expect(screen.getByTestId('list-drag-handle-11')).toBeInTheDocument();

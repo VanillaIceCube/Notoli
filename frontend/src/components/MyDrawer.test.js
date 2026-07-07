@@ -207,11 +207,7 @@ describe('MyDrawer', () => {
     await userEvent.type(input, 'test_board_01 Updated{enter}');
 
     await waitFor(() => {
-      expect(updateBoard).toHaveBeenCalledWith(
-        1,
-        { name: 'test_board_01 Updated' },
-        'token',
-      );
+      expect(updateBoard).toHaveBeenCalledWith(1, { name: 'test_board_01 Updated' }, 'token');
     });
     expect(await screen.findByText('test_board_01 Updated')).toBeInTheDocument();
   });

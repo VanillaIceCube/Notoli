@@ -579,22 +579,22 @@ export default function Lists({ setAppBarHeader }) {
                         },
                       },
                     }}
-                  placeholder="New List Name..."
-                  value={newListName}
-                  onChange={(event) => setNewListName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') onAdd();
-                    if (event.key === 'Escape') setIsAdding(false);
-                  }}
-                />
-                <IconButton size="small" onClick={onAdd} disabled={!newListName.trim()}>
-                  <Add />
-                </IconButton>
-                <IconButton size="small" onClick={() => setIsAdding(false)}>
-                  <Close />
-                </IconButton>
-              </Box>
-            )}
+                    placeholder="New List Name..."
+                    value={newListName}
+                    onChange={(event) => setNewListName(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') onAdd();
+                      if (event.key === 'Escape') setIsAdding(false);
+                    }}
+                  />
+                  <IconButton size="small" onClick={onAdd} disabled={!newListName.trim()}>
+                    <Add />
+                  </IconButton>
+                  <IconButton size="small" onClick={() => setIsAdding(false)}>
+                    <Close />
+                  </IconButton>
+                </Box>
+              )}
             </Stack>
           )}
         </Box>

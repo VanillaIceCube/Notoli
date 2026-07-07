@@ -2,10 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../test-support/utils';
 import BoardShareDialog from './BoardShareDialog';
-import {
-  addBoardCollaborator,
-  removeBoardCollaborator,
-} from '../services/notoliApiClient';
+import { addBoardCollaborator, removeBoardCollaborator } from '../services/notoliApiClient';
 
 jest.mock('../services/notoliApiClient', () => ({
   addBoardCollaborator: jest.fn(),
@@ -78,18 +75,11 @@ describe('BoardShareDialog', () => {
 
     renderDialog({ onBoardUpdated });
 
-    await userEvent.type(
-      screen.getByLabelText('Username or email address'),
-      'newuser',
-    );
+    await userEvent.type(screen.getByLabelText('Username or email address'), 'newuser');
     await userEvent.click(screen.getByRole('button', { name: /add/i }));
 
     await waitFor(() => {
-      expect(addBoardCollaborator).toHaveBeenCalledWith(
-        4,
-        { identifier: 'newuser' },
-        'token',
-      );
+      expect(addBoardCollaborator).toHaveBeenCalledWith(4, { identifier: 'newuser' }, 'token');
     });
 
     expect(onBoardUpdated).toHaveBeenCalledWith(updatedBoard);
@@ -100,17 +90,11 @@ describe('BoardShareDialog', () => {
     const showSnackbar = jest.fn();
     renderDialog({ showSnackbar });
 
-    await userEvent.type(
-      screen.getByLabelText('Username or email address'),
-      'collab',
-    );
+    await userEvent.type(screen.getByLabelText('Username or email address'), 'collab');
     await userEvent.click(screen.getByRole('button', { name: /add/i }));
 
     expect(addBoardCollaborator).not.toHaveBeenCalled();
-    expect(showSnackbar).toHaveBeenCalledWith(
-      'error',
-      'That user is already a collaborator.',
-    );
+    expect(showSnackbar).toHaveBeenCalledWith('error', 'That user is already a collaborator.');
   });
 
   test('allows the owner to remove a collaborator', async () => {
@@ -123,9 +107,7 @@ describe('BoardShareDialog', () => {
 
     renderDialog({ onBoardUpdated });
 
-    await userEvent.click(
-      screen.getByRole('button', { name: /remove collaborator user/i }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: /remove collaborator user/i }));
 
     await waitFor(() => {
       expect(removeBoardCollaborator).toHaveBeenCalledWith(4, 2, 'token');

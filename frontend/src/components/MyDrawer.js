@@ -160,18 +160,12 @@ export default function MyDrawer({
     setError(null);
 
     try {
-      const response = await updateBoard(
-        editingBoardId,
-        { name: editBoardName },
-        token,
-      );
+      const response = await updateBoard(editingBoardId, { name: editBoardName }, token);
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
-      setBoards((prev) =>
-        prev.map((board) => (board.id === updated.id ? updated : board)),
-      );
+      setBoards((prev) => prev.map((board) => (board.id === updated.id ? updated : board)));
 
       closeEdit();
     } catch (err) {
@@ -194,11 +188,7 @@ export default function MyDrawer({
   };
 
   const updateSharedBoard = (updatedBoard) => {
-    setBoards((prev) =>
-      prev.map((board) =>
-        board.id === updatedBoard.id ? updatedBoard : board,
-      ),
-    );
+    setBoards((prev) => prev.map((board) => (board.id === updatedBoard.id ? updatedBoard : board)));
     setSharingBoard(updatedBoard);
   };
 

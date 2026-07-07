@@ -1,8 +1,4 @@
-import {
-  getLastBoardId,
-  getPreferredBoardId,
-  rememberLastBoard,
-} from './lastBoard';
+import { getLastBoardId, getPreferredBoardId, rememberLastBoard } from './lastBoard';
 
 describe('lastBoard', () => {
   beforeEach(() => {
