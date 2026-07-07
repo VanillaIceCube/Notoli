@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-07
+### Added
+- Remembered the last accessible board per logged-in browser user and reopened it by default.
+### Changed
+- Rebranded the product hierarchy from Workspace/TodoList/Note to Board/List/Note across backend models, API routes, frontend routes, UI copy, tests, and docs.
+- Renamed the list-note membership model from `TodoListNote` to `ListNote` and moved ordering payloads to `board`/`list` terminology.
+- Named new users' default board after their username or email prefix.
+- Made board membership the source of truth for list and note access, removing item-level owner and collaborator fields.
+
 ## 2026-07-06
 ### Added
 - Added mobile swipe gestures to open the right drawer and pull down to refresh note and todo-list pages.

@@ -1,25 +1,25 @@
-export const getWorkspaceId = (path) => {
-  // /workspace/:wid/todolist/:tlid
-  const todolistMatch = path.match(/^\/workspace\/([^/]+)\/todolist\/[^/]+$/);
-  if (todolistMatch) return todolistMatch[1]; // just workspaceId
+export const getBoardId = (path) => {
+  // /board/:boardId/list/:listId
+  const listMatch = path.match(/^\/board\/([^/]+)\/list\/[^/]+$/);
+  if (listMatch) return listMatch[1]; // just boardId
 
-  // /workspace/:wid
-  const workspaceMatch = path.match(/^\/workspace\/([^/]+)$/);
-  if (workspaceMatch) return workspaceMatch[1]; // just workspaceId
+  // /board/:boardId
+  const boardMatch = path.match(/^\/board\/([^/]+)$/);
+  if (boardMatch) return boardMatch[1]; // just boardId
 
   return null;
 };
 
 export const getParentPath = (path) => {
-  //  todolist <-- notes
-  //  /workspace/:wid/todolist/:tlid*
-  const todolistPath = path.match(/^(\/workspace\/[^/]+)\/todolist\/[^/]+$/);
-  if (todolistPath) return `${todolistPath[1]}`;
+  //  list <-- notes
+  //  /board/:boardId/list/:listId
+  const listPath = path.match(/^(\/board\/[^/]+)\/list\/[^/]+$/);
+  if (listPath) return `${listPath[1]}`;
 
-  //  workspace <-- todolists
-  //  /workspace/:wid
-  const workspacePath = path.match(/^\/workspace\/[^/]+$/);
-  if (workspacePath) return '/';
+  //  board <-- lists
+  //  /board/:boardId
+  const boardPath = path.match(/^\/board\/[^/]+$/);
+  if (boardPath) return '/';
 };
 
 export const goBackToParent = (path, navigate) => {

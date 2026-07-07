@@ -24,8 +24,8 @@ export default function Register({ showSnackbar }) {
       persistAuthSession(data);
 
       showSnackbar('success', 'Account created! Welcome to Notoli!');
-      if (data?.workspace_id) {
-        navigate(`/workspace/${data.workspace_id}`);
+      if (data?.board_id) {
+        navigate(`/board/${data.board_id}`);
       } else {
         navigate('/');
       }

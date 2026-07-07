@@ -19,73 +19,73 @@ import Edit from '@mui/icons-material/Edit';
 import MoreVert from '@mui/icons-material/MoreVert';
 import Share from '@mui/icons-material/Share';
 import Divider from '@mui/material/Divider';
-import { getWorkspaceId } from '../utils/Navigation';
+import { getBoardId } from '../utils/Navigation';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
-import WorkspaceShareDialog from './WorkspaceShareDialog';
+import BoardShareDialog from './BoardShareDialog';
 
 import {
-  createWorkspace,
-  deleteWorkspace,
-  fetchWorkspace as fetchWorkspaceApi,
-  fetchWorkspaces as fetchWorkspacesApi,
-  updateWorkspace,
+  createBoard,
+  deleteBoard,
+  fetchBoard as fetchBoardApi,
+  fetchBoards as fetchBoardsApi,
+  updateBoard,
 } from '../services/notoliApiClient';
 
 export default function MyDrawer({
   open,
   setDrawerOpen,
-  drawerWorkspacesLabel,
-  setDrawerWorkspacesLabel,
+  drawerBoardsLabel,
+  setDrawerBoardsLabel,
   showSnackbar,
 }) {
   // Navigate using Drawer
   const navigate = useNavigate();
 
-  // Fetch Workspace Name
+  // Fetch Board Name
   const location = useLocation();
 
-  const workspaceId = getWorkspaceId(location.pathname);
+  const boardId = getBoardId(location.pathname);
 
   const token = sessionStorage.getItem('accessToken');
 
-  const fetchWorkspaceName = useCallback(async () => {
-    if (!workspaceId) return '';
+  const fetchBoardName = useCallback(async () => {
+    if (!boardId) return '';
     try {
-      const response = await fetchWorkspaceApi(workspaceId, token);
+      const response = await fetchBoardApi(boardId, token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const workspaceData = await response.json();
-      return workspaceData?.name ?? '';
+      const boardData = await response.json();
+      return boardData?.name ?? '';
     } catch (error) {
       return error.toString() ?? '';
     }
-  }, [workspaceId, token]);
+  }, [boardId, token]);
 
   useEffect(() => {
     (async () => {
       try {
-        const name = await fetchWorkspaceName();
-        setDrawerWorkspacesLabel(name);
+        const name = await fetchBoardName();
+        setDrawerBoardsLabel(name);
       } catch {
-        setDrawerWorkspacesLabel('');
+        setDrawerBoardsLabel('');
       }
     })();
-  }, [fetchWorkspaceName, setDrawerWorkspacesLabel]);
+  }, [fetchBoardName, setDrawerBoardsLabel]);
 
-  // Fetch Workspace List
-  const [workspaces, setWorkspaces] = useState([]);
+  // Fetch Board List
+  const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchWorkspaces = useCallback(async () => {
+  const fetchBoards = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetchWorkspacesApi(token);
+      const response = await fetchBoardsApi(token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
-      setWorkspaces(data);
+      setBoards(data);
       setError(null);
     } catch (err) {
       setError(err.toString());
@@ -95,21 +95,21 @@ export default function MyDrawer({
   }, [token]);
 
   useEffect(() => {
-    fetchWorkspaces();
-  }, [fetchWorkspaces]);
+    fetchBoards();
+  }, [fetchBoards]);
 
-  // Add New Workspace
+  // Add New Board
   const [isAdding, setIsAdding] = useState(false);
-  const [newWorkspaceName, setNewWorkspaceName] = useState('');
+  const [newBoardName, setNewBoardName] = useState('');
 
   const onAdd = async () => {
-    if (!newWorkspaceName.trim()) return;
+    if (!newBoardName.trim()) return;
     setError(null);
 
     try {
-      const response = await createWorkspace(
+      const response = await createBoard(
         {
-          name: newWorkspaceName,
+          name: newBoardName,
           description: '',
         },
         token,
@@ -118,10 +118,10 @@ export default function MyDrawer({
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const created = await response.json();
-      setWorkspaces((prev) => [...prev, created]);
+      setBoards((prev) => [...prev, created]);
 
       setIsAdding(false);
-      setNewWorkspaceName('');
+      setNewBoardName('');
     } catch (err) {
       setError(err.toString());
     }
@@ -129,49 +129,43 @@ export default function MyDrawer({
 
   // Triple Dot Menu Functions
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
-  const [selectedWorkspace, setSelectedWorkspace] = useState(null);
+  const [selectedBoard, setSelectedBoard] = useState(null);
   const tripleDotOpen = Boolean(tripleDotAnchorElement);
 
-  const handleTripleDotClick = (event, workspaces) => {
+  const handleTripleDotClick = (event, boards) => {
     event.stopPropagation();
     setTripleDotAnchorElement(event.currentTarget);
-    setSelectedWorkspace(workspaces);
+    setSelectedBoard(boards);
   };
 
   const handleTripleDotClose = () => {
     setTripleDotAnchorElement(null);
-    setSelectedWorkspace(null);
+    setSelectedBoard(null);
   };
 
-  // Rename workspace
+  // Rename board
   const [isEditing, setIsEditing] = useState(false);
-  const [editingWorkspaceId, setEditingWorkspaceId] = useState(null);
-  const [editWorkspaceName, setEditWorkspaceName] = useState('');
+  const [editingBoardId, setEditingBoardId] = useState(null);
+  const [editBoardName, setEditBoardName] = useState('');
 
   const startEditing = () => {
     setIsEditing(true);
-    setEditingWorkspaceId(selectedWorkspace.id);
-    setEditWorkspaceName(selectedWorkspace.name);
+    setEditingBoardId(selectedBoard.id);
+    setEditBoardName(selectedBoard.name);
     handleTripleDotClose();
   };
 
   const onEdit = async () => {
-    if (!editWorkspaceName.trim()) return;
+    if (!editBoardName.trim()) return;
     setError(null);
 
     try {
-      const response = await updateWorkspace(
-        editingWorkspaceId,
-        { name: editWorkspaceName },
-        token,
-      );
+      const response = await updateBoard(editingBoardId, { name: editBoardName }, token);
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const updated = await response.json();
-      setWorkspaces((prev) =>
-        prev.map((workspace) => (workspace.id === updated.id ? updated : workspace)),
-      );
+      setBoards((prev) => prev.map((board) => (board.id === updated.id ? updated : board)));
 
       closeEdit();
     } catch (err) {
@@ -181,37 +175,33 @@ export default function MyDrawer({
 
   const closeEdit = () => {
     setIsEditing(false);
-    setEditingWorkspaceId(null);
-    setEditWorkspaceName('');
+    setEditingBoardId(null);
+    setEditBoardName('');
   };
 
-  // Share Workspace
-  const [sharingWorkspace, setSharingWorkspace] = useState(null);
+  // Share Board
+  const [sharingBoard, setSharingBoard] = useState(null);
 
-  const openShareDialog = (workspace) => {
-    setSharingWorkspace(workspace);
+  const openShareDialog = (board) => {
+    setSharingBoard(board);
     handleTripleDotClose();
   };
 
-  const updateSharedWorkspace = (updatedWorkspace) => {
-    setWorkspaces((prev) =>
-      prev.map((workspace) =>
-        workspace.id === updatedWorkspace.id ? updatedWorkspace : workspace,
-      ),
-    );
-    setSharingWorkspace(updatedWorkspace);
+  const updateSharedBoard = (updatedBoard) => {
+    setBoards((prev) => prev.map((board) => (board.id === updatedBoard.id ? updatedBoard : board)));
+    setSharingBoard(updatedBoard);
   };
 
-  // Remove workspace
+  // Remove board
   const onDelete = async (id) => {
     setError(null);
 
     try {
-      const response = await deleteWorkspace(id, token);
+      const response = await deleteBoard(id, token);
 
       // Pessimistic Local Merge
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      setWorkspaces((prev) => prev.filter((workspace) => workspace.id !== id));
+      setBoards((prev) => prev.filter((board) => board.id !== id));
     } catch (err) {
       setError(err.toString());
     } finally {
@@ -220,8 +210,8 @@ export default function MyDrawer({
   };
 
   // Manage Drawer
-  const [workspaceDrawerOpen, setWorkspaceDrawerOpen] = useState(false);
-  const toggleWorkspaceDrawer = () => setWorkspaceDrawerOpen((prev) => !prev);
+  const [boardDrawerOpen, setBoardDrawerOpen] = useState(false);
+  const toggleBoardDrawer = () => setBoardDrawerOpen((prev) => !prev);
   const [drawerWidth, setDrawerWidth] = useState(180);
 
   useEffect(() => {
@@ -284,16 +274,16 @@ export default function MyDrawer({
           <List disablePadding sx={{ mt: 1, mb: 1 }}>
             {/* Header row that toggles the nested content */}
             <ListItemButton
-              onClick={toggleWorkspaceDrawer}
-              aria-expanded={workspaceDrawerOpen}
+              onClick={toggleBoardDrawer}
+              aria-expanded={boardDrawerOpen}
               sx={{ py: 0 }}
             >
-              <ListItemText primary="Workspace" secondary={drawerWorkspacesLabel} />
-              {workspaceDrawerOpen ? <ExpandLess /> : <ExpandMore />}
+              <ListItemText primary="Board" secondary={drawerBoardsLabel} />
+              {boardDrawerOpen ? <ExpandLess /> : <ExpandMore />}
             </ListItemButton>
 
             {/* Nested content that opens/closes */}
-            <Collapse in={workspaceDrawerOpen} timeout="auto" unmountOnExit>
+            <Collapse in={boardDrawerOpen} timeout="auto" unmountOnExit>
               <List sx={{ pb: 0 }}>
                 <Divider
                   sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }}
@@ -302,7 +292,7 @@ export default function MyDrawer({
                 {/* Loading */}
                 {loading && (
                   <Typography align="left" sx={{ pl: 3, py: 1, pt: 2 }}>
-                    Loading…
+                    Loading...
                   </Typography>
                 )}
 
@@ -316,8 +306,8 @@ export default function MyDrawer({
                 {/* Data */}
                 {!error &&
                   !loading &&
-                  workspaces.map((workspace, i) => (
-                    <React.Fragment key={workspace.id}>
+                  boards.map((board, i) => (
+                    <React.Fragment key={board.id}>
                       {i !== 0 && (
                         <Divider
                           sx={{
@@ -330,7 +320,7 @@ export default function MyDrawer({
                           }}
                         />
                       )}
-                      {editingWorkspaceId === workspace.id ? (
+                      {editingBoardId === board.id ? (
                         <React.Fragment>
                           {/* Editing  Mode */}
                           <Box
@@ -361,8 +351,8 @@ export default function MyDrawer({
                                   },
                                 },
                               }}
-                              value={editWorkspaceName}
-                              onChange={(event) => setEditWorkspaceName(event.target.value)}
+                              value={editBoardName}
+                              onChange={(event) => setEditBoardName(event.target.value)}
                               onKeyDown={(event) => {
                                 if (event.key === 'Enter') onEdit();
                                 if (event.key === 'Escape') closeEdit();
@@ -371,7 +361,7 @@ export default function MyDrawer({
                             <IconButton
                               size="small"
                               onClick={onEdit}
-                              disabled={!editWorkspaceName.trim()}
+                              disabled={!editBoardName.trim()}
                             >
                               <Add />
                             </IconButton>
@@ -387,11 +377,11 @@ export default function MyDrawer({
                             dense
                             sx={{ pl: 3, py: 0.75 }}
                             onClick={() => {
-                              navigate(`/workspace/${workspace.id}`);
+                              navigate(`/board/${board.id}`);
                             }}
                           >
-                            <ListItemText primary={workspace.name} />
-                            <MoreVert onClick={(event) => handleTripleDotClick(event, workspace)} />
+                            <ListItemText primary={board.name} />
+                            <MoreVert onClick={(event) => handleTripleDotClick(event, board)} />
                           </ListItemButton>
                         </React.Fragment>
                       )}
@@ -447,15 +437,15 @@ export default function MyDrawer({
                         },
                       },
                     }}
-                    placeholder="New Workspace Name..."
-                    value={newWorkspaceName}
-                    onChange={(event) => setNewWorkspaceName(event.target.value)}
+                    placeholder="New Board Name..."
+                    value={newBoardName}
+                    onChange={(event) => setNewBoardName(event.target.value)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter') onAdd();
                       if (event.key === 'Escape') setIsAdding(false);
                     }}
                   />
-                  <IconButton size="small" onClick={onAdd} disabled={!newWorkspaceName.trim()}>
+                  <IconButton size="small" onClick={onAdd} disabled={!newBoardName.trim()}>
                     <Add />
                   </IconButton>
                   <IconButton size="small" onClick={() => setIsAdding(false)}>
@@ -489,7 +479,7 @@ export default function MyDrawer({
       >
         <MenuItem
           sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
-          onClick={() => openShareDialog(selectedWorkspace)}
+          onClick={() => openShareDialog(selectedBoard)}
         >
           <Share sx={{ mr: 1, fontSize: 18 }} />
           Share
@@ -511,18 +501,18 @@ export default function MyDrawer({
         />
         <MenuItem
           sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
-          onClick={() => onDelete(selectedWorkspace.id)}
+          onClick={() => onDelete(selectedBoard.id)}
         >
           <Delete sx={{ mr: 1, fontSize: 18 }} />
           Remove
         </MenuItem>
       </Menu>
-      <WorkspaceShareDialog
-        open={Boolean(sharingWorkspace)}
-        workspace={sharingWorkspace}
+      <BoardShareDialog
+        open={Boolean(sharingBoard)}
+        board={sharingBoard}
         token={token}
-        onClose={() => setSharingWorkspace(null)}
-        onWorkspaceUpdated={updateSharedWorkspace}
+        onClose={() => setSharingBoard(null)}
+        onBoardUpdated={updateSharedBoard}
         showSnackbar={showSnackbar}
       />
     </SwipeableDrawer>

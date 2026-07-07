@@ -5,13 +5,13 @@ The Notoli backend is a Django + Django REST Framework API, served by Gunicorn i
 ## 🧭 What Lives Here
 - `backend/app/`: Django project settings/urls (`settings.py`, `urls.py`)
 - `backend/authentication/`: custom user model + JWT auth endpoints
-- `backend/notes/`: workspaces, todo lists, and notes (DRF viewsets)
+- `backend/notes/`: boards, lists, and notes (DRF viewsets)
 - `backend/manage.py`: Django management entrypoint
 
 ## 🗺️ API Routes
 Top-level routes (without any path prefix):
 - Auth: `/auth/` (register/login/refresh)
-- API: `/api/` (workspaces/todolists/notes)
+- API: `/api/` (boards/lists/notes)
 - Admin: `/admin/`
 
 Production serves these routes from the subdomain root at `https://notoli.judeandrewalaba.com`.
@@ -20,29 +20,30 @@ Production serves these routes from the subdomain root at `https://notoli.judean
 JWT auth is provided by `djangorestframework-simplejwt`.
 
 Common endpoints:
-- `POST /auth/register/` -> creates a user; returns `access`, `refresh`, `username`, `email`, and `workspace_id`
+- `POST /auth/register/` -> creates a user; returns `access`, `refresh`, `username`, `email`, and `board_id`
 - `POST /auth/login/` -> accepts `email` (preferred) or `username`, plus `password`; returns `access`, `refresh`, `username`, and `email`
 - `POST /auth/refresh/` -> exchanges `refresh` for a new `access`
 - `POST /auth/forgot-password/` -> accepts `email`; sends a reset link if the account exists and returns a generic success message
 - `POST /auth/reset-password/` -> accepts `uid`, `token`, and `password`; sets a new password when the token is valid
 
-New users get a default workspace (`"My Workspace"`) created automatically via a post-save signal in `notes/signals.py`.
+New users get a default board named after their username, such as `"andrew's board"`, created automatically via a post-save signal in `notes/signals.py`. If a username is unavailable, the name falls back to the email prefix.
 
 All `/api/*` endpoints require:
 - Header: `Authorization: Bearer <accessToken>`
 
 ## 🧱 Data Model (High Level)
-- Workspace: top-level container for organizing todo lists
-- TodoList: belongs to a workspace; associates notes via a many-to-many relation
-- Note: a single checklist item (`note` + optional `description` + `status`); can be linked into multiple todo lists
+- Board: top-level container for organizing lists
+- List: belongs to a board; associates notes via a many-to-many relation
+- Note: a single checklist item (`note` + optional `description` + `status`); can be linked into multiple lists
 
 Access scoping:
-- The API filters objects by `owner`/`created_by`/`collaborators` so users only see what they have access to.
-- Workspace owners can manage workspace collaborators with `POST /api/workspaces/<id>/collaborators/` using `{ "identifier": "<username-or-email>" }` and `DELETE /api/workspaces/<id>/collaborators/<user_id>/`.
-- Workspace responses include `owner_details` and `collaborators_details` summaries for sharing/access UI.
-- Todo lists are returned in their saved workspace order. Persist a new workspace order with `PATCH /api/todolists/reorder/` and `{ "workspace": <id>, "ordered_ids": [<todo-list-id>, ...] }`.
-- Notes inside a todo list are returned in their saved list-membership order. Persist a new note order with `PATCH /api/notes/reorder/` and `{ "todo_list": <id>, "ordered_ids": [<note-id>, ...] }`.
-- Note order is stored on the `TodoListNote` membership table so the same note can appear in multiple todo lists with different positions.
+- Board membership is the source of truth for access. `Board.owner` and `Board.collaborators` control access to child lists and notes.
+- Lists and notes keep `created_by` metadata, but do not have separate owner or collaborator fields.
+- Board owners can manage board collaborators with `POST /api/boards/<id>/collaborators/` using `{ "identifier": "<username-or-email>" }` and `DELETE /api/boards/<id>/collaborators/<user_id>/`.
+- Board responses include `owner_details` and `collaborators_details` summaries for sharing/access UI.
+- Lists are returned in their saved board order. Persist a new board order with `PATCH /api/lists/reorder/` and `{ "board": <id>, "ordered_ids": [<list-id>, ...] }`.
+- Notes inside a list are returned in their saved list-membership order. Persist a new note order with `PATCH /api/notes/reorder/` and `{ "list": <id>, "ordered_ids": [<note-id>, ...] }`.
+- Note order is stored on the `ListNote` membership table so the same note can appear in multiple lists with different positions.
 
 ## 💻 Local Development
 Full setup (Conda, env vars) lives in [`AGENTS.md`](../AGENTS.md). Common commands:
