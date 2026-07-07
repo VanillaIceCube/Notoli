@@ -174,6 +174,24 @@ describe('TodoLists', () => {
     expect(input).toHaveValue('test_todolist_01');
   });
 
+  test('when row actions are opened, edit, reorder, and delete actions include icons', async () => {
+    await renderTodoLists();
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /todo list actions for test_todolist_01/i }),
+    );
+
+    expect(screen.getByRole('menuitem', { name: /rename/i })).toContainElement(
+      screen.getByTestId('EditIcon'),
+    );
+    expect(screen.getByRole('menuitem', { name: /reorder/i })).toContainElement(
+      screen.getByTestId('ReorderIcon'),
+    );
+    expect(screen.getByRole('menuitem', { name: /remove/i })).toContainElement(
+      screen.getByTestId('DeleteIcon'),
+    );
+  });
+
   test('when a valid edit is submitted, it updates the item', async () => {
     updateTodoList.mockResolvedValueOnce({
       ok: true,

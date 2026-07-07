@@ -30,8 +30,11 @@ import {
 } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import Close from '@mui/icons-material/Close';
+import Delete from '@mui/icons-material/Delete';
 import DragIndicator from '@mui/icons-material/DragIndicator';
+import Edit from '@mui/icons-material/Edit';
 import MoreVert from '@mui/icons-material/MoreVert';
+import Reorder from '@mui/icons-material/Reorder';
 import Divider from '@mui/material/Divider';
 import { useNavigate, useParams } from 'react-router-dom';
 import PullToRefreshIndicator from '../../components/PullToRefreshIndicator';
@@ -593,6 +596,7 @@ export default function TodoLists({ setAppBarHeader }) {
             sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
             onClick={startEditing}
           >
+            <Edit sx={{ mr: 1, fontSize: 18 }} />
             Rename
           </MenuItem>
           <Divider
@@ -604,6 +608,7 @@ export default function TodoLists({ setAppBarHeader }) {
             onClick={startReordering}
             disabled={lists.length < 2}
           >
+            <Reorder sx={{ mr: 1, fontSize: 18 }} />
             Reorder
           </MenuItem>
           <Divider
@@ -614,6 +619,7 @@ export default function TodoLists({ setAppBarHeader }) {
             sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
             onClick={() => onDelete(selectedTodoList.id)}
           >
+            <Delete sx={{ mr: 1, fontSize: 18 }} />
             Remove
           </MenuItem>
         </Menu>
