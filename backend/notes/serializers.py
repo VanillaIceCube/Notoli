@@ -66,11 +66,7 @@ class ListSerializer(serializers.ModelSerializer):
             bad_note_ids = [n.id for n in notes if n.board_id != board.id]
             if bad_note_ids:
                 raise serializers.ValidationError(
-                    {
-                        "notes": [
-                            "All notes must belong to the same board as the list."
-                        ]
-                    }
+                    {"notes": ["All notes must belong to the same board as the list."]}
                 )
 
         return attrs
@@ -147,29 +143,21 @@ class NoteSerializer(serializers.ModelSerializer):
                 )
 
         # For updates, the note's board is immutable, so always validate against the instance board.
-        effective_board = (
-            instance_board if self.instance is not None else board
-        )
+        effective_board = instance_board if self.instance is not None else board
 
         # Creation requires scope. Updates can omit scope as long as the instance already has it.
         if note_list is None and board is None:
             if self.instance is None or instance_board is None:
                 raise serializers.ValidationError(
                     {
-                        "list": [
-                            "This field is required when board is not provided."
-                        ],
+                        "list": ["This field is required when board is not provided."],
                     }
                 )
 
         if note_list is not None and effective_board is not None:
             if note_list.board_id != effective_board.id:
                 raise serializers.ValidationError(
-                    {
-                        "list": [
-                            "List must be in the same board as the note."
-                        ]
-                    }
+                    {"list": ["List must be in the same board as the note."]}
                 )
 
         return attrs

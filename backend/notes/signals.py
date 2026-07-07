@@ -49,16 +49,10 @@ def enforce_note_board_boundary(
             .exclude(board_id=note.board_id)
             .exists()
         ):
-            raise ValidationError(
-                "Cannot add a note to a list in a different board."
-            )
+            raise ValidationError("Cannot add a note to a list in a different board.")
         return
 
     # instance is a List; pk_set contains Note IDs.
     note_list = instance
-    if (
-        Note.objects.filter(id__in=pk_set)
-        .exclude(board_id=note_list.board_id)
-        .exists()
-    ):
+    if Note.objects.filter(id__in=pk_set).exclude(board_id=note_list.board_id).exists():
         raise ValidationError("Cannot add notes from a different board.")

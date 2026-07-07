@@ -57,9 +57,7 @@ class List(models.Model):
     description = models.TextField(blank=True)
 
     # Scope
-    board = models.ForeignKey(
-        Board, on_delete=models.CASCADE, related_name="lists"
-    )
+    board = models.ForeignKey(Board, on_delete=models.CASCADE, related_name="lists")
     notes = models.ManyToManyField(
         "Note",
         blank=True,
@@ -107,9 +105,7 @@ class Note(models.Model):
     )
 
     # Scope
-    board = models.ForeignKey(
-        Board, on_delete=models.CASCADE, related_name="notes"
-    )
+    board = models.ForeignKey(Board, on_delete=models.CASCADE, related_name="notes")
 
     # Metadata
     created_by = models.ForeignKey(

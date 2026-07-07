@@ -200,9 +200,7 @@ class BoardApiTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 403, response.data)
-        self.assertFalse(
-            self.board.collaborators.filter(pk=self.outsider.pk).exists()
-        )
+        self.assertFalse(self.board.collaborators.filter(pk=self.outsider.pk).exists())
 
     def test_owner_cannot_add_duplicate_board_collaborator(self):
         self.board.collaborators.add(self.collaborator)
@@ -985,12 +983,8 @@ class NoteApiTests(APITestCase):
             created_by=self.owner,
         )
         self.list.notes.add(second_note)
-        ListNote.objects.filter(list=self.list, note=self.note).update(
-            position=1
-        )
-        ListNote.objects.filter(list=self.list, note=second_note).update(
-            position=0
-        )
+        ListNote.objects.filter(list=self.list, note=self.note).update(position=1)
+        ListNote.objects.filter(list=self.list, note=second_note).update(position=0)
 
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(f"/api/notes/?list={self.list.id}")
@@ -1026,9 +1020,7 @@ class NoteApiTests(APITestCase):
             [second_note.id, self.note.id],
         )
         self.assertEqual(
-            ListNote.objects.get(
-                list=self.list, note=second_note
-            ).position,
+            ListNote.objects.get(list=self.list, note=second_note).position,
             0,
         )
         self.assertEqual(

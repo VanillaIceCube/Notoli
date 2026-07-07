@@ -190,9 +190,9 @@ class ListViewSet(viewsets.ModelViewSet):
         ):
             raise PermissionDenied("You cannot add lists to this board.")
 
-        max_position = NoteList.objects.filter(board=board).aggregate(
-            Max("position")
-        )["position__max"]
+        max_position = NoteList.objects.filter(board=board).aggregate(Max("position"))[
+            "position__max"
+        ]
         next_position = (max_position if max_position is not None else -1) + 1
 
         serializer.save(
@@ -215,9 +215,7 @@ class ListViewSet(viewsets.ModelViewSet):
             return error_response
 
         accessible_queryset = self.get_queryset()
-        _require_board_filter_access(
-            request.user, board_id, accessible_queryset
-        )
+        _require_board_filter_access(request.user, board_id, accessible_queryset)
         scoped_queryset = accessible_queryset.filter(board_id=board_id)
         current_ids = list(scoped_queryset.values_list("id", flat=True))
 
@@ -233,9 +231,9 @@ class ListViewSet(viewsets.ModelViewSet):
 
         with transaction.atomic():
             for position, list_id in enumerate(ordered_ids):
-                NoteList.objects.filter(
-                    pk=list_id, board_id=board_id
-                ).update(position=position)
+                NoteList.objects.filter(pk=list_id, board_id=board_id).update(
+                    position=position
+                )
 
         serializer = self.get_serializer(
             scoped_queryset.order_by("position", "created_at", "id"), many=True
@@ -331,9 +329,7 @@ class NoteViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You do not have access to this list.")
 
         accessible_notes = self.get_queryset()
-        memberships = ListNote.objects.filter(
-            list=note_list, note__in=accessible_notes
-        )
+        memberships = ListNote.objects.filter(list=note_list, note__in=accessible_notes)
         current_ids = list(
             memberships.order_by("position", "id").values_list("note_id", flat=True)
         )
