@@ -4,13 +4,16 @@ import PullToRefreshIndicator from './PullToRefreshIndicator';
 import { renderWithProviders } from '../test-support/utils';
 
 describe('PullToRefreshIndicator', () => {
-  test('when not pulling or refreshing, it reserves spacing without an active status', () => {
+  test('when not pulling or refreshing, it does not reserve spacing or expose an active status', () => {
     renderWithProviders(
       <PullToRefreshIndicator pullDistance={0} refreshReady={false} isRefreshing={false} />,
     );
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    expect(screen.getByTestId('pull-to-refresh-indicator')).toBeInTheDocument();
+    expect(screen.getByTestId('pull-to-refresh-indicator')).toHaveStyle({
+      height: '0px',
+      marginBottom: '0px',
+    });
     expect(screen.getByTestId('RefreshIcon')).toBeInTheDocument();
   });
 
