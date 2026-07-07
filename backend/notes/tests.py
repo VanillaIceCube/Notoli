@@ -553,7 +553,7 @@ class TodoListApiTests(APITestCase):
     def test_list_todolists_filters_by_workspace_denied_for_item_only_collaborator(
         self,
     ):
-        list_in_workspace = TodoList.objects.create(
+        TodoList.objects.create(
             name="Shared List",
             description="No item-level sharing remains",
             workspace=self.workspace,

@@ -92,11 +92,7 @@ class TodoListAdmin(admin.ModelAdmin):
     )
 
     def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .select_related("workspace", "created_by")
-        )
+        return super().get_queryset(request).select_related("workspace", "created_by")
 
 
 @admin.register(TodoListNote)
@@ -146,4 +142,3 @@ class NoteAdmin(admin.ModelAdmin):
     @admin.display(description="Todo Lists")
     def todolists_display(self, obj):
         return _summarize_items(obj.todolists.all())
-
