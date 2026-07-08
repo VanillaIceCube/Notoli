@@ -26,7 +26,7 @@ function safeGetSessionItem(key) {
   }
 }
 
-export default function MyAppBar({ appBarHeader, setDrawerOpen }) {
+export default function AppHeader({ appBarHeader, setDrawerOpen }) {
   const location = useLocation();
   const navigate = useNavigate();
 

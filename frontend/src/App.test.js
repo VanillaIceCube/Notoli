@@ -16,16 +16,16 @@ jest.mock('./components/AuthenticatedRoute', () => ({ children }) => {
   }
   return <div>{children}</div>;
 });
-jest.mock('./components/MyAppBar', () => ({ setDrawerOpen }) => (
+jest.mock('./components/AppHeader', () => ({ setDrawerOpen }) => (
   <button type="button" onClick={() => setDrawerOpen((prev) => !prev)}>
     ToggleDrawer
   </button>
 ));
-jest.mock('./components/MyDrawer', () => ({ open }) => (
+jest.mock('./components/BoardNavigationDrawer', () => ({ open }) => (
   <div data-testid="drawer">{open ? 'DrawerOpen' : 'DrawerClosed'}</div>
 ));
 jest.mock(
-  './components/MySnackbar',
+  './components/AppSnackbar',
   () =>
     ({ open, message }) =>
       open ? <div data-testid="snackbar">{message}</div> : null,
@@ -39,8 +39,8 @@ jest.mock('./pages/authentication/Register', () => () => <div>RegisterPage</div>
 jest.mock('./pages/authentication/ForgotPassword', () => () => <div>ForgotPasswordPage</div>);
 jest.mock('./pages/authentication/ResetPassword', () => () => <div>ResetPasswordPage</div>);
 jest.mock('./components/BoardHomeRedirect', () => () => <div>BoardHomeRedirect</div>);
-jest.mock('./pages/notes/Lists', () => () => <div>ListsPage</div>);
-jest.mock('./pages/notes/Notes', () => () => <div>NotesPage</div>);
+jest.mock('./pages/boards/BoardListsPage', () => () => <div>BoardListsPage</div>);
+jest.mock('./pages/lists/ListTasksPage', () => () => <div>ListTasksPage</div>);
 
 const testTheme = createTheme();
 const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true };
@@ -91,18 +91,18 @@ describe('App', () => {
     expect(document.body.textContent).toContain('BoardHomeRedirect');
   });
 
-  test('when the route is /board/:id, it renders Lists', () => {
+  test('when the route is /board/:id, it renders board lists', () => {
     sessionStorage.setItem('accessToken', 'token');
     renderApp('/board/1');
 
-    expect(document.body.textContent).toContain('ListsPage');
+    expect(document.body.textContent).toContain('BoardListsPage');
   });
 
-  test('when the route is /board/:id/list/:id, it renders Notes', () => {
+  test('when the route is /board/:id/list/:id, it renders list tasks', () => {
     sessionStorage.setItem('accessToken', 'token');
     renderApp('/board/1/list/2');
 
-    expect(document.body.textContent).toContain('NotesPage');
+    expect(document.body.textContent).toContain('ListTasksPage');
   });
 
   test('when a child triggers showSnackbar, it renders the snackbar message', async () => {

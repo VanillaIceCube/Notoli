@@ -34,7 +34,7 @@ import {
   updateBoard,
 } from '../services/notoliApiClient';
 
-export default function MyDrawer({
+export default function BoardNavigationDrawer({
   open,
   setDrawerOpen,
   drawerBoardsLabel,
