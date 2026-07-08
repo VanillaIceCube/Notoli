@@ -66,9 +66,7 @@ describe('SortableNotepadItems', () => {
       />,
     );
 
-    expect(screen.getByTestId('row-reorder-list')).toHaveStyle(
-      `gap: ${NOTEPAD_ITEM_VERTICAL_GAP}`,
-    );
+    expect(screen.getByTestId('row-reorder-list')).toHaveStyle(`gap: ${NOTEPAD_ITEM_VERTICAL_GAP}`);
     expect(screen.getByTestId('row-sortable-row-1')).toBeInTheDocument();
     expect(screen.getByTestId('drag-1').style.touchAction).toBe('none');
     expect(NOTEPAD_ITEM_ROW_MIN_HEIGHT).toBe(42);
