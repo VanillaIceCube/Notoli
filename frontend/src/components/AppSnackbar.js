@@ -1,6 +1,6 @@
 import { Snackbar, Alert } from '@mui/material';
 
-export default function MySnackbar({ open, severity, message, onClose }) {
+export default function AppSnackbar({ open, severity, message, onClose }) {
   return (
     <Snackbar
       open={open}

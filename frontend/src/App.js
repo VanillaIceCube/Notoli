@@ -6,11 +6,11 @@ import Login from './pages/authentication/Login';
 import Register from './pages/authentication/Register';
 import ForgotPassword from './pages/authentication/ForgotPassword';
 import ResetPassword from './pages/authentication/ResetPassword';
-import Lists from './pages/notes/Lists';
-import Notes from './pages/notes/Notes';
-import MyAppBar from './components/MyAppBar';
-import MySnackbar from './components/MySnackbar';
-import MyDrawer from './components/MyDrawer';
+import BoardListsPage from './pages/boards/BoardListsPage';
+import ListTasksPage from './pages/lists/ListTasksPage';
+import AppHeader from './components/AppHeader';
+import AppSnackbar from './components/AppSnackbar';
+import BoardNavigationDrawer from './components/BoardNavigationDrawer';
 import NavigationBridge from './components/NavigationBridge';
 import BoardHomeRedirect from './components/BoardHomeRedirect';
 
@@ -44,8 +44,8 @@ function App() {
     <React.Fragment>
       <Router basename={routerBasename}>
         <NavigationBridge />
-        <MyAppBar appBarHeader={appBarHeader} setDrawerOpen={setDrawerOpen} />
-        <MyDrawer
+        <AppHeader appBarHeader={appBarHeader} setDrawerOpen={setDrawerOpen} />
+        <BoardNavigationDrawer
           open={drawerOpen}
           setDrawerOpen={setDrawerOpen}
           drawerBoardsLabel={drawerBoardsLabel}
@@ -72,7 +72,7 @@ function App() {
               path="/board/:boardId"
               element={
                 <AuthenticatedRoute>
-                  <Lists setAppBarHeader={setAppBarHeader} />
+                  <BoardListsPage setAppBarHeader={setAppBarHeader} />
                 </AuthenticatedRoute>
               }
             />
@@ -81,14 +81,14 @@ function App() {
               path="/board/:boardId/list/:listId"
               element={
                 <AuthenticatedRoute>
-                  <Notes setAppBarHeader={setAppBarHeader} />
+                  <ListTasksPage setAppBarHeader={setAppBarHeader} />
                 </AuthenticatedRoute>
               }
             />
           </React.Fragment>
         </Routes>
       </Router>
-      <MySnackbar
+      <AppSnackbar
         open={snackbarOpen}
         severity={snackbarSeverity}
         message={snackbarMessage}

@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import Lists from './Lists';
+import BoardListsPage from './BoardListsPage';
 import { listFixtures, boardFixtures } from '../../test-support/fixtures';
 import { collectRowStartPixels } from '../../test-support/layout';
 import {
@@ -37,7 +37,7 @@ jest.mock('../../services/notoliApiClient', () => ({
 
 async function renderLists() {
   const setAppBarHeader = jest.fn();
-  const view = renderWithProviders(<Lists setAppBarHeader={setAppBarHeader} />);
+  const view = renderWithProviders(<BoardListsPage setAppBarHeader={setAppBarHeader} />);
 
   await waitFor(() => {
     expect(fetchListsApi).toHaveBeenCalledWith('1', 'token');
@@ -53,7 +53,7 @@ function setMobilePullViewport() {
   Object.defineProperty(window.navigator, 'maxTouchPoints', { value: 1, configurable: true });
 }
 
-describe('Lists', () => {
+describe('BoardListsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.setItem('accessToken', 'token');
@@ -72,7 +72,7 @@ describe('Lists', () => {
     const deferred = createDeferred();
     fetchListsApi.mockReturnValueOnce(deferred.promise);
 
-    renderWithProviders(<Lists setAppBarHeader={jest.fn()} />);
+    renderWithProviders(<BoardListsPage setAppBarHeader={jest.fn()} />);
 
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /lists/i })).not.toBeInTheDocument();
@@ -106,7 +106,7 @@ describe('Lists', () => {
   test('when the boardId is missing, it does not fetch the lists', async () => {
     mockUseParams.mockReturnValue({ boardId: undefined });
 
-    renderWithProviders(<Lists setAppBarHeader={jest.fn()} />);
+    renderWithProviders(<BoardListsPage setAppBarHeader={jest.fn()} />);
 
     await waitFor(() => {
       expect(fetchListsApi).not.toHaveBeenCalled();
@@ -339,7 +339,7 @@ describe('Lists', () => {
   });
 
   test('when the boardId changes, it refetches the lists', async () => {
-    const { rerender } = renderWithProviders(<Lists setAppBarHeader={jest.fn()} />);
+    const { rerender } = renderWithProviders(<BoardListsPage setAppBarHeader={jest.fn()} />);
 
     await waitFor(() => {
       expect(fetchListsApi).toHaveBeenCalledWith('1', 'token');
@@ -348,7 +348,7 @@ describe('Lists', () => {
     mockUseParams.mockReturnValue({ boardId: '2' });
     fetchListsApi.mockResolvedValueOnce({ ok: true, json: async () => [] });
 
-    rerender(<Lists setAppBarHeader={jest.fn()} />);
+    rerender(<BoardListsPage setAppBarHeader={jest.fn()} />);
 
     await waitFor(() => {
       expect(fetchListsApi).toHaveBeenCalledWith('2', 'token');

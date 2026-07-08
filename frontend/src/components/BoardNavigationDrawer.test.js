@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import MyDrawer from './MyDrawer';
+import BoardNavigationDrawer from './BoardNavigationDrawer';
 import { boardFixtures } from '../test-support/fixtures';
 import { renderWithProviders } from '../test-support/utils';
 import { getBoardId } from '../utils/Navigation';
@@ -50,7 +50,7 @@ async function renderDrawer({
   const labelSetter = setDrawerBoardsLabel || jest.fn();
 
   const view = renderWithProviders(
-    <MyDrawer
+    <BoardNavigationDrawer
       open={open}
       setDrawerOpen={setDrawerOpen}
       drawerBoardsLabel={drawerBoardsLabel}
@@ -70,7 +70,7 @@ async function openBoardList() {
   await userEvent.click(screen.getByRole('button', { name: /board/i }));
 }
 
-describe('MyDrawer', () => {
+describe('BoardNavigationDrawer', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.setItem('accessToken', 'token');

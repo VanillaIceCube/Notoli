@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import MyAppBar from './MyAppBar';
+import AppHeader from './AppHeader';
 import { renderWithProviders } from '../test-support/utils';
 import { goBackToParent } from '../utils/Navigation';
 import { setNavigate } from '../services/navigationService';
@@ -19,7 +19,7 @@ jest.mock('../utils/Navigation', () => ({
   goBackToParent: jest.fn(),
 }));
 
-describe('MyAppBar', () => {
+describe('AppHeader', () => {
   const setDrawerOpen = jest.fn();
 
   beforeEach(() => {
@@ -32,7 +32,7 @@ describe('MyAppBar', () => {
   test('when the route is /login, it does not render the app bar', () => {
     mockUseLocation.mockReturnValue({ pathname: '/login' });
 
-    renderWithProviders(<MyAppBar appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<AppHeader appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
 
     expect(screen.queryByText('Header')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
@@ -41,7 +41,7 @@ describe('MyAppBar', () => {
   test('when the route is /register, it does not render the app bar', () => {
     mockUseLocation.mockReturnValue({ pathname: '/register' });
 
-    renderWithProviders(<MyAppBar appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<AppHeader appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
 
     expect(screen.queryByText('Header')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
@@ -50,7 +50,7 @@ describe('MyAppBar', () => {
   test('when the route is /forgot-password, it does not render the app bar', () => {
     mockUseLocation.mockReturnValue({ pathname: '/forgot-password' });
 
-    renderWithProviders(<MyAppBar appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<AppHeader appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
 
     expect(screen.queryByText('Header')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
@@ -59,7 +59,7 @@ describe('MyAppBar', () => {
   test('when the route is /reset-password, it does not render the app bar', () => {
     mockUseLocation.mockReturnValue({ pathname: '/reset-password' });
 
-    renderWithProviders(<MyAppBar appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<AppHeader appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
 
     expect(screen.queryByText('Header')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
@@ -68,7 +68,7 @@ describe('MyAppBar', () => {
   test('when the path includes /list, it shows the back button', () => {
     mockUseLocation.mockReturnValue({ pathname: '/boards/1/list/2' });
 
-    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     expect(screen.getByLabelText('back button')).toBeInTheDocument();
   });
@@ -76,7 +76,7 @@ describe('MyAppBar', () => {
   test('when the path does not include /list, it does not show the back button', () => {
     mockUseLocation.mockReturnValue({ pathname: '/boards/1' });
 
-    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     expect(screen.queryByLabelText('back button')).not.toBeInTheDocument();
   });
@@ -84,7 +84,7 @@ describe('MyAppBar', () => {
   test('when the back button is clicked, it calls goBackToParent', async () => {
     mockUseLocation.mockReturnValue({ pathname: '/boards/1/list/2' });
 
-    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     await userEvent.click(screen.getByLabelText('back button'));
 
@@ -92,7 +92,7 @@ describe('MyAppBar', () => {
   });
 
   test('when the menu icon is clicked, it toggles setDrawerOpen', async () => {
-    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     await userEvent.click(screen.getByLabelText('menu'));
 
@@ -105,7 +105,7 @@ describe('MyAppBar', () => {
     sessionStorage.setItem('username', 'judea');
     sessionStorage.setItem('email', 'judea@example.com');
 
-    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     await userEvent.click(screen.getByLabelText('user profile'));
 
@@ -116,7 +116,7 @@ describe('MyAppBar', () => {
   });
 
   test('when no profile info exists, it falls back to username + username@gmail.com', async () => {
-    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     await userEvent.click(screen.getByLabelText('user profile'));
 
@@ -129,7 +129,7 @@ describe('MyAppBar', () => {
       throw new Error('blocked');
     });
 
-    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     await userEvent.click(screen.getByLabelText('user profile'));
 
@@ -146,7 +146,7 @@ describe('MyAppBar', () => {
     sessionStorage.setItem('email', 'judea@example.com');
     window.history.replaceState({}, '', '/');
 
-    renderWithProviders(<MyAppBar appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
     await userEvent.click(screen.getByLabelText('user profile'));
     await userEvent.click(screen.getByRole('menuitem', { name: /logout/i }));
