@@ -372,6 +372,23 @@ describe('BoardListsPage', () => {
     });
   });
 
+  test('when a mobile user pulls down from a list row, it refreshes the lists', async () => {
+    setMobilePullViewport();
+    await renderLists();
+
+    const rowButton = screen.getByTestId('list-row-button-10');
+    fireEvent.touchStart(rowButton, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(rowButton, { touches: [{ clientX: 122, clientY: 112 }] });
+
+    expect(await screen.findByRole('status', { name: /release to refresh/i })).toBeInTheDocument();
+
+    fireEvent.touchEnd(rowButton, { changedTouches: [{ clientX: 122, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchListsApi).toHaveBeenCalledTimes(2);
+    });
+  });
+
   test('when a mobile user pulls down from page whitespace, it refreshes the lists', async () => {
     setMobilePullViewport();
     await renderLists();

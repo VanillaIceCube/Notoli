@@ -11,6 +11,10 @@ function isMobileTouchViewport() {
 }
 
 function isInteractiveTarget(target) {
+  if (target?.closest?.('[data-pull-refresh-start="true"]')) {
+    return false;
+  }
+
   return Boolean(
     target?.closest?.(
       [

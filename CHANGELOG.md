@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-08
+### Fixed
+- Allowed BoardList row-started mobile pull-to-refresh gestures to refresh consistently.
+
 ## 2026-07-07
 ### Added
 - Remembered the last accessible board per logged-in browser user and reopened it by default.

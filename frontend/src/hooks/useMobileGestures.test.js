@@ -42,6 +42,9 @@ function PullHarness({ enabled = true, onRefresh = jest.fn() }) {
       <span data-testid="ready">{refreshReady ? 'ready' : 'idle'}</span>
       <span data-testid="refreshing">{isRefreshing ? 'refreshing' : 'idle'}</span>
       <input aria-label="name" />
+      <button type="button" data-pull-refresh-start="true">
+        Open item
+      </button>
     </div>
   );
 }
@@ -106,5 +109,22 @@ describe('usePullToRefresh', () => {
     });
 
     expect(onRefresh).not.toHaveBeenCalled();
+  });
+
+  test('allows gestures from controls that opt into pull refresh starts', async () => {
+    const onRefresh = jest.fn();
+    render(<PullHarness onRefresh={onRefresh} />);
+    const refreshStartButton = screen.getByRole('button', { name: /open item/i });
+
+    await act(async () => {
+      refreshStartButton.dispatchEvent(
+        touchEvent('touchstart', { target: refreshStartButton, y: 0 }),
+      );
+      window.dispatchEvent(touchEvent('touchmove', { y: 90 }));
+      window.dispatchEvent(touchEvent('touchend'));
+      await Promise.resolve();
+    });
+
+    expect(onRefresh).toHaveBeenCalledTimes(1);
   });
 });

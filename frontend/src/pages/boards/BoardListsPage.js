@@ -256,6 +256,8 @@ export default function BoardListsPage({ setAppBarHeader }) {
       <Box data-testid={`list-row-${list.id}`} sx={rowSx}>
         <Button
           variant="text"
+          data-pull-refresh-start="true"
+          data-testid={`list-row-button-${list.id}`}
           sx={{
             flexGrow: 1,
             justifyContent: 'flex-start',
