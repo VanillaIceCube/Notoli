@@ -85,16 +85,18 @@ class BoardViewSet(viewsets.ModelViewSet):
         serializer.save(owner=self.request.user, created_by=self.request.user)
 
     def perform_update(self, serializer):
-        self._require_owner(serializer.instance)
+        self._require_owner(
+            serializer.instance, "Only the board owner can update this board."
+        )
         serializer.save()
 
     def perform_destroy(self, instance):
-        self._require_owner(instance)
+        self._require_owner(instance, "Only the board owner can delete this board.")
         instance.delete()
 
-    def _require_owner(self, board):
+    def _require_owner(self, board, message="Only the board owner can manage access."):
         if board.owner_id != self.request.user.id:
-            raise PermissionDenied("Only the board owner can manage access.")
+            raise PermissionDenied(message)
 
     def _find_collaborator(self, identifier):
         identifier = identifier.strip() if isinstance(identifier, str) else ""

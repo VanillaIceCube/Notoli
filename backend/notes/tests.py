@@ -286,6 +286,9 @@ class BoardApiTests(APITestCase):
             status.HTTP_403_FORBIDDEN,
             f"Expected 403 when collaborator updates board, got {response.status_code}: {response.data}",
         )
+        self.assertEqual(
+            response.data.get("detail"), "Only the board owner can update this board."
+        )
         self.board.refresh_from_db()
         self.assertEqual(self.board.name, "Owner Board")
 
@@ -308,6 +311,9 @@ class BoardApiTests(APITestCase):
             response.status_code,
             status.HTTP_403_FORBIDDEN,
             f"Expected 403 when collaborator deletes board, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("detail"), "Only the board owner can delete this board."
         )
         self.assertTrue(Board.objects.filter(pk=self.board.pk).exists())
 
