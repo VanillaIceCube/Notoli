@@ -367,7 +367,7 @@ describe('BoardNavigationDrawer', () => {
     expect(screen.getByText('Owner')).toBeInTheDocument();
   });
 
-  test('when a non-owner opens Share from the drawer, add and remove controls are hidden', async () => {
+  test('when a non-owner opens Share from the drawer, the access list is read-only', async () => {
     sessionStorage.setItem('username', 'collab');
     sessionStorage.setItem('email', 'collab@example.com');
 
@@ -378,9 +378,10 @@ describe('BoardNavigationDrawer', () => {
     await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
     await userEvent.click(screen.getByRole('menuitem', { name: /share/i }));
 
-    expect(screen.queryByText(/only owners can manage sharing/i)).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/username or email address/i)).toBeDisabled();
-    expect(screen.getByRole('button', { name: /^add$/i })).toBeDisabled();
+    expect(screen.getByText('Sharing is read-only for collaborators.')).toBeInTheDocument();
+    expect(screen.queryByText('Invite a collaborator')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/username or email address/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^add$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /remove collab/i })).not.toBeInTheDocument();
   });
 });
