@@ -372,6 +372,46 @@ describe('BoardListsPage', () => {
     });
   });
 
+  test('when a mobile refresh is pending, it keeps existing lists visible', async () => {
+    setMobilePullViewport();
+    await renderLists();
+
+    const deferred = createDeferred();
+    fetchListsApi.mockReturnValueOnce(deferred.promise);
+
+    const list = screen.getByTestId('list-list');
+    fireEvent.touchStart(list, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(list, { touches: [{ clientX: 124, clientY: 112 }] });
+    fireEvent.touchEnd(list, { changedTouches: [{ clientX: 124, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchListsApi).toHaveBeenCalledTimes(2);
+    });
+    expect(screen.getByText('test_list_01')).toBeInTheDocument();
+    expect(screen.getByText('test_list_02')).toBeInTheDocument();
+    expect(screen.queryByText(/^loading/i)).not.toBeInTheDocument();
+
+    deferred.resolve({ ok: true, json: async () => [{ id: 12, name: 'test_list_03' }] });
+
+    expect(await screen.findByText('test_list_03')).toBeInTheDocument();
+  });
+
+  test('when a mobile refresh fails, it keeps existing lists visible with the error', async () => {
+    setMobilePullViewport();
+    await renderLists();
+
+    fetchListsApi.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+
+    const list = screen.getByTestId('list-list');
+    fireEvent.touchStart(list, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(list, { touches: [{ clientX: 124, clientY: 112 }] });
+    fireEvent.touchEnd(list, { changedTouches: [{ clientX: 124, clientY: 112 }] });
+
+    expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
+    expect(screen.getByText('test_list_01')).toBeInTheDocument();
+    expect(screen.getByText('test_list_02')).toBeInTheDocument();
+  });
+
   test('when a mobile user pulls down from a list row, it refreshes the lists', async () => {
     setMobilePullViewport();
     await renderLists();

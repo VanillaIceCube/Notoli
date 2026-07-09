@@ -297,7 +297,7 @@ export default function BoardNavigationDrawer({
                 />
 
                 {/* Loading */}
-                {loading && (
+                {loading && boards.length === 0 && (
                   <Typography align="left" sx={{ pl: 3, py: 1, pt: 2 }}>
                     Loading...
                   </Typography>
@@ -311,8 +311,7 @@ export default function BoardNavigationDrawer({
                 )}
 
                 {/* Data */}
-                {!error &&
-                  !loading &&
+                {(!error || boards.length > 0) &&
                   boards.map((board, i) => (
                     <React.Fragment key={board.id}>
                       {i !== 0 && (

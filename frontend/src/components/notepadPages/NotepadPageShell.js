@@ -7,12 +7,16 @@ export default function NotepadPageShell({
   title,
   loading,
   error,
+  hasContent = false,
   pullDistance,
   refreshReady,
   isRefreshing,
   pullContentOffset,
   children,
 }) {
+  const showLoading = loading && !hasContent;
+  const showContent = hasContent || (!loading && !error);
+
   return (
     <Container
       maxWidth="sm"
@@ -54,7 +58,7 @@ export default function NotepadPageShell({
             <Box sx={{ width: 40 }} />
           </Box>
 
-          {loading && <Typography align="center"> Loading... </Typography>}
+          {showLoading && <Typography align="center"> Loading... </Typography>}
 
           {error && (
             <Typography color="error" align="center">
@@ -65,7 +69,7 @@ export default function NotepadPageShell({
           <Divider
             sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }}
           />
-          {!loading && !error && <Stack spacing={1}>{children}</Stack>}
+          {showContent && <Stack spacing={1}>{children}</Stack>}
         </Box>
       </Paper>
     </Container>
