@@ -339,6 +339,7 @@ export default function ListTasksPage({ setAppBarHeader }) {
         title={isReordering ? 'Reorder Notes' : listName}
         loading={loading}
         error={error}
+        hasContent={tasks.length > 0}
         pullDistance={pullDistance}
         refreshReady={refreshReady}
         isRefreshing={isRefreshing}

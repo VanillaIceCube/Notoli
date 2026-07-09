@@ -422,6 +422,49 @@ describe('ListTasksPage', () => {
     });
   });
 
+  test('when a mobile refresh is pending, it keeps existing notes visible', async () => {
+    setMobilePullViewport();
+    await renderNotes();
+
+    const deferred = createDeferred();
+    fetchNotesApi.mockReturnValueOnce(deferred.promise);
+
+    const list = screen.getByTestId('note-list');
+    fireEvent.touchStart(list, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(list, { touches: [{ clientX: 122, clientY: 112 }] });
+    fireEvent.touchEnd(list, { changedTouches: [{ clientX: 122, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchNotesApi).toHaveBeenCalledTimes(2);
+    });
+    expect(screen.getByText('test_note_01')).toBeInTheDocument();
+    expect(screen.getByText('test_note_02')).toBeInTheDocument();
+    expect(screen.queryByText(/^loading/i)).not.toBeInTheDocument();
+
+    deferred.resolve({
+      ok: true,
+      json: async () => [{ id: 103, note: 'test_note_03', status: 'Not Started' }],
+    });
+
+    expect(await screen.findByText('test_note_03')).toBeInTheDocument();
+  });
+
+  test('when a mobile refresh fails, it keeps existing notes visible with the error', async () => {
+    setMobilePullViewport();
+    await renderNotes();
+
+    fetchNotesApi.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+
+    const list = screen.getByTestId('note-list');
+    fireEvent.touchStart(list, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(list, { touches: [{ clientX: 122, clientY: 112 }] });
+    fireEvent.touchEnd(list, { changedTouches: [{ clientX: 122, clientY: 112 }] });
+
+    expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
+    expect(screen.getByText('test_note_01')).toBeInTheDocument();
+    expect(screen.getByText('test_note_02')).toBeInTheDocument();
+  });
+
   test('when a mobile user pulls down from page whitespace, it refreshes the notes', async () => {
     setMobilePullViewport();
     await renderNotes();

@@ -1,9 +1,10 @@
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 
 import BoardNavigationDrawer from './BoardNavigationDrawer';
 import { boardFixtures } from '../test-support/fixtures';
-import { renderWithProviders } from '../test-support/utils';
+import { createDeferred, renderWithProviders } from '../test-support/utils';
 import { getBoardId } from '../utils/Navigation';
 import {
   addBoardCollaborator,
@@ -111,6 +112,58 @@ describe('BoardNavigationDrawer', () => {
     await openBoardList();
 
     expect(await screen.findByText('Error: HTTP 500')).toBeInTheDocument();
+  });
+
+  test('when refreshing boards fails, it keeps the existing board list visible', async () => {
+    const setDrawerOpen = jest.fn();
+    const setDrawerBoardsLabel = jest.fn();
+    const showSnackbar = jest.fn();
+    let refreshDrawer;
+
+    function RefreshableDrawer() {
+      const [, setRefreshCount] = useState(0);
+      refreshDrawer = () => setRefreshCount((count) => count + 1);
+
+      return (
+        <BoardNavigationDrawer
+          open
+          setDrawerOpen={setDrawerOpen}
+          drawerBoardsLabel=""
+          setDrawerBoardsLabel={setDrawerBoardsLabel}
+          showSnackbar={showSnackbar}
+        />
+      );
+    }
+
+    renderWithProviders(<RefreshableDrawer />);
+
+    await waitFor(() => {
+      expect(fetchBoardsApi).toHaveBeenCalledWith('token');
+    });
+
+    await openBoardList();
+
+    expect(await screen.findByText('test_board_01')).toBeInTheDocument();
+
+    const deferred = createDeferred();
+    fetchBoardsApi.mockReturnValueOnce(deferred.promise);
+    sessionStorage.setItem('accessToken', 'token-2');
+
+    act(() => {
+      refreshDrawer();
+    });
+
+    await waitFor(() => {
+      expect(fetchBoardsApi).toHaveBeenCalledWith('token-2');
+    });
+    expect(screen.getByText('test_board_01')).toBeInTheDocument();
+    expect(screen.getByText('test_board_02')).toBeInTheDocument();
+
+    deferred.resolve({ ok: false, status: 500, json: async () => [] });
+
+    expect(await screen.findByText('Error: HTTP 500')).toBeInTheDocument();
+    expect(screen.getByText('test_board_01')).toBeInTheDocument();
+    expect(screen.getByText('test_board_02')).toBeInTheDocument();
   });
 
   test('when the Board header is clicked, it expands the list', async () => {

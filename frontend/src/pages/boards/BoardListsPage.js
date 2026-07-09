@@ -288,6 +288,7 @@ export default function BoardListsPage({ setAppBarHeader }) {
         title={isReordering ? 'Reorder Lists' : boardName}
         loading={loading}
         error={error}
+        hasContent={lists.length > 0}
         pullDistance={pullDistance}
         refreshReady={refreshReady}
         isRefreshing={isRefreshing}
