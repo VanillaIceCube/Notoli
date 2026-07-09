@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ### Added
 - Added a CodeQL analysis workflow for backend Python, frontend JavaScript/TypeScript, and GitHub Actions workflow scanning.
 ### Fixed
+- Returned explicit 403 details when shared board collaborators try to update or delete board metadata.
 - Made shared board collaborator access read-only in the sharing dialog without presenting invite or remove controls.
 - Added regression coverage for collaborator attempts to remove board collaborators.
 ### Changed

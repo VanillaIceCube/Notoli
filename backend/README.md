@@ -39,6 +39,7 @@ All `/api/*` endpoints require:
 Access scoping:
 - Board membership is the source of truth for access. `Board.owner` and `Board.collaborators` control access to child lists and notes.
 - Lists and notes keep `created_by` metadata, but do not have separate owner or collaborator fields.
+- Board owners can update board metadata and delete boards; collaborators receive a 403 response for board `PATCH`/`DELETE` attempts while retaining read access to shared boards.
 - Board owners can manage board collaborators with `POST /api/boards/<id>/collaborators/` using `{ "identifier": "<username-or-email>" }` and `DELETE /api/boards/<id>/collaborators/<user_id>/`.
 - Board responses include `owner_details` and `collaborators_details` summaries for sharing/access UI.
 - Lists are returned in their saved board order. Persist a new board order with `PATCH /api/lists/reorder/` and `{ "board": <id>, "ordered_ids": [<list-id>, ...] }`.
