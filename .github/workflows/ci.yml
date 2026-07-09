@@ -25,10 +25,19 @@ jobs:
   tests:
     name: Tests
     uses: ./.github/workflows/tests.yml
-  
+
+  codeql:
+    name: CodeQL
+    uses: ./.github/workflows/codeql.yml
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+      security-events: write
+
   commentary:
     name: Commentary
-    needs: [lints, tests]
+    needs: [lints, tests, codeql]
     if: >-
       always() &&
       github.event.pull_request.user.login != 'dependabot[bot]'
@@ -46,8 +55,9 @@ jobs:
 
   auto-merge:
     name: Auto Merge
-    needs: [lints, tests]
+    needs: [lints, tests, codeql]
     if: >-
+      always() &&
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       needs.lints.result == 'success' &&
       needs.tests.result == 'success'

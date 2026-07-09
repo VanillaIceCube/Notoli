@@ -1,0 +1,149 @@
+name: CodeQL
+
+on:
+  workflow_call:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - ".github/actions/**"
+      - ".github/workflows/**"
+      - ".github/codeql/**"
+  schedule:
+    - cron: "24 10 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+  security-events: write
+
+jobs:
+  changes:
+    name: Detect CodeQL Scope
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      python: ${{ steps.scope.outputs.python }}
+      javascript: ${{ steps.scope.outputs.javascript }}
+      actions: ${{ steps.scope.outputs.actions }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Detect relevant changes
+        id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            python:
+              - 'backend/**'
+              - '.github/actions/**'
+              - '.github/workflows/**'
+              - '.github/codeql/**'
+            javascript:
+              - 'frontend/**'
+              - '.github/actions/**'
+              - '.github/workflows/**'
+              - '.github/codeql/**'
+            actions:
+              - '.github/actions/**'
+              - '.github/workflows/**'
+              - '.github/codeql/**'
+
+      - name: Set analysis scope
+        id: scope
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "python=${{ steps.filter.outputs.python }}" >> "$GITHUB_OUTPUT"
+            echo "javascript=${{ steps.filter.outputs.javascript }}" >> "$GITHUB_OUTPUT"
+            echo "actions=${{ steps.filter.outputs.actions }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "python=true" >> "$GITHUB_OUTPUT"
+            echo "javascript=true" >> "$GITHUB_OUTPUT"
+            echo "actions=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  analyze-python:
+    name: Analyze Python
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: python
+          queries: security-extended,security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:python"
+
+  analyze-javascript:
+    name: Analyze JavaScript/TypeScript
+    needs: changes
+    if: needs.changes.outputs.javascript == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          queries: security-extended,security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:javascript-typescript"
+
+  analyze-actions:
+    name: Analyze GitHub Actions
+    needs: changes
+    if: needs.changes.outputs.actions == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: actions
+          queries: security-extended,security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:actions"

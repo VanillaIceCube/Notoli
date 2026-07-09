@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-09
+### Added
+- Added a CodeQL analysis workflow for backend Python, frontend JavaScript/TypeScript, and GitHub Actions workflow scanning.
+
 ## 2026-07-08
 ### Fixed
 - Allowed BoardList row-started mobile pull-to-refresh gestures to refresh consistently.
@@ -663,4 +667,3 @@ All notable changes to this project are documented in this file.
 ## 2025-04-20
 ### Added
 - Initial repository with base README and LICENSE.
-
