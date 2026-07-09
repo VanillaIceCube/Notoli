@@ -50,6 +50,8 @@ export default function BoardNavigationDrawer({
   const boardId = getBoardId(location.pathname);
 
   const token = sessionStorage.getItem('accessToken');
+  const currentUsername = sessionStorage.getItem('username');
+  const currentEmail = sessionStorage.getItem('email');
 
   const fetchBoardName = useCallback(async () => {
     if (!boardId) return '';
@@ -131,6 +133,11 @@ export default function BoardNavigationDrawer({
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
   const [selectedBoard, setSelectedBoard] = useState(null);
   const tripleDotOpen = Boolean(tripleDotAnchorElement);
+  const selectedBoardOwner = selectedBoard?.owner_details;
+  const selectedBoardIsOwner =
+    selectedBoardOwner &&
+    ((currentUsername && selectedBoardOwner.username === currentUsername) ||
+      (currentEmail && selectedBoardOwner.email === currentEmail));
 
   const handleTripleDotClick = (event, boards) => {
     event.stopPropagation();
@@ -484,28 +491,32 @@ export default function BoardNavigationDrawer({
           <Share sx={{ mr: 1, fontSize: 18 }} />
           Share
         </MenuItem>
-        <Divider
-          variant="middle"
-          sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
-        />
-        <MenuItem
-          sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
-          onClick={startEditing}
-        >
-          <Edit sx={{ mr: 1, fontSize: 18 }} />
-          Rename
-        </MenuItem>
-        <Divider
-          variant="middle"
-          sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
-        />
-        <MenuItem
-          sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
-          onClick={() => onDelete(selectedBoard.id)}
-        >
-          <Delete sx={{ mr: 1, fontSize: 18 }} />
-          Remove
-        </MenuItem>
+        {selectedBoardIsOwner && (
+          <React.Fragment>
+            <Divider
+              variant="middle"
+              sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+            />
+            <MenuItem
+              sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+              onClick={startEditing}
+            >
+              <Edit sx={{ mr: 1, fontSize: 18 }} />
+              Rename
+            </MenuItem>
+            <Divider
+              variant="middle"
+              sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+            />
+            <MenuItem
+              sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+              onClick={() => onDelete(selectedBoard.id)}
+            >
+              <Delete sx={{ mr: 1, fontSize: 18 }} />
+              Remove
+            </MenuItem>
+          </React.Fragment>
+        )}
       </Menu>
       <BoardShareDialog
         open={Boolean(sharingBoard)}

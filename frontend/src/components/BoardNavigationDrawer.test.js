@@ -146,6 +146,33 @@ describe('BoardNavigationDrawer', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/board/1');
   });
 
+  test('when the owner opens a board menu, Share, Rename, and Remove are visible', async () => {
+    await renderDrawer();
+
+    await openBoardList();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+
+    expect(screen.getByRole('menuitem', { name: /share/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /rename/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /remove/i })).toBeInTheDocument();
+  });
+
+  test('when a collaborator opens a shared board menu, only Share is visible', async () => {
+    sessionStorage.setItem('username', 'collab');
+    sessionStorage.setItem('email', 'collab@example.com');
+
+    await renderDrawer();
+
+    await openBoardList();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+
+    expect(screen.getByRole('menuitem', { name: /share/i })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /rename/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /remove/i })).not.toBeInTheDocument();
+  });
+
   test('when Add New is clicked, it shows the new board input', async () => {
     await renderDrawer();
 
