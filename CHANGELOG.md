@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 ## 2026-07-09
 ### Added
 - Added a CodeQL analysis workflow for backend Python, frontend JavaScript/TypeScript, and GitHub Actions workflow scanning.
+=======
+### Fixed
+- Made shared board collaborator access read-only in the sharing dialog without presenting invite or remove controls.
+- Added regression coverage for collaborator attempts to remove board collaborators.
 
 ## 2026-07-08
 ### Fixed
