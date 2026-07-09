@@ -37,6 +37,10 @@ Board management lives in the right sidebar. Open the Board list, use a board ro
 
 Notes in a list render as checklist rows. Checking a note updates its `status` to `Complete` through the notes API, immediately reflects the change in the UI, and shows complete note text with a strikethrough. Unchecked notes use `Not Started`, and the API also supports `In Progress`.
 
+## In-App Notifications
+
+The app bar notification icon opens a popover with the newest notifications first. Unread notifications show a badge count and can be marked read individually or all at once. Notification API failures are shown inside the popover and do not block the rest of the page.
+
 ## Drag-and-Drop Reordering
 
 List and note pages include a top-right page action menu for entering reorder mode. Reorder mode hides row action menus, shows right-side drag handles, hides Add New, and exits through Done. Dragging only starts from the handle and persists the final order through the reorder API after drop.
@@ -50,6 +54,7 @@ API calls go through `src/services/notoliApiClient.js` (endpoints) via `src/serv
 - In production, leave `REACT_APP_API_BASE_URL` blank/unset so calls use relative paths like `/api/...` on `https://notoli.judeandrewalaba.com`.
 - If an absolute URL is required, set `REACT_APP_API_BASE_URL=https://notoli.judeandrewalaba.com`.
 - Reorder calls use `PATCH /api/lists/reorder/` for board-scoped list order and `PATCH /api/notes/reorder/` for list-scoped note order.
+- Notification calls use `GET /api/notifications/`, `PATCH /api/notifications/<id>/`, and `PATCH /api/notifications/mark-all-read/`.
 
 Note: in the Docker image, `REACT_APP_API_BASE_URL` is a build-time value (it's baked into the static build).
 

@@ -163,3 +163,21 @@ export const reorderNotes = (listId, orderedIds, token) =>
     headers: jsonHeaders(token),
     body: JSON.stringify({ list: listId, ordered_ids: orderedIds }),
   });
+
+export const fetchNotifications = (token) =>
+  apiFetch('/api/notifications/', {
+    headers: authHeader(token),
+  });
+
+export const markNotificationRead = (notificationId, token) =>
+  apiFetch(`/api/notifications/${notificationId}/`, {
+    method: 'PATCH',
+    headers: jsonHeaders(token),
+    body: JSON.stringify({ is_read: true }),
+  });
+
+export const markAllNotificationsRead = (token) =>
+  apiFetch('/api/notifications/mark-all-read/', {
+    method: 'PATCH',
+    headers: jsonHeaders(token),
+  });

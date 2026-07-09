@@ -133,6 +133,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
   - Backend:
     - `https://notoli.judeandrewalaba.com/api`
       - Board sharing uses `POST /api/boards/<id>/collaborators/` and `DELETE /api/boards/<id>/collaborators/<user_id>/`.
+      - Notifications use `GET /api/notifications/`, `PATCH /api/notifications/<id>/`, and `PATCH /api/notifications/mark-all-read/`.
     - `https://notoli.judeandrewalaba.com/auth`
     - `https://notoli.judeandrewalaba.com/admin`
   - Frontend public auth routes:

@@ -1,7 +1,13 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AppBar,
+  Badge,
   Box,
+  Button,
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemButton,
   Toolbar,
   Typography,
   IconButton,
@@ -9,14 +15,21 @@ import {
   MenuItem,
   Divider,
   ListItemText,
+  Popover,
+  Stack,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import AccountCircle from '@mui/icons-material/AccountCircle';
-import Notifications from '@mui/icons-material/Notifications';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { goBackToParent } from '../utils/Navigation';
 import { logout } from '../services/requestClient';
+import {
+  fetchNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from '../services/notoliApiClient';
 
 function safeGetSessionItem(key) {
   try {
@@ -33,12 +46,80 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
   // Profile menu
   const [profileAnchorEl, setProfileAnchorEl] = useState(null);
   const profileMenuOpen = Boolean(profileAnchorEl);
+  const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationError, setNotificationError] = useState('');
+  const notificationsOpen = Boolean(notificationAnchorEl);
 
   const profileUsername = safeGetSessionItem('username');
   const profileEmail = safeGetSessionItem('email');
+  const accessToken = safeGetSessionItem('accessToken');
   const profilePrimary = profileUsername || profileEmail.split?.('@')?.[0] || 'username';
   const profileSecondary =
     profileEmail || (profilePrimary === 'username' ? 'username@gmail.com' : null);
+  const unreadCount = useMemo(
+    () => notifications.filter((notification) => !notification.is_read).length,
+    [notifications],
+  );
+
+  const loadNotifications = useCallback(async () => {
+    if (!accessToken) {
+      setNotifications([]);
+      return;
+    }
+
+    setNotificationsLoading(true);
+    setNotificationError('');
+    try {
+      const response = await fetchNotifications(accessToken);
+      if (!response.ok) {
+        throw new Error('Unable to load notifications.');
+      }
+      setNotifications(await response.json());
+    } catch (_err) {
+      setNotificationError('Notifications are unavailable right now.');
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  const handleMarkRead = async (notificationId) => {
+    setNotificationError('');
+    try {
+      const response = await markNotificationRead(notificationId, accessToken);
+      if (!response.ok) {
+        throw new Error('Unable to mark notification read.');
+      }
+      const updatedNotification = await response.json();
+      setNotifications((currentNotifications) =>
+        currentNotifications.map((notification) =>
+          notification.id === updatedNotification.id ? updatedNotification : notification,
+        ),
+      );
+    } catch (_err) {
+      setNotificationError('Could not update that notification.');
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    setNotificationError('');
+    try {
+      const response = await markAllNotificationsRead(accessToken);
+      if (!response.ok) {
+        throw new Error('Unable to mark all notifications read.');
+      }
+      setNotifications((currentNotifications) =>
+        currentNotifications.map((notification) => ({ ...notification, is_read: true })),
+      );
+    } catch (_err) {
+      setNotificationError('Could not update notifications.');
+    }
+  };
 
   // Don't render on auth pages
   if (
@@ -83,9 +164,124 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
           <Typography variant="h6" edge="start" component="div" noWrap sx={{ flexGrow: 1 }}>
             {appBarHeader}
           </Typography>
-          <IconButton size="large" color="inherit" aria-label="notifications">
-            <Notifications />
+          <IconButton
+            size="large"
+            color="inherit"
+            aria-label="notifications"
+            onClick={(event) => setNotificationAnchorEl(event.currentTarget)}
+          >
+            <Badge badgeContent={unreadCount} color="error">
+              <NotificationsIcon />
+            </Badge>
           </IconButton>
+          <Popover
+            anchorEl={notificationAnchorEl}
+            open={notificationsOpen}
+            onClose={() => setNotificationAnchorEl(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            slotProps={{
+              paper: {
+                sx: {
+                  backgroundColor: 'var(--secondary-background-color)',
+                  color: 'var(--secondary-color)',
+                  boxShadow: 3,
+                  border: '2.5px solid var(--background-color)',
+                  borderRadius: 1.5,
+                  width: { xs: 320, sm: 380 },
+                  maxWidth: 'calc(100vw - 24px)',
+                },
+              },
+            }}
+          >
+            <Box sx={{ p: 1.5 }}>
+              <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                  Notifications
+                </Typography>
+                {unreadCount > 0 && (
+                  <Button
+                    size="small"
+                    sx={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}
+                    onClick={handleMarkAllRead}
+                  >
+                    Mark all read
+                  </Button>
+                )}
+              </Stack>
+              {notificationsLoading && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
+                  <CircularProgress size={24} />
+                </Box>
+              )}
+              {!notificationsLoading && notificationError && (
+                <Typography role="status" variant="body2" sx={{ py: 2 }}>
+                  {notificationError}
+                </Typography>
+              )}
+              {!notificationsLoading && !notificationError && notifications.length === 0 && (
+                <Typography variant="body2" sx={{ py: 2 }}>
+                  No notifications yet.
+                </Typography>
+              )}
+              {!notificationsLoading && !notificationError && notifications.length > 0 && (
+                <List dense disablePadding sx={{ maxHeight: 360, overflowY: 'auto', mt: 1 }}>
+                  {notifications.map((notification) => (
+                    <ListItem
+                      key={notification.id}
+                      disablePadding
+                      secondaryAction={
+                        !notification.is_read && (
+                          <Button
+                            size="small"
+                            sx={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}
+                            onClick={() => handleMarkRead(notification.id)}
+                          >
+                            Mark read
+                          </Button>
+                        )
+                      }
+                    >
+                      <ListItemButton
+                        dense
+                        onClick={() =>
+                          !notification.is_read ? handleMarkRead(notification.id) : undefined
+                        }
+                        sx={{
+                          alignItems: 'flex-start',
+                          borderRadius: 1,
+                          pr: notification.is_read ? 1 : 11,
+                          bgcolor: notification.is_read ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
+                        }}
+                      >
+                        <ListItemText
+                          primary={notification.title}
+                          secondary={
+                            <>
+                              <span>{notification.message}</span>
+                              <br />
+                              <span>{notification.board_name}</span>
+                            </>
+                          }
+                          slotProps={{
+                            primary: {
+                              sx: {
+                                color: 'var(--secondary-color)',
+                                fontWeight: notification.is_read ? 500 : 'bold',
+                              },
+                            },
+                            secondary: {
+                              sx: { color: 'var(--secondary-color)', opacity: 0.8 },
+                            },
+                          }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                </List>
+              )}
+            </Box>
+          </Popover>
           <IconButton
             size="large"
             color="inherit"

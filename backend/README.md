@@ -11,7 +11,7 @@ The Notoli backend is a Django + Django REST Framework API, served by Gunicorn i
 ## 🗺️ API Routes
 Top-level routes (without any path prefix):
 - Auth: `/auth/` (register/login/refresh)
-- API: `/api/` (boards/lists/notes)
+- API: `/api/` (boards/lists/notes/notifications)
 - Admin: `/admin/`
 
 Production serves these routes from the subdomain root at `https://notoli.judeandrewalaba.com`.
@@ -35,6 +35,7 @@ All `/api/*` endpoints require:
 - Board: top-level container for organizing lists
 - List: belongs to a board; associates notes via a many-to-many relation
 - Note: a single checklist item (`note` + optional `description` + `status`); can be linked into multiple lists
+- Notification: recipient-scoped in-app activity item with persistent read/unread state
 
 Access scoping:
 - Board membership is the source of truth for access. `Board.owner` and `Board.collaborators` control access to child lists and notes.
@@ -45,6 +46,8 @@ Access scoping:
 - Lists are returned in their saved board order. Persist a new board order with `PATCH /api/lists/reorder/` and `{ "board": <id>, "ordered_ids": [<list-id>, ...] }`.
 - Notes inside a list are returned in their saved list-membership order. Persist a new note order with `PATCH /api/notes/reorder/` and `{ "list": <id>, "ordered_ids": [<note-id>, ...] }`.
 - Note order is stored on the `ListNote` membership table so the same note can appear in multiple lists with different positions.
+- Notifications are only visible to their recipient. Clients can list them with `GET /api/notifications/`, mark one read with `PATCH /api/notifications/<id>/`, and mark all read with `PATCH /api/notifications/mark-all-read/`.
+- Shared board activity creates notifications for other board members when a user is added as a collaborator, when a list is created, when a note is created, and when a note is updated.
 
 ## 💻 Local Development
 Full setup (Conda, env vars) lives in [`AGENTS.md`](../AGENTS.md). Common commands:

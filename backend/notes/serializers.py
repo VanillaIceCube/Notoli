@@ -3,7 +3,7 @@ from django.db.models import Max
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
 
-from .models import Board, ListNote, Note
+from .models import Board, ListNote, Note, Notification
 from .models import List as NoteList
 
 User = get_user_model()
@@ -196,4 +196,37 @@ class NoteSerializer(serializers.ModelSerializer):
             list=note_list,
             note=note,
             defaults={"position": next_position},
+        )
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    actor_details = UserSummarySerializer(source="actor", read_only=True)
+    board_name = serializers.CharField(source="board.name", read_only=True)
+
+    class Meta:
+        model = Notification
+        fields = (
+            "id",
+            "event_type",
+            "title",
+            "message",
+            "is_read",
+            "created_at",
+            "read_at",
+            "actor",
+            "actor_details",
+            "board",
+            "board_name",
+        )
+        read_only_fields = (
+            "id",
+            "event_type",
+            "title",
+            "message",
+            "created_at",
+            "read_at",
+            "actor",
+            "actor_details",
+            "board",
+            "board_name",
         )

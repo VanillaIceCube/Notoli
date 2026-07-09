@@ -2,15 +2,21 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Max, Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Board, ListNote, Note
+from .models import Board, ListNote, Note, Notification
 from .models import List as NoteList
-from .serializers import BoardSerializer, ListSerializer, NoteSerializer
+from .serializers import (
+    BoardSerializer,
+    ListSerializer,
+    NoteSerializer,
+    NotificationSerializer,
+)
 
 User = get_user_model()
 
@@ -74,6 +80,36 @@ def _ordered_ids_from_request(request):
     return ordered_ids, None
 
 
+def _display_name(user):
+    return user.get_full_name() or user.get_username() or user.email
+
+
+def _board_recipients(board, actor):
+    user_ids = {board.owner_id, *board.collaborators.values_list("id", flat=True)}
+    user_ids.discard(actor.id)
+    return User.objects.filter(id__in=user_ids)
+
+
+def _notify_board_members(board, actor, event_type, title, message):
+    recipients = list(_board_recipients(board, actor))
+    if not recipients:
+        return
+
+    Notification.objects.bulk_create(
+        [
+            Notification(
+                recipient=recipient,
+                actor=actor,
+                board=board,
+                event_type=event_type,
+                title=title,
+                message=message,
+            )
+            for recipient in recipients
+        ]
+    )
+
+
 class BoardViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = BoardSerializer
@@ -127,6 +163,14 @@ class BoardViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         board.collaborators.add(user)
+        Notification.objects.create(
+            recipient=user,
+            actor=request.user,
+            board=board,
+            event_type=Notification.EVENT_COLLABORATOR_ADDED,
+            title=f"You were added to {board.name}",
+            message=f"{_display_name(request.user)} added you as a collaborator.",
+        )
         serializer = self.get_serializer(board)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -201,6 +245,14 @@ class ListViewSet(viewsets.ModelViewSet):
             created_by=self.request.user,
             board=board,
             position=next_position,
+        )
+        note_list = serializer.instance
+        _notify_board_members(
+            board,
+            self.request.user,
+            Notification.EVENT_LIST_CREATED,
+            f"New list in {board.name}",
+            f'{_display_name(self.request.user)} created the list "{note_list.name}".',
         )
 
     @action(detail=False, methods=["patch"], url_path="reorder")
@@ -302,6 +354,24 @@ class NoteViewSet(viewsets.ModelViewSet):
                 raise PermissionDenied("You cannot add notes to this board.")
 
         serializer.save(created_by=self.request.user)
+        note = serializer.instance
+        _notify_board_members(
+            note.board,
+            self.request.user,
+            Notification.EVENT_NOTE_CREATED,
+            f"New note in {note.board.name}",
+            f'{_display_name(self.request.user)} created "{note.note}".',
+        )
+
+    def perform_update(self, serializer):
+        note = serializer.save()
+        _notify_board_members(
+            note.board,
+            self.request.user,
+            Notification.EVENT_NOTE_UPDATED,
+            f"Note updated in {note.board.name}",
+            f'{_display_name(self.request.user)} updated "{note.note}".',
+        )
 
     @action(detail=False, methods=["patch"], url_path="reorder")
     def reorder(self, request):
@@ -356,3 +426,35 @@ class NoteViewSet(viewsets.ModelViewSet):
         ordered_notes.sort(key=lambda note: ordered_ids.index(note.id))
         serializer = self.get_serializer(ordered_notes, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = NotificationSerializer
+    http_method_names = ["get", "patch", "head", "options"]
+
+    def get_queryset(self):
+        return (
+            Notification.objects.filter(recipient=self.request.user)
+            .select_related("actor", "board")
+            .order_by("-created_at", "-id")
+        )
+
+    def perform_update(self, serializer):
+        is_read = serializer.validated_data.get("is_read")
+        notification = serializer.instance
+        if is_read is True and not notification.read_at:
+            serializer.save(read_at=timezone.now())
+        elif is_read is False:
+            serializer.save(read_at=None)
+        else:
+            serializer.save()
+
+    @action(detail=False, methods=["patch"], url_path="mark-all-read")
+    def mark_all_read(self, request):
+        updated = (
+            self.get_queryset()
+            .filter(is_read=False)
+            .update(is_read=True, read_at=timezone.now())
+        )
+        return Response({"updated": updated}, status=status.HTTP_200_OK)
