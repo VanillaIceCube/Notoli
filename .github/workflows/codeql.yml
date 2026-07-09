@@ -42,7 +42,7 @@ jobs:
       - name: Detect relevant changes
         id: filter
         if: github.event_name == 'pull_request'
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
         with:
           filters: |
             python:

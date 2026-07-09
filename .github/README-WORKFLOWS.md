@@ -29,6 +29,7 @@ OpenAI inputs (commentary workflow):
 Version pins:
 - Node version is read from `frontend/package.json` (`engines.node`)
 - Python version is read from `backend/environment.yml` (`python=<version>`)
+- Third-party `dorny/paths-filter` workflow steps are pinned to an immutable commit hash.
 
 CodeQL details:
 - Pull requests run CodeQL through `ci.yml`, keeping PR feedback under the main CI workflow.
