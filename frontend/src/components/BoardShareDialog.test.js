@@ -59,6 +59,13 @@ describe('BoardShareDialog', () => {
     expect(screen.getByText('Collaborator')).toBeInTheDocument();
   });
 
+  test('does not flash an empty access message after the selected board is cleared', () => {
+    renderDialog({ open: false, board: null });
+
+    expect(screen.queryByText('No people have access yet.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   test('allows the owner to add a collaborator', async () => {
     const updatedBoard = {
       ...board,
@@ -116,14 +123,16 @@ describe('BoardShareDialog', () => {
     expect(onBoardUpdated).toHaveBeenCalledWith(updatedBoard);
   });
 
-  test('disables sharing controls for non-owners', () => {
+  test('renders read-only access for non-owners without sharing controls', () => {
     sessionStorage.setItem('username', 'collab');
     sessionStorage.setItem('email', 'collab@example.com');
 
     renderDialog();
 
-    expect(screen.getByLabelText('Username or email address')).toBeDisabled();
-    expect(screen.getByRole('button', { name: /add/i })).toBeDisabled();
+    expect(screen.getByText('Sharing is read-only for collaborators.')).toBeInTheDocument();
+    expect(screen.queryByText('Invite a collaborator')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Username or email address')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /add/i })).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /remove collaborator user/i }),
     ).not.toBeInTheDocument();

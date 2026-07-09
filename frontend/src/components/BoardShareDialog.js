@@ -208,6 +208,8 @@ export default function BoardShareDialog({
     }
   };
 
+  if (!board) return null;
+
   return (
     <Dialog
       open={open}
@@ -250,44 +252,50 @@ export default function BoardShareDialog({
       <Divider sx={{ mx: 3, borderColor: 'var(--secondary-color)', opacity: 0.45 }} />
       <DialogContent sx={{ px: 3, pt: 1.5, pb: 2.75 }}>
         <Stack spacing={2.25}>
-          <Box>
-            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
-              Invite a collaborator
+          {isOwner ? (
+            <Box>
+              <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+                Invite a collaborator
+              </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="Username or email address"
+                  value={identifier}
+                  onChange={(event) => setIdentifier(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') handleAdd();
+                  }}
+                  disabled={savingAdd || Boolean(removingUserId)}
+                  sx={textFieldStyles}
+                  slotProps={{
+                    htmlInput: {
+                      'aria-label': 'Username or email address',
+                    },
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  startIcon={<PersonAdd />}
+                  onClick={handleAdd}
+                  disabled={!identifier.trim() || savingAdd || Boolean(removingUserId)}
+                  sx={{
+                    minWidth: { xs: '100%', sm: 92 },
+                    bgcolor: 'var(--secondary-color)',
+                    color: 'var(--text-color)',
+                    '&:hover': { bgcolor: 'var(--background-color)' },
+                  }}
+                >
+                  {savingAdd ? 'Adding...' : 'Add'}
+                </Button>
+              </Stack>
+            </Box>
+          ) : (
+            <Typography variant="body2" sx={{ color: 'var(--secondary-color)' }}>
+              Sharing is read-only for collaborators.
             </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Username or email address"
-                value={identifier}
-                onChange={(event) => setIdentifier(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') handleAdd();
-                }}
-                disabled={!isOwner || savingAdd || Boolean(removingUserId)}
-                sx={textFieldStyles}
-                slotProps={{
-                  htmlInput: {
-                    'aria-label': 'Username or email address',
-                  },
-                }}
-              />
-              <Button
-                variant="contained"
-                startIcon={<PersonAdd />}
-                onClick={handleAdd}
-                disabled={!isOwner || !identifier.trim() || savingAdd || Boolean(removingUserId)}
-                sx={{
-                  minWidth: { xs: '100%', sm: 92 },
-                  bgcolor: 'var(--secondary-color)',
-                  color: 'var(--text-color)',
-                  '&:hover': { bgcolor: 'var(--background-color)' },
-                }}
-              >
-                {savingAdd ? 'Adding...' : 'Add'}
-              </Button>
-            </Stack>
-          </Box>
+          )}
 
           <Box>
             <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
