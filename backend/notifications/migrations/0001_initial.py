@@ -6,6 +6,8 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
+    initial = True
+
     dependencies = [
         ("notes", "0011_rename_boards_lists"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
@@ -73,7 +75,7 @@ class Migration(migrations.Migration):
                 "indexes": [
                     models.Index(
                         fields=["recipient", "is_read", "-created_at"],
-                        name="notes_notif_recipie_c62fb3_idx",
+                        name="notificatio_recipie_684eac_idx",
                     )
                 ],
             },

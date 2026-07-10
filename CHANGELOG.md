@@ -1,14 +1,24 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-10
+### Added
+- Added notification board/list/note navigation context and `target_path` routing metadata for shared board activity.
+- Added completion-specific shared note notifications when a note transitions to `Complete`.
+### Fixed
+- Prevented repeated saves of an already-complete note from creating duplicate completion notifications.
+- Confirmed duplicate collaborator-add attempts do not create extra notifications.
+
 ## 2026-07-09
 ### Added
 - Added a CodeQL analysis workflow for backend Python, frontend JavaScript/TypeScript, and GitHub Actions workflow scanning.
 - Added recipient-scoped in-app notifications with API endpoints for listing and marking notifications read.
+- Added a dedicated backend `notifications` app to own notification models, API routes, admin, services, and tests.
 - Added app bar notification badge and popover UI for shared board activity.
 - Added notification generation for collaborator adds, shared board list creation, note creation, and note updates.
-- Added notification target paths and board/list/item context so users can open relevant shared workspace activity from the notifications popover.
-- Added completion-specific item notifications for shared workspaces without duplicating notifications on repeated saves.
+- Added board membership-change notifications when collaborators are added or removed.
+- Added notification generation for shared board list updates and board/list/note deletions, including board-name snapshots for deleted-board notifications.
+- Added notification generation for shared board renames.
 ### Fixed
 - Returned explicit 403 details when shared board collaborators try to update or delete board metadata.
 - Made shared board collaborator access read-only in the sharing dialog without presenting invite or remove controls.
