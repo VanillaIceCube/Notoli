@@ -5,8 +5,6 @@ import Register from './Register';
 import { register } from '../../services/notoliApiClient';
 import { useNavigate } from 'react-router-dom';
 
-jest.setTimeout(15000);
-
 jest.mock('react-router-dom', () => ({
   ...jest.requireActual('react-router-dom'),
   useNavigate: jest.fn(),
