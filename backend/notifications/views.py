@@ -11,7 +11,7 @@ from .serializers import NotificationSerializer
 class NotificationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = NotificationSerializer
-    http_method_names = ["get", "patch", "head", "options"]
+    http_method_names = ["get", "patch", "delete", "head", "options"]
 
     def get_queryset(self):
         return (
@@ -38,3 +38,8 @@ class NotificationViewSet(viewsets.ModelViewSet):
             .update(is_read=True, read_at=timezone.now())
         )
         return Response({"updated": updated}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["delete"], url_path="clear-all")
+    def clear_all(self, request):
+        deleted, _ = self.get_queryset().delete()
+        return Response({"deleted": deleted}, status=status.HTTP_200_OK)

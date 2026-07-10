@@ -8,6 +8,14 @@ All notable changes to this project are documented in this file.
 ### Fixed
 - Prevented repeated saves of an already-complete note from creating duplicate completion notifications.
 - Confirmed duplicate collaborator-add attempts do not create extra notifications.
+### Changed
+- Aligned the profile menu with the notification panel so both open inward from the right side of the app bar on mobile screens.
+- Simplified notification rows to a single event message with concise location context, clear actions, and dividers between notifications, including legacy messages that repeat the list name.
+- Added per-notification clearing while retaining the header action for marking all notifications read.
+- Aligned notification rows with the panel header and centered each clear action vertically.
+- Reduced notification row padding and added light spacing between rows for clearer unread-state highlighting.
+- Added a Clear all action for notification panels that contain only read items.
+- Reduced empty-state spacing in the notification panel.
 
 ## 2026-07-09
 ### Added

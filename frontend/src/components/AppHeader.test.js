@@ -6,6 +6,8 @@ import { renderWithProviders } from '../test-support/utils';
 import { goBackToParent } from '../utils/Navigation';
 import { setNavigate } from '../services/navigationService';
 import {
+  clearAllNotifications,
+  clearNotification,
   fetchNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -25,6 +27,8 @@ jest.mock('../utils/Navigation', () => ({
 }));
 
 jest.mock('../services/notoliApiClient', () => ({
+  clearAllNotifications: jest.fn(),
+  clearNotification: jest.fn(),
   fetchNotifications: jest.fn(),
   markAllNotificationsRead: jest.fn(),
   markNotificationRead: jest.fn(),
@@ -43,6 +47,8 @@ describe('AppHeader', () => {
     setNavigate(mockNavigate);
     mockUseLocation.mockReturnValue({ pathname: '/' });
     fetchNotifications.mockResolvedValue(jsonResponse([]));
+    clearAllNotifications.mockResolvedValue({ ok: true });
+    clearNotification.mockResolvedValue({ ok: true });
     markNotificationRead.mockResolvedValue(
       jsonResponse({
         id: 1,
@@ -148,9 +154,10 @@ describe('AppHeader', () => {
         {
           id: 1,
           title: 'New note in Shared Board',
-          message: 'collaborator created "Plan".',
+          message: 'collaborator created "Plan" in Ideas.',
           is_read: false,
           board_name: 'Shared Board',
+          list_name: 'Ideas',
         },
       ]),
     );
@@ -161,8 +168,11 @@ describe('AppHeader', () => {
     await userEvent.click(screen.getByLabelText('notifications'));
 
     expect(screen.getByText('Notifications')).toBeInTheDocument();
-    expect(screen.getByText('New note in Shared Board')).toBeInTheDocument();
     expect(screen.getByText('collaborator created "Plan".')).toBeInTheDocument();
+    expect(screen.getByText('Shared Board · Ideas')).toBeInTheDocument();
+    expect(screen.queryByText('collaborator created "Plan" in Ideas.')).toBeNull();
+    expect(screen.queryByText('New note in Shared Board')).toBeNull();
+    expect(screen.getByRole('button', { name: /clear notification/i })).toBeInTheDocument();
   });
 
   test('when there are no notifications, it shows the empty state', async () => {
@@ -176,7 +186,7 @@ describe('AppHeader', () => {
     expect(screen.getByText('No notifications yet.')).toBeInTheDocument();
   });
 
-  test('when a notification is marked read, it calls the read endpoint', async () => {
+  test('when a notification is cleared, it removes the notification from the panel', async () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     fetchNotifications.mockResolvedValue(
       jsonResponse([
@@ -194,10 +204,13 @@ describe('AppHeader', () => {
 
     await screen.findByText('1');
     await userEvent.click(screen.getByLabelText('notifications'));
-    await userEvent.click(screen.getByRole('button', { name: /mark read/i }));
 
-    expect(markNotificationRead).toHaveBeenCalledWith(1, 'ACCESS');
-    await waitFor(() => expect(screen.queryByRole('button', { name: /mark read/i })).toBeNull());
+    await userEvent.click(screen.getByRole('button', { name: /clear notification/i }));
+
+    expect(clearNotification).toHaveBeenCalledWith(1, 'ACCESS');
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /clear notification/i })).toBeNull(),
+    );
   });
 
   test('when a notification row is clicked, it marks read and navigates to the target path', async () => {
@@ -231,7 +244,7 @@ describe('AppHeader', () => {
 
     await screen.findByText('1');
     await userEvent.click(screen.getByLabelText('notifications'));
-    await userEvent.click(screen.getByText('New note in Shared Board'));
+    await userEvent.click(screen.getByText('collaborator added "Plan".'));
 
     expect(markNotificationRead).toHaveBeenCalledWith(1, 'ACCESS');
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/board/12/list/34'));
@@ -265,9 +278,30 @@ describe('AppHeader', () => {
     await userEvent.click(screen.getByRole('button', { name: /mark all read/i }));
 
     expect(markAllNotificationsRead).toHaveBeenCalledWith('ACCESS');
-    await waitFor(() =>
-      expect(screen.queryByRole('button', { name: /mark all read/i })).toBeNull(),
+    expect(await screen.findByRole('button', { name: /clear all/i })).toBeInTheDocument();
+  });
+
+  test('when all notifications are read, Clear all removes them from the panel', async () => {
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    fetchNotifications.mockResolvedValue(
+      jsonResponse([
+        {
+          id: 1,
+          title: 'New note in Shared Board',
+          message: 'collaborator created "Plan".',
+          is_read: true,
+          board_name: 'Shared Board',
+        },
+      ]),
     );
+
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+
+    await userEvent.click(screen.getByLabelText('notifications'));
+    await userEvent.click(await screen.findByRole('button', { name: /clear all/i }));
+
+    expect(clearAllNotifications).toHaveBeenCalledWith('ACCESS');
+    expect(await screen.findByText('No notifications yet.')).toBeInTheDocument();
   });
 
   test('when no profile info exists, it falls back to username + username@gmail.com', async () => {

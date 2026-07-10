@@ -17,15 +17,19 @@ import {
   ListItemText,
   Popover,
   Stack,
+  Tooltip,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import AccountCircle from '@mui/icons-material/AccountCircle';
+import ClearIcon from '@mui/icons-material/Clear';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { goBackToParent } from '../utils/Navigation';
 import { logout } from '../services/requestClient';
 import {
+  clearAllNotifications,
+  clearNotification,
   fetchNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -37,6 +41,14 @@ function safeGetSessionItem(key) {
   } catch (_err) {
     return '';
   }
+}
+
+function formatNotificationMessage(notification) {
+  const listSuffix = notification.list_name ? ` in ${notification.list_name}.` : '';
+  if (listSuffix && notification.message.endsWith(listSuffix)) {
+    return `${notification.message.slice(0, -listSuffix.length)}.`;
+  }
+  return notification.message;
 }
 
 export default function AppHeader({ appBarHeader, setDrawerOpen }) {
@@ -103,6 +115,34 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
       );
     } catch (_err) {
       setNotificationError('Could not update that notification.');
+    }
+  };
+
+  const handleClearNotification = async (notificationId) => {
+    setNotificationError('');
+    try {
+      const response = await clearNotification(notificationId, accessToken);
+      if (!response.ok) {
+        throw new Error('Unable to clear notification.');
+      }
+      setNotifications((currentNotifications) =>
+        currentNotifications.filter((notification) => notification.id !== notificationId),
+      );
+    } catch (_err) {
+      setNotificationError('Could not clear that notification.');
+    }
+  };
+
+  const handleClearAllNotifications = async () => {
+    setNotificationError('');
+    try {
+      const response = await clearAllNotifications(accessToken);
+      if (!response.ok) {
+        throw new Error('Unable to clear notifications.');
+      }
+      setNotifications([]);
+    } catch (_err) {
+      setNotificationError('Could not clear notifications.');
     }
   };
 
@@ -209,16 +249,17 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                   Notifications
                 </Typography>
-                {unreadCount > 0 && (
+                {notifications.length > 0 && (
                   <Button
                     size="small"
                     sx={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}
-                    onClick={handleMarkAllRead}
+                    onClick={unreadCount > 0 ? handleMarkAllRead : handleClearAllNotifications}
                   >
-                    Mark all read
+                    {unreadCount > 0 ? 'Mark all read' : 'Clear all'}
                   </Button>
                 )}
               </Stack>
+              <Divider sx={{ my: 1, borderColor: 'rgba(0, 0, 0, 0.12)' }} />
               {notificationsLoading && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
                   <CircularProgress size={24} />
@@ -230,65 +271,76 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                 </Typography>
               )}
               {!notificationsLoading && !notificationError && notifications.length === 0 && (
-                <Typography variant="body2" sx={{ py: 2 }}>
+                <Typography variant="body2" sx={{ py: 0.25 }}>
                   No notifications yet.
                 </Typography>
               )}
               {!notificationsLoading && !notificationError && notifications.length > 0 && (
                 <List dense disablePadding sx={{ maxHeight: 360, overflowY: 'auto', mt: 1 }}>
-                  {notifications.map((notification) => (
-                    <ListItem
-                      key={notification.id}
-                      disablePadding
-                      secondaryAction={
-                        !notification.is_read && (
-                          <Button
-                            size="small"
-                            sx={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleMarkRead(notification.id);
-                            }}
-                          >
-                            Mark read
-                          </Button>
-                        )
-                      }
-                    >
-                      <ListItemButton
-                        dense
-                        onClick={() => handleOpenNotification(notification)}
-                        sx={{
-                          alignItems: 'flex-start',
-                          borderRadius: 1,
-                          pr: notification.is_read ? 1 : 11,
-                          bgcolor: notification.is_read ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
-                        }}
+                  {notifications.map((notification, index) => {
+                    const notificationLocation = [notification.board_name, notification.list_name]
+                      .filter(Boolean)
+                      .join(' · ');
+                    const notificationMessage = formatNotificationMessage(notification);
+
+                    return (
+                      <ListItem
+                        key={notification.id}
+                        disablePadding
+                        divider={index < notifications.length - 1}
+                        sx={{ borderColor: 'rgba(0, 0, 0, 0.12)' }}
                       >
-                        <ListItemText
-                          primary={notification.title}
-                          secondary={
-                            <>
-                              <span>{notification.message}</span>
-                              <br />
-                              <span>{notification.list_name || notification.board_name}</span>
-                            </>
-                          }
-                          slotProps={{
-                            primary: {
-                              sx: {
-                                color: 'var(--secondary-color)',
-                                fontWeight: notification.is_read ? 500 : 'bold',
-                              },
-                            },
-                            secondary: {
-                              sx: { color: 'var(--secondary-color)', opacity: 0.8 },
-                            },
+                        <ListItemButton
+                          dense
+                          onClick={() => handleOpenNotification(notification)}
+                          sx={{
+                            alignItems: 'flex-start',
+                            borderRadius: 1,
+                            px: 1.5,
+                            py: 0.75,
+                            my: 0.125,
+                            bgcolor: notification.is_read ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
                           }}
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
+                        >
+                          <ListItemText
+                            primary={notificationMessage}
+                            secondary={notificationLocation || null}
+                            slotProps={{
+                              primary: {
+                                sx: {
+                                  color: 'var(--secondary-color)',
+                                  fontWeight: notification.is_read ? 500 : 'bold',
+                                },
+                              },
+                              secondary: {
+                                sx: { color: 'var(--secondary-color)', opacity: 0.8 },
+                              },
+                            }}
+                          />
+                          <Tooltip title="Clear notification">
+                            <IconButton
+                              aria-label="Clear notification"
+                              size="small"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleClearNotification(notification.id);
+                              }}
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                ml: 1,
+                                alignSelf: 'center',
+                                flexShrink: 0,
+                                color: 'var(--secondary-color)',
+                              }}
+                            >
+                              <ClearIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })}
                 </List>
               )}
             </Box>
@@ -305,6 +357,8 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
             anchorEl={profileAnchorEl}
             open={profileMenuOpen}
             onClose={() => setProfileAnchorEl(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             slotProps={{
               paper: {
                 sx: {

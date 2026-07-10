@@ -39,7 +39,7 @@ Notes in a list render as checklist rows. Checking a note updates its `status` t
 
 ## In-App Notifications
 
-The app bar notification icon opens a popover with the newest notifications first. Unread notifications show a badge count and can be marked read individually or all at once. Clicking a notification opens its target board or list when the backend provides `target_path`. Notification API failures are shown inside the popover and do not block the rest of the page.
+The app bar notification icon opens a popover with the newest notifications first. Unread notifications show a badge count and can be marked read all at once. Clicking a notification opens its target board or list when the backend provides `target_path`, and each notification can be cleared individually. Notification API failures are shown inside the popover and do not block the rest of the page.
 
 ## Drag-and-Drop Reordering
 
@@ -54,7 +54,7 @@ API calls go through `src/services/notoliApiClient.js` (endpoints) via `src/serv
 - In production, leave `REACT_APP_API_BASE_URL` blank/unset so calls use relative paths like `/api/...` on `https://notoli.judeandrewalaba.com`.
 - If an absolute URL is required, set `REACT_APP_API_BASE_URL=https://notoli.judeandrewalaba.com`.
 - Reorder calls use `PATCH /api/lists/reorder/` for board-scoped list order and `PATCH /api/notes/reorder/` for list-scoped note order.
-- Notification calls use `GET /api/notifications/`, `PATCH /api/notifications/<id>/`, and `PATCH /api/notifications/mark-all-read/`.
+- Notification calls use `GET /api/notifications/`, `PATCH` or `DELETE /api/notifications/<id>/`, `PATCH /api/notifications/mark-all-read/`, and `DELETE /api/notifications/clear-all/`.
 
 Note: in the Docker image, `REACT_APP_API_BASE_URL` is a build-time value (it's baked into the static build).
 
