@@ -8,6 +8,9 @@ All notable changes to this project are documented in this file.
 ### Fixed
 - Prevented repeated saves of an already-complete note from creating duplicate completion notifications.
 - Confirmed duplicate collaborator-add attempts do not create extra notifications.
+### Changed
+- Aligned the profile menu with the notification panel so both open inward from the right side of the app bar on mobile screens.
+- Simplified notification rows to a single event message with concise location context, unread indicators, and dividers between notifications.
 
 ## 2026-07-09
 ### Added

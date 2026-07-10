@@ -161,8 +161,10 @@ describe('AppHeader', () => {
     await userEvent.click(screen.getByLabelText('notifications'));
 
     expect(screen.getByText('Notifications')).toBeInTheDocument();
-    expect(screen.getByText('New note in Shared Board')).toBeInTheDocument();
     expect(screen.getByText('collaborator created "Plan".')).toBeInTheDocument();
+    expect(screen.getByText('Shared Board')).toBeInTheDocument();
+    expect(screen.queryByText('New note in Shared Board')).toBeNull();
+    expect(screen.getByLabelText('Unread notification')).toBeInTheDocument();
   });
 
   test('when there are no notifications, it shows the empty state', async () => {
@@ -176,7 +178,7 @@ describe('AppHeader', () => {
     expect(screen.getByText('No notifications yet.')).toBeInTheDocument();
   });
 
-  test('when a notification is marked read, it calls the read endpoint', async () => {
+  test('when a notification is unread, it does not show a per-row mark read action', async () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     fetchNotifications.mockResolvedValue(
       jsonResponse([
@@ -194,10 +196,9 @@ describe('AppHeader', () => {
 
     await screen.findByText('1');
     await userEvent.click(screen.getByLabelText('notifications'));
-    await userEvent.click(screen.getByRole('button', { name: /mark read/i }));
 
-    expect(markNotificationRead).toHaveBeenCalledWith(1, 'ACCESS');
-    await waitFor(() => expect(screen.queryByRole('button', { name: /mark read/i })).toBeNull());
+    expect(screen.getByLabelText('Unread notification')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^mark read$/i })).toBeNull();
   });
 
   test('when a notification row is clicked, it marks read and navigates to the target path', async () => {
@@ -231,7 +232,7 @@ describe('AppHeader', () => {
 
     await screen.findByText('1');
     await userEvent.click(screen.getByLabelText('notifications'));
-    await userEvent.click(screen.getByText('New note in Shared Board'));
+    await userEvent.click(screen.getByText('collaborator added "Plan".'));
 
     expect(markNotificationRead).toHaveBeenCalledWith(1, 'ACCESS');
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/board/12/list/34'));

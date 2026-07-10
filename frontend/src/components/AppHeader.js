@@ -236,59 +236,61 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
               )}
               {!notificationsLoading && !notificationError && notifications.length > 0 && (
                 <List dense disablePadding sx={{ maxHeight: 360, overflowY: 'auto', mt: 1 }}>
-                  {notifications.map((notification) => (
-                    <ListItem
-                      key={notification.id}
-                      disablePadding
-                      secondaryAction={
-                        !notification.is_read && (
-                          <Button
-                            size="small"
-                            sx={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              handleMarkRead(notification.id);
-                            }}
-                          >
-                            Mark read
-                          </Button>
-                        )
-                      }
-                    >
-                      <ListItemButton
-                        dense
-                        onClick={() => handleOpenNotification(notification)}
-                        sx={{
-                          alignItems: 'flex-start',
-                          borderRadius: 1,
-                          pr: notification.is_read ? 1 : 11,
-                          bgcolor: notification.is_read ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
-                        }}
+                  {notifications.map((notification, index) => {
+                    const notificationLocation = [notification.board_name, notification.list_name]
+                      .filter(Boolean)
+                      .join(' · ');
+
+                    return (
+                      <ListItem
+                        key={notification.id}
+                        disablePadding
+                        divider={index < notifications.length - 1}
+                        sx={{ borderColor: 'rgba(0, 0, 0, 0.12)' }}
                       >
-                        <ListItemText
-                          primary={notification.title}
-                          secondary={
-                            <>
-                              <span>{notification.message}</span>
-                              <br />
-                              <span>{notification.list_name || notification.board_name}</span>
-                            </>
-                          }
-                          slotProps={{
-                            primary: {
-                              sx: {
-                                color: 'var(--secondary-color)',
-                                fontWeight: notification.is_read ? 500 : 'bold',
-                              },
-                            },
-                            secondary: {
-                              sx: { color: 'var(--secondary-color)', opacity: 0.8 },
-                            },
+                        <ListItemButton
+                          dense
+                          onClick={() => handleOpenNotification(notification)}
+                          sx={{
+                            alignItems: 'flex-start',
+                            borderRadius: 1,
+                            py: 1,
+                            bgcolor: notification.is_read ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
                           }}
-                        />
-                      </ListItemButton>
-                    </ListItem>
-                  ))}
+                        >
+                          <ListItemText
+                            primary={notification.message}
+                            secondary={notificationLocation || null}
+                            slotProps={{
+                              primary: {
+                                sx: {
+                                  color: 'var(--secondary-color)',
+                                  fontWeight: notification.is_read ? 500 : 'bold',
+                                },
+                              },
+                              secondary: {
+                                sx: { color: 'var(--secondary-color)', opacity: 0.8 },
+                              },
+                            }}
+                          />
+                          {!notification.is_read && (
+                            <Box
+                              aria-label="Unread notification"
+                              sx={{
+                                width: 8,
+                                height: 8,
+                                mt: 0.75,
+                                ml: 1.5,
+                                flexShrink: 0,
+                                borderRadius: '50%',
+                                bgcolor: 'var(--secondary-color)',
+                              }}
+                            />
+                          )}
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })}
                 </List>
               )}
             </Box>
@@ -305,6 +307,8 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
             anchorEl={profileAnchorEl}
             open={profileMenuOpen}
             onClose={() => setProfileAnchorEl(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             slotProps={{
               paper: {
                 sx: {
