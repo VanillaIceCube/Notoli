@@ -26,6 +26,7 @@ def notify_board_members(board, actor, event_type, title, message):
                 recipient=recipient,
                 actor=actor,
                 board=board,
+                board_name=board.name,
                 event_type=event_type,
                 title=title,
                 message=message,

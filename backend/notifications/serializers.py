@@ -19,7 +19,6 @@ class UserSummarySerializer(serializers.ModelSerializer):
 
 class NotificationSerializer(serializers.ModelSerializer):
     actor_details = UserSummarySerializer(source="actor", read_only=True)
-    board_name = serializers.CharField(source="board.name", read_only=True)
 
     class Meta:
         model = Notification

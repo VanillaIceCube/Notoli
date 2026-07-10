@@ -167,6 +167,7 @@ class NotificationApiTests(APITestCase):
         self.assertEqual(notification.actor, self.owner)
         self.assertEqual(notification.event_type, Notification.EVENT_COLLABORATOR_ADDED)
         self.assertEqual(notification.board, self.board)
+        self.assertEqual(notification.board_name, self.board.name)
 
     def test_collaborator_list_create_notifies_other_board_members(self):
         self.client.force_authenticate(user=self.collaborator)
@@ -188,7 +189,43 @@ class NotificationApiTests(APITestCase):
         self.assertEqual(recipient_ids, {self.owner.id, self.other_collaborator.id})
         self.assertFalse(notifications.filter(recipient=self.collaborator).exists())
 
-    def test_collaborator_note_create_and_update_notify_other_board_members(self):
+    def test_collaborator_list_update_notifies_other_board_members(self):
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.patch(
+            f"/api/lists/{self.list.id}/",
+            {"name": "Renamed Shared List"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        notifications = Notification.objects.filter(
+            event_type=Notification.EVENT_LIST_UPDATED
+        )
+        self.assertEqual(
+            set(notifications.values_list("recipient_id", flat=True)),
+            {self.owner.id, self.other_collaborator.id},
+        )
+        self.assertFalse(notifications.filter(recipient=self.collaborator).exists())
+        self.assertIn("Renamed Shared List", notifications.first().message)
+
+    def test_collaborator_list_delete_notifies_other_board_members(self):
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.delete(f"/api/lists/{self.list.id}/")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        notifications = Notification.objects.filter(
+            event_type=Notification.EVENT_LIST_DELETED
+        )
+        self.assertEqual(
+            set(notifications.values_list("recipient_id", flat=True)),
+            {self.owner.id, self.other_collaborator.id},
+        )
+        self.assertFalse(notifications.filter(recipient=self.collaborator).exists())
+        self.assertIn("Shared List", notifications.first().message)
+
+    def test_collaborator_note_create_update_and_delete_notify_other_board_members(
+        self,
+    ):
         self.client.force_authenticate(user=self.collaborator)
         create_response = self.client.post(
             "/api/notes/",
@@ -222,3 +259,36 @@ class NotificationApiTests(APITestCase):
                 set(notifications.values_list("recipient_id", flat=True)),
                 {self.owner.id, self.other_collaborator.id},
             )
+
+        delete_response = self.client.delete(f"/api/notes/{note_id}/")
+
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        deleted_notifications = Notification.objects.filter(
+            event_type=Notification.EVENT_NOTE_DELETED
+        )
+        self.assertEqual(
+            set(deleted_notifications.values_list("recipient_id", flat=True)),
+            {self.owner.id, self.other_collaborator.id},
+        )
+        self.assertFalse(
+            deleted_notifications.filter(recipient=self.collaborator).exists()
+        )
+        self.assertIn("Collaborator Note", deleted_notifications.first().message)
+
+    def test_owner_board_delete_notifies_collaborators_and_preserves_board_name(self):
+        board_id = self.board.id
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(f"/api/boards/{board_id}/")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        notifications = Notification.objects.filter(
+            event_type=Notification.EVENT_BOARD_DELETED
+        )
+        self.assertEqual(
+            set(notifications.values_list("recipient_id", flat=True)),
+            {self.collaborator.id, self.other_collaborator.id},
+        )
+        notification = notifications.first()
+        self.assertIsNone(notification.board)
+        self.assertEqual(notification.board_name, "Shared Board")
+        self.assertIn("Shared Board", notification.message)

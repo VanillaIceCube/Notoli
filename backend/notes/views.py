@@ -95,6 +95,13 @@ class BoardViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         self._require_owner(instance, "Only the board owner can delete this board.")
+        notify_board_members(
+            instance,
+            self.request.user,
+            Notification.EVENT_BOARD_DELETED,
+            f"Board deleted: {instance.name}",
+            f'{display_name(self.request.user)} deleted the shared board "{instance.name}".',
+        )
         instance.delete()
 
     def _require_owner(self, board, message="Only the board owner can manage access."):
@@ -134,6 +141,7 @@ class BoardViewSet(viewsets.ModelViewSet):
             recipient=user,
             actor=request.user,
             board=board,
+            board_name=board.name,
             event_type=Notification.EVENT_COLLABORATOR_ADDED,
             title=f"You were added to {board.name}",
             message=f"{display_name(request.user)} added you as a collaborator.",
@@ -221,6 +229,28 @@ class ListViewSet(viewsets.ModelViewSet):
             f"New list in {board.name}",
             f'{display_name(self.request.user)} created the list "{note_list.name}".',
         )
+
+    def perform_update(self, serializer):
+        note_list = serializer.save()
+        notify_board_members(
+            note_list.board,
+            self.request.user,
+            Notification.EVENT_LIST_UPDATED,
+            f"List updated in {note_list.board.name}",
+            f'{display_name(self.request.user)} updated the list "{note_list.name}".',
+        )
+
+    def perform_destroy(self, instance):
+        board = instance.board
+        list_name = instance.name
+        notify_board_members(
+            board,
+            self.request.user,
+            Notification.EVENT_LIST_DELETED,
+            f"List deleted in {board.name}",
+            f'{display_name(self.request.user)} deleted the list "{list_name}".',
+        )
+        instance.delete()
 
     @action(detail=False, methods=["patch"], url_path="reorder")
     def reorder(self, request):
@@ -339,6 +369,18 @@ class NoteViewSet(viewsets.ModelViewSet):
             f"Note updated in {note.board.name}",
             f'{display_name(self.request.user)} updated "{note.note}".',
         )
+
+    def perform_destroy(self, instance):
+        board = instance.board
+        note_text = instance.note
+        notify_board_members(
+            board,
+            self.request.user,
+            Notification.EVENT_NOTE_DELETED,
+            f"Note deleted in {board.name}",
+            f'{display_name(self.request.user)} deleted "{note_text}".',
+        )
+        instance.delete()
 
     @action(detail=False, methods=["patch"], url_path="reorder")
     def reorder(self, request):
