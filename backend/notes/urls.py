@@ -13,7 +13,6 @@ router = DefaultRouter()
 router.register(r"boards", views.BoardViewSet, basename="board")
 router.register(r"lists", views.ListViewSet, basename="list")
 router.register(r"notes", views.NoteViewSet, basename="note")
-router.register(r"notifications", views.NotificationViewSet, basename="notification")
 
 urlpatterns = [
     path("", include(router.urls)),

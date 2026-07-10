@@ -6,6 +6,7 @@ The Notoli backend is a Django + Django REST Framework API, served by Gunicorn i
 - `backend/app/`: Django project settings/urls (`settings.py`, `urls.py`)
 - `backend/authentication/`: custom user model + JWT auth endpoints
 - `backend/notes/`: boards, lists, and notes (DRF viewsets)
+- `backend/notifications/`: recipient-scoped in-app notifications, API endpoints, and notification helper services
 - `backend/manage.py`: Django management entrypoint
 
 ## 🗺️ API Routes
@@ -35,7 +36,7 @@ All `/api/*` endpoints require:
 - Board: top-level container for organizing lists
 - List: belongs to a board; associates notes via a many-to-many relation
 - Note: a single checklist item (`note` + optional `description` + `status`); can be linked into multiple lists
-- Notification: recipient-scoped in-app activity item with persistent read/unread state
+- Notification: recipient-scoped in-app activity item with persistent read/unread state, owned by the `notifications` app
 
 Access scoping:
 - Board membership is the source of truth for access. `Board.owner` and `Board.collaborators` control access to child lists and notes.
