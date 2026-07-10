@@ -91,7 +91,16 @@ class BoardViewSet(viewsets.ModelViewSet):
         self._require_owner(
             serializer.instance, "Only the board owner can update this board."
         )
-        serializer.save()
+        previous_name = serializer.instance.name
+        board = serializer.save()
+        if board.name != previous_name:
+            notify_board_members(
+                board,
+                self.request.user,
+                Notification.EVENT_BOARD_UPDATED,
+                f"Board renamed: {board.name}",
+                f'{display_name(self.request.user)} renamed "{previous_name}" to "{board.name}".',
+            )
 
     def perform_destroy(self, instance):
         self._require_owner(instance, "Only the board owner can delete this board.")

@@ -9,6 +9,7 @@ All notable changes to this project are documented in this file.
 - Added app bar notification badge and popover UI for shared board activity.
 - Added notification generation for collaborator adds, shared board list creation, note creation, and note updates.
 - Added notification generation for shared board list updates and board/list/note deletions, including board-name snapshots for deleted-board notifications.
+- Added notification generation for shared board renames.
 ### Fixed
 - Returned explicit 403 details when shared board collaborators try to update or delete board metadata.
 - Made shared board collaborator access read-only in the sharing dialog without presenting invite or remove controls.

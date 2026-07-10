@@ -189,6 +189,43 @@ class NotificationApiTests(APITestCase):
         self.assertEqual(recipient_ids, {self.owner.id, self.other_collaborator.id})
         self.assertFalse(notifications.filter(recipient=self.collaborator).exists())
 
+    def test_owner_board_rename_notifies_collaborators(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            f"/api/boards/{self.board.id}/",
+            {"name": "Renamed Shared Board"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        notifications = Notification.objects.filter(
+            event_type=Notification.EVENT_BOARD_UPDATED
+        )
+        self.assertEqual(
+            set(notifications.values_list("recipient_id", flat=True)),
+            {self.collaborator.id, self.other_collaborator.id},
+        )
+        notification = notifications.first()
+        self.assertEqual(notification.board, self.board)
+        self.assertEqual(notification.board_name, "Renamed Shared Board")
+        self.assertIn("Shared Board", notification.message)
+        self.assertIn("Renamed Shared Board", notification.message)
+
+    def test_owner_board_description_update_does_not_notify(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.patch(
+            f"/api/boards/{self.board.id}/",
+            {"description": "Updated description"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertFalse(
+            Notification.objects.filter(
+                event_type=Notification.EVENT_BOARD_UPDATED
+            ).exists()
+        )
+
     def test_collaborator_list_update_notifies_other_board_members(self):
         self.client.force_authenticate(user=self.collaborator)
         response = self.client.patch(

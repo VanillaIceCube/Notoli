@@ -12,6 +12,7 @@ class Notification(models.Model):
     EVENT_NOTE_CREATED = "note_created"
     EVENT_NOTE_UPDATED = "note_updated"
     EVENT_NOTE_DELETED = "note_deleted"
+    EVENT_BOARD_UPDATED = "board_updated"
     EVENT_BOARD_DELETED = "board_deleted"
     EVENT_CHOICES = [
         (EVENT_COLLABORATOR_ADDED, "Collaborator added"),
@@ -21,6 +22,7 @@ class Notification(models.Model):
         (EVENT_NOTE_CREATED, "Note created"),
         (EVENT_NOTE_UPDATED, "Note updated"),
         (EVENT_NOTE_DELETED, "Note deleted"),
+        (EVENT_BOARD_UPDATED, "Board updated"),
         (EVENT_BOARD_DELETED, "Board deleted"),
     ]
 
