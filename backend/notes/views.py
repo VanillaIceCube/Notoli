@@ -155,6 +155,14 @@ class BoardViewSet(viewsets.ModelViewSet):
             title=f"You were added to {board.name}",
             message=f"{display_name(request.user)} added you as a collaborator.",
         )
+        notify_board_members(
+            board,
+            request.user,
+            Notification.EVENT_COLLABORATOR_ADDED,
+            f"Collaborator added to {board.name}",
+            f'{display_name(request.user)} added {display_name(user)} to "{board.name}".',
+            exclude_user_ids={user.id},
+        )
         serializer = self.get_serializer(board)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -180,7 +188,24 @@ class BoardViewSet(viewsets.ModelViewSet):
                 {"error": "That user is not a collaborator."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        removed_user = User.objects.get(pk=user_id)
         board.collaborators.remove(user_id)
+        Notification.objects.create(
+            recipient=removed_user,
+            actor=request.user,
+            board=board,
+            board_name=board.name,
+            event_type=Notification.EVENT_COLLABORATOR_REMOVED,
+            title=f"You were removed from {board.name}",
+            message=f"{display_name(request.user)} removed you from this board.",
+        )
+        notify_board_members(
+            board,
+            request.user,
+            Notification.EVENT_COLLABORATOR_REMOVED,
+            f"Collaborator removed from {board.name}",
+            f'{display_name(request.user)} removed {display_name(removed_user)} from "{board.name}".',
+        )
         serializer = self.get_serializer(board)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

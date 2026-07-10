@@ -169,6 +169,62 @@ class NotificationApiTests(APITestCase):
         self.assertEqual(notification.board, self.board)
         self.assertEqual(notification.board_name, self.board.name)
 
+    def test_adding_collaborator_notifies_existing_board_members(self):
+        new_collaborator = User.objects.create_user(
+            username="new_collaborator",
+            email="new_collaborator@example.com",
+            password="new-password",
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(
+            f"/api/boards/{self.board.id}/collaborators/",
+            {"identifier": new_collaborator.email},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        notifications = Notification.objects.filter(
+            event_type=Notification.EVENT_COLLABORATOR_ADDED
+        )
+        self.assertTrue(notifications.filter(recipient=new_collaborator).exists())
+        self.assertEqual(
+            set(
+                notifications.exclude(recipient=new_collaborator).values_list(
+                    "recipient_id", flat=True
+                )
+            ),
+            {self.collaborator.id, self.other_collaborator.id},
+        )
+        self.assertIn(
+            "new_collaborator",
+            notifications.get(recipient=self.collaborator).message,
+        )
+
+    def test_removing_collaborator_notifies_removed_user_and_remaining_members(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(
+            f"/api/boards/{self.board.id}/collaborators/{self.collaborator.id}/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        notifications = Notification.objects.filter(
+            event_type=Notification.EVENT_COLLABORATOR_REMOVED
+        )
+        self.assertTrue(notifications.filter(recipient=self.collaborator).exists())
+        self.assertEqual(
+            set(
+                notifications.exclude(recipient=self.collaborator).values_list(
+                    "recipient_id", flat=True
+                )
+            ),
+            {self.other_collaborator.id},
+        )
+        removed_notification = notifications.get(recipient=self.collaborator)
+        self.assertEqual(removed_notification.board, self.board)
+        self.assertEqual(removed_notification.board_name, "Shared Board")
+        self.assertIn("removed you", removed_notification.message)
+
     def test_collaborator_list_create_notifies_other_board_members(self):
         self.client.force_authenticate(user=self.collaborator)
         response = self.client.post(

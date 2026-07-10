@@ -6,6 +6,7 @@ from notes.models import Board
 
 class Notification(models.Model):
     EVENT_COLLABORATOR_ADDED = "collaborator_added"
+    EVENT_COLLABORATOR_REMOVED = "collaborator_removed"
     EVENT_LIST_CREATED = "list_created"
     EVENT_LIST_UPDATED = "list_updated"
     EVENT_LIST_DELETED = "list_deleted"
@@ -16,6 +17,7 @@ class Notification(models.Model):
     EVENT_BOARD_DELETED = "board_deleted"
     EVENT_CHOICES = [
         (EVENT_COLLABORATOR_ADDED, "Collaborator added"),
+        (EVENT_COLLABORATOR_REMOVED, "Collaborator removed"),
         (EVENT_LIST_CREATED, "List created"),
         (EVENT_LIST_UPDATED, "List updated"),
         (EVENT_LIST_DELETED, "List deleted"),

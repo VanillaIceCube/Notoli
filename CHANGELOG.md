@@ -8,6 +8,7 @@ All notable changes to this project are documented in this file.
 - Added a dedicated backend `notifications` app to own notification models, API routes, admin, services, and tests.
 - Added app bar notification badge and popover UI for shared board activity.
 - Added notification generation for collaborator adds, shared board list creation, note creation, and note updates.
+- Added board membership-change notifications when collaborators are added or removed.
 - Added notification generation for shared board list updates and board/list/note deletions, including board-name snapshots for deleted-board notifications.
 - Added notification generation for shared board renames.
 ### Fixed

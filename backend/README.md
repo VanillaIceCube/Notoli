@@ -48,7 +48,7 @@ Access scoping:
 - Notes inside a list are returned in their saved list-membership order. Persist a new note order with `PATCH /api/notes/reorder/` and `{ "list": <id>, "ordered_ids": [<note-id>, ...] }`.
 - Note order is stored on the `ListNote` membership table so the same note can appear in multiple lists with different positions.
 - Notifications are only visible to their recipient. Clients can list them with `GET /api/notifications/`, mark one read with `PATCH /api/notifications/<id>/`, and mark all read with `PATCH /api/notifications/mark-all-read/`.
-- Shared board activity creates notifications for other board members when a user is added as a collaborator, when a board is renamed, when a list is created or updated, when a note is created or updated, and when boards/lists/notes are deleted.
+- Shared board activity creates notifications for other board members when a collaborator is added or removed, when a board is renamed, when a list is created or updated, when a note is created or updated, and when boards/lists/notes are deleted. Added and removed collaborators also receive direct access-change notifications.
 
 ## 💻 Local Development
 Full setup (Conda, env vars) lives in [`AGENTS.md`](../AGENTS.md). Common commands:
