@@ -1,10 +1,51 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-10
+### Added
+- Added notification board/list/note navigation context and `target_path` routing metadata for shared board activity.
+- Added completion-specific shared note notifications when a note transitions to `Complete`.
+### Fixed
+- Prevented repeated saves of an already-complete note from creating duplicate completion notifications.
+- Confirmed duplicate collaborator-add attempts do not create extra notifications.
+### Changed
+- Aligned the profile menu with the notification panel so both open inward from the right side of the app bar on mobile screens.
+- Simplified notification rows to a single event message with concise location context, clear actions, and dividers between notifications, including legacy messages that repeat the list name.
+- Added per-notification clearing while retaining the header action for marking all notifications read.
+- Aligned notification rows with the panel header and centered each clear action vertically.
+- Reduced notification row padding and added light spacing between rows for clearer unread-state highlighting.
+- Added a Clear all action for notification panels that contain only read items.
+- Reduced empty-state spacing in the notification panel.
+
+## 2026-07-09
+### Added
+- Added a CodeQL analysis workflow for backend Python, frontend JavaScript/TypeScript, and GitHub Actions workflow scanning.
+- Added recipient-scoped in-app notifications with API endpoints for listing and marking notifications read.
+- Added a dedicated backend `notifications` app to own notification models, API routes, admin, services, and tests.
+- Added app bar notification badge and popover UI for shared board activity.
+- Added notification generation for collaborator adds, shared board list creation, note creation, and note updates.
+- Added board membership-change notifications when collaborators are added or removed.
+- Added notification generation for shared board list updates and board/list/note deletions, including board-name snapshots for deleted-board notifications.
+- Added notification generation for shared board renames.
+### Fixed
+- Returned explicit 403 details when shared board collaborators try to update or delete board metadata.
+- Made shared board collaborator access read-only in the sharing dialog without presenting invite or remove controls.
+- Added regression coverage for collaborator attempts to remove board collaborators.
+- Kept existing board/list/note rows visible during background refreshes and refresh failures.
+### Changed
+- Pinned the `dorny/paths-filter` GitHub Action to an immutable commit in CI workflows.
+
+## 2026-07-08
+### Fixed
+- Allowed BoardList row-started mobile pull-to-refresh gestures to refresh consistently.
+
 ## 2026-07-07
 ### Added
 - Remembered the last accessible board per logged-in browser user and reopened it by default.
+- Added shared frontend notepad page components for page layout, inline editing, action menus, and sortable rows.
 ### Changed
+- Renamed frontend app shell and collection page components to `AppHeader`, `BoardNavigationDrawer`, `AppSnackbar`, `BoardListsPage`, and `ListTasksPage`.
+- Refactored the board lists and list tasks pages to share reusable notepad page UI while keeping page-specific data behavior local.
 - Rebranded the product hierarchy from Workspace/TodoList/Note to Board/List/Note across backend models, API routes, frontend routes, UI copy, tests, and docs.
 - Renamed the list-note membership model from `TodoListNote` to `ListNote` and moved ordering payloads to `board`/`list` terminology.
 - Named new users' default board after their username or email prefix.
@@ -656,4 +697,3 @@ All notable changes to this project are documented in this file.
 ## 2025-04-20
 ### Added
 - Initial repository with base README and LICENSE.
-

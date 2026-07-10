@@ -12,6 +12,10 @@ What it does:
 - Runs the reusable test workflow: [`.github/workflows/tests.yml`](workflows/tests.yml)
   - Frontend: `npm test` (CI mode)
   - Backend: `python manage.py test`
+- Runs the reusable CodeQL workflow: [`.github/workflows/codeql.yml`](workflows/codeql.yml)
+  - Python/Django backend analysis for `backend/**`
+  - JavaScript/TypeScript frontend analysis for `frontend/**`
+  - GitHub Actions workflow analysis for `.github/workflows/**` and `.github/actions/**`
 - For non-Dependabot PRs, runs [`.github/workflows/commentary.yml`](workflows/commentary.yml)
   - Generates an OpenAI-written PR summary and PR review
   - Posts the summary to the PR description or as a comment
@@ -25,6 +29,23 @@ OpenAI inputs (commentary workflow):
 Version pins:
 - Node version is read from `frontend/package.json` (`engines.node`)
 - Python version is read from `backend/environment.yml` (`python=<version>`)
+- Third-party `dorny/paths-filter` workflow steps are pinned to an immutable commit hash.
+
+CodeQL details:
+- Pull requests run CodeQL through `ci.yml`, keeping PR feedback under the main CI workflow.
+- Pull request scans use path filtering so unrelated changes avoid the expensive language analysis jobs.
+- Pushes to `main`, weekly scheduled scans, and manual `workflow_dispatch` runs are supported directly by `codeql.yml`.
+- CodeQL uploads SARIF results to GitHub Code Scanning with scoped permissions: `contents: read`, `pull-requests: read`, `actions: read`, and `security-events: write`.
+- Results appear in PR checks and under GitHub Security -> Code scanning when code scanning is enabled for the repository.
+- CodeQL uses the `security-extended` and `security-and-quality` query suites for Python, JavaScript/TypeScript, and GitHub Actions workflow analysis.
+- CodeQL is not a scanner for Dockerfiles, Nginx config, or env example files. Those remain covered by Dependabot updates, review, and deployment validation unless a separate scanner is added.
+
+Merge blocking:
+- The workflow reports CodeQL findings, but this repository has not intentionally made CodeQL a Dependabot auto-merge prerequisite in `auto_merge.yml` yet.
+- Dependabot auto-merge still requires the existing lint and test jobs to pass. CodeQL runs in the same CI graph so its check is visible before merge decisions, but the auto-merge condition only checks lints and tests.
+- To make serious CodeQL findings block merges, configure GitHub branch protection or a repository ruleset to require the relevant CodeQL check after validating runtime and alert noise.
+- Recommended staged policy: block high/critical security findings first; allow medium, low, and note-level findings to report until the false-positive rate is understood.
+- When code fixes remove a finding, GitHub closes the matching code scanning alert after the protected branch is reanalyzed. False positives or accepted risks should be dismissed in GitHub Code Scanning with a clear reason.
 
 ## 🚀 Flow 2: Deploy (`.github/workflows/deploy.yml`)
 Trigger:

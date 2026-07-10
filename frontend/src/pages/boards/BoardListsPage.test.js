@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import Lists from './Lists';
+import BoardListsPage from './BoardListsPage';
 import { listFixtures, boardFixtures } from '../../test-support/fixtures';
 import { collectRowStartPixels } from '../../test-support/layout';
 import {
@@ -37,7 +37,7 @@ jest.mock('../../services/notoliApiClient', () => ({
 
 async function renderLists() {
   const setAppBarHeader = jest.fn();
-  const view = renderWithProviders(<Lists setAppBarHeader={setAppBarHeader} />);
+  const view = renderWithProviders(<BoardListsPage setAppBarHeader={setAppBarHeader} />);
 
   await waitFor(() => {
     expect(fetchListsApi).toHaveBeenCalledWith('1', 'token');
@@ -53,7 +53,7 @@ function setMobilePullViewport() {
   Object.defineProperty(window.navigator, 'maxTouchPoints', { value: 1, configurable: true });
 }
 
-describe('Lists', () => {
+describe('BoardListsPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.setItem('accessToken', 'token');
@@ -72,7 +72,7 @@ describe('Lists', () => {
     const deferred = createDeferred();
     fetchListsApi.mockReturnValueOnce(deferred.promise);
 
-    renderWithProviders(<Lists setAppBarHeader={jest.fn()} />);
+    renderWithProviders(<BoardListsPage setAppBarHeader={jest.fn()} />);
 
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /lists/i })).not.toBeInTheDocument();
@@ -106,7 +106,7 @@ describe('Lists', () => {
   test('when the boardId is missing, it does not fetch the lists', async () => {
     mockUseParams.mockReturnValue({ boardId: undefined });
 
-    renderWithProviders(<Lists setAppBarHeader={jest.fn()} />);
+    renderWithProviders(<BoardListsPage setAppBarHeader={jest.fn()} />);
 
     await waitFor(() => {
       expect(fetchListsApi).not.toHaveBeenCalled();
@@ -339,7 +339,7 @@ describe('Lists', () => {
   });
 
   test('when the boardId changes, it refetches the lists', async () => {
-    const { rerender } = renderWithProviders(<Lists setAppBarHeader={jest.fn()} />);
+    const { rerender } = renderWithProviders(<BoardListsPage setAppBarHeader={jest.fn()} />);
 
     await waitFor(() => {
       expect(fetchListsApi).toHaveBeenCalledWith('1', 'token');
@@ -348,7 +348,7 @@ describe('Lists', () => {
     mockUseParams.mockReturnValue({ boardId: '2' });
     fetchListsApi.mockResolvedValueOnce({ ok: true, json: async () => [] });
 
-    rerender(<Lists setAppBarHeader={jest.fn()} />);
+    rerender(<BoardListsPage setAppBarHeader={jest.fn()} />);
 
     await waitFor(() => {
       expect(fetchListsApi).toHaveBeenCalledWith('2', 'token');
@@ -366,6 +366,63 @@ describe('Lists', () => {
     expect(await screen.findByRole('status', { name: /release to refresh/i })).toBeInTheDocument();
 
     fireEvent.touchEnd(list, { changedTouches: [{ clientX: 124, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchListsApi).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test('when a mobile refresh is pending, it keeps existing lists visible', async () => {
+    setMobilePullViewport();
+    await renderLists();
+
+    const deferred = createDeferred();
+    fetchListsApi.mockReturnValueOnce(deferred.promise);
+
+    const list = screen.getByTestId('list-list');
+    fireEvent.touchStart(list, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(list, { touches: [{ clientX: 124, clientY: 112 }] });
+    fireEvent.touchEnd(list, { changedTouches: [{ clientX: 124, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchListsApi).toHaveBeenCalledTimes(2);
+    });
+    expect(screen.getByText('test_list_01')).toBeInTheDocument();
+    expect(screen.getByText('test_list_02')).toBeInTheDocument();
+    expect(screen.queryByText(/^loading/i)).not.toBeInTheDocument();
+
+    deferred.resolve({ ok: true, json: async () => [{ id: 12, name: 'test_list_03' }] });
+
+    expect(await screen.findByText('test_list_03')).toBeInTheDocument();
+  });
+
+  test('when a mobile refresh fails, it keeps existing lists visible with the error', async () => {
+    setMobilePullViewport();
+    await renderLists();
+
+    fetchListsApi.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+
+    const list = screen.getByTestId('list-list');
+    fireEvent.touchStart(list, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(list, { touches: [{ clientX: 124, clientY: 112 }] });
+    fireEvent.touchEnd(list, { changedTouches: [{ clientX: 124, clientY: 112 }] });
+
+    expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
+    expect(screen.getByText('test_list_01')).toBeInTheDocument();
+    expect(screen.getByText('test_list_02')).toBeInTheDocument();
+  });
+
+  test('when a mobile user pulls down from a list row, it refreshes the lists', async () => {
+    setMobilePullViewport();
+    await renderLists();
+
+    const rowButton = screen.getByTestId('list-row-button-10');
+    fireEvent.touchStart(rowButton, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(rowButton, { touches: [{ clientX: 122, clientY: 112 }] });
+
+    expect(await screen.findByRole('status', { name: /release to refresh/i })).toBeInTheDocument();
+
+    fireEvent.touchEnd(rowButton, { changedTouches: [{ clientX: 122, clientY: 112 }] });
 
     await waitFor(() => {
       expect(fetchListsApi).toHaveBeenCalledTimes(2);

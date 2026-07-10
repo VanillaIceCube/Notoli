@@ -34,7 +34,7 @@ import {
   updateBoard,
 } from '../services/notoliApiClient';
 
-export default function MyDrawer({
+export default function BoardNavigationDrawer({
   open,
   setDrawerOpen,
   drawerBoardsLabel,
@@ -50,6 +50,8 @@ export default function MyDrawer({
   const boardId = getBoardId(location.pathname);
 
   const token = sessionStorage.getItem('accessToken');
+  const currentUsername = sessionStorage.getItem('username');
+  const currentEmail = sessionStorage.getItem('email');
 
   const fetchBoardName = useCallback(async () => {
     if (!boardId) return '';
@@ -131,6 +133,11 @@ export default function MyDrawer({
   const [tripleDotAnchorElement, setTripleDotAnchorElement] = useState(null);
   const [selectedBoard, setSelectedBoard] = useState(null);
   const tripleDotOpen = Boolean(tripleDotAnchorElement);
+  const selectedBoardOwner = selectedBoard?.owner_details;
+  const selectedBoardIsOwner =
+    selectedBoardOwner &&
+    ((currentUsername && selectedBoardOwner.username === currentUsername) ||
+      (currentEmail && selectedBoardOwner.email === currentEmail));
 
   const handleTripleDotClick = (event, boards) => {
     event.stopPropagation();
@@ -290,7 +297,7 @@ export default function MyDrawer({
                 />
 
                 {/* Loading */}
-                {loading && (
+                {loading && boards.length === 0 && (
                   <Typography align="left" sx={{ pl: 3, py: 1, pt: 2 }}>
                     Loading...
                   </Typography>
@@ -304,8 +311,7 @@ export default function MyDrawer({
                 )}
 
                 {/* Data */}
-                {!error &&
-                  !loading &&
+                {(!error || boards.length > 0) &&
                   boards.map((board, i) => (
                     <React.Fragment key={board.id}>
                       {i !== 0 && (
@@ -484,28 +490,32 @@ export default function MyDrawer({
           <Share sx={{ mr: 1, fontSize: 18 }} />
           Share
         </MenuItem>
-        <Divider
-          variant="middle"
-          sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
-        />
-        <MenuItem
-          sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
-          onClick={startEditing}
-        >
-          <Edit sx={{ mr: 1, fontSize: 18 }} />
-          Rename
-        </MenuItem>
-        <Divider
-          variant="middle"
-          sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
-        />
-        <MenuItem
-          sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
-          onClick={() => onDelete(selectedBoard.id)}
-        >
-          <Delete sx={{ mr: 1, fontSize: 18 }} />
-          Remove
-        </MenuItem>
+        {selectedBoardIsOwner && (
+          <React.Fragment>
+            <Divider
+              variant="middle"
+              sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+            />
+            <MenuItem
+              sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+              onClick={startEditing}
+            >
+              <Edit sx={{ mr: 1, fontSize: 18 }} />
+              Rename
+            </MenuItem>
+            <Divider
+              variant="middle"
+              sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+            />
+            <MenuItem
+              sx={{ py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+              onClick={() => onDelete(selectedBoard.id)}
+            >
+              <Delete sx={{ mr: 1, fontSize: 18 }} />
+              Remove
+            </MenuItem>
+          </React.Fragment>
+        )}
       </Menu>
       <BoardShareDialog
         open={Boolean(sharingBoard)}

@@ -2,7 +2,7 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useLocation } from 'react-router-dom';
 
-import Notes from './Notes';
+import ListTasksPage from './ListTasksPage';
 import { noteFixtures, boardFixtures } from '../../test-support/fixtures';
 import { collectRowStartPixels } from '../../test-support/layout';
 import {
@@ -45,7 +45,7 @@ async function renderNotes(routeEntries = ['/board/1/list/5']) {
   const setAppBarHeader = jest.fn();
   const view = renderWithProviders(
     <>
-      <Notes setAppBarHeader={setAppBarHeader} />
+      <ListTasksPage setAppBarHeader={setAppBarHeader} />
       <LocationDisplay />
     </>,
     { routeEntries },
@@ -65,7 +65,7 @@ function setMobilePullViewport() {
   Object.defineProperty(window.navigator, 'maxTouchPoints', { value: 1, configurable: true });
 }
 
-describe('Notes', () => {
+describe('ListTasksPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.setItem('accessToken', 'token');
@@ -88,7 +88,7 @@ describe('Notes', () => {
     const deferred = createDeferred();
     fetchNotesApi.mockReturnValueOnce(deferred.promise);
 
-    renderWithProviders(<Notes setAppBarHeader={jest.fn()} />, {
+    renderWithProviders(<ListTasksPage setAppBarHeader={jest.fn()} />, {
       routeEntries: ['/board/1/list/5'],
     });
 
@@ -297,7 +297,7 @@ describe('Notes', () => {
   test('when the board fetch succeeds, it sets the app bar header to the parent board', async () => {
     const setAppBarHeader = jest.fn();
 
-    renderWithProviders(<Notes setAppBarHeader={setAppBarHeader} />, {
+    renderWithProviders(<ListTasksPage setAppBarHeader={setAppBarHeader} />, {
       routeEntries: ['/board/1/list/5'],
     });
 
@@ -316,7 +316,7 @@ describe('Notes', () => {
 
     const setAppBarHeader = jest.fn();
 
-    renderWithProviders(<Notes setAppBarHeader={setAppBarHeader} />, {
+    renderWithProviders(<ListTasksPage setAppBarHeader={setAppBarHeader} />, {
       routeEntries: ['/board/1/list/5'],
     });
 
@@ -420,6 +420,49 @@ describe('Notes', () => {
     await waitFor(() => {
       expect(fetchNotesApi).toHaveBeenCalledTimes(2);
     });
+  });
+
+  test('when a mobile refresh is pending, it keeps existing notes visible', async () => {
+    setMobilePullViewport();
+    await renderNotes();
+
+    const deferred = createDeferred();
+    fetchNotesApi.mockReturnValueOnce(deferred.promise);
+
+    const list = screen.getByTestId('note-list');
+    fireEvent.touchStart(list, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(list, { touches: [{ clientX: 122, clientY: 112 }] });
+    fireEvent.touchEnd(list, { changedTouches: [{ clientX: 122, clientY: 112 }] });
+
+    await waitFor(() => {
+      expect(fetchNotesApi).toHaveBeenCalledTimes(2);
+    });
+    expect(screen.getByText('test_note_01')).toBeInTheDocument();
+    expect(screen.getByText('test_note_02')).toBeInTheDocument();
+    expect(screen.queryByText(/^loading/i)).not.toBeInTheDocument();
+
+    deferred.resolve({
+      ok: true,
+      json: async () => [{ id: 103, note: 'test_note_03', status: 'Not Started' }],
+    });
+
+    expect(await screen.findByText('test_note_03')).toBeInTheDocument();
+  });
+
+  test('when a mobile refresh fails, it keeps existing notes visible with the error', async () => {
+    setMobilePullViewport();
+    await renderNotes();
+
+    fetchNotesApi.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+
+    const list = screen.getByTestId('note-list');
+    fireEvent.touchStart(list, { touches: [{ clientX: 120, clientY: 20 }] });
+    fireEvent.touchMove(list, { touches: [{ clientX: 122, clientY: 112 }] });
+    fireEvent.touchEnd(list, { changedTouches: [{ clientX: 122, clientY: 112 }] });
+
+    expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
+    expect(screen.getByText('test_note_01')).toBeInTheDocument();
+    expect(screen.getByText('test_note_02')).toBeInTheDocument();
   });
 
   test('when a mobile user pulls down from page whitespace, it refreshes the notes', async () => {

@@ -230,6 +230,16 @@ class BoardApiTests(APITestCase):
         }
         self.assertNotIn(self.collaborator.id, collaborator_ids)
 
+    def test_non_owner_cannot_remove_board_collaborator(self):
+        self.board.collaborators.add(self.collaborator, self.outsider)
+        self.client.force_authenticate(user=self.collaborator)
+        response = self.client.delete(
+            f"/api/boards/{self.board.id}/collaborators/{self.outsider.id}/"
+        )
+
+        self.assertEqual(response.status_code, 403, response.data)
+        self.assertTrue(self.board.collaborators.filter(pk=self.outsider.pk).exists())
+
     def test_owner_cannot_remove_board_owner(self):
         self.client.force_authenticate(user=self.owner)
         response = self.client.delete(
@@ -276,6 +286,9 @@ class BoardApiTests(APITestCase):
             status.HTTP_403_FORBIDDEN,
             f"Expected 403 when collaborator updates board, got {response.status_code}: {response.data}",
         )
+        self.assertEqual(
+            response.data.get("detail"), "Only the board owner can update this board."
+        )
         self.board.refresh_from_db()
         self.assertEqual(self.board.name, "Owner Board")
 
@@ -298,6 +311,9 @@ class BoardApiTests(APITestCase):
             response.status_code,
             status.HTTP_403_FORBIDDEN,
             f"Expected 403 when collaborator deletes board, got {response.status_code}: {response.data}",
+        )
+        self.assertEqual(
+            response.data.get("detail"), "Only the board owner can delete this board."
         )
         self.assertTrue(Board.objects.filter(pk=self.board.pk).exists())
 
