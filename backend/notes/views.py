@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Max, Q
@@ -22,6 +24,7 @@ from .models import List as NoteList
 from .serializers import BoardSerializer, ListSerializer, NoteSerializer
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def _require_board_access(user, board_id):
@@ -266,15 +269,23 @@ class ListViewSet(viewsets.ModelViewSet):
             position=next_position,
         )
         note_list = serializer.instance
-        notify_board_members(
-            board,
-            self.request.user,
-            Notification.EVENT_LIST_CREATED,
-            f"New list in {board.name}",
-            f'{display_name(self.request.user)} created the list "{note_list.name}".',
-            note_list=note_list,
-            target_path=list_path(note_list),
-        )
+        try:
+            notify_board_members(
+                board,
+                self.request.user,
+                Notification.EVENT_LIST_CREATED,
+                f"New list in {board.name}",
+                f'{display_name(self.request.user)} created the list "{note_list.name}".',
+                note_list=note_list,
+                target_path=list_path(note_list),
+            )
+        except Exception:
+            # A notification failure must not turn a successful list write into a
+            # misleading 500 response. The list is already persisted, so log the
+            # failure and let the API return the created resource.
+            logger.exception(
+                "List creation notification failed for list_id=%s", note_list.pk
+            )
 
     def perform_update(self, serializer):
         note_list = serializer.save()
