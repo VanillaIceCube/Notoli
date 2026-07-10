@@ -182,6 +182,12 @@ export const clearNotification = (notificationId, token) =>
     headers: jsonHeaders(token),
   });
 
+export const clearAllNotifications = (token) =>
+  apiFetch('/api/notifications/clear-all/', {
+    method: 'DELETE',
+    headers: jsonHeaders(token),
+  });
+
 export const markAllNotificationsRead = (token) =>
   apiFetch('/api/notifications/mark-all-read/', {
     method: 'PATCH',

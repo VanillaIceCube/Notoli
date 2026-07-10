@@ -28,6 +28,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { goBackToParent } from '../utils/Navigation';
 import { logout } from '../services/requestClient';
 import {
+  clearAllNotifications,
   clearNotification,
   fetchNotifications,
   markAllNotificationsRead,
@@ -129,6 +130,19 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
       );
     } catch (_err) {
       setNotificationError('Could not clear that notification.');
+    }
+  };
+
+  const handleClearAllNotifications = async () => {
+    setNotificationError('');
+    try {
+      const response = await clearAllNotifications(accessToken);
+      if (!response.ok) {
+        throw new Error('Unable to clear notifications.');
+      }
+      setNotifications([]);
+    } catch (_err) {
+      setNotificationError('Could not clear notifications.');
     }
   };
 
@@ -235,15 +249,15 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                   Notifications
                 </Typography>
-                {unreadCount > 0 && (
+                {notifications.length > 0 && (
                   <Button
                     size="small"
                     sx={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}
-                    onClick={handleMarkAllRead}
+                    onClick={unreadCount > 0 ? handleMarkAllRead : handleClearAllNotifications}
                   >
-                    Mark all read
+                    {unreadCount > 0 ? 'Mark all read' : 'Clear all'}
                   </Button>
-                  )}
+                )}
               </Stack>
               <Divider sx={{ my: 1, borderColor: 'rgba(0, 0, 0, 0.12)' }} />
               {notificationsLoading && (
@@ -257,7 +271,7 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                 </Typography>
               )}
               {!notificationsLoading && !notificationError && notifications.length === 0 && (
-                <Typography variant="body2" sx={{ py: 2 }}>
+                <Typography variant="body2" sx={{ py: 0.25 }}>
                   No notifications yet.
                 </Typography>
               )}
@@ -283,8 +297,9 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                           alignItems: 'flex-start',
                           borderRadius: 1,
                           px: 1.5,
-                          py: 1,
-                            bgcolor: notification.is_read ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
+                          py: 0.75,
+                          my: 0.125,
+                          bgcolor: notification.is_read ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
                           }}
                         >
                           <ListItemText

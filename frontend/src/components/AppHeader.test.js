@@ -6,6 +6,7 @@ import { renderWithProviders } from '../test-support/utils';
 import { goBackToParent } from '../utils/Navigation';
 import { setNavigate } from '../services/navigationService';
 import {
+  clearAllNotifications,
   clearNotification,
   fetchNotifications,
   markAllNotificationsRead,
@@ -26,6 +27,7 @@ jest.mock('../utils/Navigation', () => ({
 }));
 
 jest.mock('../services/notoliApiClient', () => ({
+  clearAllNotifications: jest.fn(),
   clearNotification: jest.fn(),
   fetchNotifications: jest.fn(),
   markAllNotificationsRead: jest.fn(),
@@ -45,6 +47,7 @@ describe('AppHeader', () => {
     setNavigate(mockNavigate);
     mockUseLocation.mockReturnValue({ pathname: '/' });
     fetchNotifications.mockResolvedValue(jsonResponse([]));
+    clearAllNotifications.mockResolvedValue({ ok: true });
     clearNotification.mockResolvedValue({ ok: true });
     markNotificationRead.mockResolvedValue(
       jsonResponse({
@@ -276,8 +279,32 @@ describe('AppHeader', () => {
 
     expect(markAllNotificationsRead).toHaveBeenCalledWith('ACCESS');
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: /mark all read/i })).toBeNull(),
+      expect(screen.getByRole('button', { name: /clear all/i })).toBeInTheDocument(),
     );
+  });
+
+  test('when all notifications are read, Clear all removes them from the panel', async () => {
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    fetchNotifications.mockResolvedValue(
+      jsonResponse([
+        {
+          id: 1,
+          title: 'New note in Shared Board',
+          message: 'collaborator created "Plan".',
+          is_read: true,
+          board_name: 'Shared Board',
+        },
+      ]),
+    );
+
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+
+    await waitFor(() => expect(fetchNotifications).toHaveBeenCalledWith('ACCESS'));
+    await userEvent.click(screen.getByLabelText('notifications'));
+    await userEvent.click(screen.getByRole('button', { name: /clear all/i }));
+
+    expect(clearAllNotifications).toHaveBeenCalledWith('ACCESS');
+    await waitFor(() => expect(screen.getByText('No notifications yet.')).toBeInTheDocument());
   });
 
   test('when no profile info exists, it falls back to username + username@gmail.com', async () => {

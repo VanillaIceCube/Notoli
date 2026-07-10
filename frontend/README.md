@@ -54,7 +54,7 @@ API calls go through `src/services/notoliApiClient.js` (endpoints) via `src/serv
 - In production, leave `REACT_APP_API_BASE_URL` blank/unset so calls use relative paths like `/api/...` on `https://notoli.judeandrewalaba.com`.
 - If an absolute URL is required, set `REACT_APP_API_BASE_URL=https://notoli.judeandrewalaba.com`.
 - Reorder calls use `PATCH /api/lists/reorder/` for board-scoped list order and `PATCH /api/notes/reorder/` for list-scoped note order.
-- Notification calls use `GET /api/notifications/`, `PATCH` or `DELETE /api/notifications/<id>/`, and `PATCH /api/notifications/mark-all-read/`.
+- Notification calls use `GET /api/notifications/`, `PATCH` or `DELETE /api/notifications/<id>/`, `PATCH /api/notifications/mark-all-read/`, and `DELETE /api/notifications/clear-all/`.
 
 Note: in the Docker image, `REACT_APP_API_BASE_URL` is a build-time value (it's baked into the static build).
 

@@ -182,6 +182,32 @@ class NotificationApiTests(APITestCase):
         self.assertTrue(owner_notification.is_read)
         self.assertFalse(outsider_notification.is_read)
 
+    def test_clear_all_only_deletes_request_users_notifications(self):
+        owner_notification = Notification.objects.create(
+            recipient=self.owner,
+            actor=self.collaborator,
+            board=self.board,
+            event_type=Notification.EVENT_NOTE_UPDATED,
+            title="Owner notification",
+            message="Visible to owner.",
+        )
+        outsider_notification = Notification.objects.create(
+            recipient=self.outsider,
+            actor=self.owner,
+            board=self.board,
+            event_type=Notification.EVENT_NOTE_UPDATED,
+            title="Outsider notification",
+            message="Hidden from owner.",
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete("/api/notifications/clear-all/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data, {"deleted": 1})
+        self.assertFalse(Notification.objects.filter(pk=owner_notification.id).exists())
+        self.assertTrue(Notification.objects.filter(pk=outsider_notification.id).exists())
+
     def test_adding_collaborator_creates_notification_for_added_user(self):
         new_collaborator = User.objects.create_user(
             username="new_collaborator",

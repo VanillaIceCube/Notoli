@@ -22,6 +22,7 @@ import {
   fetchNotifications,
   markNotificationRead,
   clearNotification,
+  clearAllNotifications,
   markAllNotificationsRead,
 } from './notoliApiClient';
 import { apiFetch } from './requestClient';
@@ -291,6 +292,15 @@ describe('notoliApiClient', () => {
     clearNotification(4, 'token');
 
     expect(apiFetch).toHaveBeenCalledWith('/api/notifications/4/', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
+    });
+  });
+
+  test('when clearing all notifications, it deletes the collection action', () => {
+    clearAllNotifications('token');
+
+    expect(apiFetch).toHaveBeenCalledWith('/api/notifications/clear-all/', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer token' },
     });
