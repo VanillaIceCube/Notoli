@@ -1,10 +1,15 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import AppHeader from './AppHeader';
 import { renderWithProviders } from '../test-support/utils';
 import { goBackToParent } from '../utils/Navigation';
 import { setNavigate } from '../services/navigationService';
+import {
+  fetchNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from '../services/notoliApiClient';
 
 const mockNavigate = jest.fn();
 const mockUseLocation = jest.fn();
@@ -19,14 +24,35 @@ jest.mock('../utils/Navigation', () => ({
   goBackToParent: jest.fn(),
 }));
 
+jest.mock('../services/notoliApiClient', () => ({
+  fetchNotifications: jest.fn(),
+  markAllNotificationsRead: jest.fn(),
+  markNotificationRead: jest.fn(),
+}));
+
 describe('AppHeader', () => {
   const setDrawerOpen = jest.fn();
+  const jsonResponse = (body, ok = true) => ({
+    ok,
+    json: jest.fn().mockResolvedValue(body),
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
     sessionStorage.clear();
     setNavigate(mockNavigate);
     mockUseLocation.mockReturnValue({ pathname: '/' });
+    fetchNotifications.mockResolvedValue(jsonResponse([]));
+    markNotificationRead.mockResolvedValue(
+      jsonResponse({
+        id: 1,
+        title: 'New note in Shared Board',
+        message: 'collaborator created "Plan".',
+        is_read: true,
+        board_name: 'Shared Board',
+      }),
+    );
+    markAllNotificationsRead.mockResolvedValue(jsonResponse({ updated: 1 }));
   });
 
   test('when the route is /login, it does not render the app bar', () => {
@@ -113,6 +139,98 @@ describe('AppHeader', () => {
     expect(screen.getByText('Logout')).toBeInTheDocument();
     expect(screen.getByText('judea')).toBeInTheDocument();
     expect(screen.getByText('judea@example.com')).toBeInTheDocument();
+  });
+
+  test('when notifications are unread, it shows a badge and notification panel', async () => {
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    fetchNotifications.mockResolvedValue(
+      jsonResponse([
+        {
+          id: 1,
+          title: 'New note in Shared Board',
+          message: 'collaborator created "Plan".',
+          is_read: false,
+          board_name: 'Shared Board',
+        },
+      ]),
+    );
+
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+
+    expect(await screen.findByText('1')).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText('notifications'));
+
+    expect(screen.getByText('Notifications')).toBeInTheDocument();
+    expect(screen.getByText('New note in Shared Board')).toBeInTheDocument();
+    expect(screen.getByText('collaborator created "Plan".')).toBeInTheDocument();
+  });
+
+  test('when there are no notifications, it shows the empty state', async () => {
+    sessionStorage.setItem('accessToken', 'ACCESS');
+
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+
+    await waitFor(() => expect(fetchNotifications).toHaveBeenCalledWith('ACCESS'));
+    await userEvent.click(screen.getByLabelText('notifications'));
+
+    expect(screen.getByText('No notifications yet.')).toBeInTheDocument();
+  });
+
+  test('when a notification is marked read, it calls the read endpoint', async () => {
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    fetchNotifications.mockResolvedValue(
+      jsonResponse([
+        {
+          id: 1,
+          title: 'New note in Shared Board',
+          message: 'collaborator created "Plan".',
+          is_read: false,
+          board_name: 'Shared Board',
+        },
+      ]),
+    );
+
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+
+    await screen.findByText('1');
+    await userEvent.click(screen.getByLabelText('notifications'));
+    await userEvent.click(screen.getByRole('button', { name: /mark read/i }));
+
+    expect(markNotificationRead).toHaveBeenCalledWith(1, 'ACCESS');
+    await waitFor(() => expect(screen.queryByRole('button', { name: /mark read/i })).toBeNull());
+  });
+
+  test('when mark all read is clicked, it updates all notifications', async () => {
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    fetchNotifications.mockResolvedValue(
+      jsonResponse([
+        {
+          id: 1,
+          title: 'New note in Shared Board',
+          message: 'collaborator created "Plan".',
+          is_read: false,
+          board_name: 'Shared Board',
+        },
+        {
+          id: 2,
+          title: 'New list in Shared Board',
+          message: 'owner created "Ideas".',
+          is_read: false,
+          board_name: 'Shared Board',
+        },
+      ]),
+    );
+
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+
+    expect(await screen.findByText('2')).toBeInTheDocument();
+    await userEvent.click(screen.getByLabelText('notifications'));
+    await userEvent.click(screen.getByRole('button', { name: /mark all read/i }));
+
+    expect(markAllNotificationsRead).toHaveBeenCalledWith('ACCESS');
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /mark all read/i })).toBeNull(),
+    );
   });
 
   test('when no profile info exists, it falls back to username + username@gmail.com', async () => {

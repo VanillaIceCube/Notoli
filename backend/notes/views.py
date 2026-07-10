@@ -8,6 +8,9 @@ from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from notifications.models import Notification
+from notifications.services import display_name, notify_board_members
+
 from .models import Board, ListNote, Note
 from .models import List as NoteList
 from .serializers import BoardSerializer, ListSerializer, NoteSerializer
@@ -88,10 +91,26 @@ class BoardViewSet(viewsets.ModelViewSet):
         self._require_owner(
             serializer.instance, "Only the board owner can update this board."
         )
-        serializer.save()
+        previous_name = serializer.instance.name
+        board = serializer.save()
+        if board.name != previous_name:
+            notify_board_members(
+                board,
+                self.request.user,
+                Notification.EVENT_BOARD_UPDATED,
+                f"Board renamed: {board.name}",
+                f'{display_name(self.request.user)} renamed "{previous_name}" to "{board.name}".',
+            )
 
     def perform_destroy(self, instance):
         self._require_owner(instance, "Only the board owner can delete this board.")
+        notify_board_members(
+            instance,
+            self.request.user,
+            Notification.EVENT_BOARD_DELETED,
+            f"Board deleted: {instance.name}",
+            f'{display_name(self.request.user)} deleted the shared board "{instance.name}".',
+        )
         instance.delete()
 
     def _require_owner(self, board, message="Only the board owner can manage access."):
@@ -127,6 +146,23 @@ class BoardViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         board.collaborators.add(user)
+        Notification.objects.create(
+            recipient=user,
+            actor=request.user,
+            board=board,
+            board_name=board.name,
+            event_type=Notification.EVENT_COLLABORATOR_ADDED,
+            title=f"You were added to {board.name}",
+            message=f"{display_name(request.user)} added you as a collaborator.",
+        )
+        notify_board_members(
+            board,
+            request.user,
+            Notification.EVENT_COLLABORATOR_ADDED,
+            f"Collaborator added to {board.name}",
+            f'{display_name(request.user)} added {display_name(user)} to "{board.name}".',
+            exclude_user_ids={user.id},
+        )
         serializer = self.get_serializer(board)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -152,7 +188,24 @@ class BoardViewSet(viewsets.ModelViewSet):
                 {"error": "That user is not a collaborator."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        removed_user = User.objects.get(pk=user_id)
         board.collaborators.remove(user_id)
+        Notification.objects.create(
+            recipient=removed_user,
+            actor=request.user,
+            board=board,
+            board_name=board.name,
+            event_type=Notification.EVENT_COLLABORATOR_REMOVED,
+            title=f"You were removed from {board.name}",
+            message=f"{display_name(request.user)} removed you from this board.",
+        )
+        notify_board_members(
+            board,
+            request.user,
+            Notification.EVENT_COLLABORATOR_REMOVED,
+            f"Collaborator removed from {board.name}",
+            f'{display_name(request.user)} removed {display_name(removed_user)} from "{board.name}".',
+        )
         serializer = self.get_serializer(board)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -202,6 +255,36 @@ class ListViewSet(viewsets.ModelViewSet):
             board=board,
             position=next_position,
         )
+        note_list = serializer.instance
+        notify_board_members(
+            board,
+            self.request.user,
+            Notification.EVENT_LIST_CREATED,
+            f"New list in {board.name}",
+            f'{display_name(self.request.user)} created the list "{note_list.name}".',
+        )
+
+    def perform_update(self, serializer):
+        note_list = serializer.save()
+        notify_board_members(
+            note_list.board,
+            self.request.user,
+            Notification.EVENT_LIST_UPDATED,
+            f"List updated in {note_list.board.name}",
+            f'{display_name(self.request.user)} updated the list "{note_list.name}".',
+        )
+
+    def perform_destroy(self, instance):
+        board = instance.board
+        list_name = instance.name
+        notify_board_members(
+            board,
+            self.request.user,
+            Notification.EVENT_LIST_DELETED,
+            f"List deleted in {board.name}",
+            f'{display_name(self.request.user)} deleted the list "{list_name}".',
+        )
+        instance.delete()
 
     @action(detail=False, methods=["patch"], url_path="reorder")
     def reorder(self, request):
@@ -302,6 +385,36 @@ class NoteViewSet(viewsets.ModelViewSet):
                 raise PermissionDenied("You cannot add notes to this board.")
 
         serializer.save(created_by=self.request.user)
+        note = serializer.instance
+        notify_board_members(
+            note.board,
+            self.request.user,
+            Notification.EVENT_NOTE_CREATED,
+            f"New note in {note.board.name}",
+            f'{display_name(self.request.user)} created "{note.note}".',
+        )
+
+    def perform_update(self, serializer):
+        note = serializer.save()
+        notify_board_members(
+            note.board,
+            self.request.user,
+            Notification.EVENT_NOTE_UPDATED,
+            f"Note updated in {note.board.name}",
+            f'{display_name(self.request.user)} updated "{note.note}".',
+        )
+
+    def perform_destroy(self, instance):
+        board = instance.board
+        note_text = instance.note
+        notify_board_members(
+            board,
+            self.request.user,
+            Notification.EVENT_NOTE_DELETED,
+            f"Note deleted in {board.name}",
+            f'{display_name(self.request.user)} deleted "{note_text}".',
+        )
+        instance.delete()
 
     @action(detail=False, methods=["patch"], url_path="reorder")
     def reorder(self, request):
