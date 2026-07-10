@@ -278,9 +278,7 @@ describe('AppHeader', () => {
     await userEvent.click(screen.getByRole('button', { name: /mark all read/i }));
 
     expect(markAllNotificationsRead).toHaveBeenCalledWith('ACCESS');
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /clear all/i })).toBeInTheDocument(),
-    );
+    expect(await screen.findByRole('button', { name: /clear all/i })).toBeInTheDocument();
   });
 
   test('when all notifications are read, Clear all removes them from the panel', async () => {
@@ -299,12 +297,11 @@ describe('AppHeader', () => {
 
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
 
-    await waitFor(() => expect(fetchNotifications).toHaveBeenCalledWith('ACCESS'));
     await userEvent.click(screen.getByLabelText('notifications'));
-    await userEvent.click(screen.getByRole('button', { name: /clear all/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /clear all/i }));
 
     expect(clearAllNotifications).toHaveBeenCalledWith('ACCESS');
-    await waitFor(() => expect(screen.getByText('No notifications yet.')).toBeInTheDocument());
+    expect(await screen.findByText('No notifications yet.')).toBeInTheDocument();
   });
 
   test('when no profile info exists, it falls back to username + username@gmail.com', async () => {

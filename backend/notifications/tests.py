@@ -206,7 +206,9 @@ class NotificationApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         self.assertEqual(response.data, {"deleted": 1})
         self.assertFalse(Notification.objects.filter(pk=owner_notification.id).exists())
-        self.assertTrue(Notification.objects.filter(pk=outsider_notification.id).exists())
+        self.assertTrue(
+            Notification.objects.filter(pk=outsider_notification.id).exists()
+        )
 
     def test_adding_collaborator_creates_notification_for_added_user(self):
         new_collaborator = User.objects.create_user(

@@ -294,12 +294,12 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                           dense
                           onClick={() => handleOpenNotification(notification)}
                           sx={{
-                          alignItems: 'flex-start',
-                          borderRadius: 1,
-                          px: 1.5,
-                          py: 0.75,
-                          my: 0.125,
-                          bgcolor: notification.is_read ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
+                            alignItems: 'flex-start',
+                            borderRadius: 1,
+                            px: 1.5,
+                            py: 0.75,
+                            my: 0.125,
+                            bgcolor: notification.is_read ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
                           }}
                         >
                           <ListItemText
