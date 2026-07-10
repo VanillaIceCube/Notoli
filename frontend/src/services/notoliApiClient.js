@@ -176,6 +176,12 @@ export const markNotificationRead = (notificationId, token) =>
     body: JSON.stringify({ is_read: true }),
   });
 
+export const clearNotification = (notificationId, token) =>
+  apiFetch(`/api/notifications/${notificationId}/`, {
+    method: 'DELETE',
+    headers: jsonHeaders(token),
+  });
+
 export const markAllNotificationsRead = (token) =>
   apiFetch('/api/notifications/mark-all-read/', {
     method: 'PATCH',

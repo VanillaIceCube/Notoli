@@ -47,7 +47,7 @@ Access scoping:
 - Lists are returned in their saved board order. Persist a new board order with `PATCH /api/lists/reorder/` and `{ "board": <id>, "ordered_ids": [<list-id>, ...] }`.
 - Notes inside a list are returned in their saved list-membership order. Persist a new note order with `PATCH /api/notes/reorder/` and `{ "list": <id>, "ordered_ids": [<note-id>, ...] }`.
 - Note order is stored on the `ListNote` membership table so the same note can appear in multiple lists with different positions.
-- Notifications are only visible to their recipient. Clients can list them with `GET /api/notifications/`, mark one read with `PATCH /api/notifications/<id>/`, and mark all read with `PATCH /api/notifications/mark-all-read/`.
+- Notifications are only visible to their recipient. Clients can list them with `GET /api/notifications/`, mark one read with `PATCH /api/notifications/<id>/`, clear one with `DELETE /api/notifications/<id>/`, and mark all read with `PATCH /api/notifications/mark-all-read/`.
 - Notification responses include board/list/note context plus `target_path` so the frontend can route users to the relevant board or list.
 - Shared board activity creates notifications for other board members when a collaborator is added or removed, when a board is renamed, when a list is created or updated, when a note is created, updated, or transitions to `Complete`, and when boards/lists/notes are deleted. Added and removed collaborators also receive direct access-change notifications.
 

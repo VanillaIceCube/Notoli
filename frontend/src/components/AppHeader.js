@@ -17,15 +17,18 @@ import {
   ListItemText,
   Popover,
   Stack,
+  Tooltip,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import AccountCircle from '@mui/icons-material/AccountCircle';
+import ClearIcon from '@mui/icons-material/Clear';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { goBackToParent } from '../utils/Navigation';
 import { logout } from '../services/requestClient';
 import {
+  clearNotification,
   fetchNotifications,
   markAllNotificationsRead,
   markNotificationRead,
@@ -37,6 +40,14 @@ function safeGetSessionItem(key) {
   } catch (_err) {
     return '';
   }
+}
+
+function formatNotificationMessage(notification) {
+  const listSuffix = notification.list_name ? ` in ${notification.list_name}.` : '';
+  if (listSuffix && notification.message.endsWith(listSuffix)) {
+    return `${notification.message.slice(0, -listSuffix.length)}.`;
+  }
+  return notification.message;
 }
 
 export default function AppHeader({ appBarHeader, setDrawerOpen }) {
@@ -103,6 +114,21 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
       );
     } catch (_err) {
       setNotificationError('Could not update that notification.');
+    }
+  };
+
+  const handleClearNotification = async (notificationId) => {
+    setNotificationError('');
+    try {
+      const response = await clearNotification(notificationId, accessToken);
+      if (!response.ok) {
+        throw new Error('Unable to clear notification.');
+      }
+      setNotifications((currentNotifications) =>
+        currentNotifications.filter((notification) => notification.id !== notificationId),
+      );
+    } catch (_err) {
+      setNotificationError('Could not clear that notification.');
     }
   };
 
@@ -240,6 +266,7 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                     const notificationLocation = [notification.board_name, notification.list_name]
                       .filter(Boolean)
                       .join(' · ');
+                    const notificationMessage = formatNotificationMessage(notification);
 
                     return (
                       <ListItem
@@ -259,7 +286,7 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                           }}
                         >
                           <ListItemText
-                            primary={notification.message}
+                            primary={notificationMessage}
                             secondary={notificationLocation || null}
                             slotProps={{
                               primary: {
@@ -273,20 +300,26 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                               },
                             }}
                           />
-                          {!notification.is_read && (
-                            <Box
-                              aria-label="Unread notification"
-                              sx={{
-                                width: 8,
-                                height: 8,
-                                mt: 0.75,
-                                ml: 1.5,
-                                flexShrink: 0,
-                                borderRadius: '50%',
-                                bgcolor: 'var(--secondary-color)',
+                          <Tooltip title="Clear notification">
+                            <IconButton
+                              aria-label="Clear notification"
+                              size="small"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleClearNotification(notification.id);
                               }}
-                            />
-                          )}
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                mt: -0.5,
+                                ml: 1,
+                                flexShrink: 0,
+                                color: 'var(--secondary-color)',
+                              }}
+                            >
+                              <ClearIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </ListItemButton>
                       </ListItem>
                     );

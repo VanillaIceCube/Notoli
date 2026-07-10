@@ -122,6 +122,38 @@ class NotificationApiTests(APITestCase):
         notification.refresh_from_db()
         self.assertFalse(notification.is_read)
 
+    def test_user_can_clear_own_notification(self):
+        notification = Notification.objects.create(
+            recipient=self.owner,
+            actor=self.collaborator,
+            board=self.board,
+            event_type=Notification.EVENT_NOTE_UPDATED,
+            title="Owner notification",
+            message="Visible to owner.",
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(f"/api/notifications/{notification.id}/")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Notification.objects.filter(pk=notification.id).exists())
+
+    def test_user_cannot_clear_another_users_notification(self):
+        notification = Notification.objects.create(
+            recipient=self.outsider,
+            actor=self.owner,
+            board=self.board,
+            event_type=Notification.EVENT_NOTE_UPDATED,
+            title="Outsider notification",
+            message="Hidden from owner.",
+        )
+
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(f"/api/notifications/{notification.id}/")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)
+        self.assertTrue(Notification.objects.filter(pk=notification.id).exists())
+
     def test_mark_all_read_only_updates_request_users_notifications(self):
         owner_notification = Notification.objects.create(
             recipient=self.owner,
@@ -464,7 +496,7 @@ class NotificationApiTests(APITestCase):
         )
         self.assertIn("completed", notification.message)
         self.assertIn("Shared Note", notification.message)
-        self.assertIn("Shared List", notification.message)
+        self.assertNotIn("Shared List", notification.message)
 
         repeat_response = self.client.patch(
             f"/api/notes/{self.note.id}/",

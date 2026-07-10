@@ -417,10 +417,7 @@ class NoteViewSet(viewsets.ModelViewSet):
             self.request.user,
             Notification.EVENT_NOTE_CREATED,
             f"New note in {note.board.name}",
-            (
-                f'{display_name(self.request.user)} created "{note.note}"'
-                + (f" in {note_list.name}." if note_list is not None else ".")
-            ),
+            f'{display_name(self.request.user)} created "{note.note}".',
             note_list=note_list,
             note=note,
             target_path=list_path(note_list)
@@ -444,10 +441,7 @@ class NoteViewSet(viewsets.ModelViewSet):
                 self.request.user,
                 Notification.EVENT_NOTE_COMPLETED,
                 f"Item completed in {note.board.name}",
-                (
-                    f'{display_name(self.request.user)} completed "{note.note}"'
-                    + (f" in {note_list.name}." if note_list is not None else ".")
-                ),
+                f'{display_name(self.request.user)} completed "{note.note}".',
                 note_list=note_list,
                 note=note,
                 target_path=target_path,
@@ -459,10 +453,7 @@ class NoteViewSet(viewsets.ModelViewSet):
             self.request.user,
             Notification.EVENT_NOTE_UPDATED,
             f"Note updated in {note.board.name}",
-            (
-                f'{display_name(self.request.user)} updated "{note.note}"'
-                + (f" in {note_list.name}." if note_list is not None else ".")
-            ),
+            f'{display_name(self.request.user)} updated "{note.note}".',
             note_list=note_list,
             note=note,
             target_path=target_path,
