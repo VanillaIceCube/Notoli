@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import models
 
-from notes.models import Board
+from notes.models import Board, List, Note
 
 
 class Notification(models.Model):
@@ -12,6 +12,7 @@ class Notification(models.Model):
     EVENT_LIST_DELETED = "list_deleted"
     EVENT_NOTE_CREATED = "note_created"
     EVENT_NOTE_UPDATED = "note_updated"
+    EVENT_NOTE_COMPLETED = "note_completed"
     EVENT_NOTE_DELETED = "note_deleted"
     EVENT_BOARD_UPDATED = "board_updated"
     EVENT_BOARD_DELETED = "board_deleted"
@@ -23,6 +24,7 @@ class Notification(models.Model):
         (EVENT_LIST_DELETED, "List deleted"),
         (EVENT_NOTE_CREATED, "Note created"),
         (EVENT_NOTE_UPDATED, "Note updated"),
+        (EVENT_NOTE_COMPLETED, "Note completed"),
         (EVENT_NOTE_DELETED, "Note deleted"),
         (EVENT_BOARD_UPDATED, "Board updated"),
         (EVENT_BOARD_DELETED, "Board deleted"),
@@ -48,9 +50,24 @@ class Notification(models.Model):
         related_name="notifications",
     )
     board_name = models.CharField(max_length=255, blank=True)
+    list = models.ForeignKey(
+        List,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notifications",
+    )
+    note = models.ForeignKey(
+        Note,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notifications",
+    )
     event_type = models.CharField(max_length=40, choices=EVENT_CHOICES)
     title = models.CharField(max_length=160)
     message = models.TextField()
+    target_path = models.CharField(max_length=255, blank=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField(null=True, blank=True)

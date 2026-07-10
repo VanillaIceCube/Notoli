@@ -9,7 +9,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from notifications.models import Notification
-from notifications.services import display_name, notify_board_members
+from notifications.services import (
+    board_path,
+    display_name,
+    first_note_list,
+    list_path,
+    notify_board_members,
+)
 
 from .models import Board, ListNote, Note
 from .models import List as NoteList
@@ -154,6 +160,7 @@ class BoardViewSet(viewsets.ModelViewSet):
             event_type=Notification.EVENT_COLLABORATOR_ADDED,
             title=f"You were added to {board.name}",
             message=f"{display_name(request.user)} added you as a collaborator.",
+            target_path=board_path(board),
         )
         notify_board_members(
             board,
@@ -162,6 +169,7 @@ class BoardViewSet(viewsets.ModelViewSet):
             f"Collaborator added to {board.name}",
             f'{display_name(request.user)} added {display_name(user)} to "{board.name}".',
             exclude_user_ids={user.id},
+            target_path=board_path(board),
         )
         serializer = self.get_serializer(board)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -198,6 +206,7 @@ class BoardViewSet(viewsets.ModelViewSet):
             event_type=Notification.EVENT_COLLABORATOR_REMOVED,
             title=f"You were removed from {board.name}",
             message=f"{display_name(request.user)} removed you from this board.",
+            target_path=board_path(board),
         )
         notify_board_members(
             board,
@@ -205,6 +214,7 @@ class BoardViewSet(viewsets.ModelViewSet):
             Notification.EVENT_COLLABORATOR_REMOVED,
             f"Collaborator removed from {board.name}",
             f'{display_name(request.user)} removed {display_name(removed_user)} from "{board.name}".',
+            target_path=board_path(board),
         )
         serializer = self.get_serializer(board)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -262,6 +272,8 @@ class ListViewSet(viewsets.ModelViewSet):
             Notification.EVENT_LIST_CREATED,
             f"New list in {board.name}",
             f'{display_name(self.request.user)} created the list "{note_list.name}".',
+            note_list=note_list,
+            target_path=list_path(note_list),
         )
 
     def perform_update(self, serializer):
@@ -272,6 +284,8 @@ class ListViewSet(viewsets.ModelViewSet):
             Notification.EVENT_LIST_UPDATED,
             f"List updated in {note_list.board.name}",
             f'{display_name(self.request.user)} updated the list "{note_list.name}".',
+            note_list=note_list,
+            target_path=list_path(note_list),
         )
 
     def perform_destroy(self, instance):
@@ -283,6 +297,7 @@ class ListViewSet(viewsets.ModelViewSet):
             Notification.EVENT_LIST_DELETED,
             f"List deleted in {board.name}",
             f'{display_name(self.request.user)} deleted the list "{list_name}".',
+            target_path=board_path(board),
         )
         instance.delete()
 
@@ -391,17 +406,55 @@ class NoteViewSet(viewsets.ModelViewSet):
             self.request.user,
             Notification.EVENT_NOTE_CREATED,
             f"New note in {note.board.name}",
-            f'{display_name(self.request.user)} created "{note.note}".',
+            (
+                f'{display_name(self.request.user)} created "{note.note}"'
+                + (f" in {note_list.name}." if note_list is not None else ".")
+            ),
+            note_list=note_list,
+            note=note,
+            target_path=list_path(note_list)
+            if note_list is not None
+            else board_path(note.board),
         )
 
     def perform_update(self, serializer):
+        previous_status = serializer.instance.status
         note = serializer.save()
+        note_list = serializer.validated_data.get("list") or first_note_list(note)
+        target_path = (
+            list_path(note_list) if note_list is not None else board_path(note.board)
+        )
+        if (
+            previous_status != Note.STATUS_COMPLETE
+            and note.status == Note.STATUS_COMPLETE
+        ):
+            notify_board_members(
+                note.board,
+                self.request.user,
+                Notification.EVENT_NOTE_COMPLETED,
+                f"Item completed in {note.board.name}",
+                (
+                    f'{display_name(self.request.user)} completed "{note.note}"'
+                    + (f" in {note_list.name}." if note_list is not None else ".")
+                ),
+                note_list=note_list,
+                note=note,
+                target_path=target_path,
+            )
+            return
+
         notify_board_members(
             note.board,
             self.request.user,
             Notification.EVENT_NOTE_UPDATED,
             f"Note updated in {note.board.name}",
-            f'{display_name(self.request.user)} updated "{note.note}".',
+            (
+                f'{display_name(self.request.user)} updated "{note.note}"'
+                + (f" in {note_list.name}." if note_list is not None else ".")
+            ),
+            note_list=note_list,
+            note=note,
+            target_path=target_path,
         )
 
     def perform_destroy(self, instance):
@@ -413,6 +466,7 @@ class NoteViewSet(viewsets.ModelViewSet):
             Notification.EVENT_NOTE_DELETED,
             f"Note deleted in {board.name}",
             f'{display_name(self.request.user)} deleted "{note_text}".',
+            target_path=board_path(board),
         )
         instance.delete()
 

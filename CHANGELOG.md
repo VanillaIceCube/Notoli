@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-10
+### Added
+- Added notification board/list/note navigation context and `target_path` routing metadata for shared board activity.
+- Added completion-specific shared note notifications when a note transitions to `Complete`.
+### Fixed
+- Prevented repeated saves of an already-complete note from creating duplicate completion notifications.
+- Confirmed duplicate collaborator-add attempts do not create extra notifications.
+
 ## 2026-07-09
 ### Added
 - Added a CodeQL analysis workflow for backend Python, frontend JavaScript/TypeScript, and GitHub Actions workflow scanning.

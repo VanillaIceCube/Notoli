@@ -16,7 +16,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return (
             Notification.objects.filter(recipient=self.request.user)
-            .select_related("actor", "board")
+            .select_related("actor", "board", "list", "note")
             .order_by("-created_at", "-id")
         )
 
