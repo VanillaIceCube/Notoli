@@ -106,6 +106,16 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
     }
   };
 
+  const handleOpenNotification = async (notification) => {
+    if (!notification.is_read) {
+      await handleMarkRead(notification.id);
+    }
+    if (notification.target_path) {
+      setNotificationAnchorEl(null);
+      navigate(notification.target_path);
+    }
+  };
+
   const handleMarkAllRead = async () => {
     setNotificationError('');
     try {
@@ -235,7 +245,10 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                           <Button
                             size="small"
                             sx={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}
-                            onClick={() => handleMarkRead(notification.id)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleMarkRead(notification.id);
+                            }}
                           >
                             Mark read
                           </Button>
@@ -244,9 +257,7 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                     >
                       <ListItemButton
                         dense
-                        onClick={() =>
-                          !notification.is_read ? handleMarkRead(notification.id) : undefined
-                        }
+                        onClick={() => handleOpenNotification(notification)}
                         sx={{
                           alignItems: 'flex-start',
                           borderRadius: 1,
@@ -260,7 +271,7 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                             <>
                               <span>{notification.message}</span>
                               <br />
-                              <span>{notification.board_name}</span>
+                              <span>{notification.list_name || notification.board_name}</span>
                             </>
                           }
                           slotProps={{

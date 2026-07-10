@@ -1482,15 +1482,16 @@ class NotificationApiTests(APITestCase):
             recipient=self.owner,
             actor=self.collaborator,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_NOTE_COMPLETED,
             title="Owner notification",
             message="Visible to owner.",
+            target_path=f"/board/{self.board.id}",
         )
         Notification.objects.create(
             recipient=self.outsider,
             actor=self.owner,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_NOTE_COMPLETED,
             title="Outsider notification",
             message="Hidden from owner.",
         )
@@ -1502,13 +1503,14 @@ class NotificationApiTests(APITestCase):
         self.assertEqual(
             [item["id"] for item in response.data], [owner_notification.id]
         )
+        self.assertEqual(response.data[0]["target_path"], f"/board/{self.board.id}")
 
     def test_user_can_mark_own_notification_read(self):
         notification = Notification.objects.create(
             recipient=self.owner,
             actor=self.collaborator,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_NOTE_COMPLETED,
             title="Owner notification",
             message="Visible to owner.",
         )
@@ -1530,7 +1532,7 @@ class NotificationApiTests(APITestCase):
             recipient=self.outsider,
             actor=self.owner,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_NOTE_COMPLETED,
             title="Outsider notification",
             message="Hidden from owner.",
         )
@@ -1551,7 +1553,7 @@ class NotificationApiTests(APITestCase):
             recipient=self.owner,
             actor=self.collaborator,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_NOTE_COMPLETED,
             title="Owner notification",
             message="Visible to owner.",
         )
@@ -1559,7 +1561,7 @@ class NotificationApiTests(APITestCase):
             recipient=self.outsider,
             actor=self.owner,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_NOTE_COMPLETED,
             title="Outsider notification",
             message="Hidden from owner.",
         )
@@ -1593,6 +1595,25 @@ class NotificationApiTests(APITestCase):
         self.assertEqual(notification.actor, self.owner)
         self.assertEqual(notification.event_type, Notification.EVENT_COLLABORATOR_ADDED)
         self.assertEqual(notification.board, self.board)
+        self.assertEqual(notification.target_path, f"/board/{self.board.id}")
+
+    def test_duplicate_collaborator_add_does_not_create_notification(self):
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(
+            f"/api/boards/{self.board.id}/collaborators/",
+            {"identifier": self.collaborator.email},
+            format="json",
+        )
+
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+        )
+        self.assertFalse(
+            Notification.objects.filter(
+                recipient=self.collaborator,
+                event_type=Notification.EVENT_COLLABORATOR_ADDED,
+            ).exists()
+        )
 
     def test_collaborator_list_create_notifies_other_board_members(self):
         self.client.force_authenticate(user=self.collaborator)
@@ -1613,8 +1634,14 @@ class NotificationApiTests(APITestCase):
         recipient_ids = set(notifications.values_list("recipient_id", flat=True))
         self.assertEqual(recipient_ids, {self.owner.id, self.other_collaborator.id})
         self.assertFalse(notifications.filter(recipient=self.collaborator).exists())
+        notification = notifications.first()
+        created_list = List.objects.get(id=response.data["id"])
+        self.assertEqual(notification.list, created_list)
+        self.assertEqual(
+            notification.target_path, f"/board/{self.board.id}/list/{created_list.id}"
+        )
 
-    def test_collaborator_note_create_and_update_notify_other_board_members(self):
+    def test_collaborator_note_create_and_complete_notify_other_board_members(self):
         self.client.force_authenticate(user=self.collaborator)
         create_response = self.client.post(
             "/api/notes/",
@@ -1629,6 +1656,24 @@ class NotificationApiTests(APITestCase):
             create_response.status_code, status.HTTP_201_CREATED, create_response.data
         )
         note_id = create_response.data["id"]
+        created_note = Note.objects.get(id=note_id)
+        created_notifications = Notification.objects.filter(
+            event_type=Notification.EVENT_NOTE_CREATED
+        )
+        self.assertEqual(
+            set(created_notifications.values_list("recipient_id", flat=True)),
+            {self.owner.id, self.other_collaborator.id},
+        )
+        self.assertFalse(
+            created_notifications.filter(recipient=self.collaborator).exists()
+        )
+        self.assertTrue(
+            created_notifications.filter(
+                note=created_note,
+                list=self.list,
+                target_path=f"/board/{self.board.id}/list/{self.list.id}",
+            ).exists()
+        )
 
         update_response = self.client.patch(
             f"/api/notes/{note_id}/",
@@ -1639,12 +1684,64 @@ class NotificationApiTests(APITestCase):
         self.assertEqual(
             update_response.status_code, status.HTTP_200_OK, update_response.data
         )
-        for event_type in (
-            Notification.EVENT_NOTE_CREATED,
-            Notification.EVENT_NOTE_UPDATED,
-        ):
-            notifications = Notification.objects.filter(event_type=event_type)
-            self.assertEqual(
-                set(notifications.values_list("recipient_id", flat=True)),
-                {self.owner.id, self.other_collaborator.id},
-            )
+        updated_notifications = Notification.objects.filter(
+            event_type=Notification.EVENT_NOTE_UPDATED
+        )
+        self.assertEqual(
+            set(updated_notifications.values_list("recipient_id", flat=True)),
+            {self.owner.id, self.other_collaborator.id},
+        )
+        self.assertFalse(
+            updated_notifications.filter(recipient=self.collaborator).exists()
+        )
+        self.assertTrue(
+            updated_notifications.filter(
+                note=created_note,
+                list=self.list,
+                target_path=f"/board/{self.board.id}/list/{self.list.id}",
+            ).exists()
+        )
+        self.assertFalse(
+            Notification.objects.filter(
+                event_type=Notification.EVENT_NOTE_COMPLETED
+            ).exists()
+        )
+
+        complete_response = self.client.patch(
+            f"/api/notes/{note_id}/",
+            {"status": Note.STATUS_COMPLETE},
+            format="json",
+        )
+
+        self.assertEqual(
+            complete_response.status_code, status.HTTP_200_OK, complete_response.data
+        )
+        completed_notifications = Notification.objects.filter(
+            event_type=Notification.EVENT_NOTE_COMPLETED
+        )
+        self.assertEqual(
+            set(completed_notifications.values_list("recipient_id", flat=True)),
+            {self.owner.id, self.other_collaborator.id},
+        )
+        self.assertFalse(
+            completed_notifications.filter(recipient=self.collaborator).exists()
+        )
+        self.assertTrue(
+            completed_notifications.filter(
+                note=created_note,
+                list=self.list,
+                target_path=f"/board/{self.board.id}/list/{self.list.id}",
+            ).exists()
+        )
+
+        self.client.patch(
+            f"/api/notes/{note_id}/",
+            {"description": "Repeated save while complete"},
+            format="json",
+        )
+        self.assertEqual(
+            Notification.objects.filter(
+                event_type=Notification.EVENT_NOTE_COMPLETED
+            ).count(),
+            2,
+        )

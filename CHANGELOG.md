@@ -7,6 +7,8 @@ All notable changes to this project are documented in this file.
 - Added recipient-scoped in-app notifications with API endpoints for listing and marking notifications read.
 - Added app bar notification badge and popover UI for shared board activity.
 - Added notification generation for collaborator adds, shared board list creation, note creation, and note updates.
+- Added notification target paths and board/list/item context so users can open relevant shared workspace activity from the notifications popover.
+- Added completion-specific item notifications for shared workspaces without duplicating notifications on repeated saves.
 ### Fixed
 - Returned explicit 403 details when shared board collaborators try to update or delete board metadata.
 - Made shared board collaborator access read-only in the sharing dialog without presenting invite or remove controls.

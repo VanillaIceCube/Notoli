@@ -159,11 +159,13 @@ class Notification(models.Model):
     EVENT_LIST_CREATED = "list_created"
     EVENT_NOTE_CREATED = "note_created"
     EVENT_NOTE_UPDATED = "note_updated"
+    EVENT_NOTE_COMPLETED = "note_completed"
     EVENT_CHOICES = [
         (EVENT_COLLABORATOR_ADDED, "Collaborator added"),
         (EVENT_LIST_CREATED, "List created"),
         (EVENT_NOTE_CREATED, "Note created"),
         (EVENT_NOTE_UPDATED, "Note updated"),
+        (EVENT_NOTE_COMPLETED, "Note completed"),
     ]
 
     recipient = models.ForeignKey(
@@ -183,9 +185,24 @@ class Notification(models.Model):
         on_delete=models.CASCADE,
         related_name="notifications",
     )
+    list = models.ForeignKey(
+        List,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notifications",
+    )
+    note = models.ForeignKey(
+        Note,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notifications",
+    )
     event_type = models.CharField(max_length=40, choices=EVENT_CHOICES)
     title = models.CharField(max_length=160)
     message = models.TextField()
+    target_path = models.CharField(max_length=255, blank=True)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField(null=True, blank=True)

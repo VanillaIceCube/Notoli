@@ -200,6 +200,43 @@ describe('AppHeader', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: /mark read/i })).toBeNull());
   });
 
+  test('when a notification row is clicked, it marks read and navigates to the target path', async () => {
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    fetchNotifications.mockResolvedValue(
+      jsonResponse([
+        {
+          id: 1,
+          title: 'New note in Shared Board',
+          message: 'collaborator added "Plan".',
+          is_read: false,
+          board_name: 'Shared Board',
+          list_name: 'Ideas',
+          target_path: '/board/12/list/34',
+        },
+      ]),
+    );
+    markNotificationRead.mockResolvedValue(
+      jsonResponse({
+        id: 1,
+        title: 'New note in Shared Board',
+        message: 'collaborator added "Plan".',
+        is_read: true,
+        board_name: 'Shared Board',
+        list_name: 'Ideas',
+        target_path: '/board/12/list/34',
+      }),
+    );
+
+    renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
+
+    await screen.findByText('1');
+    await userEvent.click(screen.getByLabelText('notifications'));
+    await userEvent.click(screen.getByText('New note in Shared Board'));
+
+    expect(markNotificationRead).toHaveBeenCalledWith(1, 'ACCESS');
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/board/12/list/34'));
+  });
+
   test('when mark all read is clicked, it updates all notifications', async () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     fetchNotifications.mockResolvedValue(

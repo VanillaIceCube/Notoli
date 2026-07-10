@@ -90,24 +90,52 @@ def _board_recipients(board, actor):
     return User.objects.filter(id__in=user_ids)
 
 
-def _notify_board_members(board, actor, event_type, title, message):
+def _board_path(board):
+    return f"/board/{board.id}"
+
+
+def _list_path(note_list):
+    return f"/board/{note_list.board_id}/list/{note_list.id}"
+
+
+def _first_note_list(note):
+    membership = (
+        ListNote.objects.filter(note=note)
+        .select_related("list", "list__board")
+        .order_by("position", "id")
+        .first()
+    )
+    if membership is None:
+        return None
+    return membership.list
+
+
+def _notify_board_members(
+    board, actor, event_type, title, message, note_list=None, note=None, target_path=""
+):
     recipients = list(_board_recipients(board, actor))
     if not recipients:
         return
 
-    Notification.objects.bulk_create(
-        [
-            Notification(
-                recipient=recipient,
-                actor=actor,
-                board=board,
-                event_type=event_type,
-                title=title,
-                message=message,
-            )
-            for recipient in recipients
-        ]
-    )
+    try:
+        Notification.objects.bulk_create(
+            [
+                Notification(
+                    recipient=recipient,
+                    actor=actor,
+                    board=board,
+                    list=note_list,
+                    note=note,
+                    event_type=event_type,
+                    title=title,
+                    message=message,
+                    target_path=target_path,
+                )
+                for recipient in recipients
+            ]
+        )
+    except Exception:
+        return
 
 
 class BoardViewSet(viewsets.ModelViewSet):
@@ -163,14 +191,18 @@ class BoardViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         board.collaborators.add(user)
-        Notification.objects.create(
-            recipient=user,
-            actor=request.user,
-            board=board,
-            event_type=Notification.EVENT_COLLABORATOR_ADDED,
-            title=f"You were added to {board.name}",
-            message=f"{_display_name(request.user)} added you as a collaborator.",
-        )
+        try:
+            Notification.objects.create(
+                recipient=user,
+                actor=request.user,
+                board=board,
+                event_type=Notification.EVENT_COLLABORATOR_ADDED,
+                title=f"You were added to {board.name}",
+                message=f"{_display_name(request.user)} added you as a collaborator.",
+                target_path=_board_path(board),
+            )
+        except Exception:
+            pass
         serializer = self.get_serializer(board)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -253,6 +285,8 @@ class ListViewSet(viewsets.ModelViewSet):
             Notification.EVENT_LIST_CREATED,
             f"New list in {board.name}",
             f'{_display_name(self.request.user)} created the list "{note_list.name}".',
+            note_list=note_list,
+            target_path=_list_path(note_list),
         )
 
     @action(detail=False, methods=["patch"], url_path="reorder")
@@ -360,18 +394,57 @@ class NoteViewSet(viewsets.ModelViewSet):
             self.request.user,
             Notification.EVENT_NOTE_CREATED,
             f"New note in {note.board.name}",
-            f'{_display_name(self.request.user)} created "{note.note}".',
+            (
+                f'{_display_name(self.request.user)} added "{note.note}"'
+                + (f" to {note_list.name}." if note_list is not None else ".")
+            ),
+            note_list=note_list,
+            note=note,
+            target_path=_list_path(note_list)
+            if note_list is not None
+            else _board_path(note.board),
         )
 
     def perform_update(self, serializer):
+        previous_status = serializer.instance.status
         note = serializer.save()
-        _notify_board_members(
-            note.board,
-            self.request.user,
-            Notification.EVENT_NOTE_UPDATED,
-            f"Note updated in {note.board.name}",
-            f'{_display_name(self.request.user)} updated "{note.note}".',
-        )
+        if (
+            previous_status != Note.STATUS_COMPLETE
+            and note.status == Note.STATUS_COMPLETE
+        ):
+            note_list = serializer.validated_data.get("list") or _first_note_list(note)
+            _notify_board_members(
+                note.board,
+                self.request.user,
+                Notification.EVENT_NOTE_COMPLETED,
+                f"Item completed in {note.board.name}",
+                (
+                    f'{_display_name(self.request.user)} completed "{note.note}"'
+                    + (f" in {note_list.name}." if note_list is not None else ".")
+                ),
+                note_list=note_list,
+                note=note,
+                target_path=_list_path(note_list)
+                if note_list is not None
+                else _board_path(note.board),
+            )
+        else:
+            note_list = serializer.validated_data.get("list") or _first_note_list(note)
+            _notify_board_members(
+                note.board,
+                self.request.user,
+                Notification.EVENT_NOTE_UPDATED,
+                f"Note updated in {note.board.name}",
+                (
+                    f'{_display_name(self.request.user)} updated "{note.note}"'
+                    + (f" in {note_list.name}." if note_list is not None else ".")
+                ),
+                note_list=note_list,
+                note=note,
+                target_path=_list_path(note_list)
+                if note_list is not None
+                else _board_path(note.board),
+            )
 
     @action(detail=False, methods=["patch"], url_path="reorder")
     def reorder(self, request):
@@ -436,7 +509,7 @@ class NotificationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return (
             Notification.objects.filter(recipient=self.request.user)
-            .select_related("actor", "board")
+            .select_related("actor", "board", "list", "note")
             .order_by("-created_at", "-id")
         )
 

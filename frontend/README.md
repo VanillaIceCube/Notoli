@@ -39,7 +39,7 @@ Notes in a list render as checklist rows. Checking a note updates its `status` t
 
 ## In-App Notifications
 
-The app bar notification icon opens a popover with the newest notifications first. Unread notifications show a badge count and can be marked read individually or all at once. Notification API failures are shown inside the popover and do not block the rest of the page.
+The app bar notification icon opens a popover with the newest notifications first. Unread notifications show a badge count and can be marked read individually or all at once. Clicking a notification opens its target board or list when the backend provides `target_path`. Notification API failures are shown inside the popover and do not block the rest of the page.
 
 ## Drag-and-Drop Reordering
 
