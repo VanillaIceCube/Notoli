@@ -243,8 +243,9 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                   >
                     Mark all read
                   </Button>
-                )}
+                  )}
               </Stack>
+              <Divider sx={{ my: 1, borderColor: 'rgba(0, 0, 0, 0.12)' }} />
               {notificationsLoading && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
                   <CircularProgress size={24} />
@@ -279,9 +280,10 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                           dense
                           onClick={() => handleOpenNotification(notification)}
                           sx={{
-                            alignItems: 'flex-start',
-                            borderRadius: 1,
-                            py: 1,
+                          alignItems: 'flex-start',
+                          borderRadius: 1,
+                          px: 1.5,
+                          py: 1,
                             bgcolor: notification.is_read ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
                           }}
                         >
@@ -311,8 +313,8 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                               sx={{
                                 width: 40,
                                 height: 40,
-                                mt: -0.5,
                                 ml: 1,
+                                alignSelf: 'center',
                                 flexShrink: 0,
                                 color: 'var(--secondary-color)',
                               }}
