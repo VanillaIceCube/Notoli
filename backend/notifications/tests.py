@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -273,6 +275,29 @@ class NotificationApiTests(APITestCase):
             notification.target_path,
             f"/board/{self.board.id}/list/{notification.list_id}",
         )
+
+    @patch(
+        "notes.views.notify_board_members",
+        side_effect=Exception("notifications table is unavailable"),
+    )
+    def test_list_create_succeeds_when_notification_fails(self, mock_notify):
+        self.client.force_authenticate(user=self.collaborator)
+        with self.assertLogs("notes.views", level="ERROR") as logs:
+            response = self.client.post(
+                "/api/lists/",
+                {
+                    "name": "List Without Notification",
+                    "description": "The list must still be created.",
+                    "board": self.board.id,
+                },
+                format="json",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        created_list = List.objects.get(name="List Without Notification")
+        self.assertEqual(response.data["id"], created_list.id)
+        mock_notify.assert_called_once()
+        self.assertIn("List creation notification failed", logs.output[0])
 
     def test_owner_board_rename_notifies_collaborators(self):
         self.client.force_authenticate(user=self.owner)
