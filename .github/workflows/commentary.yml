@@ -38,6 +38,8 @@ on:
     secrets:
       OPENAI_API_KEY:
         required: false
+      LINT_EASTWOOD_PRIVATE_KEY:
+        required: true
 
 concurrency:
   group: commentary-${{ github.ref }}
@@ -132,6 +134,15 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Create Lint Eastwood GitHub App token
+        id: lint-eastwood-app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.LINT_EASTWOOD_APP_ID }}
+          private-key: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
       - name: Get PR diff
         id: pr_diff
         uses: ./.github/actions/get-pr-diff
@@ -148,7 +159,7 @@ jobs:
           project_id: ${{ vars.OPENAI_PROJECT_ID }}
           diff_path: ${{ steps.pr_diff.outputs.linediff_path }}
           model: "gpt-5.6-luna"
-          system_prompt: "You are an experienced, pragmatic PR reviewer."
+          system_prompt: "You are Lint Eastwood, Notoli's AI Code Reviewer: pragmatic, evidence-driven, and focused on correctness and maintainability."
           prompt_prefix: |
             You are a PR reviewer for the Notoli project (Backend: Django; Frontend: React + MUI; Docker; GitHub Actions). Provide a concise, high-signal code review focused on correctness, security, and maintainability risks. Flag potential bugs, edge cases, missing tests, or backwards-incompatible changes. Avoid style nitpicks. If you are unsure, say so. Use the line-numbered diff to anchor inline comments.
 
@@ -190,6 +201,7 @@ jobs:
         env:
           REVIEW_BODY: ${{ steps.openai_review.outputs.content }}
         with:
+          github-token: ${{ steps.lint-eastwood-app-token.outputs.token }}
           script: |
             const setOutputs = (eventValue, submittedValue) => {
               core.setOutput('review_event', eventValue);

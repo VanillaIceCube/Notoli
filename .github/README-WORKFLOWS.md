@@ -32,12 +32,25 @@ What it does:
   - Generates an AI code review for Dependabot PRs only when frontend/backend lint or tests fail, avoiding token use for healthy dependency updates
   - Posts the summary to the PR description or as a comment
   - Creates a PR review with up to 6 inline comments (when line placement is valid)
+- Runs [`.github/workflows/security-review.yml`](workflows/security-review.yml) after the CI checks. RoboCop aggregates available security comments/check summaries plus lint/test status and logs, then publishes one native review through the RoboCop GitHub App. Dependency Review, malware, and CodeQL remain independent checks and are not replaced by this review.
 - For Dependabot PRs, runs [`.github/workflows/auto_merge.yml`](workflows/auto_merge.yml) only when lints, tests, vulnerability review, and malware review pass. CodeQL or security-only failures do not invoke the conditional Dependabot AI review.
 
 OpenAI inputs (commentary workflow):
 - `OPENAI_API_KEY` (optional secret)
 - `OPENAI_PROJECT_ID` (repo variable)
+- `LINT_EASTWOOD_APP_ID` repository variable and `LINT_EASTWOOD_PRIVATE_KEY` repository secret authenticate the Lint Eastwood GitHub App for native PR reviews.
+- Install Lint Eastwood on the repository with only `Contents: read` and `Pull requests: write`. The App publishes the AI code review; the optional PR summary remains a regular workflow comment.
 - PR summaries and AI reviews use `gpt-5.6-luna` through the local OpenAI Responses API action.
+
+Security-review inputs:
+- `ROBOCOP_APP_ID` repository variable and `ROBOCOP_PRIVATE_KEY` repository secret authenticate the RoboCop GitHub App.
+- RoboCop requires `OPENAI_API_KEY` and `OPENAI_PROJECT_ID`.
+- RoboCop must be installed on the repository. Give it only `Contents: read`, `Pull requests: write`, `Checks: read`, `Actions: read`, and `Security events: read`. Store the complete PEM private key in Actions secrets; never commit or print it.
+- The security-review job waits for lint, test, CodeQL, vulnerability, and malware jobs because it consumes their outputs and summaries. `always()` allows it to review failures; those jobs do not need to pass for the review to run. RoboCop is called only when a failure or security signal exists, so a clean run still avoids the extra model call.
+
+Review personas:
+- **RoboCop — AI Security Officer:** aggregates evidence from CodeQL, Dependency Review, malware checks, and failed CI, then writes an evidence-backed native security review with valid inline comments where needed. It does not replace the underlying scanners.
+- **Lint Eastwood — AI Code Reviewer:** reviews code quality, correctness, and maintainability, with a pragmatic focus on actionable inline feedback. It publishes its native PR reviews through the Lint Eastwood GitHub App identity.
 
 Security-alert aggregation:
 - Daily workflows collect open CodeQL alerts plus non-urgent Dependabot vulnerability alerts and npm malware-classified Dependabot alerts. Each workflow also supports **Run workflow** from the Actions tab.

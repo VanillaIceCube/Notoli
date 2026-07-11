@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-11
+### Added
+- Added RoboCop AI Security Officer and Lint Eastwood AI Code Reviewer workflows with separate GitHub App identities for native pull request reviews.
+### Changed
+- CI now runs an aggregated security review after the existing security, lint, and test checks.
+
 ## 2026-07-10
 ### Changed
 - Run the AI code review for Dependabot pull requests only when linting or tests fail, while continuing to skip AI calls for healthy dependency updates.
