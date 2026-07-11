@@ -1,5 +1,5 @@
 // BoardListsPage loads one board's lists and plugs board-specific CRUD/navigation into notepad UI.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Box, Button, IconButton, Typography } from '@mui/material';
 import Add from '@mui/icons-material/Add';
@@ -63,9 +63,13 @@ export default function BoardListsPage({ setAppBarHeader }) {
   const [editListName, setEditListName] = useState('');
   const actionMenuOpen = Boolean(actionMenuAnchorEl);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setAppBarHeader('');
   }, [setAppBarHeader]);
+
+  useEffect(() => {
+    document.title = boardName ? `Notoli - ${boardName}` : 'Notoli';
+  }, [boardName]);
 
   const fetchLists = useCallback(async () => {
     setLoading(true);
@@ -264,7 +268,11 @@ export default function BoardListsPage({ setAppBarHeader }) {
             color: 'var(--secondary-color)',
             textTransform: 'none',
           }}
-          onClick={() => navigate(`/board/${boardId}/list/${list.id}`)}
+          onClick={() =>
+            navigate(`/board/${boardId}/list/${list.id}`, {
+              state: { boardName, listName: list.name },
+            })
+          }
         >
           <Typography variant="body1" fontWeight="bold" sx={rowTitleSx}>
             {list.name}

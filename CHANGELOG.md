@@ -3,18 +3,24 @@ All notable changes to this project are documented in this file.
 
 ## 2026-07-10
 ### Added
+- Added Notoli browser, install, and Apple-touch branding metadata with a native Notoli mark.
 - Added daily/manual LLM-based CodeQL, Dependabot vulnerability, and Dependabot malware alert aggregation workflows with validated, idempotent GitHub issue and project-field synchronization, repository-owner assignment, and gray feed tags.
 - Added PR-time dependency vulnerability and npm malware gates to the reusable CI flow.
 - Added PR-visible malware summaries and dependency checks to Dependabot auto-merge prerequisites.
 - Added notification board/list/note navigation context and `target_path` routing metadata for shared board activity.
 - Added completion-specific shared note notifications when a note transitions to `Complete`.
 ### Fixed
+- Prevented AppBar title flicker during list-to-board navigation by ignoring stale title requests.
+- Kept sharing access rows mounted through the dialog close transition.
+- Retried a request once after a successful access-token refresh and retained sessions during transient refresh failures.
 - Gated frontend and backend lint/test jobs by relevant path changes while keeping shared workflow and action changes covered.
 - Reported explicit `not-applicable` statuses for skipped lint and test scopes in PR commentary.
 - Matched CodeQL pull-request scope detection to the lint/test pattern, skipping analysis for unrelated changes and retaining the Actions configuration for relevant PR comparisons.
 - Prevented repeated saves of an already-complete note from creating duplicate completion notifications.
 - Confirmed duplicate collaborator-add attempts do not create extra notifications.
 ### Changed
+- Capitalized the generated default board suffix to `Board` for new users.
+- Themed the notes empty state and slowed the active pull-to-refresh spinner.
 - Renamed the security-alert workflow files to concise `alerts-*` and `security-alerts` names, and corrected their Dependabot and Project-token permission model.
 - Moved the security-alert implementation into a dedicated composite action so the reusable workflow remains a small orchestration layer.
 - Provisioned gray security feed labels with descriptions and removed label-management writes from the alert action.

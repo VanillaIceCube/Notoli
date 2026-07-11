@@ -335,7 +335,9 @@ describe('BoardListsPage', () => {
 
     await userEvent.click(await screen.findByText('test_list_01'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/board/1/list/10');
+    expect(mockNavigate).toHaveBeenCalledWith('/board/1/list/10', {
+      state: { boardName: 'test_board_01', listName: 'test_list_01' },
+    });
   });
 
   test('when the boardId changes, it refetches the lists', async () => {

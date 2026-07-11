@@ -307,6 +307,25 @@ describe('ListTasksPage', () => {
     await waitFor(() => {
       expect(setAppBarHeader).toHaveBeenCalledWith('test_board_01');
     });
+    await waitFor(() => {
+      expect(document.title).toBe('Notoli - test_board_01 - List 5');
+    });
+  });
+
+  test('when navigation provides a board name, it sets the app bar header before the fallback request returns', async () => {
+    const deferred = createDeferred();
+    fetchBoardApi.mockReturnValueOnce(deferred.promise);
+    const setAppBarHeader = jest.fn();
+
+    renderWithProviders(<ListTasksPage setAppBarHeader={setAppBarHeader} />, {
+      routeEntries: [
+        { pathname: '/board/1/list/5', state: { boardName: 'Project board', listName: 'Inbox' } },
+      ],
+    });
+
+    expect(setAppBarHeader).toHaveBeenCalledWith('Project board');
+    expect(document.title).toBe('Notoli - Project board - Inbox');
+    await waitForLoadingToFinish();
   });
 
   test('when the list fetch fails, it shows an error and does not show the old hardcoded title', async () => {
@@ -397,12 +416,17 @@ describe('ListTasksPage', () => {
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
 
-  test('when the notes list is empty, it shows the empty state message', async () => {
+  test('when the last note is gone, the empty row keeps Add New at one complete note-item height', async () => {
     fetchNotesApi.mockResolvedValueOnce({ ok: true, json: async () => [] });
 
     await renderNotes();
 
     expect(await screen.findByText(/no notes found/i)).toBeInTheDocument();
+    expect(screen.getByTestId('note-empty-state')).toHaveStyle({
+      minHeight: '52px',
+      borderBottom: '2px solid var(--secondary-color)',
+    });
+    expect(screen.getByRole('button', { name: /add new/i })).toBeInTheDocument();
   });
 
   test('when a mobile user pulls down from the top, it refreshes the notes', async () => {

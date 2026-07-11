@@ -42,5 +42,8 @@ describe('PullToRefreshIndicator', () => {
 
     expect(screen.getByRole('status', { name: /refreshing/i })).toBeInTheDocument();
     expect(screen.getByTestId('RefreshIcon')).toBeInTheDocument();
+    expect(screen.getByTestId('RefreshIcon')).toHaveStyle(
+      'animation: notoliRefreshSpin 1400ms linear infinite -1050ms',
+    );
   });
 });

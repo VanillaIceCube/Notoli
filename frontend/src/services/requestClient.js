@@ -88,12 +88,56 @@ function handleUnauthorized() {
   redirectToLogin();
 }
 
+let refreshRequest = null;
+
+async function refreshAccessToken() {
+  if (refreshRequest) return refreshRequest;
+
+  const refreshToken = sessionStorage.getItem('refreshToken');
+  if (!refreshToken) return { status: 'invalid' };
+
+  refreshRequest = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh: refreshToken }),
+      });
+      if (response.status === 400 || response.status === 401) return { status: 'invalid' };
+      if (!response.ok) return { status: 'transient' };
+
+      const data = await response.json();
+      if (!data?.access) return { status: 'transient' };
+      sessionStorage.setItem('accessToken', data.access);
+      if (data.refresh) sessionStorage.setItem('refreshToken', data.refresh);
+      return { status: 'refreshed', accessToken: data.access };
+    } catch (_err) {
+      return { status: 'transient' };
+    } finally {
+      refreshRequest = null;
+    }
+  })();
+
+  return refreshRequest;
+}
+
+function withAccessToken(options, accessToken) {
+  return {
+    ...options,
+    headers: { ...(options.headers || {}), Authorization: `Bearer ${accessToken}` },
+  };
+}
+
 export async function apiFetch(path, options = {}) {
   const url = `${API_BASE_URL}${path}`;
   const response = await fetch(url, options);
 
   if (response?.status === 401 && shouldRedirectToLogin(path)) {
-    handleUnauthorized();
+    const refreshResult = await refreshAccessToken();
+    if (refreshResult.status === 'refreshed') {
+      return fetch(url, withAccessToken(options, refreshResult.accessToken));
+    }
+    if (refreshResult.status === 'invalid') handleUnauthorized();
   }
 
   return response;

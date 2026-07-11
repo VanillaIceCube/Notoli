@@ -55,7 +55,7 @@ describe('requestClient', () => {
     expect(global.fetch).toHaveBeenCalledWith('http://localhost:8000/path', options);
   });
 
-  test('when a non-auth endpoint returns 401, it clears tokens and redirects to /login', async () => {
+  test('when a non-auth endpoint and refresh token are invalid, it clears tokens and redirects to /login', async () => {
     delete process.env.REACT_APP_API_BASE_URL;
     global.fetch = jest.fn(() => Promise.resolve({ ok: false, status: 401 }));
 
@@ -78,6 +78,55 @@ describe('requestClient', () => {
       message: 'Your session expired. Please log in again.',
     });
     expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
+  });
+
+  test('when an access token expires, it refreshes once and retries without logging out', async () => {
+    delete process.env.REACT_APP_API_BASE_URL;
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 401 })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ access: 'NEW_ACCESS' }) })
+      .mockResolvedValueOnce({ ok: true, status: 200 });
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    sessionStorage.setItem('refreshToken', 'REFRESH');
+
+    const { setNavigate } = await import('./navigationService');
+    const mockNavigate = jest.fn();
+    setNavigate(mockNavigate);
+    const { apiFetch } = await import('./requestClient');
+
+    const response = await apiFetch('/api/boards/', {
+      headers: { Authorization: 'Bearer ACCESS' },
+    });
+
+    expect(response.ok).toBe(true);
+    expect(sessionStorage.getItem('accessToken')).toBe('NEW_ACCESS');
+    expect(sessionStorage.getItem('refreshToken')).toBe('REFRESH');
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenLastCalledWith('http://localhost:8000/api/boards/', {
+      headers: { Authorization: 'Bearer NEW_ACCESS' },
+    });
+  });
+
+  test('when refresh has a transient failure, it preserves the session and returns the original response', async () => {
+    delete process.env.REACT_APP_API_BASE_URL;
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 401 })
+      .mockResolvedValueOnce({ ok: false, status: 503 });
+    sessionStorage.setItem('accessToken', 'ACCESS');
+    sessionStorage.setItem('refreshToken', 'REFRESH');
+    const { setNavigate } = await import('./navigationService');
+    const mockNavigate = jest.fn();
+    setNavigate(mockNavigate);
+    const { apiFetch } = await import('./requestClient');
+
+    const response = await apiFetch('/api/boards/');
+
+    expect(response.status).toBe(401);
+    expect(sessionStorage.getItem('accessToken')).toBe('ACCESS');
+    expect(sessionStorage.getItem('refreshToken')).toBe('REFRESH');
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   test('when /auth/login/ returns 401, it does not redirect or clear tokens', async () => {
