@@ -21,6 +21,7 @@ All notable changes to this project are documented in this file.
 - Renamed alert workflows to the `*-alert` and `*-gate` naming convention.
 - Renamed lint and test workflows to `lint-gate.yml` and `test-gate.yml` for consistent merge-gate naming.
 - Standardized the vulnerability alert workflow on the singular `vulnerability` spelling.
+- Narrowed frontend/backend lint and test filters so unrelated workflow changes report `not-applicable` instead of running both application suites.
 - Updated the PR summary and AI review workflows from GPT-5.1 to GPT-5.5.
 - Aligned the profile menu with the notification panel so both open inward from the right side of the app bar on mobile screens.
 - Simplified notification rows to a single event message with concise location context, clear actions, and dividers between notifications, including legacy messages that repeat the list name.

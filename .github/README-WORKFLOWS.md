@@ -15,7 +15,8 @@ What it does:
 - Lint and test jobs use the same change filters:
   - Frontend checks run for `frontend/**` changes.
   - Backend checks run for `backend/**` changes.
-  - Changes under `.github/workflows/**` or `.github/actions/**` run both frontend and backend checks because shared CI behavior may affect either stack.
+  - Changes to `.github/actions/read-versions/**` run both frontend and backend checks because that shared action controls both toolchains.
+  - Other workflow/action changes are validated by Actionlint and CodeQL Actions analysis without forcing application test suites to run.
   - Jobs skipped because their paths are not relevant report `not-applicable` to PR commentary.
 - Runs the reusable CodeQL gate: [`.github/workflows/codeql-gate.yml`](workflows/codeql-gate.yml)
   - Python/Django backend analysis for `backend/**`
