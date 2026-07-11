@@ -3,6 +3,7 @@ All notable changes to this project are documented in this file.
 
 ## 2026-07-10
 ### Added
+- Added daily/manual LLM-based CodeQL, Dependabot vulnerability, and Dependabot malware alert aggregation workflows with validated, idempotent GitHub issue and project-field synchronization, repository-owner assignment, and gray feed tags.
 - Added PR-time dependency vulnerability and npm malware gates to the reusable CI flow.
 - Added PR-visible malware summaries and dependency checks to Dependabot auto-merge prerequisites.
 - Added notification board/list/note navigation context and `target_path` routing metadata for shared board activity.
@@ -14,6 +15,12 @@ All notable changes to this project are documented in this file.
 - Prevented repeated saves of an already-complete note from creating duplicate completion notifications.
 - Confirmed duplicate collaborator-add attempts do not create extra notifications.
 ### Changed
+- Renamed the security-alert workflow files to concise `alerts-*` and `security-alerts` names, and corrected their Dependabot and Project-token permission model.
+- Moved the security-alert implementation into a dedicated composite action so the reusable workflow remains a small orchestration layer.
+- Provisioned gray security feed labels with descriptions and removed label-management writes from the alert action.
+- Renamed alert workflows to the `*-alert` and `*-gate` naming convention.
+- Renamed lint and test workflows to `lint-gate.yml` and `test-gate.yml` for consistent merge-gate naming.
+- Standardized the vulnerability alert workflow on the singular `vulnerability` spelling.
 - Updated the PR summary and AI review workflows from GPT-5.1 to GPT-5.5.
 - Aligned the profile menu with the notification panel so both open inward from the right side of the app bar on mobile screens.
 - Simplified notification rows to a single event message with concise location context, clear actions, and dividers between notifications, including legacy messages that repeat the list name.

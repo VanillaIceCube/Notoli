@@ -1,4 +1,4 @@
-name: Lints
+name: Lint Gate
 
 on:
   workflow_call:

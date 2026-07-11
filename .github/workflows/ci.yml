@@ -18,17 +18,17 @@ permissions:
 jobs:
   lints:
     name: Lints
-    uses: ./.github/workflows/lints.yml
+    uses: ./.github/workflows/lint-gate.yml
     with:
       checkout_ref: ${{ github.event.pull_request.head.ref }}
 
   tests:
     name: Tests
-    uses: ./.github/workflows/tests.yml
+    uses: ./.github/workflows/test-gate.yml
 
   codeql:
     name: CodeQL
-    uses: ./.github/workflows/codeql.yml
+    uses: ./.github/workflows/codeql-gate.yml
     permissions:
       actions: read
       contents: read
@@ -37,14 +37,14 @@ jobs:
 
   dependency-vulnerability:
     name: Vulnerability
-    uses: ./.github/workflows/vulnerability.yml
+    uses: ./.github/workflows/vulnerability-gate.yml
     permissions:
       contents: read
       pull-requests: write
 
   dependency-malware:
     name: Malware
-    uses: ./.github/workflows/malware.yml
+    uses: ./.github/workflows/malware-gate.yml
     permissions:
       contents: read
       pull-requests: write
