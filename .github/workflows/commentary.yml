@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       lint_frontend_status:
-        description: Frontend lint status (success/failure/none).
+        description: Frontend lint status (success/failure/not-applicable).
         required: false
         type: string
       lint_frontend_log:
@@ -12,7 +12,7 @@ on:
         required: false
         type: string
       lint_backend_status:
-        description: Backend lint status (success/failure/none).
+        description: Backend lint status (success/failure/not-applicable).
         required: false
         type: string
       lint_backend_log:
@@ -20,7 +20,7 @@ on:
         required: false
         type: string
       test_frontend_status:
-        description: Frontend test status (success/failure/none).
+        description: Frontend test status (success/failure/not-applicable).
         required: false
         type: string
       test_frontend_log:
@@ -28,7 +28,7 @@ on:
         required: false
         type: string
       test_backend_status:
-        description: Backend test status (success/failure/none).
+        description: Backend test status (success/failure/not-applicable).
         required: false
         type: string
       test_backend_log:
@@ -75,7 +75,7 @@ jobs:
           api_key: ${{ secrets.OPENAI_API_KEY }}
           project_id: ${{ vars.OPENAI_PROJECT_ID }}
           diff_path: ${{ steps.pr_diff.outputs.diff_path }}
-          model: "gpt-5.1"
+          model: "gpt-5.5"
           temperature: "0.3"
           system_prompt: "You are an experienced PR summarizer helping on GitHub pull requests."
           prompt_prefix: |
@@ -143,7 +143,7 @@ jobs:
           api_key: ${{ secrets.OPENAI_API_KEY }}
           project_id: ${{ vars.OPENAI_PROJECT_ID }}
           diff_path: ${{ steps.pr_diff.outputs.linediff_path }}
-          model: "gpt-5.1"
+          model: "gpt-5.5"
           temperature: "0.2"
           system_prompt: "You are an experienced, pragmatic PR reviewer."
           prompt_prefix: |
@@ -166,10 +166,10 @@ jobs:
             - If the diff is truncated, mention it in the body.
 
             CI context (lint/test results):
-            - lint_frontend_status: ${{ inputs.lint_frontend_status || 'none' }}
-            - lint_backend_status: ${{ inputs.lint_backend_status || 'none' }}
-            - test_frontend_status: ${{ inputs.test_frontend_status || 'none' }}
-            - test_backend_status: ${{ inputs.test_backend_status || 'none' }}
+            - lint_frontend_status: ${{ inputs.lint_frontend_status || 'not-applicable' }}
+            - lint_backend_status: ${{ inputs.lint_backend_status || 'not-applicable' }}
+            - test_frontend_status: ${{ inputs.test_frontend_status || 'not-applicable' }}
+            - test_backend_status: ${{ inputs.test_backend_status || 'not-applicable' }}
             - lint_frontend_log (tail):
             ${{ inputs.lint_frontend_log }}
             - lint_backend_log (tail):

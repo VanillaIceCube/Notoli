@@ -12,6 +12,11 @@ What it does:
 - Runs the reusable test workflow: [`.github/workflows/tests.yml`](workflows/tests.yml)
   - Frontend: `npm test` (CI mode)
   - Backend: `python manage.py test`
+- Lint and test jobs use the same change filters:
+  - Frontend checks run for `frontend/**` changes.
+  - Backend checks run for `backend/**` changes.
+  - Changes under `.github/workflows/**` or `.github/actions/**` run both frontend and backend checks because shared CI behavior may affect either stack.
+  - Jobs skipped because their paths are not relevant report `not-applicable` to PR commentary.
 - Runs the reusable CodeQL workflow: [`.github/workflows/codeql.yml`](workflows/codeql.yml)
   - Python/Django backend analysis for `backend/**`
   - JavaScript/TypeScript frontend analysis for `frontend/**`
@@ -30,6 +35,7 @@ What it does:
 OpenAI inputs (commentary workflow):
 - `OPENAI_API_KEY` (optional secret)
 - `OPENAI_PROJECT_ID` (repo variable)
+- PR summaries and AI reviews use `gpt-5.5` through the local OpenAI Chat Completions action.
 
 Version pins:
 - Node version is read from `frontend/package.json` (`engines.node`)
