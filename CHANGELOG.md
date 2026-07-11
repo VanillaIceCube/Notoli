@@ -2,6 +2,10 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-07-10
+### Changed
+- Run the AI code review for Dependabot pull requests only when linting or tests fail, while continuing to skip AI calls for healthy dependency updates.
+
+## 2026-07-10
 ### Added
 - Added default personal-board starter lists and notes for newly registered users.
 ### Changed

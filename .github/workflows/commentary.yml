@@ -51,7 +51,7 @@ permissions:
 jobs:
   ai-summary:
     name: ai-summary
-    if: github.actor != 'dependabot[bot]'
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
 
     steps:
@@ -118,7 +118,12 @@ jobs:
 
   ai-review:
     name: ai-review
-    if: github.actor != 'dependabot[bot]'
+    if: >-
+      github.event.pull_request.user.login != 'dependabot[bot]' ||
+      inputs.lint_frontend_status == 'failure' ||
+      inputs.lint_backend_status == 'failure' ||
+      inputs.test_frontend_status == 'failure' ||
+      inputs.test_backend_status == 'failure'
     runs-on: ubuntu-latest
 
     steps:

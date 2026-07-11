@@ -54,7 +54,15 @@ jobs:
     needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware]
     if: >-
       always() &&
-      github.event.pull_request.user.login != 'dependabot[bot]'
+      (
+        github.event.pull_request.user.login != 'dependabot[bot]' ||
+        needs.lints.result == 'failure' ||
+        needs.tests.result == 'failure' ||
+        needs.lints.outputs.lint_frontend_status == 'failure' ||
+        needs.lints.outputs.lint_backend_status == 'failure' ||
+        needs.tests.outputs.test_frontend_status == 'failure' ||
+        needs.tests.outputs.test_backend_status == 'failure'
+      )
     uses: ./.github/workflows/commentary.yml
     secrets: inherit
     with:
