@@ -1,4 +1,4 @@
-name: Tests
+name: Test Gate
 
 on:
   workflow_call:
@@ -37,12 +37,10 @@ jobs:
           filters: |
             frontend:
               - 'frontend/**'
-              - '.github/workflows/**'
-              - '.github/actions/**'
+              - '.github/actions/read-versions/**'
             backend:
               - 'backend/**'
-              - '.github/workflows/**'
-              - '.github/actions/**'
+              - '.github/actions/read-versions/**'
 
   frontend-tests:
     name: Frontend Tests (React)

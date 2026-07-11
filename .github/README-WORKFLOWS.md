@@ -6,24 +6,25 @@ Trigger:
 - Pull requests (opened/synchronize/reopened/ready_for_review)
 
 What it does:
-- Runs the reusable lint workflow: [`.github/workflows/lints.yml`](workflows/lints.yml)
+- Runs the reusable lint gate: [`.github/workflows/lint-gate.yml`](workflows/lint-gate.yml)
   - Frontend: Prettier + ESLint (auto-fix, then strict checks)
   - Backend: Ruff (auto-fix, then strict checks)
-- Runs the reusable test workflow: [`.github/workflows/tests.yml`](workflows/tests.yml)
+- Runs the reusable test gate: [`.github/workflows/test-gate.yml`](workflows/test-gate.yml)
   - Frontend: `npm test` (CI mode)
   - Backend: `python manage.py test`
 - Lint and test jobs use the same change filters:
   - Frontend checks run for `frontend/**` changes.
   - Backend checks run for `backend/**` changes.
-  - Changes under `.github/workflows/**` or `.github/actions/**` run both frontend and backend checks because shared CI behavior may affect either stack.
+  - Changes to `.github/actions/read-versions/**` run both frontend and backend checks because that shared action controls both toolchains.
+  - Other workflow/action changes are validated by Actionlint and CodeQL Actions analysis without forcing application test suites to run.
   - Jobs skipped because their paths are not relevant report `not-applicable` to PR commentary.
-- Runs the reusable CodeQL workflow: [`.github/workflows/codeql.yml`](workflows/codeql.yml)
+- Runs the reusable CodeQL gate: [`.github/workflows/codeql-gate.yml`](workflows/codeql-gate.yml)
   - Python/Django backend analysis for `backend/**`
   - JavaScript/TypeScript frontend analysis for `frontend/**`
   - GitHub Actions workflow analysis for `.github/workflows/**` and `.github/actions/**`
-- Runs the reusable vulnerability review: [`.github/workflows/vulnerability.yml`](workflows/vulnerability.yml)
+- Runs the reusable vulnerability gate: [`.github/workflows/vulnerability-gate.yml`](workflows/vulnerability-gate.yml)
   - Uses GitHub Dependency Review and fails when a PR introduces a high or critical vulnerability.
-- Runs the reusable malware review: [`.github/workflows/malware.yml`](workflows/malware.yml)
+- Runs the reusable malware gate: [`.github/workflows/malware-gate.yml`](workflows/malware-gate.yml)
   - Uses the local [npm malware review action](actions/review-npm-malware/action.yml) to compare changed `frontend/package-lock.json` packages against GitHub's npm malware advisories.
   - Updates one PR summary comment and fails when a changed package/version matches a known malware advisory.
 - For non-Dependabot PRs, runs [`.github/workflows/commentary.yml`](workflows/commentary.yml)
@@ -36,6 +37,14 @@ OpenAI inputs (commentary workflow):
 - `OPENAI_API_KEY` (optional secret)
 - `OPENAI_PROJECT_ID` (repo variable)
 - PR summaries and AI reviews use `gpt-5.5` through the local OpenAI Chat Completions action.
+
+Security-alert aggregation:
+- Daily workflows collect open CodeQL alerts plus non-urgent Dependabot vulnerability alerts and npm malware-classified Dependabot alerts. Each workflow also supports **Run workflow** from the Actions tab.
+- The reusable [security-alert workflow](workflows/security-alerts.yml) is intentionally small; the fetching, grouping, validation, and synchronization implementation lives in the [Security Alerts composite action](actions/security-alerts/action.yml). The response must be valid JSON and must account for every source alert exactly once; validation happens before any issue is created or updated. Its callers are [`codeql-alert.yml`](workflows/codeql-alert.yml), [`vulnerability-alert.yml`](workflows/vulnerability-alert.yml), and [`malware-alert.yml`](workflows/malware-alert.yml).
+- Generated issues contain a stable marker derived from their feed and source-alert references, so subsequent runs update the same issue. Every issue is assigned to the repository owner and receives exactly one gray feed tag: `codeql`, `vulnerability`, or `malware`. These labels are provisioned on the repository and are not modified during workflow runs.
+- Required repository configuration: `OPENAI_API_KEY` secret, `SECURITY_ALERTS_TOKEN` secret, `OPENAI_PROJECT_ID` repository variable, and `SECURITY_ALERTS_PROJECT_ID` repository variable (the node ID of the Notoli GitHub Project v2). `SECURITY_ALERTS_TOKEN` must be a classic token with `repo`, `security_events`, and `project` scopes, or an equivalent GitHub App/fine-grained token that can read CodeQL and Dependabot alerts, write issues, and write to the Project.
+- The project must include these fields and options: `Status` → `Backlog`, `Domain` → `Security`, `Type` → `Maintenance / Automation`, `Priority` → `Medium`/`High`, `Size` → `Medium`, and numeric `Estimate` (set to `3`). The workflows require and write all of them.
+- `GITHUB_TOKEN` is limited to `contents: read` for checkout. `SECURITY_ALERTS_TOKEN` performs all alert, issue, label, assignment, and Project v2 API calls, because Project v2 writes require a token with Project access and Dependabot-alert access is token-specific.
 
 Version pins:
 - Node version is read from `frontend/package.json` (`engines.node`)
