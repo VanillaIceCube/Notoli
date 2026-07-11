@@ -188,15 +188,21 @@ export default function BoardNavigationDrawer({
 
   // Share Board
   const [sharingBoard, setSharingBoard] = useState(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const openShareDialog = (board) => {
     setSharingBoard(board);
+    setShareDialogOpen(true);
     handleTripleDotClose();
   };
 
   const updateSharedBoard = (updatedBoard) => {
     setBoards((prev) => prev.map((board) => (board.id === updatedBoard.id ? updatedBoard : board)));
     setSharingBoard(updatedBoard);
+  };
+
+  const closeShareDialog = () => {
+    setShareDialogOpen(false);
   };
 
   // Remove board
@@ -518,10 +524,11 @@ export default function BoardNavigationDrawer({
         )}
       </Menu>
       <BoardShareDialog
-        open={Boolean(sharingBoard)}
+        open={shareDialogOpen}
         board={sharingBoard}
         token={token}
-        onClose={() => setSharingBoard(null)}
+        onClose={closeShareDialog}
+        onExited={() => setSharingBoard(null)}
         onBoardUpdated={updateSharedBoard}
         showSnackbar={showSnackbar}
       />

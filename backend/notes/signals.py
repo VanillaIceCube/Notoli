@@ -19,7 +19,7 @@ def create_default_board(sender, instance, created, **kwargs):
     fallback = (instance.email or "").split("@", 1)[0].strip()
     base_name = username or fallback or "My"
     Board.objects.create(
-        name=f"{base_name}'s board",
+        name=f"{base_name}'s Board",
         owner=instance,
         created_by=instance,
     )

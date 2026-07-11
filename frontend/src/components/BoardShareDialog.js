@@ -130,6 +130,7 @@ export default function BoardShareDialog({
   board,
   token,
   onClose,
+  onExited,
   onBoardUpdated,
   showSnackbar,
 }) {
@@ -217,6 +218,7 @@ export default function BoardShareDialog({
       fullWidth
       maxWidth={false}
       slotProps={{
+        transition: { onExited },
         paper: {
           sx: {
             width: 'min(480px, calc(100vw - 32px))',

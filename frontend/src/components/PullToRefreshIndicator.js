@@ -2,6 +2,8 @@ import { Box } from '@mui/material';
 import Refresh from '@mui/icons-material/Refresh';
 
 const FULL_PULL_DISTANCE = 84;
+const ACTIVE_SPIN_DURATION_MS = 1400;
+const ACTIVE_SPIN_START_DELAY_MS = -(ACTIVE_SPIN_DURATION_MS * 0.75);
 
 export default function PullToRefreshIndicator({ pullDistance, refreshReady, isRefreshing }) {
   const active = isRefreshing || pullDistance > 0;
@@ -11,7 +13,7 @@ export default function PullToRefreshIndicator({ pullDistance, refreshReady, isR
       ? 'Release to refresh'
       : 'Pull to refresh';
   const pullProgress = Math.min(pullDistance / FULL_PULL_DISTANCE, 1);
-  const pullRotation = refreshReady ? 360 : Math.round(pullProgress * 270);
+  const pullRotation = Math.round(pullProgress * 270);
 
   return (
     <Box
@@ -47,7 +49,9 @@ export default function PullToRefreshIndicator({ pullDistance, refreshReady, isR
             fontSize: 28,
             transform: isRefreshing ? undefined : `rotate(${pullRotation}deg)`,
             transition: isRefreshing ? 'none' : 'transform 80ms linear',
-            animation: isRefreshing ? 'notoliRefreshSpin 750ms linear infinite' : 'none',
+            animation: isRefreshing
+              ? `notoliRefreshSpin ${ACTIVE_SPIN_DURATION_MS}ms linear infinite ${ACTIVE_SPIN_START_DELAY_MS}ms`
+              : 'none',
           },
         }}
       >

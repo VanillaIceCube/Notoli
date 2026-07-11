@@ -88,7 +88,7 @@ class RegistrationTests(APITestCase):
         )
 
         user = User.objects.get(username="test_email")
-        board = Board.objects.filter(owner=user, name="test_email's board").first()
+        board = Board.objects.filter(owner=user, name="test_email's Board").first()
         self.assertIsNotNone(
             board,
             "Default board was not created for the user.",
@@ -151,7 +151,7 @@ class RegistrationTests(APITestCase):
         board = Board.objects.filter(owner=user).first()
 
         self.assertIsNotNone(board, "Default board was not created.")
-        self.assertEqual(board.name, "fallback's board")
+        self.assertEqual(board.name, "fallback's Board")
 
     def test_register_missing_email(self):
         response = self.client.post(

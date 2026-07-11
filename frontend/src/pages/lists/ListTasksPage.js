@@ -1,11 +1,11 @@
 // ListTasksPage loads one list's tasks and adds task-specific completion behavior to notepad UI.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Box, Button, Checkbox, IconButton, Typography } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import DragIndicator from '@mui/icons-material/DragIndicator';
 import MoreVert from '@mui/icons-material/MoreVert';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import InlineTextEditor from '../../components/notepadPages/InlineTextEditor';
 import NotepadPageShell from '../../components/notepadPages/NotepadPageShell';
 import NotepadRowActionMenu from '../../components/notepadPages/NotepadRowActionMenu';
@@ -28,6 +28,8 @@ import { usePullToRefresh } from '../../hooks/useMobileGestures';
 const NOTE_STATUS_NOT_STARTED = 'Not Started';
 const NOTE_STATUS_COMPLETE = 'Complete';
 const isTaskComplete = (task) => task.status === NOTE_STATUS_COMPLETE;
+const formatDocumentTitle = (boardName, listName) =>
+  boardName && listName ? `Notoli - ${boardName} - ${listName}` : 'Notoli';
 
 const rowSx = {
   display: 'flex',
@@ -51,7 +53,9 @@ const pageActionButtonSx = {
 
 export default function ListTasksPage({ setAppBarHeader }) {
   const { boardId, listId } = useParams();
+  const location = useLocation();
   const token = sessionStorage.getItem('accessToken');
+  const [boardName, setBoardName] = useState('');
   const [listName, setListName] = useState('');
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +68,18 @@ export default function ListTasksPage({ setAppBarHeader }) {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTask, setEditTask] = useState('');
   const actionMenuOpen = Boolean(actionMenuAnchorEl);
+
+  // Preserve the AppBar's existing board-only behavior; its title is unrelated to the browser tab.
+  useLayoutEffect(() => {
+    setAppBarHeader(location.state?.boardName ?? '');
+  }, [boardId, location.state?.boardName, setAppBarHeader]);
+
+  useEffect(() => {
+    document.title = formatDocumentTitle(
+      location.state?.boardName || boardName,
+      location.state?.listName || listName,
+    );
+  }, [boardName, listName, location.state?.boardName, location.state?.listName]);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -95,29 +111,40 @@ export default function ListTasksPage({ setAppBarHeader }) {
     }
   }, [listId, token]);
 
-  const fetchBoardName = useCallback(async () => {
-    setAppBarHeader('');
+  const fetchBoardName = useCallback(
+    async (isActive = () => true) => {
+      if (!boardId) return;
 
-    if (!boardId) return;
-
-    try {
-      const response = await fetchBoardApi(boardId, token);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const boardData = await response.json();
-      setAppBarHeader(boardData?.name ?? '');
-    } catch (err) {
-      setAppBarHeader('');
-      setError(err.toString());
-    }
-  }, [boardId, token, setAppBarHeader]);
+      try {
+        const response = await fetchBoardApi(boardId, token);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const boardData = await response.json();
+        if (isActive()) {
+          setBoardName(boardData?.name ?? '');
+          setAppBarHeader(boardData?.name ?? '');
+        }
+      } catch (err) {
+        if (isActive()) {
+          setBoardName('');
+          setAppBarHeader('');
+        }
+        setError(err.toString());
+      }
+    },
+    [boardId, token, setAppBarHeader],
+  );
 
   useEffect(() => {
+    let active = true;
     if (listId) {
       rememberLastBoard(boardId);
       fetchTasks();
       fetchListName();
-      fetchBoardName();
+      fetchBoardName(() => active);
     }
+    return () => {
+      active = false;
+    };
   }, [boardId, listId, fetchTasks, fetchListName, fetchBoardName]);
 
   const closeActionMenu = () => {
