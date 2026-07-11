@@ -3,6 +3,12 @@ All notable changes to this project are documented in this file.
 
 ## 2026-07-10
 ### Added
+- Added default personal-board starter lists and notes for newly registered users.
+### Changed
+- Capitalized the first letter of email-prefix fallback names for new users' default boards.
+
+## 2026-07-10
+### Added
 - Added Notoli browser, install, and Apple-touch branding metadata with a native Notoli mark.
 - Added daily/manual LLM-based CodeQL, Dependabot vulnerability, and Dependabot malware alert aggregation workflows with validated, idempotent GitHub issue and project-field synchronization, repository-owner assignment, and gray feed tags.
 - Added PR-time dependency vulnerability and npm malware gates to the reusable CI flow.
@@ -10,6 +16,7 @@ All notable changes to this project are documented in this file.
 - Added notification board/list/note navigation context and `target_path` routing metadata for shared board activity.
 - Added completion-specific shared note notifications when a note transitions to `Complete`.
 ### Fixed
+- Updated OpenAI GitHub automation to use the Responses API with `gpt-5.6-luna` and omit unsupported temperature settings.
 - Prevented AppBar title flicker during list-to-board navigation by ignoring stale title requests.
 - Kept sharing access rows mounted through the dialog close transition.
 - Retried a request once after a successful access-token refresh and retained sessions during transient refresh failures.
