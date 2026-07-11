@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 - Added notification board/list/note navigation context and `target_path` routing metadata for shared board activity.
 - Added completion-specific shared note notifications when a note transitions to `Complete`.
 ### Fixed
+- Matched CodeQL pull-request scope detection to the lint/test pattern, skipping analysis for unrelated changes and retaining the Actions configuration for relevant PR comparisons.
 - Prevented repeated saves of an already-complete note from creating duplicate completion notifications.
 - Confirmed duplicate collaborator-add attempts do not create extra notifications.
 ### Changed
