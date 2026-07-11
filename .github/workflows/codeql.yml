@@ -66,7 +66,15 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "python=${{ steps.filter.outputs.python }}" >> "$GITHUB_OUTPUT"
             echo "javascript=${{ steps.filter.outputs.javascript }}" >> "$GITHUB_OUTPUT"
-            echo "actions=${{ steps.filter.outputs.actions }}" >> "$GITHUB_OUTPUT"
+            # Keep the Actions configuration present for relevant PRs so
+            # GitHub can compare it with the configuration on the base branch.
+            if [ "${{ steps.filter.outputs.actions }}" = "true" ] || \
+               [ "${{ steps.filter.outputs.python }}" = "true" ] || \
+               [ "${{ steps.filter.outputs.javascript }}" = "true" ]; then
+              echo "actions=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "actions=false" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "python=true" >> "$GITHUB_OUTPUT"
             echo "javascript=true" >> "$GITHUB_OUTPUT"
