@@ -48,6 +48,14 @@ def _capitalize_first(value):
     return value[0].upper() + value[1:]
 
 
+def _default_board_base_name(user):
+    username = (user.get_username() or "").strip()
+    fallback = (user.email or "").split("@", 1)[0].strip()
+    if username and username != fallback:
+        return username
+    return _capitalize_first(fallback or username) or "My"
+
+
 def seed_default_personal_board(board, user):
     for list_position, (list_name, note_texts) in enumerate(
         DEFAULT_PERSONAL_BOARD_CONTENT
@@ -80,9 +88,7 @@ def create_default_board(sender, instance, created, **kwargs):
         return
     if Board.objects.filter(owner=instance).exists():
         return
-    username = (instance.get_username() or "").strip()
-    fallback = (instance.email or "").split("@", 1)[0].strip()
-    base_name = username or _capitalize_first(fallback) or "My"
+    base_name = _default_board_base_name(instance)
     with transaction.atomic():
         board = Board.objects.create(
             name=f"{base_name}'s Board",
