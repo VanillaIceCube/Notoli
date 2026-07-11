@@ -20,7 +20,7 @@ inputs:
   model:
     description: OpenAI model name.
     required: false
-    default: "gpt-5.1"
+    default: "gpt-5.5"
   temperature:
     description: Sampling temperature.
     required: false

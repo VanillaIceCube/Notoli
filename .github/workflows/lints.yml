@@ -9,17 +9,17 @@ on:
         type: string
     outputs:
       lint_frontend_status:
-        description: Frontend lint status (success/failure/none).
-        value: ${{ jobs.lint-frontend.outputs.status }}
+        description: Frontend lint status (success/failure/not-applicable).
+        value: ${{ jobs.lint-results.outputs.frontend_status }}
       lint_frontend_log:
         description: Frontend lint log tail.
-        value: ${{ jobs.lint-frontend.outputs.log }}
+        value: ${{ jobs.lint-results.outputs.frontend_log }}
       lint_backend_status:
-        description: Backend lint status (success/failure/none).
-        value: ${{ jobs.lint-backend.outputs.status }}
+        description: Backend lint status (success/failure/not-applicable).
+        value: ${{ jobs.lint-results.outputs.backend_status }}
       lint_backend_log:
         description: Backend lint log tail.
-        value: ${{ jobs.lint-backend.outputs.log }}
+        value: ${{ jobs.lint-results.outputs.backend_log }}
 
 concurrency:
   group: lint-${{ github.ref }}
@@ -46,8 +46,12 @@ jobs:
           filters: |
             frontend:
               - 'frontend/**'
+              - '.github/workflows/**'
+              - '.github/actions/**'
             backend:
               - 'backend/**'
+              - '.github/workflows/**'
+              - '.github/actions/**'
 
   lint-frontend:
     name: Lint Frontend (ESLint + Prettier)
@@ -248,3 +252,56 @@ jobs:
     outputs:
       status: ${{ steps.lint_summary.outputs.status }}
       log: ${{ steps.lint_summary.outputs.log }}
+
+  lint-results:
+    name: Lint Results
+    if: always()
+    needs: [changes, lint-frontend, lint-backend]
+    runs-on: ubuntu-latest
+    outputs:
+      frontend_status: ${{ steps.results.outputs.frontend_status }}
+      frontend_log: ${{ steps.results.outputs.frontend_log }}
+      backend_status: ${{ steps.results.outputs.backend_status }}
+      backend_log: ${{ steps.results.outputs.backend_log }}
+    steps:
+      - name: Normalize lint results
+        id: results
+        env:
+          FRONTEND_RELEVANT: ${{ needs.changes.outputs.frontend }}
+          FRONTEND_STATUS: ${{ needs.lint-frontend.outputs.status }}
+          FRONTEND_LOG: ${{ needs.lint-frontend.outputs.log }}
+          BACKEND_RELEVANT: ${{ needs.changes.outputs.backend }}
+          BACKEND_STATUS: ${{ needs.lint-backend.outputs.status }}
+          BACKEND_LOG: ${{ needs.lint-backend.outputs.log }}
+        shell: bash
+        run: |
+          if [ "$FRONTEND_RELEVANT" = "true" ]; then
+            echo "frontend_status=${FRONTEND_STATUS:-failure}" >> "$GITHUB_OUTPUT"
+            {
+              echo 'frontend_log<<EOF'
+              echo "$FRONTEND_LOG"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "frontend_status=not-applicable" >> "$GITHUB_OUTPUT"
+            echo "frontend_log=No frontend-relevant changes." >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$BACKEND_RELEVANT" = "true" ]; then
+            echo "backend_status=${BACKEND_STATUS:-failure}" >> "$GITHUB_OUTPUT"
+            {
+              echo 'backend_log<<EOF'
+              echo "$BACKEND_LOG"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "backend_status=not-applicable" >> "$GITHUB_OUTPUT"
+            echo "backend_log=No backend-relevant changes." >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$FRONTEND_RELEVANT" = "true" ] && [ "${FRONTEND_STATUS:-failure}" != "success" ]; then
+            exit 1
+          fi
+          if [ "$BACKEND_RELEVANT" = "true" ] && [ "${BACKEND_STATUS:-failure}" != "success" ]; then
+            exit 1
+          fi

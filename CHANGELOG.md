@@ -8,10 +8,13 @@ All notable changes to this project are documented in this file.
 - Added notification board/list/note navigation context and `target_path` routing metadata for shared board activity.
 - Added completion-specific shared note notifications when a note transitions to `Complete`.
 ### Fixed
+- Gated frontend and backend lint/test jobs by relevant path changes while keeping shared workflow and action changes covered.
+- Reported explicit `not-applicable` statuses for skipped lint and test scopes in PR commentary.
 - Matched CodeQL pull-request scope detection to the lint/test pattern, skipping analysis for unrelated changes and retaining the Actions configuration for relevant PR comparisons.
 - Prevented repeated saves of an already-complete note from creating duplicate completion notifications.
 - Confirmed duplicate collaborator-add attempts do not create extra notifications.
 ### Changed
+- Updated the PR summary and AI review workflows from GPT-5.1 to GPT-5.5.
 - Aligned the profile menu with the notification panel so both open inward from the right side of the app bar on mobile screens.
 - Simplified notification rows to a single event message with concise location context, clear actions, and dividers between notifications, including legacy messages that repeat the list name.
 - Added per-notification clearing while retaining the header action for marking all notifications read.
