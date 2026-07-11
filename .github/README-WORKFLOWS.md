@@ -36,7 +36,7 @@ What it does:
 OpenAI inputs (commentary workflow):
 - `OPENAI_API_KEY` (optional secret)
 - `OPENAI_PROJECT_ID` (repo variable)
-- PR summaries and AI reviews use `gpt-5.5` through the local OpenAI Chat Completions action.
+- PR summaries and AI reviews use `gpt-5.6-luna` through the local OpenAI Responses API action.
 
 Security-alert aggregation:
 - Daily workflows collect open CodeQL alerts plus non-urgent Dependabot vulnerability alerts and npm malware-classified Dependabot alerts. Each workflow also supports **Run workflow** from the Actions tab.

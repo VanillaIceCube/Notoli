@@ -75,8 +75,7 @@ jobs:
           api_key: ${{ secrets.OPENAI_API_KEY }}
           project_id: ${{ vars.OPENAI_PROJECT_ID }}
           diff_path: ${{ steps.pr_diff.outputs.diff_path }}
-          model: "gpt-5.5"
-          temperature: "0.3"
+          model: "gpt-5.6-luna"
           system_prompt: "You are an experienced PR summarizer helping on GitHub pull requests."
           prompt_prefix: |
             You are a PR summarizer for the Notoli project (Backend: Django; Frontend: React + MUI; Docker; GitHub Actions). Produce a high-level, human-readable digest of what changed and why it matters. Focus on intent, scope, behavior changes, and impact. Do NOT do a code review. Do NOT list line-by-line or file-by-file changes. Do NOT restate the diff. Be concise. If the diff is truncated, explicitly note that the summary may be incomplete. Your response MUST use the following exact sections, in order, each containing bullet points (or '(none)' if empty): ## 📌 Summary (what & why): ## 📂 Scope (what areas are affected): ## 🔄 Behavior Changes (user-visible or API-visible): Here is the diff:
@@ -143,8 +142,7 @@ jobs:
           api_key: ${{ secrets.OPENAI_API_KEY }}
           project_id: ${{ vars.OPENAI_PROJECT_ID }}
           diff_path: ${{ steps.pr_diff.outputs.linediff_path }}
-          model: "gpt-5.5"
-          temperature: "0.2"
+          model: "gpt-5.6-luna"
           system_prompt: "You are an experienced, pragmatic PR reviewer."
           prompt_prefix: |
             You are a PR reviewer for the Notoli project (Backend: Django; Frontend: React + MUI; Docker; GitHub Actions). Provide a concise, high-signal code review focused on correctness, security, and maintainability risks. Flag potential bugs, edge cases, missing tests, or backwards-incompatible changes. Avoid style nitpicks. If you are unsure, say so. Use the line-numbered diff to anchor inline comments.
