@@ -10,7 +10,8 @@ from django.utils.http import urlsafe_base64_encode
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from notes.models import Board
+from notes.models import Board, List, ListNote, Note
+from notes.signals import DEFAULT_PERSONAL_BOARD_CONTENT, seed_default_personal_board
 
 User = get_user_model()
 
@@ -93,6 +94,30 @@ class RegistrationTests(APITestCase):
             board,
             "Default board was not created for the user.",
         )
+        default_lists = list(board.lists.order_by("position", "created_at", "id"))
+        expected_list_names = [
+            list_name for list_name, _notes in DEFAULT_PERSONAL_BOARD_CONTENT
+        ]
+        self.assertEqual(
+            [note_list.name for note_list in default_lists],
+            expected_list_names,
+            "Default board lists were not created in the expected order.",
+        )
+        for note_list, (_list_name, expected_notes) in zip(
+            default_lists, DEFAULT_PERSONAL_BOARD_CONTENT, strict=True
+        ):
+            actual_notes = list(
+                Note.objects.filter(list_memberships__list=note_list).order_by(
+                    "list_memberships__position",
+                    "list_memberships__id",
+                    "id",
+                )
+            )
+            self.assertEqual(
+                [note.note for note in actual_notes],
+                expected_notes,
+                f"Unexpected starter notes for {note_list.name}.",
+            )
 
         self.assertEqual(
             response.data.get("message"),
@@ -122,6 +147,20 @@ class RegistrationTests(APITestCase):
             board.id,
             f"Unexpected board id in response: {response.data}",
         )
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {response.data.get('access')}"
+        )
+        lists_response = self.client.get(f"/api/lists/?board={board.id}")
+        self.assertEqual(
+            lists_response.status_code,
+            status.HTTP_200_OK,
+            lists_response.data,
+        )
+        self.assertEqual(
+            [item["name"] for item in lists_response.data],
+            expected_list_names,
+            f"Unexpected list API order: {lists_response.data}",
+        )
 
     def test_register_default_username(self):
         response = self.client.post(
@@ -144,14 +183,63 @@ class RegistrationTests(APITestCase):
         )
 
     def test_default_board_name_falls_back_to_email_prefix(self):
-        user = User(username="", email="fallback@example.com")
+        user = User(username="", email="jaalaba@gmail.com")
         user.set_password("test_password")
         user.save()
 
         board = Board.objects.filter(owner=user).first()
 
         self.assertIsNotNone(board, "Default board was not created.")
-        self.assertEqual(board.name, "fallback's Board")
+        self.assertEqual(board.name, "Jaalaba's Board")
+
+    def test_default_board_bootstrap_is_idempotent(self):
+        user = User.objects.create_user(
+            username="idempotent",
+            email="idempotent@example.com",
+            password="test_password",
+        )
+        board = Board.objects.get(owner=user)
+
+        seed_default_personal_board(board, user)
+
+        expected_list_names = [
+            list_name for list_name, _notes in DEFAULT_PERSONAL_BOARD_CONTENT
+        ]
+        self.assertEqual(
+            list(
+                board.lists.order_by("position", "created_at", "id").values_list(
+                    "name", flat=True
+                )
+            ),
+            expected_list_names,
+        )
+        self.assertEqual(
+            List.objects.filter(board=board).count(),
+            len(DEFAULT_PERSONAL_BOARD_CONTENT),
+        )
+        expected_note_count = sum(
+            len(note_texts) for _list_name, note_texts in DEFAULT_PERSONAL_BOARD_CONTENT
+        )
+        self.assertEqual(Note.objects.filter(board=board).count(), expected_note_count)
+        self.assertEqual(
+            ListNote.objects.filter(list__board=board).count(),
+            expected_note_count,
+        )
+
+    def test_manually_created_board_does_not_receive_default_content(self):
+        user = User.objects.create_user(
+            username="manual",
+            email="manual@example.com",
+            password="test_password",
+        )
+
+        manual_board = Board.objects.create(
+            name="Manual Board",
+            owner=user,
+            created_by=user,
+        )
+
+        self.assertFalse(manual_board.lists.exists())
 
     def test_register_missing_email(self):
         response = self.client.post(
