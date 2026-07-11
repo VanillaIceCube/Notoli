@@ -35,9 +35,23 @@ jobs:
       pull-requests: read
       security-events: write
 
+  dependency-vulnerability:
+    name: Vulnerability
+    uses: ./.github/workflows/vulnerability.yml
+    permissions:
+      contents: read
+      pull-requests: write
+
+  dependency-malware:
+    name: Malware
+    uses: ./.github/workflows/malware.yml
+    permissions:
+      contents: read
+      pull-requests: write
+
   commentary:
     name: Commentary
-    needs: [lints, tests, codeql]
+    needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware]
     if: >-
       always() &&
       github.event.pull_request.user.login != 'dependabot[bot]'
@@ -55,12 +69,14 @@ jobs:
 
   auto-merge:
     name: Auto Merge
-    needs: [lints, tests, codeql]
+    needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware]
     if: >-
       always() &&
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       needs.lints.result == 'success' &&
-      needs.tests.result == 'success'
+      needs.tests.result == 'success' &&
+      needs.dependency-vulnerability.result == 'success' &&
+      needs.dependency-malware.result == 'success'
     uses: ./.github/workflows/auto_merge.yml
     permissions:
       contents: write

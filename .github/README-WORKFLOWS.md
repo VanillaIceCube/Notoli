@@ -16,11 +16,16 @@ What it does:
   - Python/Django backend analysis for `backend/**`
   - JavaScript/TypeScript frontend analysis for `frontend/**`
   - GitHub Actions workflow analysis for `.github/workflows/**` and `.github/actions/**`
+- Runs the reusable vulnerability review: [`.github/workflows/vulnerability.yml`](workflows/vulnerability.yml)
+  - Uses GitHub Dependency Review and fails when a PR introduces a high or critical vulnerability.
+- Runs the reusable malware review: [`.github/workflows/malware.yml`](workflows/malware.yml)
+  - Uses the local [npm malware review action](actions/review-npm-malware/action.yml) to compare changed `frontend/package-lock.json` packages against GitHub's npm malware advisories.
+  - Updates one PR summary comment and fails when a changed package/version matches a known malware advisory.
 - For non-Dependabot PRs, runs [`.github/workflows/commentary.yml`](workflows/commentary.yml)
   - Generates an OpenAI-written PR summary and PR review
   - Posts the summary to the PR description or as a comment
   - Creates a PR review with up to 6 inline comments (when line placement is valid)
-- For Dependabot PRs, runs [`.github/workflows/auto_merge.yml`](workflows/auto_merge.yml) (only if lints + tests pass)
+- For Dependabot PRs, runs [`.github/workflows/auto_merge.yml`](workflows/auto_merge.yml) only when lints, tests, vulnerability review, and malware review pass.
 
 OpenAI inputs (commentary workflow):
 - `OPENAI_API_KEY` (optional secret)
@@ -43,8 +48,11 @@ CodeQL details:
 - CodeQL is not a scanner for Dockerfiles, Nginx config, or env example files. Those remain covered by Dependabot updates, review, and deployment validation unless a separate scanner is added.
 
 Merge blocking:
+- The active `main` ruleset requires the Vulnerability and Malware checks alongside the existing lint, test, and CodeQL checks.
+- Dependency vulnerability review fails at `high` severity or above and posts its summary directly on the PR.
+- Dependency malware review is npm-focused because GitHub's malware advisory coverage is currently npm-focused; it checks only changed lockfile package versions.
 - The workflow reports CodeQL findings, but this repository has not intentionally made CodeQL a Dependabot auto-merge prerequisite in `auto_merge.yml` yet.
-- Dependabot auto-merge still requires the existing lint and test jobs to pass. CodeQL runs in the same CI graph so its check is visible before merge decisions, but the auto-merge condition only checks lints and tests.
+- Dependabot auto-merge requires lint, test, vulnerability, and malware checks to pass. CodeQL runs in the same CI graph so its check is visible before merge decisions, but it is not an auto-merge prerequisite.
 - To make serious CodeQL findings block merges, configure GitHub branch protection or a repository ruleset to require the relevant CodeQL check after validating runtime and alert noise.
 - Recommended staged policy: block high/critical security findings first; allow medium, low, and note-level findings to report until the false-positive rate is understood.
 - When code fixes remove a finding, GitHub closes the matching code scanning alert after the protected branch is reanalyzed. False positives or accepted risks should be dismissed in GitHub Code Scanning with a clear reason.

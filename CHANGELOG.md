@@ -3,6 +3,8 @@ All notable changes to this project are documented in this file.
 
 ## 2026-07-10
 ### Added
+- Added PR-time dependency vulnerability and npm malware gates to the reusable CI flow.
+- Added PR-visible malware summaries and dependency checks to Dependabot auto-merge prerequisites.
 - Added notification board/list/note navigation context and `target_path` routing metadata for shared board activity.
 - Added completion-specific shared note notifications when a note transitions to `Complete`.
 ### Fixed
