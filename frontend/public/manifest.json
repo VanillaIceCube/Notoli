@@ -2,7 +2,9 @@
   "short_name": "Notoli",
   "name": "Notoli",
   "description": "A focused, collaborative list workspace.",
-  "icons": [{ "src": "notoli-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }],
+  "icons": [
+    { "src": "notoli-mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#1a1a1a",

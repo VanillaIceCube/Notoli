@@ -85,7 +85,11 @@ describe('requestClient', () => {
     global.fetch = jest
       .fn()
       .mockResolvedValueOnce({ ok: false, status: 401 })
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ access: 'NEW_ACCESS' }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ access: 'NEW_ACCESS' }),
+      })
       .mockResolvedValueOnce({ ok: true, status: 200 });
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');

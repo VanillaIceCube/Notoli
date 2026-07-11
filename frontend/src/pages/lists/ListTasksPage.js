@@ -75,7 +75,10 @@ export default function ListTasksPage({ setAppBarHeader }) {
   }, [boardId, location.state?.boardName, setAppBarHeader]);
 
   useEffect(() => {
-    document.title = formatDocumentTitle(location.state?.boardName || boardName, location.state?.listName || listName);
+    document.title = formatDocumentTitle(
+      location.state?.boardName || boardName,
+      location.state?.listName || listName,
+    );
   }, [boardName, listName, location.state?.boardName, location.state?.listName]);
 
   const fetchTasks = useCallback(async () => {
@@ -108,25 +111,28 @@ export default function ListTasksPage({ setAppBarHeader }) {
     }
   }, [listId, token]);
 
-  const fetchBoardName = useCallback(async (isActive = () => true) => {
-    if (!boardId) return;
+  const fetchBoardName = useCallback(
+    async (isActive = () => true) => {
+      if (!boardId) return;
 
-    try {
-      const response = await fetchBoardApi(boardId, token);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const boardData = await response.json();
-      if (isActive()) {
-        setBoardName(boardData?.name ?? '');
-        setAppBarHeader(boardData?.name ?? '');
+      try {
+        const response = await fetchBoardApi(boardId, token);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const boardData = await response.json();
+        if (isActive()) {
+          setBoardName(boardData?.name ?? '');
+          setAppBarHeader(boardData?.name ?? '');
+        }
+      } catch (err) {
+        if (isActive()) {
+          setBoardName('');
+          setAppBarHeader('');
+        }
+        setError(err.toString());
       }
-    } catch (err) {
-      if (isActive()) {
-        setBoardName('');
-        setAppBarHeader('');
-      }
-      setError(err.toString());
-    }
-  }, [boardId, token, setAppBarHeader]);
+    },
+    [boardId, token, setAppBarHeader],
+  );
 
   useEffect(() => {
     let active = true;
