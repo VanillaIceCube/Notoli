@@ -27,11 +27,12 @@ What it does:
 - Runs the reusable malware gate: [`.github/workflows/malware-gate.yml`](workflows/malware-gate.yml)
   - Uses the local [npm malware review action](actions/review-npm-malware/action.yml) to compare changed `frontend/package-lock.json` packages against GitHub's npm malware advisories.
   - Updates one PR summary comment and fails when a changed package/version matches a known malware advisory.
-- For non-Dependabot PRs, runs [`.github/workflows/commentary.yml`](workflows/commentary.yml)
-  - Generates an OpenAI-written PR summary and PR review
+- For non-Dependabot PRs, and for Dependabot PRs with a failed lint or test area, runs [`.github/workflows/commentary.yml`](workflows/commentary.yml)
+  - Generates an OpenAI-written PR summary for non-Dependabot PRs
+  - Generates an AI code review for Dependabot PRs only when frontend/backend lint or tests fail, avoiding token use for healthy dependency updates
   - Posts the summary to the PR description or as a comment
   - Creates a PR review with up to 6 inline comments (when line placement is valid)
-- For Dependabot PRs, runs [`.github/workflows/auto_merge.yml`](workflows/auto_merge.yml) only when lints, tests, vulnerability review, and malware review pass.
+- For Dependabot PRs, runs [`.github/workflows/auto_merge.yml`](workflows/auto_merge.yml) only when lints, tests, vulnerability review, and malware review pass. CodeQL or security-only failures do not invoke the conditional Dependabot AI review.
 
 OpenAI inputs (commentary workflow):
 - `OPENAI_API_KEY` (optional secret)
