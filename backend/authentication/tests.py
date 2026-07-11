@@ -89,7 +89,7 @@ class RegistrationTests(APITestCase):
         )
 
         user = User.objects.get(username="test_email")
-        board = Board.objects.filter(owner=user, name="test_email's Board").first()
+        board = Board.objects.filter(owner=user, name="Test_email's Board").first()
         self.assertIsNotNone(
             board,
             "Default board was not created for the user.",
@@ -181,6 +181,40 @@ class RegistrationTests(APITestCase):
             "test_email",
             f"Unexpected username for default email: {created_user.username}",
         )
+
+    def test_register_default_board_capitalizes_derived_email_username(self):
+        response = self.client.post(
+            "/auth/register/",
+            {"email": "example_02@gmail.com", "password": "test_password"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        user = User.objects.get(email="example_02@gmail.com")
+        board = Board.objects.filter(owner=user).first()
+
+        self.assertIsNotNone(board, "Default board was not created.")
+        self.assertEqual(user.username, "example_02")
+        self.assertEqual(board.name, "Example_02's Board")
+
+    def test_register_default_board_preserves_explicit_username(self):
+        response = self.client.post(
+            "/auth/register/",
+            {
+                "email": "custom@example.com",
+                "username": "customUser",
+                "password": "test_password",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        user = User.objects.get(email="custom@example.com")
+        board = Board.objects.filter(owner=user).first()
+
+        self.assertIsNotNone(board, "Default board was not created.")
+        self.assertEqual(user.username, "customUser")
+        self.assertEqual(board.name, "customUser's Board")
 
     def test_default_board_name_falls_back_to_email_prefix(self):
         user = User(username="", email="jaalaba@gmail.com")

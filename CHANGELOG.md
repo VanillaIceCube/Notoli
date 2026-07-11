@@ -16,6 +16,7 @@ All notable changes to this project are documented in this file.
 - Added notification board/list/note navigation context and `target_path` routing metadata for shared board activity.
 - Added completion-specific shared note notifications when a note transitions to `Complete`.
 ### Fixed
+- Capitalized default board names when registration auto-derives the username from the email prefix.
 - Updated OpenAI GitHub automation to use the Responses API with `gpt-5.6-luna` and omit unsupported temperature settings.
 - Prevented AppBar title flicker during list-to-board navigation by ignoring stale title requests.
 - Kept sharing access rows mounted through the dialog close transition.
