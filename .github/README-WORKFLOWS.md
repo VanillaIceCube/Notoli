@@ -1,15 +1,15 @@
 # 🤖 GitHub Automation
 This repo uses GitHub Actions for CI and deployments, plus Dependabot for dependency updates.
 
-## ✅ Flow 1: CI (`.github/workflows/ci.yml`)
+## ✅ Flow 1: CI (`.github/workflows/ci-orchestrator.yml`)
 Trigger:
 - Pull requests (opened/synchronize/reopened/ready_for_review)
 
 What it does:
-- Runs the reusable lint gate: [`.github/workflows/lint-gate.yml`](workflows/lint-gate.yml)
+- Runs the reusable lint gate: [`.github/workflows/gate-lint.yml`](workflows/gate-lint.yml)
   - Frontend: Prettier + ESLint (auto-fix, then strict checks)
   - Backend: Ruff (auto-fix, then strict checks)
-- Runs the reusable test gate: [`.github/workflows/test-gate.yml`](workflows/test-gate.yml)
+- Runs the reusable test gate: [`.github/workflows/gate-test.yml`](workflows/gate-test.yml)
   - Frontend: `npm test` (CI mode)
   - Backend: `python manage.py test`
 - Lint and test jobs use the same change filters:
@@ -17,31 +17,48 @@ What it does:
   - Backend checks run for `backend/**` changes.
   - Changes to `.github/actions/read-versions/**` run both frontend and backend checks because that shared action controls both toolchains.
   - Other workflow/action changes are validated by Actionlint and CodeQL Actions analysis without forcing application test suites to run.
-  - Jobs skipped because their paths are not relevant report `not-applicable` to PR commentary.
-- Runs the reusable CodeQL gate: [`.github/workflows/codeql-gate.yml`](workflows/codeql-gate.yml)
+  - Jobs skipped because their paths are not relevant report `not-applicable` to downstream review workflows.
+- Runs the reusable CodeQL gate: [`.github/workflows/gate-codeql.yml`](workflows/gate-codeql.yml)
   - Python/Django backend analysis for `backend/**`
   - JavaScript/TypeScript frontend analysis for `frontend/**`
   - GitHub Actions workflow analysis for `.github/workflows/**` and `.github/actions/**`
-- Runs the reusable vulnerability gate: [`.github/workflows/vulnerability-gate.yml`](workflows/vulnerability-gate.yml)
+- Runs the reusable vulnerability gate: [`.github/workflows/gate-vulnerability.yml`](workflows/gate-vulnerability.yml)
   - Uses GitHub Dependency Review and fails when a PR introduces a high or critical vulnerability.
-- Runs the reusable malware gate: [`.github/workflows/malware-gate.yml`](workflows/malware-gate.yml)
+  - Emits a vulnerability report output for RoboCop instead of posting a standalone PR comment.
+- Runs the reusable malware gate: [`.github/workflows/gate-malware.yml`](workflows/gate-malware.yml)
   - Uses the local [npm malware review action](actions/review-npm-malware/action.yml) to compare changed `frontend/package-lock.json` packages against GitHub's npm malware advisories.
-  - Updates one PR summary comment and fails when a changed package/version matches a known malware advisory.
-- For non-Dependabot PRs, and for Dependabot PRs with a failed lint or test area, runs [`.github/workflows/commentary.yml`](workflows/commentary.yml)
-  - Generates an OpenAI-written PR summary for non-Dependabot PRs
-  - Generates an AI code review for Dependabot PRs only when frontend/backend lint or tests fail, avoiding token use for healthy dependency updates
-  - Posts the summary to the PR description or as a comment
-  - Creates a PR review with up to 6 inline comments (when line placement is valid)
-- For Dependabot PRs, runs [`.github/workflows/auto_merge.yml`](workflows/auto_merge.yml) only when lints, tests, vulnerability review, and malware review pass. CodeQL or security-only failures do not invoke the conditional Dependabot AI review.
+  - Emits a malware report output for RoboCop and fails when a changed package/version matches a known malware advisory.
+- For non-Dependabot PRs, runs [`.github/workflows/review-code.yml`](workflows/review-code.yml)
+  - Runs Obi-Wan Code-nobi, the AI Code Reviewer, for general implementation review
+  - Reviews the repository file map, changed-file contents, and line-numbered PR diff, then publishes one native PR review with inline comments when line placement is valid.
+- After frontend/backend lint and tests complete, runs [`.github/workflows/review-build.yml`](workflows/review-build.yml)
+  - Runs Lint Eastwood, the AI Build Sheriff, to interpret lint, test, build, formatting, and CI evidence.
+  - Consumes lint/test statuses, log tails, and the line-numbered PR diff before publishing one native PR review.
+  - Requests changes when failed lint/test/build evidence appears caused by the PR; approves clean build evidence.
+- After the security checks, runs [`.github/workflows/review-security.yml`](workflows/review-security.yml)
+  - Runs RoboCop, the AI Security Officer, for every pull request after CodeQL, Dependency/Vulnerability Review, and Malware Review complete.
+  - Consumes explicit gate results, vulnerability/malware reports, security check summaries, check annotations, and the line-numbered PR diff before publishing one native PR review.
+  - Requests changes for actionable security findings; approves clean security evidence.
+  - Dependency Review, malware scanning, and CodeQL remain independent required checks; RoboCop does not replace them.
+- For Dependabot PRs, runs [`.github/workflows/ci-auto-merge.yml`](workflows/ci-auto-merge.yml) only when lints, tests, CodeQL, vulnerability review, and malware review pass. Failed lint/test evidence routes to Lint Eastwood, and failed security evidence routes to RoboCop; the general Obi-Wan Code-nobi review remains skipped for Dependabot updates.
 
-OpenAI inputs (commentary workflow):
-- `OPENAI_API_KEY` (optional secret)
+OpenAI and GitHub App inputs:
+- `OPENAI_API_KEY` secret. Triggered AI reviews fail visibly when the key is missing.
 - `OPENAI_PROJECT_ID` (repo variable)
-- PR summaries and AI reviews use `gpt-5.6-luna` through the local OpenAI Responses API action.
+- `OBI_WAN_CODE_NOBI_APP_ID` repository variable and `OBI_WAN_CODE_NOBI_PRIVATE_KEY` repository secret authenticate the Obi-Wan Code-nobi GitHub App. Install it with `Contents: read` and `Pull requests: write`.
+- `LINT_EASTWOOD_APP_ID` repository variable and `LINT_EASTWOOD_PRIVATE_KEY` repository secret authenticate the Lint Eastwood GitHub App. Install it with `Contents: read` and `Pull requests: write`.
+- `ROBOCOP_APP_ID` repository variable and `ROBOCOP_PRIVATE_KEY` repository secret authenticate the RoboCop GitHub App. Install it with `Contents: read`, `Pull requests: write`, `Checks: read`, `Actions: read`, and `Security events: read`.
+- AI reviews use `gpt-5.6-luna` through the local OpenAI Responses API action.
+- AI personas do not post standalone PR comments. Any bot comments are submitted as part of their native PR review.
+
+Review personas:
+- **RoboCop - AI Security Officer:** owns CodeQL, Dependency/Vulnerability Review, Malware Review, security-sensitive code paths, permissions/auth risk, and security interpretation.
+- **Lint Eastwood - AI Build Sheriff:** owns lint failures, test failures, build/workflow failures, formatting/type-check style failures, and CI failure interpretation.
+- **Obi-Wan Code-nobi - AI Code Reviewer:** owns general implementation review: correctness, maintainability, architecture, edge cases, missing tests, API/UX concerns, and overall code quality.
 
 Security-alert aggregation:
 - Daily workflows collect open CodeQL alerts plus non-urgent Dependabot vulnerability alerts and npm malware-classified Dependabot alerts. Each workflow also supports **Run workflow** from the Actions tab.
-- The reusable [security-alert workflow](workflows/security-alerts.yml) is intentionally small; the fetching, grouping, validation, and synchronization implementation lives in the [Security Alerts composite action](actions/security-alerts/action.yml). The response must be valid JSON and must account for every source alert exactly once; validation happens before any issue is created or updated. Its callers are [`codeql-alert.yml`](workflows/codeql-alert.yml), [`vulnerability-alert.yml`](workflows/vulnerability-alert.yml), and [`malware-alert.yml`](workflows/malware-alert.yml).
+- The alert workflows keep scheduling in [`alert-codeql.yml`](workflows/alert-codeql.yml), [`alert-vulnerability.yml`](workflows/alert-vulnerability.yml), and [`alert-malware.yml`](workflows/alert-malware.yml). The fetching, grouping, validation, and synchronization implementation lives in the [Security Alerts composite action](actions/security-alerts/action.yml). The response must be valid JSON and must account for every source alert exactly once; validation happens before any issue is created or updated.
 - Generated issues contain a stable marker derived from their feed and source-alert references, so subsequent runs update the same issue. Every issue is assigned to the repository owner and receives exactly one gray feed tag: `codeql`, `vulnerability`, or `malware`. These labels are provisioned on the repository and are not modified during workflow runs.
 - Required repository configuration: `OPENAI_API_KEY` secret, `SECURITY_ALERTS_TOKEN` secret, `OPENAI_PROJECT_ID` repository variable, and `SECURITY_ALERTS_PROJECT_ID` repository variable (the node ID of the Notoli GitHub Project v2). `SECURITY_ALERTS_TOKEN` must be a classic token with `repo`, `security_events`, and `project` scopes, or an equivalent GitHub App/fine-grained token that can read CodeQL and Dependabot alerts, write issues, and write to the Project.
 - The project must include these fields and options: `Status` → `Backlog`, `Domain` → `Security`, `Type` → `Maintenance / Automation`, `Priority` → `Medium`/`High`, `Size` → `Medium`, and numeric `Estimate` (set to `3`). The workflows require and write all of them.
@@ -53,11 +70,11 @@ Version pins:
 - Third-party `dorny/paths-filter` workflow steps are pinned to an immutable commit hash.
 
 CodeQL details:
-- Pull requests run CodeQL through `ci.yml`, keeping PR feedback under the main CI workflow.
+- Pull requests run CodeQL through `ci-orchestrator.yml`, keeping PR feedback under the main CI workflow.
 - Pull request CodeQL uses the reusable workflow's change-detection job, following the same skip-by-scope pattern as linting and testing; documentation-only and unrelated pull requests run the detector but skip analysis jobs.
 - For a CodeQL-relevant pull request, Python and JavaScript/TypeScript analysis use language-specific filters, while GitHub Actions analysis runs so the `/language:actions` configuration remains present for code-scanning comparisons.
 - CI ignores pull requests targeting `env-prod`, so CodeQL is not invoked for that deployment branch.
-- Pushes to `main`, weekly scheduled scans, and manual `workflow_dispatch` runs are supported directly by `codeql.yml`.
+- Pushes to `main`, weekly scheduled scans, and manual `workflow_dispatch` runs are supported directly by `gate-codeql.yml`.
 - CodeQL uploads SARIF results to GitHub Code Scanning with scoped permissions: `contents: read`, `pull-requests: read`, `actions: read`, and `security-events: write`.
 - Results appear in PR checks and under GitHub Security -> Code scanning when code scanning is enabled for the repository.
 - CodeQL uses the `security-extended` and `security-and-quality` query suites for Python, JavaScript/TypeScript, and GitHub Actions workflow analysis.
@@ -67,13 +84,13 @@ Merge blocking:
 - The active `main` ruleset requires the Vulnerability and Malware checks alongside the existing lint, test, and CodeQL checks.
 - Dependency vulnerability review fails at `high` severity or above and posts its summary directly on the PR.
 - Dependency malware review is npm-focused because GitHub's malware advisory coverage is currently npm-focused; it checks only changed lockfile package versions.
-- The workflow reports CodeQL findings, but this repository has not intentionally made CodeQL a Dependabot auto-merge prerequisite in `auto_merge.yml` yet.
-- Dependabot auto-merge requires lint, test, vulnerability, and malware checks to pass. CodeQL runs in the same CI graph so its check is visible before merge decisions, but it is not an auto-merge prerequisite.
+- The workflow reports CodeQL findings, and CodeQL must pass before `ci-auto-merge.yml` can run.
+- Dependabot auto-merge requires lint, test, CodeQL, vulnerability, and malware checks to pass.
 - To make serious CodeQL findings block merges, configure GitHub branch protection or a repository ruleset to require the relevant CodeQL check after validating runtime and alert noise.
 - Recommended staged policy: block high/critical security findings first; allow medium, low, and note-level findings to report until the false-positive rate is understood.
 - When code fixes remove a finding, GitHub closes the matching code scanning alert after the protected branch is reanalyzed. False positives or accepted risks should be dismissed in GitHub Code Scanning with a clear reason.
 
-## 🚀 Flow 2: Deploy (`.github/workflows/deploy.yml`)
+## 🚀 Flow 2: Deploy (`.github/workflows/ci-deploy.yml`)
 Trigger:
 - Push to the `env-prod` branch
 - Manual `workflow_dispatch`
@@ -111,7 +128,7 @@ Dependabot configuration:
   - Docker (`/`, `/backend`, `/frontend`)
 
 Auto-merge behavior:
-- Dependabot PRs go through CI (`ci.yml`), and if lints/tests pass, `auto_merge.yml` can enable auto-merge.
+- Dependabot PRs go through CI (`ci-orchestrator.yml`), and if all gates pass, `ci-auto-merge.yml` can enable auto-merge.
 - Auto-merge is restricted to patch/minor updates.
 - If a security alert is present, the workflow requires CVSS <= 6.9.
 - The workflow uses `dependabot/fetch-metadata@v2` and can optionally use `DEPENDABOT_PAT` for metadata/alert lookup.

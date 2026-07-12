@@ -1,6 +1,26 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-11
+### Added
+- Added three AI pull-request review personas: RoboCop for security review, Lint Eastwood for build/lint/test failure review, and Obi-Wan Code-nobi for general code review.
+- Added reusable AI Build Sheriff and AI Security Review workflows with separate GitHub App identities for native pull request reviews.
+### Changed
+- Security gates now provide evidence outputs for RoboCop instead of posting separate PR comments, while continuing to fail independently.
+- CI now routes lint/test evidence to Lint Eastwood, security evidence to RoboCop, and general implementation review to Obi-Wan Code-nobi.
+- Lint Eastwood and RoboCop now publish reviews on every pull request and request changes when their owned checks produce actionable failures.
+- AI PR automation now publishes native reviews only; bot comments are inline or summary comments within those reviews rather than standalone PR comments.
+- Workflow files now use grouped prefixes: `gate-*` for required PR checks, `review-*` for AI PR reviews, `ci-auto-merge.yml` for the CI-triggered Dependabot merge helper, and `alert-*` for scheduled/manual security alert aggregation.
+- Daily alert workflows now call the shared `.github/actions/security-alerts` composite action directly instead of routing through a reusable workflow wrapper.
+- Renamed the CI entrypoint to `ci-orchestrator.yml` and the deployment workflow to `ci-deploy.yml`.
+- Dependabot auto-merge now requires every gate, including CodeQL, to pass.
+- AI review workflows no longer cap inline review comments at six.
+- Expanded Obi-Wan Code-nobi's review context with the repository file map and changed-file contents, while keeping inline comments constrained to valid added PR lines.
+- Hardened security gate report outputs so multiline malware and vulnerability reports always close their GitHub output delimiters correctly.
+- Fixed Obi-Wan Code-nobi's changed-file context builder so file section headings cannot be parsed as `printf` options.
+- Updated the shared OpenAI action to pass large prompts through files instead of shell arguments and to use unique multiline output delimiters.
+- Fixed Obi-Wan Code-nobi's changed-file context budget loop so byte accounting persists across files and fails if the budget is exceeded.
+
 ## 2026-07-10
 ### Changed
 - Run the AI code review for Dependabot pull requests only when linting or tests fail, while continuing to skip AI calls for healthy dependency updates.
@@ -36,8 +56,8 @@ All notable changes to this project are documented in this file.
 - Renamed the security-alert workflow files to concise `alerts-*` and `security-alerts` names, and corrected their Dependabot and Project-token permission model.
 - Moved the security-alert implementation into a dedicated composite action so the reusable workflow remains a small orchestration layer.
 - Provisioned gray security feed labels with descriptions and removed label-management writes from the alert action.
-- Renamed alert workflows to the `*-alert` and `*-gate` naming convention.
-- Renamed lint and test workflows to `lint-gate.yml` and `test-gate.yml` for consistent merge-gate naming.
+- Renamed alert workflows to the earlier `*-alert` and `*-gate` naming convention.
+- Renamed lint and test workflows to the earlier suffix-style gate naming convention.
 - Standardized the vulnerability alert workflow on the singular `vulnerability` spelling.
 - Narrowed frontend/backend lint and test filters so unrelated workflow changes report `not-applicable` instead of running both application suites.
 - Updated the PR summary and AI review workflows from GPT-5.1 to GPT-5.5.
