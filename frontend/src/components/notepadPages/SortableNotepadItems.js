@@ -21,6 +21,7 @@ import Divider from '@mui/material/Divider';
 
 export const NOTEPAD_ITEM_VERTICAL_GAP = '8px';
 export const NOTEPAD_ITEM_ROW_MIN_HEIGHT = 42;
+export const NOTEPAD_ITEM_FOOTPRINT_HEIGHT = 52;
 export const VERTICAL_REORDER_DRAG_MODIFIERS = [
   ({ transform }) => ({
     ...transform,
@@ -80,7 +81,26 @@ export default function SortableNotepadItems({
 
   if (!items.length) {
     return (
-      <Typography variant="body1" align="center" fontWeight="bold" sx={{ fontSize: '1.1rem' }}>
+      <Typography
+        data-testid={`${testIdPrefix}-empty-state`}
+        variant="body1"
+        align="center"
+        fontWeight="bold"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          // Match one rendered list item: 42px row + 8px list gap + 2px divider.
+          minHeight: NOTEPAD_ITEM_FOOTPRINT_HEIGHT,
+          boxSizing: 'border-box',
+          px: 2,
+          borderRadius: 1,
+          borderBottom: '2px solid var(--secondary-color)',
+          bgcolor: 'var(--secondary-background-color)',
+          color: 'var(--secondary-color)',
+          fontSize: '1.1rem',
+        }}
+      >
         {emptyMessage}
       </Typography>
     );

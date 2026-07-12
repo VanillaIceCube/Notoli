@@ -1,28 +1,51 @@
-name: Tests
+name: Test Gate
 
 on:
   workflow_call:
     outputs:
       test_frontend_status:
-        description: Frontend test status (success/failure/none).
-        value: ${{ jobs.frontend-tests.outputs.status }}
+        description: Frontend test status (success/failure/not-applicable).
+        value: ${{ jobs.test-results.outputs.frontend_status }}
       test_frontend_log:
         description: Frontend test log tail.
-        value: ${{ jobs.frontend-tests.outputs.log }}
+        value: ${{ jobs.test-results.outputs.frontend_log }}
       test_backend_status:
-        description: Backend test status (success/failure/none).
-        value: ${{ jobs.backend-tests.outputs.status }}
+        description: Backend test status (success/failure/not-applicable).
+        value: ${{ jobs.test-results.outputs.backend_status }}
       test_backend_log:
         description: Backend test log tail.
-        value: ${{ jobs.backend-tests.outputs.log }}
+        value: ${{ jobs.test-results.outputs.backend_log }}
 
 concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+              - '.github/actions/read-versions/**'
+            backend:
+              - 'backend/**'
+              - '.github/actions/read-versions/**'
+
   frontend-tests:
     name: Frontend Tests (React)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -89,6 +112,8 @@ jobs:
 
   backend-tests:
     name: Backend Tests (Django)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -150,3 +175,56 @@ jobs:
     outputs:
       status: ${{ steps.test_summary.outputs.status }}
       log: ${{ steps.test_summary.outputs.log }}
+
+  test-results:
+    name: Test Results
+    if: always()
+    needs: [changes, frontend-tests, backend-tests]
+    runs-on: ubuntu-latest
+    outputs:
+      frontend_status: ${{ steps.results.outputs.frontend_status }}
+      frontend_log: ${{ steps.results.outputs.frontend_log }}
+      backend_status: ${{ steps.results.outputs.backend_status }}
+      backend_log: ${{ steps.results.outputs.backend_log }}
+    steps:
+      - name: Normalize test results
+        id: results
+        env:
+          FRONTEND_RELEVANT: ${{ needs.changes.outputs.frontend }}
+          FRONTEND_STATUS: ${{ needs.frontend-tests.outputs.status }}
+          FRONTEND_LOG: ${{ needs.frontend-tests.outputs.log }}
+          BACKEND_RELEVANT: ${{ needs.changes.outputs.backend }}
+          BACKEND_STATUS: ${{ needs.backend-tests.outputs.status }}
+          BACKEND_LOG: ${{ needs.backend-tests.outputs.log }}
+        shell: bash
+        run: |
+          if [ "$FRONTEND_RELEVANT" = "true" ]; then
+            echo "frontend_status=${FRONTEND_STATUS:-failure}" >> "$GITHUB_OUTPUT"
+            {
+              echo 'frontend_log<<EOF'
+              echo "$FRONTEND_LOG"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "frontend_status=not-applicable" >> "$GITHUB_OUTPUT"
+            echo "frontend_log=No frontend-relevant changes." >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$BACKEND_RELEVANT" = "true" ]; then
+            echo "backend_status=${BACKEND_STATUS:-failure}" >> "$GITHUB_OUTPUT"
+            {
+              echo 'backend_log<<EOF'
+              echo "$BACKEND_LOG"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "backend_status=not-applicable" >> "$GITHUB_OUTPUT"
+            echo "backend_log=No backend-relevant changes." >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$FRONTEND_RELEVANT" = "true" ] && [ "${FRONTEND_STATUS:-failure}" != "success" ]; then
+            exit 1
+          fi
+          if [ "$BACKEND_RELEVANT" = "true" ] && [ "${BACKEND_STATUS:-failure}" != "success" ]; then
+            exit 1
+          fi

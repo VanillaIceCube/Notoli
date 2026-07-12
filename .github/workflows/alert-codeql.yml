@@ -1,0 +1,25 @@
+name: CodeQL Alert
+
+on:
+  schedule:
+    - cron: '10 11 * * *'
+  workflow_dispatch:
+
+jobs:
+  aggregate:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out workflow actions
+        uses: actions/checkout@v6
+
+      - name: Aggregate CodeQL alerts
+        uses: ./.github/actions/security-alerts
+        with:
+          feed: codeql
+          github-token: ${{ secrets.SECURITY_ALERTS_TOKEN }}
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          openai-project-id: ${{ vars.OPENAI_PROJECT_ID }}
+          project-id: ${{ vars.SECURITY_ALERTS_PROJECT_ID }}

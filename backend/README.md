@@ -27,7 +27,7 @@ Common endpoints:
 - `POST /auth/forgot-password/` -> accepts `email`; sends a reset link if the account exists and returns a generic success message
 - `POST /auth/reset-password/` -> accepts `uid`, `token`, and `password`; sets a new password when the token is valid
 
-New users get a default board named after their username, such as `"andrew's board"`, created automatically via a post-save signal in `notes/signals.py`. If a username is unavailable, the name falls back to the email prefix.
+New users get a default board named after their username, such as `"andrew's Board"`, created automatically via a post-save signal in `notes/signals.py`. If the username is auto-derived from the email prefix, the board name uses that prefix with its first letter capitalized, such as `"Example_02's Board"` for `example_02@gmail.com`. The default personal board is also bootstrapped with ordered starter lists: `Grocery List`, `Chores List`, and `Todo List`, each with starter notes.
 
 All `/api/*` endpoints require:
 - Header: `Authorization: Bearer <accessToken>`

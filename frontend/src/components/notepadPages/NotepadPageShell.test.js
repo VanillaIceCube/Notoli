@@ -42,6 +42,15 @@ describe('NotepadPageShell', () => {
     expect(screen.getByText('Rows go here')).toBeInTheDocument();
   });
 
+  test('when content is loaded while the title is pending, it reserves title height', () => {
+    renderShell({ title: '', loading: true, hasContent: true });
+
+    expect(screen.getByTestId('notepad-page-title')).toHaveStyle({
+      minHeight: '2.625rem',
+    });
+    expect(screen.getByText('Rows go here')).toBeInTheDocument();
+  });
+
   test('when an error exists, it shows the error and hides child content', () => {
     renderShell({ error: 'Error: HTTP 500' });
 

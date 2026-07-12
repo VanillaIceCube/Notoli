@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react';
 import SortableNotepadItems, {
   DRAG_HANDLE_TOUCH_STYLE,
   NOTEPAD_ITEM_ROW_MIN_HEIGHT,
+  NOTEPAD_ITEM_FOOTPRINT_HEIGHT,
   NOTEPAD_ITEM_VERTICAL_GAP,
 } from './SortableNotepadItems';
 import { renderWithProviders } from '../../test-support/utils';
@@ -26,6 +27,10 @@ describe('SortableNotepadItems', () => {
     );
 
     expect(screen.getByText('No rows found.')).toBeInTheDocument();
+    expect(screen.getByTestId('row-empty-state')).toHaveStyle({
+      minHeight: '52px',
+      borderBottom: '2px solid var(--secondary-color)',
+    });
   });
 
   test('when not reordering, it renders the rows in a stable vertical list', () => {
@@ -70,5 +75,6 @@ describe('SortableNotepadItems', () => {
     expect(screen.getByTestId('row-sortable-row-1')).toBeInTheDocument();
     expect(screen.getByTestId('drag-1').style.touchAction).toBe('none');
     expect(NOTEPAD_ITEM_ROW_MIN_HEIGHT).toBe(42);
+    expect(NOTEPAD_ITEM_FOOTPRINT_HEIGHT).toBe(52);
   });
 });

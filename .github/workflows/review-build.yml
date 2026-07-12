@@ -1,0 +1,173 @@
+name: AI Build Sheriff Review
+
+on:
+  workflow_call:
+    inputs:
+      lint_result:
+        required: false
+        type: string
+      test_result:
+        required: false
+        type: string
+      lint_frontend_status:
+        required: false
+        type: string
+      lint_frontend_log:
+        required: false
+        type: string
+      lint_backend_status:
+        required: false
+        type: string
+      lint_backend_log:
+        required: false
+        type: string
+      test_frontend_status:
+        required: false
+        type: string
+      test_frontend_log:
+        required: false
+        type: string
+      test_backend_status:
+        required: false
+        type: string
+      test_backend_log:
+        required: false
+        type: string
+    secrets:
+      OPENAI_API_KEY:
+        required: true
+      LINT_EASTWOOD_PRIVATE_KEY:
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Lint Eastwood build sheriff review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Create Lint Eastwood GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.LINT_EASTWOOD_APP_ID }}
+          private-key: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Collect prior Lint Eastwood reviews
+        uses: ./.github/actions/collect-prior-ai-reviews
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          persona_name: "Lint Eastwood"
+          output_path: ${{ runner.temp }}/build-prior-reviews.json
+
+      - name: Get PR diff
+        id: pr-diff
+        uses: ./.github/actions/get-pr-diff
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          head_sha: ${{ github.event.pull_request.head.sha }}
+          max_bytes: "45000"
+
+      - name: Build review context
+        shell: bash
+        env:
+          CONTEXT_PATH: ${{ runner.temp }}/build-review-context.txt
+          DIFF_PATH: ${{ steps.pr-diff.outputs.linediff_path }}
+          PRIOR_REVIEWS_PATH: ${{ runner.temp }}/build-prior-reviews.json
+          LINT_RESULT: ${{ inputs.lint_result || 'unknown' }}
+          TEST_RESULT: ${{ inputs.test_result || 'unknown' }}
+          LINT_FRONTEND_STATUS: ${{ inputs.lint_frontend_status || 'not-applicable' }}
+          LINT_FRONTEND_LOG: ${{ inputs.lint_frontend_log }}
+          LINT_BACKEND_STATUS: ${{ inputs.lint_backend_status || 'not-applicable' }}
+          LINT_BACKEND_LOG: ${{ inputs.lint_backend_log }}
+          TEST_FRONTEND_STATUS: ${{ inputs.test_frontend_status || 'not-applicable' }}
+          TEST_FRONTEND_LOG: ${{ inputs.test_frontend_log }}
+          TEST_BACKEND_STATUS: ${{ inputs.test_backend_status || 'not-applicable' }}
+          TEST_BACKEND_LOG: ${{ inputs.test_backend_log }}
+        run: |
+          {
+            echo '=== BUILD, LINT, AND TEST EVIDENCE ==='
+            printf 'lint_result: %s\n' "$LINT_RESULT"
+            printf 'test_result: %s\n' "$TEST_RESULT"
+            printf 'lint_frontend_status: %s\n' "$LINT_FRONTEND_STATUS"
+            printf 'lint_backend_status: %s\n' "$LINT_BACKEND_STATUS"
+            printf 'test_frontend_status: %s\n' "$TEST_FRONTEND_STATUS"
+            printf 'test_backend_status: %s\n' "$TEST_BACKEND_STATUS"
+            echo
+            echo '--- lint_frontend_log ---'
+            printf '%s\n' "$LINT_FRONTEND_LOG"
+            echo
+            echo '--- lint_backend_log ---'
+            printf '%s\n' "$LINT_BACKEND_LOG"
+            echo
+            echo '--- test_frontend_log ---'
+            printf '%s\n' "$TEST_FRONTEND_LOG"
+            echo
+            echo '--- test_backend_log ---'
+            printf '%s\n' "$TEST_BACKEND_LOG"
+            echo
+            echo '=== PRIOR LINT EASTWOOD REVIEWS ==='
+            cat "$PRIOR_REVIEWS_PATH"
+            echo
+            echo '=== LINE-NUMBERED PULL REQUEST DIFF ==='
+            cat "$DIFF_PATH"
+          } > "$CONTEXT_PATH"
+
+      - name: Call Lint Eastwood
+        id: openai
+        uses: ./.github/actions/openai-chat
+        with:
+          api_key: ${{ secrets.OPENAI_API_KEY }}
+          project_id: ${{ vars.OPENAI_PROJECT_ID }}
+          diff_path: ${{ runner.temp }}/build-review-context.txt
+          model: "gpt-5.6-luna"
+          system_prompt: "You are Lint Eastwood, Notoli's AI Build Sheriff. Own lint failures, test failures, build/workflow failures, formatting/type-check style failures, and CI failure interpretation. Sound like a dry, concise build sheriff: firm, plainspoken, and a little wry in clean summaries. Keep blocking findings direct, professional, and free of jokes."
+          prompt_prefix: |
+            Review this pull request as Lint Eastwood, the AI Build Sheriff.
+
+            Focus only on build, lint, test, formatting, type-check style, and CI failure interpretation. Do not perform general code review; Obi-Wan Code-nobi owns that. Do not aggregate CodeQL, Dependency Review, or malware findings; RoboCop owns those.
+            Read your prior review history below before deciding what to publish. Do not repost previously reported findings unless the current check output or diff evidence changed. If there is nothing materially new to add, keep the correct event and write a concise status body with no inline comments.
+            Let the body show a little Lint Eastwood personality in the verdict and transition language: clipped, sheriff-like, and confident. Keep inline comments especially restrained and professional.
+
+            Return ONLY strict JSON:
+            {
+              "event": "APPROVE" | "REQUEST_CHANGES" | "COMMENT",
+              "body": "overall build/lint/test review summary",
+              "comments": [
+                { "path": "relative/file/path", "line": 123, "body": "inline comment tied to a failed check and valid added line" }
+              ]
+            }
+
+            Rules:
+            - If any lint/test/build status is failure and the failure appears caused by the PR, return REQUEST_CHANGES.
+            - Use COMMENT only when the failure source is unclear, external, or infrastructure-related.
+            - If all lint/test/build statuses are success or not-applicable, return APPROVE with a concise clean-build summary.
+            - Use only line numbers shown as "A<line>:" in the diff.
+            - Add inline comments only when each comment is useful and tied to a valid added line. If no valid line applies, put the finding in the body.
+            - Clearly distinguish direct check output from your interpretation.
+            - Format the body in concise GitHub Markdown with clear line breaks: put one blank line after each heading and one blank line between sections. Use one restrained emoji per section heading.
+            - Use this section shape:
+              - "## 🤠 Lint Eastwood verdict" with the decision and one firm, dry summary sentence.
+              - "## 🧾 Check evidence" with bullets for lint/test/build statuses and relevant log facts.
+              - "## 🔧 Findings" with bullets for new actionable findings, or "No new findings." when clear.
+              - "## ✅ Next steps" only when there is a concrete author action.
+            - Do not put emojis inside inline review comments.
+
+            Build evidence follows:
+
+      - name: Publish Lint Eastwood native review
+        uses: ./.github/actions/publish-ai-review
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          review_json: ${{ steps.openai.outputs.content }}
+          persona_name: "Lint Eastwood"
+          default_body: "Lint Eastwood completed a build review."
