@@ -156,10 +156,10 @@ jobs:
             - Clearly distinguish direct check output from your interpretation.
             - Format the body in concise GitHub Markdown with clear line breaks: put one blank line after each heading and one blank line between sections. Use one restrained emoji per section heading.
             - Use this section shape:
-              - "### 🤠 Lint Eastwood verdict" with the decision and one firm, dry summary sentence.
-              - "### 🧾 Check evidence" with bullets for lint/test/build statuses and relevant log facts.
-              - "### 🔧 Findings" with bullets for new actionable findings, or "No new findings." when clear.
-              - "### ✅ Next steps" only when there is a concrete author action.
+              - "## 🤠 Lint Eastwood verdict" with the decision and one firm, dry summary sentence.
+              - "## 🧾 Check evidence" with bullets for lint/test/build statuses and relevant log facts.
+              - "## 🔧 Findings" with bullets for new actionable findings, or "No new findings." when clear.
+              - "## ✅ Next steps" only when there is a concrete author action.
             - Do not put emojis inside inline review comments.
 
             Build evidence follows:
