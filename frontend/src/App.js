@@ -1,6 +1,6 @@
 import './App.css';
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import AuthenticatedRoute from './components/AuthenticatedRoute';
 import Login from './pages/authentication/Login';
 import Register from './pages/authentication/Register';
@@ -13,6 +13,102 @@ import AppSnackbar from './components/AppSnackbar';
 import BoardNavigationDrawer from './components/BoardNavigationDrawer';
 import NavigationBridge from './components/NavigationBridge';
 import BoardHomeRedirect from './components/BoardHomeRedirect';
+
+function getLocationSignature(location) {
+  return `${location.pathname}${location.search}${location.hash}`;
+}
+
+function isNotepadRoute(pathname) {
+  return pathname === '/' || /^\/board\/[^/]+(?:\/list\/[^/]+)?$/.test(pathname);
+}
+
+function NotepadRoutes({ setAppBarHeader }) {
+  const location = useLocation();
+  const currentSignature = getLocationSignature(location);
+  const [routeSlots, setRouteSlots] = useState([
+    { signature: currentSignature, location, active: true },
+  ]);
+
+  useEffect(() => {
+    setRouteSlots((slots) => {
+      const activeSlot = slots.find((slot) => slot.active) ?? slots[0];
+      const activeIsNotepadRoute = activeSlot && isNotepadRoute(activeSlot.location.pathname);
+      const currentIsNotepadRoute = isNotepadRoute(location.pathname);
+
+      if (!activeSlot || !activeIsNotepadRoute || !currentIsNotepadRoute) {
+        return [{ signature: currentSignature, location, active: true }];
+      }
+
+      if (activeSlot.signature === currentSignature) {
+        return slots;
+      }
+
+      const pendingSlot = slots.find((slot) => slot.signature === currentSignature);
+      if (pendingSlot) {
+        return slots;
+      }
+
+      return [activeSlot, { signature: currentSignature, location, active: false }];
+    });
+  }, [currentSignature, location]);
+
+  const handlePageReady = useCallback(
+    (readySignature) => {
+      if (readySignature !== currentSignature) return;
+
+      setRouteSlots((slots) => {
+        const readySlot = slots.find((slot) => slot.signature === readySignature);
+        if (!readySlot) return slots;
+
+        return slots
+          .map((slot) => ({ ...slot, active: slot.signature === readySignature }))
+          .filter((slot) => slot.signature === readySignature);
+      });
+    },
+    [currentSignature],
+  );
+
+  return routeSlots.map((slot) => (
+    <div key={slot.signature} hidden={!slot.active}>
+      <Routes location={slot.location}>
+        <Route
+          path="/"
+          element={
+            <AuthenticatedRoute>
+              <BoardHomeRedirect />
+            </AuthenticatedRoute>
+          }
+        />
+
+        <Route
+          path="/board/:boardId"
+          element={
+            <AuthenticatedRoute>
+              <BoardListsPage
+                active={slot.active}
+                onPageReady={() => handlePageReady(slot.signature)}
+                setAppBarHeader={setAppBarHeader}
+              />
+            </AuthenticatedRoute>
+          }
+        />
+
+        <Route
+          path="/board/:boardId/list/:listId"
+          element={
+            <AuthenticatedRoute>
+              <ListTasksPage
+                active={slot.active}
+                onPageReady={() => handlePageReady(slot.signature)}
+                setAppBarHeader={setAppBarHeader}
+              />
+            </AuthenticatedRoute>
+          }
+        />
+      </Routes>
+    </div>
+  ));
+}
 
 function App() {
   // App Bar
@@ -58,34 +154,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword showSnackbar={showSnackbar} />} />
           <Route path="/reset-password" element={<ResetPassword showSnackbar={showSnackbar} />} />
 
-          <React.Fragment>
-            <Route
-              path="/"
-              element={
-                <AuthenticatedRoute>
-                  <BoardHomeRedirect />
-                </AuthenticatedRoute>
-              }
-            />
-
-            <Route
-              path="/board/:boardId"
-              element={
-                <AuthenticatedRoute>
-                  <BoardListsPage setAppBarHeader={setAppBarHeader} />
-                </AuthenticatedRoute>
-              }
-            />
-
-            <Route
-              path="/board/:boardId/list/:listId"
-              element={
-                <AuthenticatedRoute>
-                  <ListTasksPage setAppBarHeader={setAppBarHeader} />
-                </AuthenticatedRoute>
-              }
-            />
-          </React.Fragment>
+          <Route path="*" element={<NotepadRoutes setAppBarHeader={setAppBarHeader} />} />
         </Routes>
       </Router>
       <AppSnackbar

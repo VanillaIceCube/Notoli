@@ -51,7 +51,13 @@ export default function NotepadPageShell({
               variant="h4"
               align="center"
               gutterBottom
-              sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
+              data-testid="notepad-page-title"
+              sx={{
+                fontWeight: 'bold',
+                color: 'var(--secondary-color)',
+                lineHeight: 1.235,
+                minHeight: '2.625rem',
+              }}
             >
               {title}
             </Typography>
