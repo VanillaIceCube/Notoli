@@ -66,7 +66,7 @@ jobs:
           total_bytes=0
           max_total_bytes=180000
           max_file_bytes=30000
-          git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA" | while IFS= read -r file; do
+          while IFS= read -r file; do
             if [ ! -f "$file" ]; then
               continue
             fi
@@ -112,9 +112,16 @@ jobs:
             else
               total_bytes=$((total_bytes + file_bytes))
             fi
-          done
+          done < <(git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA")
+
+          if [ "$total_bytes" -gt "$max_total_bytes" ]; then
+            echo "Changed-file context exceeded budget: $total_bytes > $max_total_bytes" >&2
+            exit 1
+          fi
 
           {
+            echo
+            printf 'Changed-file context bytes included: %s / %s\n' "$total_bytes" "$max_total_bytes"
             echo
             echo '=== LINE-NUMBERED PULL REQUEST DIFF ==='
             cat "$DIFF_PATH"
