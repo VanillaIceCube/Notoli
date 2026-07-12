@@ -48,10 +48,7 @@ function NotepadRoutes({ setAppBarHeader }) {
         return slots;
       }
 
-      return [
-        activeSlot,
-        { signature: currentSignature, location, active: false },
-      ];
+      return [activeSlot, { signature: currentSignature, location, active: false }];
     });
   }, [currentSignature, location]);
 
