@@ -30,7 +30,7 @@ What it does:
   - Emits a malware report output for RoboCop and fails when a changed package/version matches a known malware advisory.
 - For non-Dependabot PRs, runs [`.github/workflows/review-code.yml`](workflows/review-code.yml)
   - Runs Obi-Wan Code-nobi, the AI Code Reviewer, for general implementation review
-- Publishes one native PR review with inline review comments when line placement is valid.
+  - Reviews the repository file map, changed-file contents, and line-numbered PR diff, then publishes one native PR review with inline comments when line placement is valid.
 - After frontend/backend lint and tests complete, runs [`.github/workflows/review-build.yml`](workflows/review-build.yml)
   - Runs Lint Eastwood, the AI Build Sheriff, to interpret lint, test, build, formatting, and CI evidence.
   - Consumes lint/test statuses, log tails, and the line-numbered PR diff before publishing one native PR review.
