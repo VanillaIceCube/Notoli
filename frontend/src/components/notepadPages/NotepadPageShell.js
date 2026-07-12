@@ -6,8 +6,7 @@ import PullToRefreshIndicator from '../PullToRefreshIndicator';
 const skeletonWaveSx = {
   bgcolor: 'rgba(85, 85, 85, 0.18)',
   '&::after': {
-    background:
-      'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent)',
+    background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent)',
   },
   '@media (prefers-reduced-motion: reduce)': {
     animation: 'none',
