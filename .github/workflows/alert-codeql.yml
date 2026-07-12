@@ -1,34 +1,24 @@
-name: Security Alerts
+name: CodeQL Alert
 
 on:
-  workflow_call:
-    inputs:
-      feed:
-        description: Alert feed to aggregate (codeql, vulnerability, or malware).
-        required: true
-        type: string
-    secrets:
-      OPENAI_API_KEY:
-        required: true
-      SECURITY_ALERTS_TOKEN:
-        required: true
-
-permissions:
-  contents: read
+  schedule:
+    - cron: '10 11 * * *'
+  workflow_dispatch:
 
 jobs:
   aggregate:
-    name: Aggregate ${{ inputs.feed }} alerts
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out workflow actions
         uses: actions/checkout@v6
 
-      - name: Aggregate security alerts
+      - name: Aggregate CodeQL alerts
         uses: ./.github/actions/security-alerts
         with:
-          feed: ${{ inputs.feed }}
+          feed: codeql
           github-token: ${{ secrets.SECURITY_ALERTS_TOKEN }}
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           openai-project-id: ${{ vars.OPENAI_PROJECT_ID }}

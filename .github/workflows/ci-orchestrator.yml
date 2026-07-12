@@ -18,17 +18,17 @@ permissions:
 jobs:
   lints:
     name: Lints
-    uses: ./.github/workflows/lint-gate.yml
+    uses: ./.github/workflows/gate-lint.yml
     with:
       checkout_ref: ${{ github.event.pull_request.head.ref }}
 
   tests:
     name: Tests
-    uses: ./.github/workflows/test-gate.yml
+    uses: ./.github/workflows/gate-test.yml
 
   codeql:
     name: CodeQL
-    uses: ./.github/workflows/codeql-gate.yml
+    uses: ./.github/workflows/gate-codeql.yml
     permissions:
       actions: read
       contents: read
@@ -37,35 +37,37 @@ jobs:
 
   dependency-vulnerability:
     name: Vulnerability
-    uses: ./.github/workflows/vulnerability-gate.yml
+    uses: ./.github/workflows/gate-vulnerability.yml
     permissions:
       contents: read
       pull-requests: write
 
   dependency-malware:
     name: Malware
-    uses: ./.github/workflows/malware-gate.yml
+    uses: ./.github/workflows/gate-malware.yml
     permissions:
       contents: read
       pull-requests: write
 
-  commentary:
-    name: Commentary
-    needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware]
+  code-review:
+    name: AI Code Review
     if: >-
-      always() &&
-      (
-        github.event.pull_request.user.login != 'dependabot[bot]' ||
-        needs.lints.result == 'failure' ||
-        needs.tests.result == 'failure' ||
-        needs.lints.outputs.lint_frontend_status == 'failure' ||
-        needs.lints.outputs.lint_backend_status == 'failure' ||
-        needs.tests.outputs.test_frontend_status == 'failure' ||
-        needs.tests.outputs.test_backend_status == 'failure'
-      )
-    uses: ./.github/workflows/commentary.yml
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    uses: ./.github/workflows/review-code.yml
     secrets: inherit
+
+  build-review:
+    name: AI Build Sheriff Review
+    needs: [lints, tests]
+    if: always() && github.event_name == 'pull_request'
+    uses: ./.github/workflows/review-build.yml
+    secrets: inherit
+    permissions:
+      contents: read
+      pull-requests: write
     with:
+      lint_result: ${{ needs.lints.result }}
+      test_result: ${{ needs.tests.result }}
       lint_frontend_status: ${{ needs.lints.outputs.lint_frontend_status }}
       lint_frontend_log: ${{ needs.lints.outputs.lint_frontend_log }}
       lint_backend_status: ${{ needs.lints.outputs.lint_backend_status }}
@@ -74,6 +76,25 @@ jobs:
       test_frontend_log: ${{ needs.tests.outputs.test_frontend_log }}
       test_backend_status: ${{ needs.tests.outputs.test_backend_status }}
       test_backend_log: ${{ needs.tests.outputs.test_backend_log }}
+
+  security-review:
+    name: AI Security Review
+    needs: [codeql, dependency-vulnerability, dependency-malware]
+    if: always() && github.event_name == 'pull_request'
+    uses: ./.github/workflows/review-security.yml
+    secrets: inherit
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      pull-requests: write
+      security-events: read
+    with:
+      codeql_result: ${{ needs.codeql.result }}
+      dependency_vulnerability_result: ${{ needs.dependency-vulnerability.result }}
+      dependency_vulnerability_report: ${{ needs.dependency-vulnerability.outputs.vulnerability_report }}
+      dependency_malware_result: ${{ needs.dependency-malware.result }}
+      dependency_malware_report: ${{ needs.dependency-malware.outputs.malware_report }}
 
   auto-merge:
     name: Auto Merge
@@ -85,7 +106,7 @@ jobs:
       needs.tests.result == 'success' &&
       needs.dependency-vulnerability.result == 'success' &&
       needs.dependency-malware.result == 'success'
-    uses: ./.github/workflows/auto_merge.yml
+    uses: ./.github/workflows/ci-auto-merge.yml
     permissions:
       contents: write
       pull-requests: write
