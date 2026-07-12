@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-12
+### Added
+- Added shared AI review actions that collect each persona's prior native PR reviews and publish deduplicated native reviews.
+### Changed
+- AI review personas now receive prior-review context, use concise Markdown body sections, and apply light prompt-guided persona voice.
+- Automated frontend and backend lint-fix commits now use the `Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>` author and committer identity.
+
 ## 2026-07-11
 ### Added
 - Added three AI pull-request review personas: RoboCop for security review, Lint Eastwood for build/lint/test failure review, and Obi-Wan Code-nobi for general code review.

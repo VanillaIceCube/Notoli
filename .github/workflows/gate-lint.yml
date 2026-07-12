@@ -107,8 +107,9 @@ jobs:
           branch: ${{ inputs.checkout_ref || github.head_ref }}
           file_pattern: |
             frontend
-          commit_user_name: "lint-bot"
-          commit_user_email: "lint-bot@users.noreply.github.com"
+          commit_user_name: "Lint Eastwood"
+          commit_user_email: "41898282+github-actions[bot]@users.noreply.github.com"
+          commit_author: "Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>"
 
       - name: Lint checks
         id: lint_checks
@@ -207,8 +208,9 @@ jobs:
           branch: ${{ inputs.checkout_ref || github.head_ref }}
           file_pattern: |
             backend
-          commit_user_name: "lint-bot"
-          commit_user_email: "lint-bot@users.noreply.github.com"
+          commit_user_name: "Lint Eastwood"
+          commit_user_email: "41898282+github-actions[bot]@users.noreply.github.com"
+          commit_author: "Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>"
 
       - name: Ruff checks
         id: lint_checks
