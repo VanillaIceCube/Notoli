@@ -28,17 +28,21 @@ describe('NotepadPageShell', () => {
     expect(screen.getByText('Rows go here')).toBeInTheDocument();
   });
 
-  test('when loading, it shows skeleton rows and hides child content', () => {
+  test('when loading, it shows title and row skeletons and hides child content', () => {
     renderShell({ loading: true });
 
+    expect(screen.getByTestId('notepad-title-skeleton')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument();
     expect(screen.getByRole('status', { name: /loading content/i })).toBeInTheDocument();
     expect(screen.getByTestId('notepad-loading-skeleton')).toBeInTheDocument();
     expect(screen.queryByText('Rows go here')).not.toBeInTheDocument();
   });
 
-  test('when refreshing existing content, it keeps child content visible', () => {
+  test('when refreshing existing content, it keeps the title and child content visible', () => {
     renderShell({ loading: true, hasContent: true });
 
+    expect(screen.queryByTestId('notepad-title-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
     expect(screen.queryByRole('status', { name: /loading content/i })).not.toBeInTheDocument();
     expect(screen.getByText('Rows go here')).toBeInTheDocument();
   });

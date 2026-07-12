@@ -138,14 +138,32 @@ export default function NotepadPageShell({
             sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5 }}
           >
             <Box sx={{ width: 40 }} />
-            <Typography
-              variant="h4"
-              align="center"
-              gutterBottom
-              sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
-            >
-              {title}
-            </Typography>
+            {showLoading ? (
+              <Skeleton
+                variant="rounded"
+                animation="wave"
+                width="42%"
+                height={40}
+                data-testid="notepad-title-skeleton"
+                aria-hidden="true"
+                sx={{
+                  ...skeletonWaveSx,
+                  borderRadius: 1,
+                  mb: 0.35,
+                  maxWidth: 240,
+                  minWidth: 132,
+                }}
+              />
+            ) : (
+              <Typography
+                variant="h4"
+                align="center"
+                gutterBottom
+                sx={{ fontWeight: 'bold', color: 'var(--secondary-color)' }}
+              >
+                {title}
+              </Typography>
+            )}
             <Box sx={{ width: 40 }} />
           </Box>
 
