@@ -219,12 +219,17 @@ jobs:
             - If all security gates are clean and you find no security risk in the diff, return APPROVE with a concise clean-security summary.
 
             Use only added RIGHT-side lines from the supplied diff for inline comments. Add inline comments only when each comment is useful and evidence-backed. If context is missing, say so in the body.
-            Format the body in concise GitHub Markdown with clear line breaks: put one blank line after each heading and one blank line between sections. Use one restrained emoji per section heading.
-            Use this section shape:
-            - "### 🛡️ RoboCop verdict" with the decision and one procedural summary sentence.
-            - "### 📋 Tool evidence" with bullets for CodeQL, Dependency Review, Malware Review, and relevant check annotations.
-            - "### ⚖️ AI security conclusion" with bullets for security interpretation, or "No new security findings." when clear.
-            - "### ✅ Next steps" only when there is a concrete author action or evidence gap.
+            - Format the body exactly as concise GitHub Markdown. Use one blank line after each heading, one blank line before and after every `---`, and one restrained emoji per section heading.
+            - Use this exact section order and section names:
+              - "### 🛡️ RoboCop verdict"
+              - "---"
+              - "### 📋 Tool evidence"
+              - "---"
+              - "### ⚖️ Security findings"
+            - In "RoboCop verdict", start with `**Decision:** <APPROVE | REQUEST_CHANGES | COMMENT>` and then add one procedural summary sentence.
+            - In "Tool evidence", use short bullets for **CodeQL**, **Dependency Review**, **Malware Review**, and relevant security check annotations only when evidence exists. Include statuses and concrete facts, not guesses.
+            - In "Security findings", list only new actionable security findings. Label any interpretation as an AI security conclusion. If there are no clear new security findings, write exactly `No new security findings.`
+            - Do not add a "Next steps" section. Put concrete author actions or evidence gaps inside the relevant finding bullet.
             Do not put emojis inside inline review comments.
 
             Security evidence follows:
