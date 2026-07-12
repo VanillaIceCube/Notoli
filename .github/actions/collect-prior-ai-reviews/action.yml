@@ -1,0 +1,104 @@
+name: Collect Prior AI Reviews
+description: Write prior native PR reviews for the current GitHub App identity to a context file.
+inputs:
+  github_token:
+    description: GitHub App installation token for the reviewer persona.
+    required: true
+  persona_name:
+    description: Human-readable reviewer persona name.
+    required: true
+  output_path:
+    description: Path where prior-review context should be written.
+    required: true
+  max_reviews:
+    description: Maximum prior reviews to include.
+    required: false
+    default: "5"
+runs:
+  using: composite
+  steps:
+    - name: Collect prior native reviews
+      uses: actions/github-script@v8
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+
+          const owner = context.repo.owner;
+          const repo = context.repo.repo;
+          const pull_number = context.payload.pull_request.number;
+          const personaName = '${{ inputs.persona_name }}';
+          const outputPath = '${{ inputs.output_path }}';
+          const maxReviews = Number('${{ inputs.max_reviews }}') || 5;
+
+          let botLogin = '';
+          try {
+            const app = await github.rest.apps.getAuthenticated();
+            if (app.data?.slug) {
+              botLogin = `${app.data.slug}[bot]`;
+            }
+          } catch (error) {
+            core.warning(`Could not resolve authenticated GitHub App slug: ${error.message}`);
+          }
+
+          const reviews = await github.paginate(github.rest.pulls.listReviews, {
+            owner,
+            repo,
+            pull_number,
+            per_page: 100,
+          });
+          const reviewComments = await github.paginate(github.rest.pulls.listReviewComments, {
+            owner,
+            repo,
+            pull_number,
+            per_page: 100,
+          });
+
+          const isOwnReview = (item) => {
+            const login = item.user?.login || '';
+            if (botLogin) return login === botLogin;
+            return login.toLowerCase().includes(personaName.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+          };
+
+          const ownReviews = reviews
+            .filter(isOwnReview)
+            .sort((left, right) => new Date(right.submitted_at || 0) - new Date(left.submitted_at || 0))
+            .slice(0, maxReviews)
+            .reverse();
+
+          const ownReviewIds = new Set(ownReviews.map((review) => review.id));
+          const ownComments = reviewComments
+            .filter((comment) => isOwnReview(comment) || ownReviewIds.has(comment.pull_request_review_id))
+            .sort((left, right) => new Date(left.created_at || 0) - new Date(right.created_at || 0));
+
+          const contextPayload = {
+            persona: personaName,
+            authenticated_bot_login: botLogin || '(unresolved)',
+            instruction: [
+              'Use this prior-review history to avoid reposting the same findings.',
+              'If you have no materially new findings, keep the same native review event semantics but write a concise status body and leave comments empty.',
+              'Do not duplicate previously reported findings unless the evidence changed in the current diff, checks, or logs.',
+            ],
+            prior_reviews: ownReviews.map((review) => ({
+              id: review.id,
+              state: review.state,
+              commit_id: review.commit_id,
+              submitted_at: review.submitted_at,
+              body: review.body || '',
+            })),
+            prior_inline_comments: ownComments.map((comment) => ({
+              id: comment.id,
+              review_id: comment.pull_request_review_id,
+              path: comment.path,
+              line: comment.line,
+              original_line: comment.original_line,
+              commit_id: comment.commit_id,
+              diff_hunk: comment.diff_hunk || '',
+              body: comment.body || '',
+              created_at: comment.created_at,
+            })),
+          };
+
+          fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+          fs.writeFileSync(outputPath, JSON.stringify(contextPayload, null, 2));

@@ -9,6 +9,7 @@ What it does:
 - Runs the reusable lint gate: [`.github/workflows/gate-lint.yml`](workflows/gate-lint.yml)
   - Frontend: Prettier + ESLint (auto-fix, then strict checks)
   - Backend: Ruff (auto-fix, then strict checks)
+  - Auto-fix commits use `Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>` as both the author and committer identity when the workflow can push back to the pull request branch.
 - Runs the reusable test gate: [`.github/workflows/gate-test.yml`](workflows/gate-test.yml)
   - Frontend: `npm test` (CI mode)
   - Backend: `python manage.py test`
@@ -30,14 +31,14 @@ What it does:
   - Emits a malware report output for RoboCop and fails when a changed package/version matches a known malware advisory.
 - For non-Dependabot PRs, runs [`.github/workflows/review-code.yml`](workflows/review-code.yml)
   - Runs Obi-Wan Code-nobi, the AI Code Reviewer, for general implementation review
-  - Reviews the repository file map, changed-file contents, and line-numbered PR diff, then publishes one native PR review with inline comments when line placement is valid.
+  - Reviews the repository file map, changed-file contents, prior Obi-Wan Code-nobi reviews on the PR, and line-numbered PR diff, then publishes one native PR review with inline comments when line placement is valid.
 - After frontend/backend lint and tests complete, runs [`.github/workflows/review-build.yml`](workflows/review-build.yml)
   - Runs Lint Eastwood, the AI Build Sheriff, to interpret lint, test, build, formatting, and CI evidence.
-  - Consumes lint/test statuses, log tails, and the line-numbered PR diff before publishing one native PR review.
+  - Consumes lint/test statuses, log tails, prior Lint Eastwood reviews on the PR, and the line-numbered PR diff before publishing one native PR review.
   - Requests changes when failed lint/test/build evidence appears caused by the PR; approves clean build evidence.
 - After the security checks, runs [`.github/workflows/review-security.yml`](workflows/review-security.yml)
   - Runs RoboCop, the AI Security Officer, for every pull request after CodeQL, Dependency/Vulnerability Review, and Malware Review complete.
-  - Consumes explicit gate results, vulnerability/malware reports, security check summaries, check annotations, and the line-numbered PR diff before publishing one native PR review.
+  - Consumes explicit gate results, vulnerability/malware reports, security check summaries, check annotations, prior RoboCop reviews on the PR, and the line-numbered PR diff before publishing one native PR review.
   - Requests changes for actionable security findings; approves clean security evidence.
   - Dependency Review, malware scanning, and CodeQL remain independent required checks; RoboCop does not replace them.
 - For Dependabot PRs, runs [`.github/workflows/ci-auto-merge.yml`](workflows/ci-auto-merge.yml) only when lints, tests, CodeQL, vulnerability review, and malware review pass. Failed lint/test evidence routes to Lint Eastwood, and failed security evidence routes to RoboCop; the general Obi-Wan Code-nobi review remains skipped for Dependabot updates.
@@ -50,6 +51,7 @@ OpenAI and GitHub App inputs:
 - `ROBOCOP_APP_ID` repository variable and `ROBOCOP_PRIVATE_KEY` repository secret authenticate the RoboCop GitHub App. Install it with `Contents: read`, `Pull requests: write`, `Checks: read`, `Actions: read`, and `Security events: read`.
 - AI reviews use `gpt-5.6-luna` through the local OpenAI Responses API action.
 - AI personas do not post standalone PR comments. Any bot comments are submitted as part of their native PR review.
+- AI personas read prior native reviews authored by their own GitHub App identity, suppress duplicate inline findings when the evidence has not changed, and use concise review bodies with clear section line breaks plus restrained section-heading emojis. Persona voice is prompt-guided only: RoboCop uses procedural security-officer phrasing, Lint Eastwood uses clipped build-sheriff phrasing, and Obi-Wan Code-nobi uses calm senior-reviewer phrasing.
 
 Review personas:
 - **RoboCop - AI Security Officer:** owns CodeQL, Dependency/Vulnerability Review, Malware Review, security-sensitive code paths, permissions/auth risk, and security interpretation.
