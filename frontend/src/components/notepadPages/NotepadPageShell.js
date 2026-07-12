@@ -142,16 +142,18 @@ export default function NotepadPageShell({
               <Skeleton
                 variant="rounded"
                 animation="wave"
-                width="42%"
-                height={40}
+                width="62%"
+                height={44}
                 data-testid="notepad-title-skeleton"
                 aria-hidden="true"
                 sx={{
                   ...skeletonWaveSx,
                   borderRadius: 1,
-                  mb: 0.35,
-                  maxWidth: 240,
-                  minWidth: 132,
+                  alignSelf: 'flex-start',
+                  mt: 0.25,
+                  mb: 0.85,
+                  maxWidth: 320,
+                  minWidth: 196,
                 }}
               />
             ) : (
