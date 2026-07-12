@@ -54,12 +54,14 @@ runs:
           exit 0
         fi
 
-        DIFF_CONTENT=$(cat "$DIFF_PATH")
-        PROMPT="${PROMPT_PREFIX}${DIFF_CONTENT}"
+        {
+          printf '%s' "$PROMPT_PREFIX"
+          cat "$DIFF_PATH"
+        } > prompt.txt
 
         # Build JSON safely
         jq -n \
-          --arg prompt "$PROMPT" \
+          --rawfile prompt prompt.txt \
           --arg model "$MODEL" \
           --arg system_prompt "$SYSTEM_PROMPT" \
           '
@@ -101,8 +103,9 @@ runs:
         echo "$CONTENT"
 
         # Write multi-line output for GitHub Actions
+        delimiter="OPENAI_CONTENT_$(uuidgen)"
         {
-          echo 'content<<EOF'
+          printf 'content<<%s\n' "$delimiter"
           printf '%s\n' "$CONTENT"
-          echo 'EOF'
+          printf '%s\n' "$delimiter"
         } >> "$GITHUB_OUTPUT"
