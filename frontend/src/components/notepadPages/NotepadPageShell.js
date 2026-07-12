@@ -1,7 +1,99 @@
 // Shared notepad page frame for title, pull-to-refresh offset, loading/error states, and row content.
-import { Box, Container, Paper, Stack, Typography } from '@mui/material';
+import { Box, Container, Paper, Skeleton, Stack, Typography } from '@mui/material';
 import Divider from '@mui/material/Divider';
 import PullToRefreshIndicator from '../PullToRefreshIndicator';
+
+const skeletonWaveSx = {
+  bgcolor: 'rgba(85, 85, 85, 0.18)',
+  '&::after': {
+    background:
+      'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent)',
+  },
+  '@media (prefers-reduced-motion: reduce)': {
+    animation: 'none',
+    '&::after': { animation: 'none' },
+  },
+};
+
+function NotepadLoadingSkeleton() {
+  const rowWidths = ['78%', '64%', '72%'];
+
+  return (
+    <Stack
+      spacing={1}
+      role="status"
+      aria-label="Loading content"
+      data-testid="notepad-loading-skeleton"
+    >
+      {rowWidths.map((width) => (
+        <Box
+          key={width}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            minHeight: 52,
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            bgcolor: 'var(--secondary-background-color)',
+            borderBottom: '2px solid rgba(85, 85, 85, 0.42)',
+            boxSizing: 'border-box',
+          }}
+        >
+          <Skeleton
+            variant="circular"
+            animation="wave"
+            width={24}
+            height={24}
+            sx={{ ...skeletonWaveSx, mr: 1.5, flex: '0 0 auto' }}
+          />
+          <Skeleton
+            variant="rounded"
+            animation="wave"
+            width={width}
+            height={22}
+            sx={{ ...skeletonWaveSx, borderRadius: 1 }}
+          />
+          <Skeleton
+            variant="circular"
+            animation="wave"
+            width={24}
+            height={24}
+            sx={{ ...skeletonWaveSx, ml: 'auto', flex: '0 0 auto' }}
+          />
+        </Box>
+      ))}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          minHeight: 52,
+          px: 1,
+          py: 0.5,
+          borderRadius: 1,
+          bgcolor: 'var(--secondary-background-color)',
+          boxSizing: 'border-box',
+        }}
+        aria-hidden="true"
+      >
+        <Skeleton
+          variant="circular"
+          animation="wave"
+          width={24}
+          height={24}
+          sx={{ ...skeletonWaveSx, mr: 1.5, flex: '0 0 auto' }}
+        />
+        <Skeleton
+          variant="rounded"
+          animation="wave"
+          width="34%"
+          height={22}
+          sx={{ ...skeletonWaveSx, borderRadius: 1 }}
+        />
+      </Box>
+    </Stack>
+  );
+}
 
 export default function NotepadPageShell({
   title,
@@ -58,8 +150,6 @@ export default function NotepadPageShell({
             <Box sx={{ width: 40 }} />
           </Box>
 
-          {showLoading && <Typography align="center"> Loading... </Typography>}
-
           {error && (
             <Typography color="error" align="center">
               Error: {error}
@@ -69,6 +159,7 @@ export default function NotepadPageShell({
           <Divider
             sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }}
           />
+          {showLoading && <NotepadLoadingSkeleton />}
           {showContent && <Stack spacing={1}>{children}</Stack>}
         </Box>
       </Paper>

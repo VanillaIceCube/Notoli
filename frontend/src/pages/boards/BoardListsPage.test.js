@@ -68,13 +68,14 @@ describe('BoardListsPage', () => {
     });
   });
 
-  test('when the page loads, it shows a loading state', async () => {
+  test('when the page loads, it shows skeleton placeholders', async () => {
     const deferred = createDeferred();
     fetchListsApi.mockReturnValueOnce(deferred.promise);
 
     renderWithProviders(<BoardListsPage setAppBarHeader={jest.fn()} />);
 
-    expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: /loading content/i })).toBeInTheDocument();
+    expect(screen.getByTestId('notepad-loading-skeleton')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /lists/i })).not.toBeInTheDocument();
 
     deferred.resolve({ ok: true, json: async () => [] });

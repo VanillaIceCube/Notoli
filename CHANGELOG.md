@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ### Added
 - Added shared AI review actions that collect each persona's prior native PR reviews and publish deduplicated native reviews.
 ### Changed
+- Replaced abrupt notepad page loading text with layout-matched skeleton placeholders.
 - AI review personas now receive prior-review context, use concise Markdown body sections with clearer line breaks and restrained section-heading emojis, and apply more recognizable prompt-guided persona voice.
 - Dependabot pull requests now request AI reviews only on failed gates: Lint Eastwood for lint/test failures and RoboCop for CodeQL, vulnerability, or malware failures, while Obi-Wan Code-nobi remains skipped.
 - Automated frontend and backend lint-fix commits now use the `Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>` author and committer identity.

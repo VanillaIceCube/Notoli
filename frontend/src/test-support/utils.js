@@ -37,5 +37,6 @@ export function createDeferred() {
 export async function waitForLoadingToFinish() {
   await waitFor(() => {
     expect(document.body.textContent || '').not.toMatch(/loading/i);
+    expect(document.querySelector('[data-testid="notepad-loading-skeleton"]')).toBeNull();
   });
 }
