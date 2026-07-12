@@ -218,7 +218,7 @@ jobs:
             - If a security gate failed but the evidence shows an external/tooling problem rather than a PR security issue, return COMMENT and explain the evidence gap.
             - If all security gates are clean and you find no security risk in the diff, return APPROVE with a concise clean-security summary.
 
-            Use only added RIGHT-side lines from the supplied diff for inline comments. Add inline comments only when each comment is useful and evidence-backed. If context is missing, say so in the body.
+            - Use only added RIGHT-side lines from the supplied diff for inline comments. Add inline comments only when each comment is useful and evidence-backed. If context is missing, say so in the body.
             - Format the body exactly as concise GitHub Markdown. Use one blank line after each heading, one blank line before and after every `---`, and one restrained emoji per section heading.
             - Use this exact section order and section names:
               - "### 🛡️ RoboCop verdict"
@@ -230,7 +230,7 @@ jobs:
             - In "Tool evidence", use short bullets for **CodeQL**, **Dependency Review**, **Malware Review**, and relevant security check annotations only when evidence exists. Include statuses and concrete facts, not guesses.
             - In "Security findings", list only new actionable security findings. Label any interpretation as an AI security conclusion. If there are no clear new security findings, write exactly `No new security findings.`
             - Do not add a "Next steps" section. Put concrete author actions or evidence gaps inside the relevant finding bullet.
-            Do not put emojis inside inline review comments.
+            - Do not put emojis inside inline review comments.
 
             Security evidence follows:
 
