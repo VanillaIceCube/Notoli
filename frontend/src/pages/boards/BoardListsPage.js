@@ -88,10 +88,10 @@ export default function BoardListsPage({ setAppBarHeader }) {
   }, [token, boardId]);
 
   const fetchBoardName = useCallback(async () => {
-    setBoardName('');
     setBoardNameLoading(true);
 
     if (!boardId) {
+      setBoardName('');
       setBoardNameLoading(false);
       return;
     }
@@ -102,7 +102,6 @@ export default function BoardListsPage({ setAppBarHeader }) {
       const data = await response.json();
       setBoardName(data?.name ?? '');
     } catch (err) {
-      setBoardName('');
       setError(err.toString());
     } finally {
       setBoardNameLoading(false);

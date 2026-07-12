@@ -55,6 +55,14 @@ describe('NotepadPageShell', () => {
     expect(screen.getByText('Rows go here')).toBeInTheDocument();
   });
 
+  test('when a previous title exists and the next title is loading, it keeps the title visible', () => {
+    renderShell({ title: 'Board', titleLoading: true, hasContent: true });
+
+    expect(screen.queryByTestId('notepad-title-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+    expect(screen.getByText('Rows go here')).toBeInTheDocument();
+  });
+
   test('when an error exists, it shows the error and hides child content', () => {
     renderShell({ error: 'Error: HTTP 500' });
 

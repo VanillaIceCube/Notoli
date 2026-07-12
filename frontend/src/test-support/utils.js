@@ -16,14 +16,17 @@ const testTheme = createTheme({
 const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true };
 
 export function renderWithProviders(ui, { routeEntries = ['/'], ...renderOptions } = {}) {
-  return render(
-    <ThemeProvider theme={testTheme}>
-      <MemoryRouter future={routerFuture} initialEntries={routeEntries}>
-        {ui}
-      </MemoryRouter>
-    </ThemeProvider>,
-    renderOptions,
-  );
+  function Providers({ children }) {
+    return (
+      <ThemeProvider theme={testTheme}>
+        <MemoryRouter future={routerFuture} initialEntries={routeEntries}>
+          {children}
+        </MemoryRouter>
+      </ThemeProvider>
+    );
+  }
+
+  return render(ui, { wrapper: Providers, ...renderOptions });
 }
 
 export function createDeferred() {

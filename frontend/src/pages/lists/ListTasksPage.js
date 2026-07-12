@@ -99,10 +99,10 @@ export default function ListTasksPage({ setAppBarHeader }) {
   }, [token, listId]);
 
   const fetchListName = useCallback(async () => {
-    setListName('');
     setListNameLoading(true);
 
     if (!listId) {
+      setListName('');
       setListNameLoading(false);
       return;
     }
@@ -112,7 +112,6 @@ export default function ListTasksPage({ setAppBarHeader }) {
       const listData = await response.json();
       setListName(listData?.name ?? '');
     } catch (err) {
-      setListName('');
       setError(err.toString());
     } finally {
       setListNameLoading(false);

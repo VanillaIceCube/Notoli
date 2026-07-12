@@ -114,6 +114,29 @@ describe('BoardListsPage', () => {
     expect(screen.getByText('test_list_01')).toBeInTheDocument();
   });
 
+  test('when a later board title is pending, it keeps the previous title instead of showing a skeleton', async () => {
+    const { rerender } = await renderLists();
+    expect(await screen.findByRole('heading', { name: 'test_board_01' })).toBeInTheDocument();
+
+    mockUseParams.mockReturnValue({ boardId: '2' });
+    fetchListsApi.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 12, name: 'test_list_03' }],
+    });
+    const deferredBoard = createDeferred();
+    fetchBoardApi.mockReturnValueOnce(deferredBoard.promise);
+
+    rerender(<BoardListsPage setAppBarHeader={jest.fn()} />);
+
+    expect(await screen.findByText('test_list_03')).toBeInTheDocument();
+    expect(screen.queryByTestId('notepad-title-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'test_board_01' })).toBeInTheDocument();
+
+    deferredBoard.resolve({ ok: true, json: async () => boardFixtures[1] });
+
+    expect(await screen.findByRole('heading', { name: 'test_board_02' })).toBeInTheDocument();
+  });
+
   test('when the fetch fails, it shows an error message', async () => {
     fetchListsApi.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
 
