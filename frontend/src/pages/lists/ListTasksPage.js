@@ -1,5 +1,5 @@
 // ListTasksPage loads one list's tasks and adds task-specific completion behavior to notepad UI.
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Box, Button, Checkbox, IconButton, Typography } from '@mui/material';
 import Add from '@mui/icons-material/Add';
@@ -70,6 +70,7 @@ export default function ListTasksPage({ setAppBarHeader }) {
   const [editTask, setEditTask] = useState('');
   const actionMenuOpen = Boolean(actionMenuAnchorEl);
   const displayedListName = location.state?.listName || listName;
+  const listNameRequestIdRef = useRef(0);
 
   // Preserve the AppBar's existing board-only behavior; its title is unrelated to the browser tab.
   useLayoutEffect(() => {
@@ -99,6 +100,8 @@ export default function ListTasksPage({ setAppBarHeader }) {
   }, [token, listId]);
 
   const fetchListName = useCallback(async () => {
+    const requestId = listNameRequestIdRef.current + 1;
+    listNameRequestIdRef.current = requestId;
     setListNameLoading(true);
 
     if (!listId) {
@@ -110,10 +113,13 @@ export default function ListTasksPage({ setAppBarHeader }) {
       const response = await fetchListApi(listId, token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const listData = await response.json();
+      if (requestId !== listNameRequestIdRef.current) return;
       setListName(listData?.name ?? '');
     } catch (err) {
+      if (requestId !== listNameRequestIdRef.current) return;
       setError(err.toString());
     } finally {
+      if (requestId !== listNameRequestIdRef.current) return;
       setListNameLoading(false);
     }
   }, [listId, token]);

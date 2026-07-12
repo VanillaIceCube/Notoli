@@ -162,6 +162,56 @@ describe('ListTasksPage', () => {
     expect(await screen.findByRole('heading', { name: 'List 6' })).toBeInTheDocument();
   });
 
+  test('when list title responses resolve out of order, it ignores stale titles', async () => {
+    const { rerender } = await renderNotes();
+
+    mockUseParams.mockReturnValue({ boardId: '1', listId: '6' });
+    fetchNotesApi.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 103, note: 'test_note_03', status: 'Not Started' }],
+    });
+    const staleList = createDeferred();
+    fetchListApi.mockReturnValueOnce(staleList.promise);
+
+    rerender(
+      <>
+        <ListTasksPage setAppBarHeader={jest.fn()} />
+        <LocationDisplay />
+      </>,
+    );
+
+    expect(await screen.findByText('test_note_03')).toBeInTheDocument();
+
+    mockUseParams.mockReturnValue({ boardId: '1', listId: '7' });
+    fetchNotesApi.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 104, note: 'test_note_04', status: 'Not Started' }],
+    });
+    const currentList = createDeferred();
+    fetchListApi.mockReturnValueOnce(currentList.promise);
+
+    rerender(
+      <>
+        <ListTasksPage setAppBarHeader={jest.fn()} />
+        <LocationDisplay />
+      </>,
+    );
+
+    expect(await screen.findByText('test_note_04')).toBeInTheDocument();
+
+    await act(async () => {
+      currentList.resolve({ ok: true, json: async () => ({ name: 'List 7' }) });
+    });
+    expect(await screen.findByRole('heading', { name: 'List 7' })).toBeInTheDocument();
+
+    await act(async () => {
+      staleList.resolve({ ok: true, json: async () => ({ name: 'List 6' }) });
+    });
+
+    expect(screen.getByRole('heading', { name: 'List 7' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'List 6' })).not.toBeInTheDocument();
+  });
+
   test('when the fetch fails, it shows an error message', async () => {
     fetchNotesApi.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
 

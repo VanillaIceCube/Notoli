@@ -1,5 +1,5 @@
 // BoardListsPage loads one board's lists and plugs board-specific CRUD/navigation into notepad UI.
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
 import { Box, Button, IconButton, Typography } from '@mui/material';
 import Add from '@mui/icons-material/Add';
@@ -63,6 +63,7 @@ export default function BoardListsPage({ setAppBarHeader }) {
   const [editingListId, setEditingListId] = useState(null);
   const [editListName, setEditListName] = useState('');
   const actionMenuOpen = Boolean(actionMenuAnchorEl);
+  const boardNameRequestIdRef = useRef(0);
 
   useLayoutEffect(() => {
     setAppBarHeader('');
@@ -88,6 +89,8 @@ export default function BoardListsPage({ setAppBarHeader }) {
   }, [token, boardId]);
 
   const fetchBoardName = useCallback(async () => {
+    const requestId = boardNameRequestIdRef.current + 1;
+    boardNameRequestIdRef.current = requestId;
     setBoardNameLoading(true);
 
     if (!boardId) {
@@ -100,10 +103,13 @@ export default function BoardListsPage({ setAppBarHeader }) {
       const response = await fetchBoardApi(boardId, token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
+      if (requestId !== boardNameRequestIdRef.current) return;
       setBoardName(data?.name ?? '');
     } catch (err) {
+      if (requestId !== boardNameRequestIdRef.current) return;
       setError(err.toString());
     } finally {
+      if (requestId !== boardNameRequestIdRef.current) return;
       setBoardNameLoading(false);
     }
   }, [token, boardId]);

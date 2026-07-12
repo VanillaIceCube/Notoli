@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import BoardListsPage from './BoardListsPage';
@@ -135,6 +135,46 @@ describe('BoardListsPage', () => {
     deferredBoard.resolve({ ok: true, json: async () => boardFixtures[1] });
 
     expect(await screen.findByRole('heading', { name: 'test_board_02' })).toBeInTheDocument();
+  });
+
+  test('when board title responses resolve out of order, it ignores stale titles', async () => {
+    const { rerender } = await renderLists();
+
+    mockUseParams.mockReturnValue({ boardId: '2' });
+    fetchListsApi.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 12, name: 'test_list_03' }],
+    });
+    const staleBoard = createDeferred();
+    fetchBoardApi.mockReturnValueOnce(staleBoard.promise);
+
+    rerender(<BoardListsPage setAppBarHeader={jest.fn()} />);
+
+    expect(await screen.findByText('test_list_03')).toBeInTheDocument();
+
+    mockUseParams.mockReturnValue({ boardId: '3' });
+    fetchListsApi.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 13, name: 'test_list_04' }],
+    });
+    const currentBoard = createDeferred();
+    fetchBoardApi.mockReturnValueOnce(currentBoard.promise);
+
+    rerender(<BoardListsPage setAppBarHeader={jest.fn()} />);
+
+    expect(await screen.findByText('test_list_04')).toBeInTheDocument();
+
+    await act(async () => {
+      currentBoard.resolve({ ok: true, json: async () => ({ id: 3, name: 'test_board_03' }) });
+    });
+    expect(await screen.findByRole('heading', { name: 'test_board_03' })).toBeInTheDocument();
+
+    await act(async () => {
+      staleBoard.resolve({ ok: true, json: async () => boardFixtures[1] });
+    });
+
+    expect(screen.getByRole('heading', { name: 'test_board_03' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'test_board_02' })).not.toBeInTheDocument();
   });
 
   test('when the fetch fails, it shows an error message', async () => {
