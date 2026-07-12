@@ -59,7 +59,14 @@ jobs:
   build-review:
     name: AI Build Sheriff Review
     needs: [lints, tests]
-    if: always() && github.event_name == 'pull_request'
+    if: >-
+      always() &&
+      github.event_name == 'pull_request' &&
+      (
+        github.event.pull_request.user.login != 'dependabot[bot]' ||
+        needs.lints.result != 'success' ||
+        needs.tests.result != 'success'
+      )
     uses: ./.github/workflows/review-build.yml
     secrets: inherit
     permissions:
@@ -80,7 +87,15 @@ jobs:
   security-review:
     name: AI Security Review
     needs: [codeql, dependency-vulnerability, dependency-malware]
-    if: always() && github.event_name == 'pull_request'
+    if: >-
+      always() &&
+      github.event_name == 'pull_request' &&
+      (
+        github.event.pull_request.user.login != 'dependabot[bot]' ||
+        needs.codeql.result != 'success' ||
+        needs.dependency-vulnerability.result != 'success' ||
+        needs.dependency-malware.result != 'success'
+      )
     uses: ./.github/workflows/review-security.yml
     secrets: inherit
     permissions:
