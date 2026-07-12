@@ -10,7 +10,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - AI review personas now receive prior-review context, use concise Markdown body sections with clearer line breaks and restrained section-heading emojis, and apply more recognizable prompt-guided persona voice.
 - Dependabot pull requests now request AI reviews only on failed gates: Lint Eastwood for lint/test failures and RoboCop for CodeQL, vulnerability, or malware failures, while Obi-Wan Code-nobi remains skipped.
-- Automated frontend and backend lint-fix commits now use the `Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>` author and committer identity.
+- Automated frontend and backend lint-fix commits now use the Lint Eastwood GitHub App token and dynamically resolved bot noreply email for author and committer attribution.
 
 ## 2026-07-11
 ### Added

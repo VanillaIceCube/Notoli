@@ -19,6 +19,7 @@ jobs:
   lints:
     name: Lints
     uses: ./.github/workflows/gate-lint.yml
+    secrets: inherit
     with:
       checkout_ref: ${{ github.event.pull_request.head.ref }}
 

@@ -7,6 +7,9 @@ on:
         description: "Branch or ref to check out for auto-fix commits."
         required: false
         type: string
+    secrets:
+      LINT_EASTWOOD_PRIVATE_KEY:
+        required: true
     outputs:
       lint_frontend_status:
         description: Frontend lint status (success/failure/not-applicable).
@@ -34,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
-      backend:  ${{ steps.filter.outputs.backend }}
+      backend: ${{ steps.filter.outputs.backend }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -63,10 +66,29 @@ jobs:
       run:
         working-directory: frontend
     steps:
+      - name: Create Lint Eastwood GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.LINT_EASTWOOD_APP_ID }}
+          private-key: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
+          permission-contents: write
+
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Resolve Lint Eastwood bot identity
+        id: lint-eastwood-bot
+        shell: bash
+        run: |
+          bot_login="${{ steps.app-token.outputs.app-slug }}[bot]"
+          bot_id="$(gh api "/users/${bot_login}" --jq .id)"
+          echo "email=${bot_id}+${bot_login}@users.noreply.github.com" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Read versions
         id: versions
@@ -77,8 +99,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ steps.versions.outputs.node_version }}
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
+          cache: "npm"
+          cache-dependency-path: "frontend/package-lock.json"
 
       - name: Install dependencies
         run: npm ci
@@ -108,8 +130,8 @@ jobs:
           file_pattern: |
             frontend
           commit_user_name: "Lint Eastwood"
-          commit_user_email: "41898282+github-actions[bot]@users.noreply.github.com"
-          commit_author: "Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>"
+          commit_user_email: ${{ steps.lint-eastwood-bot.outputs.email }}
+          commit_author: "Lint Eastwood <${{ steps.lint-eastwood-bot.outputs.email }}>"
 
       - name: Lint checks
         id: lint_checks
@@ -164,10 +186,29 @@ jobs:
       run:
         working-directory: backend
     steps:
+      - name: Create Lint Eastwood GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.LINT_EASTWOOD_APP_ID }}
+          private-key: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
+          permission-contents: write
+
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_ref || github.ref }}
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Resolve Lint Eastwood bot identity
+        id: lint-eastwood-bot
+        shell: bash
+        run: |
+          bot_login="${{ steps.app-token.outputs.app-slug }}[bot]"
+          bot_id="$(gh api "/users/${bot_login}" --jq .id)"
+          echo "email=${bot_id}+${bot_login}@users.noreply.github.com" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
       - name: Read versions
         id: versions
@@ -178,7 +219,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ steps.versions.outputs.python_version }}
-          cache: 'pip'
+          cache: "pip"
           cache-dependency-path: backend/environment.yml
 
       - name: Install deps
@@ -209,8 +250,8 @@ jobs:
           file_pattern: |
             backend
           commit_user_name: "Lint Eastwood"
-          commit_user_email: "41898282+github-actions[bot]@users.noreply.github.com"
-          commit_author: "Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>"
+          commit_user_email: ${{ steps.lint-eastwood-bot.outputs.email }}
+          commit_author: "Lint Eastwood <${{ steps.lint-eastwood-bot.outputs.email }}>"
 
       - name: Ruff checks
         id: lint_checks

@@ -9,7 +9,8 @@ What it does:
 - Runs the reusable lint gate: [`.github/workflows/gate-lint.yml`](workflows/gate-lint.yml)
   - Frontend: Prettier + ESLint (auto-fix, then strict checks)
   - Backend: Ruff (auto-fix, then strict checks)
-  - Auto-fix commits use `Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>` as both the author and committer identity when the workflow can push back to the pull request branch.
+  - Auto-fix commits use the Lint Eastwood GitHub App installation token to check out and push branch updates.
+  - Auto-fix commits resolve Lint Eastwood's bot noreply email at runtime from the app slug and bot user ID, then use `Lint Eastwood <bot-id+lint-eastwood[bot]@users.noreply.github.com>` as both the author and committer identity.
 - Runs the reusable test gate: [`.github/workflows/gate-test.yml`](workflows/gate-test.yml)
   - Frontend: `npm test` (CI mode)
   - Backend: `python manage.py test`
@@ -47,7 +48,7 @@ OpenAI and GitHub App inputs:
 - `OPENAI_API_KEY` secret. Triggered AI reviews fail visibly when the key is missing.
 - `OPENAI_PROJECT_ID` (repo variable)
 - `OBI_WAN_CODE_NOBI_APP_ID` repository variable and `OBI_WAN_CODE_NOBI_PRIVATE_KEY` repository secret authenticate the Obi-Wan Code-nobi GitHub App. Install it with `Contents: read` and `Pull requests: write`.
-- `LINT_EASTWOOD_APP_ID` repository variable and `LINT_EASTWOOD_PRIVATE_KEY` repository secret authenticate the Lint Eastwood GitHub App. Install it with `Contents: read` and `Pull requests: write`.
+- `LINT_EASTWOOD_APP_ID` repository variable and `LINT_EASTWOOD_PRIVATE_KEY` repository secret authenticate the Lint Eastwood GitHub App. Install it with `Contents: write` so lint auto-fix commits can be pushed, and `Pull requests: write` so build reviews can be published.
 - `ROBOCOP_APP_ID` repository variable and `ROBOCOP_PRIVATE_KEY` repository secret authenticate the RoboCop GitHub App. Install it with `Contents: read`, `Pull requests: write`, `Checks: read`, `Actions: read`, and `Security events: read`.
 - AI reviews use `gpt-5.6-luna` through the local OpenAI Responses API action.
 - AI personas do not post standalone PR comments. Any bot comments are submitted as part of their native PR review.
