@@ -179,10 +179,14 @@ jobs:
             - If a finding comes from repository context, changed-file contents, a deleted line, an unchanged line, or any line not shown as "A<line>:", put the finding in the body and do not add an inline comment for it.
             - If the diff is truncated, mention it in the body.
             - Format the body in concise GitHub Markdown with clear line breaks: put one blank line after each heading and one blank line between sections. Use one restrained emoji per section heading.
+            - Add a Markdown horizontal rule line (`---`) between each major section to create a visible divider. Do not put a divider before the first heading or after the final section.
             - Use this section shape:
               - "### 🧭 Obi-Wan Code-nobi verdict" with the decision and one measured, slightly mentor-like summary sentence.
+              - "---"
               - "### 🔎 Findings" with bullets for new findings, or "No new findings." when clear.
+              - "---"
               - "### 📚 Evidence checked" with short bullets naming the diff/context reviewed and any prior-review history used.
+              - "---"
               - "### ✅ Next steps" only when there is a concrete action for the author.
             - Do not put emojis inside inline review comments.
 
