@@ -4,6 +4,7 @@ All notable changes to this project are documented in this file.
 ## 2026-07-12
 ### Added
 - Added shared AI review actions that collect each persona's prior native PR reviews and publish deduplicated native reviews.
+- Added regression coverage for preserving unplaceable AI review findings when duplicate inline comments are suppressed.
 ### Fixed
 - Reserved the notepad page title height while board and list titles are loading so existing rows do not shift when the title resolves.
 - Kept the current notepad page visible while the next board or list route loads, avoiding full-page loading flashes during navigation.

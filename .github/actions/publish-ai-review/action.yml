@@ -78,7 +78,7 @@ runs:
               const hunk = line.match(/^@@ .* \+(\d+)/);
               if (hunk) {
                 lineNumber = Number(hunk[1]);
-                currentHunk = hunk[0];
+                currentHunk = line;
                 continue;
               }
               if (lineNumber == null) continue;
@@ -169,7 +169,7 @@ runs:
             .sort((left, right) => new Date(right.submitted_at) - new Date(left.submitted_at))[0];
           const repeatedBody = latestOwnReview && normalize(latestOwnReview.body) === normalize(body);
           const decisionUnchanged = latestOwnReview && latestOwnReview.state === reviewStateForEvent(event);
-          if ((suppressed > 0 || repeatedBody) && comments.length === 0 && decisionUnchanged) {
+          if ((suppressed > 0 || repeatedBody) && comments.length === 0 && unplacedComments.length === 0 && decisionUnchanged) {
             body = [
               `### ${personaName} status`,
               '',
