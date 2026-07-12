@@ -51,7 +51,7 @@ const pageActionButtonSx = {
   color: 'var(--secondary-color)',
 };
 
-export default function ListTasksPage({ setAppBarHeader }) {
+export default function ListTasksPage({ active = true, onPageReady = () => {}, setAppBarHeader }) {
   const { boardId, listId } = useParams();
   const location = useLocation();
   const token = sessionStorage.getItem('accessToken');
@@ -71,15 +71,23 @@ export default function ListTasksPage({ setAppBarHeader }) {
 
   // Preserve the AppBar's existing board-only behavior; its title is unrelated to the browser tab.
   useLayoutEffect(() => {
-    setAppBarHeader(location.state?.boardName ?? '');
-  }, [boardId, location.state?.boardName, setAppBarHeader]);
+    if (!active) return;
+    setAppBarHeader(location.state?.boardName || boardName || '');
+  }, [active, boardId, boardName, location.state?.boardName, setAppBarHeader]);
 
   useEffect(() => {
+    if (!active) return;
     document.title = formatDocumentTitle(
       location.state?.boardName || boardName,
       location.state?.listName || listName,
     );
-  }, [boardName, listName, location.state?.boardName, location.state?.listName]);
+  }, [active, boardName, listName, location.state?.boardName, location.state?.listName]);
+
+  useEffect(() => {
+    if (!loading) {
+      onPageReady();
+    }
+  }, [loading, onPageReady]);
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -121,17 +129,21 @@ export default function ListTasksPage({ setAppBarHeader }) {
         const boardData = await response.json();
         if (isActive()) {
           setBoardName(boardData?.name ?? '');
-          setAppBarHeader(boardData?.name ?? '');
+          if (active) {
+            setAppBarHeader(boardData?.name ?? '');
+          }
         }
       } catch (err) {
         if (isActive()) {
           setBoardName('');
-          setAppBarHeader('');
+          if (active) {
+            setAppBarHeader('');
+          }
         }
         setError(err.toString());
       }
     },
-    [boardId, token, setAppBarHeader],
+    [active, boardId, token, setAppBarHeader],
   );
 
   useEffect(() => {

@@ -46,7 +46,7 @@ const pageActionButtonSx = {
 
 const rowTitleSx = { fontSize: '1.1rem', textAlign: 'left' };
 
-export default function BoardListsPage({ setAppBarHeader }) {
+export default function BoardListsPage({ active = true, onPageReady = () => {}, setAppBarHeader }) {
   const navigate = useNavigate();
   const { boardId } = useParams();
   const token = sessionStorage.getItem('accessToken');
@@ -64,12 +64,20 @@ export default function BoardListsPage({ setAppBarHeader }) {
   const actionMenuOpen = Boolean(actionMenuAnchorEl);
 
   useLayoutEffect(() => {
+    if (!active) return;
     setAppBarHeader('');
-  }, [setAppBarHeader]);
+  }, [active, setAppBarHeader]);
 
   useEffect(() => {
+    if (!active) return;
     document.title = boardName ? `Notoli - ${boardName}` : 'Notoli';
-  }, [boardName]);
+  }, [active, boardName]);
+
+  useEffect(() => {
+    if (!loading) {
+      onPageReady();
+    }
+  }, [loading, onPageReady]);
 
   const fetchLists = useCallback(async () => {
     setLoading(true);

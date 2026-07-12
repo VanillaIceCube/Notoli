@@ -1,5 +1,5 @@
 import App from './App';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router-dom';
@@ -39,8 +39,36 @@ jest.mock('./pages/authentication/Register', () => () => <div>RegisterPage</div>
 jest.mock('./pages/authentication/ForgotPassword', () => () => <div>ForgotPasswordPage</div>);
 jest.mock('./pages/authentication/ResetPassword', () => () => <div>ResetPasswordPage</div>);
 jest.mock('./components/BoardHomeRedirect', () => () => <div>BoardHomeRedirect</div>);
-jest.mock('./pages/boards/BoardListsPage', () => () => <div>BoardListsPage</div>);
-jest.mock('./pages/lists/ListTasksPage', () => () => <div>ListTasksPage</div>);
+jest.mock('./pages/boards/BoardListsPage', () => {
+  const { useNavigate } = require('react-router-dom');
+
+  return ({ active }) => {
+    const navigate = useNavigate();
+
+    return (
+      <div data-testid={active ? 'active-board-page' : 'hidden-board-page'}>
+        <button type="button" onClick={() => navigate('/board/1/list/2')}>
+          OpenList
+        </button>
+        BoardListsPage
+      </div>
+    );
+  };
+});
+jest.mock('./pages/lists/ListTasksPage', () => {
+  const React = require('react');
+
+  return ({ active, onPageReady }) => {
+    React.useEffect(() => {
+      globalThis.__notoliListPageReady = onPageReady;
+      return () => {
+        delete globalThis.__notoliListPageReady;
+      };
+    }, [onPageReady]);
+
+    return <div data-testid={active ? 'active-list-page' : 'hidden-list-page'}>ListTasksPage</div>;
+  };
+});
 
 const testTheme = createTheme();
 const routerFuture = { v7_startTransition: true, v7_relativeSplatPath: true };
@@ -58,6 +86,7 @@ function renderApp(route) {
 describe('App', () => {
   beforeEach(() => {
     sessionStorage.clear();
+    delete globalThis.__notoliListPageReady;
   });
 
   test('when the route is /login, it renders Login', () => {
@@ -126,5 +155,22 @@ describe('App', () => {
     await userEvent.click(screen.getByRole('button', { name: /toggledrawer/i }));
 
     expect(screen.getByTestId('drawer')).toHaveTextContent('DrawerOpen');
+  });
+
+  test('when a notepad route is loading, it keeps the previous page visible until ready', async () => {
+    sessionStorage.setItem('accessToken', 'token');
+    renderApp('/board/1');
+
+    await userEvent.click(screen.getByRole('button', { name: /openlist/i }));
+
+    expect(screen.getByTestId('active-board-page')).toBeInTheDocument();
+    expect(screen.getByTestId('hidden-list-page')).toBeInTheDocument();
+
+    act(() => {
+      globalThis.__notoliListPageReady();
+    });
+
+    expect(await screen.findByTestId('active-list-page')).toBeInTheDocument();
+    expect(screen.queryByTestId('active-board-page')).not.toBeInTheDocument();
   });
 });
