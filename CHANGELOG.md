@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 ## 2026-07-12
 ### Added
 - Added shared AI review actions that collect each persona's prior native PR reviews and publish deduplicated native reviews.
+### Fixed
+- Prevented notepad page rows from shifting when board or list titles finish loading after content.
 ### Changed
 - Replaced abrupt notepad page loading text with layout-matched skeleton placeholders.
 - AI review personas now receive prior-review context, use concise Markdown body sections with clearer line breaks and restrained section-heading emojis, and apply more recognizable prompt-guided persona voice.

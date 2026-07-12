@@ -51,6 +51,7 @@ export default function BoardListsPage({ setAppBarHeader }) {
   const { boardId } = useParams();
   const token = sessionStorage.getItem('accessToken');
   const [boardName, setBoardName] = useState('');
+  const [boardNameLoading, setBoardNameLoading] = useState(true);
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -88,8 +89,12 @@ export default function BoardListsPage({ setAppBarHeader }) {
 
   const fetchBoardName = useCallback(async () => {
     setBoardName('');
+    setBoardNameLoading(true);
 
-    if (!boardId) return;
+    if (!boardId) {
+      setBoardNameLoading(false);
+      return;
+    }
 
     try {
       const response = await fetchBoardApi(boardId, token);
@@ -99,6 +104,8 @@ export default function BoardListsPage({ setAppBarHeader }) {
     } catch (err) {
       setBoardName('');
       setError(err.toString());
+    } finally {
+      setBoardNameLoading(false);
     }
   }, [token, boardId]);
 
@@ -294,6 +301,7 @@ export default function BoardListsPage({ setAppBarHeader }) {
     <>
       <NotepadPageShell
         title={isReordering ? 'Reorder Lists' : boardName}
+        titleLoading={!isReordering && boardNameLoading}
         loading={loading}
         error={error}
         hasContent={lists.length > 0}

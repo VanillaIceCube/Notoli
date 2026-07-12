@@ -96,6 +96,24 @@ describe('BoardListsPage', () => {
     expect(screen.getByText('test_list_02')).toBeInTheDocument();
   });
 
+  test('when lists load before the board title, it keeps the title skeleton until the title is ready', async () => {
+    const deferredBoard = createDeferred();
+    fetchBoardApi.mockReturnValueOnce(deferredBoard.promise);
+
+    renderWithProviders(<BoardListsPage setAppBarHeader={jest.fn()} />);
+
+    expect(await screen.findByText('test_list_01')).toBeInTheDocument();
+    expect(screen.getByText('test_list_02')).toBeInTheDocument();
+    expect(screen.getByTestId('notepad-title-skeleton')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'test_board_01' })).not.toBeInTheDocument();
+
+    deferredBoard.resolve({ ok: true, json: async () => boardFixtures[0] });
+
+    expect(await screen.findByRole('heading', { name: 'test_board_01' })).toBeInTheDocument();
+    expect(screen.queryByTestId('notepad-title-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByText('test_list_01')).toBeInTheDocument();
+  });
+
   test('when the fetch fails, it shows an error message', async () => {
     fetchListsApi.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
 

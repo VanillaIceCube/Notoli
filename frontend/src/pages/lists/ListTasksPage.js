@@ -57,6 +57,7 @@ export default function ListTasksPage({ setAppBarHeader }) {
   const token = sessionStorage.getItem('accessToken');
   const [boardName, setBoardName] = useState('');
   const [listName, setListName] = useState('');
+  const [listNameLoading, setListNameLoading] = useState(true);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -68,6 +69,7 @@ export default function ListTasksPage({ setAppBarHeader }) {
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editTask, setEditTask] = useState('');
   const actionMenuOpen = Boolean(actionMenuAnchorEl);
+  const displayedListName = location.state?.listName || listName;
 
   // Preserve the AppBar's existing board-only behavior; its title is unrelated to the browser tab.
   useLayoutEffect(() => {
@@ -98,8 +100,12 @@ export default function ListTasksPage({ setAppBarHeader }) {
 
   const fetchListName = useCallback(async () => {
     setListName('');
+    setListNameLoading(true);
 
-    if (!listId) return;
+    if (!listId) {
+      setListNameLoading(false);
+      return;
+    }
     try {
       const response = await fetchListApi(listId, token);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -108,6 +114,8 @@ export default function ListTasksPage({ setAppBarHeader }) {
     } catch (err) {
       setListName('');
       setError(err.toString());
+    } finally {
+      setListNameLoading(false);
     }
   }, [listId, token]);
 
@@ -363,7 +371,8 @@ export default function ListTasksPage({ setAppBarHeader }) {
   return (
     <>
       <NotepadPageShell
-        title={isReordering ? 'Reorder Notes' : listName}
+        title={isReordering ? 'Reorder Notes' : displayedListName}
+        titleLoading={!isReordering && !displayedListName && listNameLoading}
         loading={loading}
         error={error}
         hasContent={tasks.length > 0}

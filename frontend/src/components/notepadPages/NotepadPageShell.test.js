@@ -47,6 +47,14 @@ describe('NotepadPageShell', () => {
     expect(screen.getByText('Rows go here')).toBeInTheDocument();
   });
 
+  test('when the title is still loading but content is ready, it preserves title space', () => {
+    renderShell({ title: '', titleLoading: true, hasContent: true });
+
+    expect(screen.getByTestId('notepad-title-skeleton')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: /loading content/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Rows go here')).toBeInTheDocument();
+  });
+
   test('when an error exists, it shows the error and hides child content', () => {
     renderShell({ error: 'Error: HTTP 500' });
 

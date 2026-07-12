@@ -115,6 +115,26 @@ describe('ListTasksPage', () => {
     expect(screen.getByRole('checkbox', { name: /mark test_note_02 complete/i })).toBeChecked();
   });
 
+  test('when notes load before the list title, it keeps the title skeleton until the title is ready', async () => {
+    const deferredList = createDeferred();
+    fetchListApi.mockReturnValueOnce(deferredList.promise);
+
+    renderWithProviders(<ListTasksPage setAppBarHeader={jest.fn()} />, {
+      routeEntries: ['/board/1/list/5'],
+    });
+
+    expect(await screen.findByText('test_note_01')).toBeInTheDocument();
+    expect(screen.getByText('test_note_02')).toBeInTheDocument();
+    expect(screen.getByTestId('notepad-title-skeleton')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'List 5' })).not.toBeInTheDocument();
+
+    deferredList.resolve({ ok: true, json: async () => ({ name: 'List 5' }) });
+
+    expect(await screen.findByRole('heading', { name: 'List 5' })).toBeInTheDocument();
+    expect(screen.queryByTestId('notepad-title-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByText('test_note_01')).toBeInTheDocument();
+  });
+
   test('when the fetch fails, it shows an error message', async () => {
     fetchNotesApi.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
 

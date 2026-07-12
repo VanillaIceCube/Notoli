@@ -96,6 +96,7 @@ function NotepadLoadingSkeleton() {
 
 export default function NotepadPageShell({
   title,
+  titleLoading = false,
   loading,
   error,
   hasContent = false,
@@ -106,6 +107,7 @@ export default function NotepadPageShell({
   children,
 }) {
   const showLoading = loading && !hasContent;
+  const showTitleSkeleton = showLoading || (titleLoading && !title);
   const showContent = hasContent || (!loading && !error);
 
   return (
@@ -138,7 +140,7 @@ export default function NotepadPageShell({
             sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1.5 }}
           >
             <Box sx={{ width: 40 }} />
-            {showLoading ? (
+            {showTitleSkeleton ? (
               <Skeleton
                 variant="rounded"
                 animation="wave"
