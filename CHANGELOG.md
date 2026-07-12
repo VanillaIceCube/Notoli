@@ -17,6 +17,7 @@ All notable changes to this project are documented in this file.
 - AI review workflows no longer cap inline review comments at six.
 - Expanded Obi-Wan Code-nobi's review context with the repository file map and changed-file contents, while keeping inline comments constrained to valid added PR lines.
 - Hardened security gate report outputs so multiline malware and vulnerability reports always close their GitHub output delimiters correctly.
+- Fixed Obi-Wan Code-nobi's changed-file context builder so file section headings cannot be parsed as `printf` options.
 
 ## 2026-07-10
 ### Changed

@@ -73,7 +73,7 @@ jobs:
             if ! grep -Iq . "$file"; then
               {
                 echo
-                printf '--- %s ---\n' "$file"
+                printf -- '--- %s ---\n' "$file"
                 echo '[binary or non-text file omitted]'
               } >> "$CONTEXT_PATH"
               continue
@@ -83,7 +83,7 @@ jobs:
             if [ "$total_bytes" -ge "$max_total_bytes" ]; then
               {
                 echo
-                printf '--- %s ---\n' "$file"
+                printf -- '--- %s ---\n' "$file"
                 echo '[omitted: changed-file context byte budget reached]'
               } >> "$CONTEXT_PATH"
               continue
@@ -97,7 +97,7 @@ jobs:
 
             {
               echo
-              printf '--- %s ---\n' "$file"
+              printf -- '--- %s ---\n' "$file"
               if [ "$file_bytes" -gt "$limit" ]; then
                 head -c "$limit" "$file"
                 echo
