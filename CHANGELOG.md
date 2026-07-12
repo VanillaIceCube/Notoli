@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 ### Added
 - Added shared AI review actions that collect each persona's prior native PR reviews and publish deduplicated native reviews.
 ### Changed
-- AI review personas now receive prior-review context, use concise Markdown body sections with underlined labels and restrained section-heading emojis, and apply more recognizable prompt-guided persona voice.
+- AI review personas now receive prior-review context, use concise Markdown body sections with clearer line breaks and restrained section-heading emojis, and apply more recognizable prompt-guided persona voice.
 - Automated frontend and backend lint-fix commits now use the `Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>` author and committer identity.
 
 ## 2026-07-11

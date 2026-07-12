@@ -154,12 +154,12 @@ jobs:
             - Use only line numbers shown as "A<line>:" in the diff.
             - Add inline comments only when each comment is useful and tied to a valid added line. If no valid line applies, put the finding in the body.
             - Clearly distinguish direct check output from your interpretation.
-            - Format the body in concise GitHub Markdown with underlined HTML section labels and one restrained emoji per section heading.
+            - Format the body in concise GitHub Markdown with clear line breaks: put one blank line after each heading and one blank line between sections. Use one restrained emoji per section heading.
             - Use this section shape:
-              - "### 🤠 <ins>Lint Eastwood verdict</ins>" with the decision and one firm, dry summary sentence.
-              - "### 🧾 <ins>Check evidence</ins>" with bullets for lint/test/build statuses and relevant log facts.
-              - "### 🔧 <ins>Findings</ins>" with bullets for new actionable findings, or "No new findings." when clear.
-              - "### ✅ <ins>Next steps</ins>" only when there is a concrete author action.
+              - "### 🤠 Lint Eastwood verdict" with the decision and one firm, dry summary sentence.
+              - "### 🧾 Check evidence" with bullets for lint/test/build statuses and relevant log facts.
+              - "### 🔧 Findings" with bullets for new actionable findings, or "No new findings." when clear.
+              - "### ✅ Next steps" only when there is a concrete author action.
             - Do not put emojis inside inline review comments.
 
             Build evidence follows:
