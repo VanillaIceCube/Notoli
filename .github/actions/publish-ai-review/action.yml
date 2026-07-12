@@ -139,6 +139,7 @@ runs:
           let dropped = 0;
           let suppressed = 0;
           const comments = [];
+          const unplacedComments = [];
           for (const comment of Array.isArray(parsed.comments) ? parsed.comments : []) {
             const path = String(comment.path || '').replace(/^b\//, '').trim();
             const line = Number(comment.line);
@@ -146,6 +147,13 @@ runs:
             const currentHunk = valid.get(path)?.get(line);
             if (!path || !text || Number.isNaN(line) || !currentHunk) {
               dropped += 1;
+              if (text) {
+                unplacedComments.push({
+                  path: path || 'unknown file',
+                  line: Number.isNaN(line) ? null : line,
+                  body: text,
+                });
+              }
               continue;
             }
             const duplicateKey = [path, String(line), normalize(text), normalize(currentHunk)].join('\u0000');
@@ -172,8 +180,20 @@ runs:
             if (suppressed > 0) {
               notes.push(`${suppressed} duplicate inline comment(s) already appeared in an earlier ${personaName} review and were not repeated.`);
             }
-            if (dropped > 0) {
-              notes.push(`${dropped} inline comment(s) could not be placed on valid added lines.`);
+            if (unplacedComments.length > 0) {
+              const unplacedLines = unplacedComments.slice(0, 5).map((comment) => {
+                const target = comment.line == null ? comment.path : `${comment.path}:${comment.line}`;
+                return `- \`${target.replace(/`/g, '')}\`: ${comment.body.replace(/\s+/g, ' ')}`;
+              });
+              const remaining = unplacedComments.length - unplacedLines.length;
+              if (remaining > 0) {
+                unplacedLines.push(`- ${remaining} additional unplaced inline finding(s) omitted from this summary.`);
+              }
+              body += `\n\n### Unplaced inline findings\n${unplacedLines.join('\n')}`;
+              notes.push(`${unplacedComments.length} inline finding(s) were moved into the review body because they did not target valid added diff lines.`);
+            }
+            if (dropped > unplacedComments.length) {
+              notes.push(`${dropped - unplacedComments.length} malformed inline comment(s) were omitted because they did not include enough file, line, and body data.`);
             }
             if (notes.length > 0) {
               body += `\n\n### Automation notes\n${notes.map((note) => `- ${note}`).join('\n')}`;

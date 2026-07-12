@@ -9,8 +9,9 @@ All notable changes to this project are documented in this file.
 - Kept the current notepad page visible while the next board or list route loads, avoiding full-page loading flashes during navigation.
 ### Changed
 - AI review personas now receive prior-review context, use concise Markdown body sections with clearer line breaks and restrained section-heading emojis, and apply more recognizable prompt-guided persona voice.
+- AI review publishing now preserves unplaceable inline findings in the review body instead of dropping them when they do not target valid added diff lines.
 - Dependabot pull requests now request AI reviews only on failed gates: Lint Eastwood for lint/test failures and RoboCop for CodeQL, vulnerability, or malware failures, while Obi-Wan Code-nobi remains skipped.
-- Automated frontend and backend lint-fix commits now use the Lint Eastwood GitHub App token and dynamically resolved bot noreply email for author and committer attribution.
+- Automated frontend and backend lint-fix commits now use the Lint Eastwood GitHub App token and dynamically resolved bot noreply email for author and committer attribution, with write credentials configured only after lint auto-fixes have run.
 
 ## 2026-07-11
 ### Added
