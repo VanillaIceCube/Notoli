@@ -104,6 +104,7 @@ jobs:
       github.event.pull_request.user.login == 'dependabot[bot]' &&
       needs.lints.result == 'success' &&
       needs.tests.result == 'success' &&
+      needs.codeql.result == 'success' &&
       needs.dependency-vulnerability.result == 'success' &&
       needs.dependency-malware.result == 'success'
     uses: ./.github/workflows/ci-auto-merge.yml

@@ -30,7 +30,7 @@ What it does:
   - Emits a malware report output for RoboCop and fails when a changed package/version matches a known malware advisory.
 - For non-Dependabot PRs, runs [`.github/workflows/review-code.yml`](workflows/review-code.yml)
   - Runs Obi-Wan Code-nobi, the AI Code Reviewer, for general implementation review
-  - Publishes one native PR review with up to 6 inline review comments when line placement is valid.
+- Publishes one native PR review with inline review comments when line placement is valid.
 - After frontend/backend lint and tests complete, runs [`.github/workflows/review-build.yml`](workflows/review-build.yml)
   - Runs Lint Eastwood, the AI Build Sheriff, to interpret lint, test, build, formatting, and CI evidence.
   - Consumes lint/test statuses, log tails, and the line-numbered PR diff before publishing one native PR review.
@@ -40,7 +40,7 @@ What it does:
   - Consumes explicit gate results, vulnerability/malware reports, security check summaries, check annotations, and the line-numbered PR diff before publishing one native PR review.
   - Requests changes for actionable security findings; approves clean security evidence.
   - Dependency Review, malware scanning, and CodeQL remain independent required checks; RoboCop does not replace them.
-- For Dependabot PRs, runs [`.github/workflows/ci-auto-merge.yml`](workflows/ci-auto-merge.yml) only when lints, tests, vulnerability review, and malware review pass. Failed lint/test evidence routes to Lint Eastwood, and failed security evidence routes to RoboCop; the general Obi-Wan Code-nobi review remains skipped for Dependabot updates.
+- For Dependabot PRs, runs [`.github/workflows/ci-auto-merge.yml`](workflows/ci-auto-merge.yml) only when lints, tests, CodeQL, vulnerability review, and malware review pass. Failed lint/test evidence routes to Lint Eastwood, and failed security evidence routes to RoboCop; the general Obi-Wan Code-nobi review remains skipped for Dependabot updates.
 
 OpenAI and GitHub App inputs:
 - `OPENAI_API_KEY` secret. Triggered AI reviews fail visibly when the key is missing.
@@ -84,8 +84,8 @@ Merge blocking:
 - The active `main` ruleset requires the Vulnerability and Malware checks alongside the existing lint, test, and CodeQL checks.
 - Dependency vulnerability review fails at `high` severity or above and posts its summary directly on the PR.
 - Dependency malware review is npm-focused because GitHub's malware advisory coverage is currently npm-focused; it checks only changed lockfile package versions.
-- The workflow reports CodeQL findings, but this repository has not intentionally made CodeQL a Dependabot auto-merge prerequisite in `ci-auto-merge.yml` yet.
-- Dependabot auto-merge requires lint, test, vulnerability, and malware checks to pass. CodeQL runs in the same CI graph so its check is visible before merge decisions, but it is not an auto-merge prerequisite.
+- The workflow reports CodeQL findings, and CodeQL must pass before `ci-auto-merge.yml` can run.
+- Dependabot auto-merge requires lint, test, CodeQL, vulnerability, and malware checks to pass.
 - To make serious CodeQL findings block merges, configure GitHub branch protection or a repository ruleset to require the relevant CodeQL check after validating runtime and alert noise.
 - Recommended staged policy: block high/critical security findings first; allow medium, low, and note-level findings to report until the false-positive rate is understood.
 - When code fixes remove a finding, GitHub closes the matching code scanning alert after the protected branch is reanalyzed. False positives or accepted risks should be dismissed in GitHub Code Scanning with a clear reason.
@@ -128,7 +128,7 @@ Dependabot configuration:
   - Docker (`/`, `/backend`, `/frontend`)
 
 Auto-merge behavior:
-- Dependabot PRs go through CI (`ci-orchestrator.yml`), and if lints/tests pass, `ci-auto-merge.yml` can enable auto-merge.
+- Dependabot PRs go through CI (`ci-orchestrator.yml`), and if all gates pass, `ci-auto-merge.yml` can enable auto-merge.
 - Auto-merge is restricted to patch/minor updates.
 - If a security alert is present, the workflow requires CVSS <= 6.9.
 - The workflow uses `dependabot/fetch-metadata@v2` and can optionally use `DEPENDABOT_PAT` for metadata/alert lookup.

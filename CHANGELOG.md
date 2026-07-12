@@ -13,6 +13,8 @@ All notable changes to this project are documented in this file.
 - Workflow files now use grouped prefixes: `gate-*` for required PR checks, `review-*` for AI PR reviews, `ci-auto-merge.yml` for the CI-triggered Dependabot merge helper, and `alert-*` for scheduled/manual security alert aggregation.
 - Daily alert workflows now call the shared `.github/actions/security-alerts` composite action directly instead of routing through a reusable workflow wrapper.
 - Renamed the CI entrypoint to `ci-orchestrator.yml` and the deployment workflow to `ci-deploy.yml`.
+- Dependabot auto-merge now requires every gate, including CodeQL, to pass.
+- AI review workflows no longer cap inline review comments at six.
 
 ## 2026-07-10
 ### Changed
