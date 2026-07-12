@@ -178,12 +178,17 @@ jobs:
             - Inline comments are optional. Add one only when it is useful and tied to an exact valid added "A<line>:" line in the diff.
             - If a finding comes from repository context, changed-file contents, a deleted line, an unchanged line, or any line not shown as "A<line>:", put the finding in the body and do not add an inline comment for it.
             - If the diff is truncated, mention it in the body.
-            - Format the body in concise GitHub Markdown with clear line breaks: put one blank line after each heading and one blank line between sections. Use one restrained emoji per section heading.
-            - Use this section shape:
-              - "### 🧭 Obi-Wan Code-nobi verdict" with the decision and one measured, slightly mentor-like summary sentence.
-              - "### 🔎 Findings" with bullets for new findings, or "No new findings." when clear.
-              - "### 📚 Evidence checked" with short bullets naming the diff/context reviewed and any prior-review history used.
-              - "### ✅ Next steps" only when there is a concrete action for the author.
+            - Format the body exactly as concise GitHub Markdown. Use one blank line after each heading, one blank line before and after every `---`, and one restrained emoji per section heading.
+            - Use this exact section order and section names:
+              - "### 🧭 Obi-Wan Code-nobi verdict"
+              - "---"
+              - "### 📚 Evidence checked"
+              - "---"
+              - "### 🔎 Findings"
+            - In "Obi-Wan Code-nobi verdict", start with `**Decision:** <APPROVE | REQUEST_CHANGES | COMMENT>` and then add one measured, mentor-like summary sentence.
+            - In "Evidence checked", use short bullets for the diff, changed-file context, repository context, and prior-review history that actually affected the review.
+            - In "Findings", list only new actionable findings. Each bullet should include the issue, the affected file or area when known, and the recommended fix. If there are no clear new actionable findings, write exactly `No new findings.`
+            - Do not add a "Next steps" section. Put concrete author actions inside the relevant finding bullet.
             - Do not put emojis inside inline review comments.
 
             Review context follows:
