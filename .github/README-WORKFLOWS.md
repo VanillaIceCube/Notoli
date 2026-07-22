@@ -12,13 +12,14 @@ What it does:
   - Auto-fix jobs check out code without persisted Git credentials while package installation and lint commands run.
   - Auto-fix commits create the Lint Eastwood GitHub App installation token only after changed files are detected, then use that token to push branch updates.
   - Auto-fix commits resolve Lint Eastwood's bot noreply email at runtime from the app slug and bot user ID, then use `Lint Eastwood <bot-id+lint-eastwood[bot]@users.noreply.github.com>` as both the author and committer identity.
+  - The shared [`.github/actions/prepare-lint-commit`](actions/prepare-lint-commit/action.yml) action validates that identity, configures the token only as the Git remote's push URL, and the lint job restores the unauthenticated push URL immediately after the commit step.
 - Runs the reusable test gate: [`.github/workflows/gate-test.yml`](workflows/gate-test.yml)
   - Frontend: `npm test` (CI mode)
   - Backend: `python manage.py test`
 - Lint and test jobs use the same change filters:
   - Frontend checks run for `frontend/**` changes.
   - Backend checks run for `backend/**` changes.
-  - Changes to `.github/actions/read-versions/**` run both frontend and backend checks because that shared action controls both toolchains.
+  - Changes to `.github/actions/read-versions/**` or `.github/actions/prepare-lint-commit/**` run both frontend and backend checks because those actions are shared by both lint jobs.
   - Other workflow/action changes are validated by Actionlint and CodeQL Actions analysis without forcing application test suites to run.
   - Jobs skipped because their paths are not relevant report `not-applicable` to downstream review workflows.
 - Runs the reusable CodeQL gate: [`.github/workflows/gate-codeql.yml`](workflows/gate-codeql.yml)
@@ -49,12 +50,11 @@ OpenAI and GitHub App inputs:
 - `OPENAI_API_KEY` secret. Triggered AI reviews fail visibly when the key is missing.
 - `OPENAI_PROJECT_ID` (repo variable)
 - `OBI_WAN_CODE_NOBI_APP_ID` repository variable and `OBI_WAN_CODE_NOBI_PRIVATE_KEY` repository secret authenticate the Obi-Wan Code-nobi GitHub App. Install it with `Contents: read` and `Pull requests: write`.
-- `LINT_EASTWOOD_APP_ID` repository variable and `LINT_EASTWOOD_PRIVATE_KEY` repository secret authenticate the Lint Eastwood GitHub App. Install it with `Contents: write` so lint auto-fix commits can be pushed, and `Pull requests: write` so build reviews can be published.
+- `LINT_EASTWOOD_APP_ID` repository variable and `LINT_EASTWOOD_PRIVATE_KEY` repository secret authenticate the Lint Eastwood GitHub App. Install it on this repository with `Contents: write` so lint auto-fix commits can be pushed, and `Pull requests: write` so build reviews can be published. The CI orchestrator passes only `LINT_EASTWOOD_PRIVATE_KEY` into the reusable lint workflow; a missing secret, invalid app identity, or insufficient app permission fails the affected auto-fix job instead of falling back to `GITHUB_TOKEN` attribution.
 - `ROBOCOP_APP_ID` repository variable and `ROBOCOP_PRIVATE_KEY` repository secret authenticate the RoboCop GitHub App. Install it with `Contents: read`, `Pull requests: write`, `Checks: read`, `Actions: read`, and `Security events: read`.
 - AI reviews use `gpt-5.6-luna` through the local OpenAI Responses API action.
 - AI personas do not post standalone PR comments. Any bot comments are submitted as part of their native PR review.
 - AI personas read prior native reviews authored by their own GitHub App identity, suppress duplicate inline findings when the evidence has not changed, and use concise review bodies with clear section line breaks plus restrained section-heading emojis. Persona voice is prompt-guided only: RoboCop uses procedural security-officer phrasing, Lint Eastwood uses clipped build-sheriff phrasing, and Obi-Wan Code-nobi uses calm senior-reviewer phrasing.
-- AI review publishing only sends inline comments that target valid added diff lines. Findings that cannot be placed inline are moved into the native review body with file and line context instead of being dropped.
 
 Review personas:
 - **RoboCop - AI Security Officer:** owns CodeQL, Dependency/Vulnerability Review, Malware Review, security-sensitive code paths, permissions/auth risk, and security interpretation.

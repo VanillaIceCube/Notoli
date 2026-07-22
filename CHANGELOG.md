@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-22
+### Changed
+- Automated frontend and backend lint-fix commits now use a short-lived Lint Eastwood GitHub App token and the app bot's dynamically resolved noreply identity, while the reusable lint workflow receives only the required private-key secret.
+- Lint jobs now share one local action for Lint Eastwood identity and push-credential setup, and remove the credential from the Git remote immediately after each auto-commit attempt.
+
 ## 2026-07-21
 ### Fixed
 - Aligned daily security-alert project fields with the current Notoli board options so CodeQL and vulnerability issue synchronization no longer fails after creating or updating tickets.
@@ -9,15 +14,12 @@ All notable changes to this project are documented in this file.
 ## 2026-07-12
 ### Added
 - Added shared AI review actions that collect each persona's prior native PR reviews and publish deduplicated native reviews.
-- Added regression coverage for preserving unplaceable AI review findings when duplicate inline comments are suppressed.
 ### Fixed
 - Reserved the notepad page title height while board and list titles are loading so existing rows do not shift when the title resolves.
 - Kept the current notepad page visible while the next board or list route loads, avoiding full-page loading flashes during navigation.
 ### Changed
 - AI review personas now receive prior-review context, use concise Markdown body sections with clearer line breaks and restrained section-heading emojis, and apply more recognizable prompt-guided persona voice.
-- AI review publishing now preserves unplaceable inline findings in the review body instead of dropping them when they do not target valid added diff lines.
 - Dependabot pull requests now request AI reviews only on failed gates: Lint Eastwood for lint/test failures and RoboCop for CodeQL, vulnerability, or malware failures, while Obi-Wan Code-nobi remains skipped.
-- Automated frontend and backend lint-fix commits now use the Lint Eastwood GitHub App token and dynamically resolved bot noreply email for author and committer attribution, with write credentials configured only after lint auto-fixes have run.
 
 ## 2026-07-11
 ### Added
