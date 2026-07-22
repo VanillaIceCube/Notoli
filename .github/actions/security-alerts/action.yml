@@ -72,7 +72,7 @@ runs:
               // High and critical findings are handled by immediate remediation/incident work.
               alerts = dependabotAlerts.filter((alert) => ['low', 'medium', 'unknown'].includes(alert.severity));
             } else if (feed === 'malware') {
-              const advisories = await github.paginate(github.request, 'GET /advisories', {
+              const advisories = await github.paginate('GET /advisories', {
                 ecosystem: 'npm', type: 'malware', per_page: 100,
                 headers: { 'X-GitHub-Api-Version': '2022-11-28' },
               });
@@ -185,9 +185,9 @@ runs:
           const source = JSON.parse(fs.readFileSync(process.env.ALERT_PATH, 'utf8'));
           const { groups } = JSON.parse(fs.readFileSync(process.env.GROUP_PATH, 'utf8'));
           const config = {
-            codeql: { label: 'codeql', priority: 'High' },
-            vulnerability: { label: 'vulnerability', priority: 'Medium' },
-            malware: { label: 'malware', priority: 'High' },
+            codeql: { label: 'codeql', priority: 'P1' },
+            vulnerability: { label: 'vulnerability', priority: 'P2' },
+            malware: { label: 'malware', priority: 'P1' },
           }[source.feed];
           const alertByRef = new Map(source.alerts.map((alert) => [alert.ref, alert]));
 
@@ -219,7 +219,7 @@ runs:
               itemId = project.node?.items?.nodes?.find((item) => item.content?.id === issue.node_id)?.id;
               if (!itemId) throw error;
             }
-            const values = { Status: 'Backlog', Domain: 'Security', Type: 'Maintenance / Automation', Priority: config.priority, Size: 'Medium', Estimate: 3 };
+            const values = { Status: 'Backlog', Domain: 'CI/CD', Type: 'Security', Priority: config.priority, Size: 'M', Estimate: 3 };
             for (const [name, value] of Object.entries(values)) {
               const field = fields.get(name);
               if (!field) throw new Error(`Project field ${name} is required but was not found.`);
