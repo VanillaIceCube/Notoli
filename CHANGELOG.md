@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-21
+### Fixed
+- Aligned daily security-alert project fields with the current Notoli board options so CodeQL and vulnerability issue synchronization no longer fails after creating or updating tickets.
+- Corrected npm malware advisory pagination for `actions/github-script@v8` so the scheduled malware aggregation can fetch all advisory pages.
+
 ## 2026-07-12
 ### Added
 - Added shared AI review actions that collect each persona's prior native PR reviews and publish deduplicated native reviews.
