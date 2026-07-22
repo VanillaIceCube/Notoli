@@ -2,9 +2,12 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-07-22
+### Added
+- Added a dedicated repository automation test job and colocated Node regression coverage for preserving unplaceable AI review findings when duplicate inline comments are suppressed.
 ### Changed
 - Automated frontend and backend lint-fix commits now use a short-lived Lint Eastwood GitHub App token and the app bot's dynamically resolved noreply identity, while the reusable lint workflow receives only the required private-key secret.
 - Lint jobs now share one local action for Lint Eastwood identity and push-credential setup, and remove the credential from the Git remote immediately after each auto-commit attempt.
+- Extracted AI review publishing into a directly testable helper beside its GitHub Action instead of testing workflow YAML through the frontend Jest suite.
 
 ## 2026-07-21
 ### Fixed

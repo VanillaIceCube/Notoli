@@ -85,6 +85,8 @@ jobs:
       test_frontend_log: ${{ needs.tests.outputs.test_frontend_log }}
       test_backend_status: ${{ needs.tests.outputs.test_backend_status }}
       test_backend_log: ${{ needs.tests.outputs.test_backend_log }}
+      test_automation_status: ${{ needs.tests.outputs.test_automation_status }}
+      test_automation_log: ${{ needs.tests.outputs.test_automation_log }}
 
   security-review:
     name: AI Security Review

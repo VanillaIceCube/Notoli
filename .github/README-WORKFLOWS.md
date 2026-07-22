@@ -16,10 +16,12 @@ What it does:
 - Runs the reusable test gate: [`.github/workflows/gate-test.yml`](workflows/gate-test.yml)
   - Frontend: `npm test` (CI mode)
   - Backend: `python manage.py test`
+  - Repository automation: Node's built-in test runner executes colocated tests for the AI review publisher when `.github/actions/publish-ai-review/**` changes.
 - Lint and test jobs use the same change filters:
   - Frontend checks run for `frontend/**` changes.
   - Backend checks run for `backend/**` changes.
   - Changes to `.github/actions/read-versions/**` or `.github/actions/prepare-lint-commit/**` run both frontend and backend checks because those actions are shared by both lint jobs.
+  - Changes to `.github/actions/publish-ai-review/**` run the dedicated repository automation test job without coupling GitHub Action behavior to the frontend Jest suite.
   - Other workflow/action changes are validated by Actionlint and CodeQL Actions analysis without forcing application test suites to run.
   - Jobs skipped because their paths are not relevant report `not-applicable` to downstream review workflows.
 - Runs the reusable CodeQL gate: [`.github/workflows/gate-codeql.yml`](workflows/gate-codeql.yml)
@@ -55,6 +57,7 @@ OpenAI and GitHub App inputs:
 - AI reviews use `gpt-5.6-luna` through the local OpenAI Responses API action.
 - AI personas do not post standalone PR comments. Any bot comments are submitted as part of their native PR review.
 - AI personas read prior native reviews authored by their own GitHub App identity, suppress duplicate inline findings when the evidence has not changed, and use concise review bodies with clear section line breaks plus restrained section-heading emojis. Persona voice is prompt-guided only: RoboCop uses procedural security-officer phrasing, Lint Eastwood uses clipped build-sheriff phrasing, and Obi-Wan Code-nobi uses calm senior-reviewer phrasing.
+- AI review publishing only sends inline comments that target valid added diff lines. Findings that cannot be placed inline are moved into the native review body with file and line context instead of being dropped. The publishing logic and its Node regression test are colocated under `.github/actions/publish-ai-review/`.
 
 Review personas:
 - **RoboCop - AI Security Officer:** owns CodeQL, Dependency/Vulnerability Review, Malware Review, security-sensitive code paths, permissions/auth risk, and security interpretation.

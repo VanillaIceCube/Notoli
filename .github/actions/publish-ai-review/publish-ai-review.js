@@ -1,0 +1,264 @@
+"use strict";
+
+function stripCodeFences(text) {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("```")) return trimmed;
+  return trimmed
+    .replace(/^```[a-zA-Z]*\n?/, "")
+    .replace(/```$/, "")
+    .trim();
+}
+
+function normalize(text) {
+  return String(text || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function hunkHeader(text) {
+  return (
+    String(text || "")
+      .split(/\r?\n/)
+      .find((line) => line.startsWith("@@")) || ""
+  );
+}
+
+function reviewStateForEvent(reviewEvent) {
+  return (
+    {
+      APPROVE: "APPROVED",
+      REQUEST_CHANGES: "CHANGES_REQUESTED",
+      COMMENT: "COMMENTED",
+    }[reviewEvent] || reviewEvent
+  );
+}
+
+function addedLinesByFile(files) {
+  const valid = new Map();
+  for (const file of files) {
+    if (!file.patch) continue;
+    let lineNumber;
+    let currentHunk = "";
+    for (const line of file.patch.split(/\r?\n/)) {
+      const hunk = line.match(/^@@ .* \+(\d+)/);
+      if (hunk) {
+        lineNumber = Number(hunk[1]);
+        currentHunk = line;
+        continue;
+      }
+      if (lineNumber == null) continue;
+      if (line.startsWith("+") && !line.startsWith("+++")) {
+        if (!valid.has(file.filename)) valid.set(file.filename, new Map());
+        valid.get(file.filename).set(lineNumber, currentHunk);
+        lineNumber += 1;
+      } else if (!line.startsWith("-")) {
+        lineNumber += 1;
+      }
+    }
+  }
+  return valid;
+}
+
+async function publishAiReview({
+  github,
+  context,
+  core,
+  raw,
+  personaName = "AI reviewer",
+  defaultBody = `${personaName} completed a review.`,
+}) {
+  const reviewJson = String(raw || "").trim();
+  if (
+    !reviewJson ||
+    reviewJson.startsWith("Missing secret") ||
+    reviewJson.startsWith("OpenAI ")
+  ) {
+    core.setFailed(reviewJson || `${personaName} did not return a review.`);
+    return;
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(stripCodeFences(reviewJson));
+  } catch (error) {
+    core.setFailed(`${personaName} returned invalid JSON: ${error.message}`);
+    return;
+  }
+
+  const events = new Set(["APPROVE", "REQUEST_CHANGES", "COMMENT"]);
+  const event = events.has(parsed.event) ? parsed.event : "COMMENT";
+  let body = typeof parsed.body === "string" ? parsed.body.trim() : "";
+  if (!body) body = defaultBody;
+
+  const owner = context.repo.owner;
+  const repo = context.repo.repo;
+  const pull_number = context.payload.pull_request.number;
+  const files = await github.paginate(github.rest.pulls.listFiles, {
+    owner,
+    repo,
+    pull_number,
+    per_page: 100,
+  });
+  const valid = addedLinesByFile(files);
+
+  let botLogin = "";
+  try {
+    const app = await github.rest.apps.getAuthenticated();
+    if (app.data?.slug) botLogin = `${app.data.slug}[bot]`;
+  } catch (error) {
+    core.warning(
+      `Could not resolve authenticated GitHub App slug: ${error.message}`,
+    );
+  }
+
+  const isOwnReviewItem = (item) => {
+    const login = item.user?.login || "";
+    if (botLogin) return login === botLogin;
+    return login
+      .toLowerCase()
+      .includes(personaName.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
+  };
+
+  const priorReviews = await github.paginate(github.rest.pulls.listReviews, {
+    owner,
+    repo,
+    pull_number,
+    per_page: 100,
+  });
+  const priorReviewComments = await github.paginate(
+    github.rest.pulls.listReviewComments,
+    {
+      owner,
+      repo,
+      pull_number,
+      per_page: 100,
+    },
+  );
+  const ownReviewIds = new Set(
+    priorReviews.filter(isOwnReviewItem).map((review) => review.id),
+  );
+  const ownPriorReviews = priorReviews.filter(isOwnReviewItem);
+  const ownPriorComments = priorReviewComments.filter(
+    (comment) =>
+      isOwnReviewItem(comment) ||
+      ownReviewIds.has(comment.pull_request_review_id),
+  );
+
+  const priorCommentKeys = new Set();
+  for (const comment of ownPriorComments) {
+    priorCommentKeys.add(
+      [
+        comment.path,
+        String(comment.line || comment.original_line || ""),
+        normalize(comment.body),
+        normalize(hunkHeader(comment.diff_hunk)),
+      ].join("\u0000"),
+    );
+  }
+
+  let dropped = 0;
+  let suppressed = 0;
+  const comments = [];
+  const unplacedComments = [];
+  for (const comment of Array.isArray(parsed.comments) ? parsed.comments : []) {
+    const path = String(comment.path || "")
+      .replace(/^b\//, "")
+      .trim();
+    const line = Number(comment.line);
+    const validLine = Number.isInteger(line) && line > 0;
+    const text = typeof comment.body === "string" ? comment.body.trim() : "";
+    const currentHunk = validLine ? valid.get(path)?.get(line) : undefined;
+    if (!path || !text || !currentHunk) {
+      dropped += 1;
+      if (text) {
+        unplacedComments.push({
+          path: path || "unknown file",
+          line: validLine ? line : null,
+          body: text,
+        });
+      }
+      continue;
+    }
+
+    const duplicateKey = [
+      path,
+      String(line),
+      normalize(text),
+      normalize(currentHunk),
+    ].join("\u0000");
+    if (priorCommentKeys.has(duplicateKey)) {
+      suppressed += 1;
+      continue;
+    }
+    comments.push({ path, line, side: "RIGHT", body: text });
+  }
+
+  const latestOwnReview = ownPriorReviews
+    .filter((review) => review.submitted_at)
+    .sort(
+      (left, right) =>
+        new Date(right.submitted_at) - new Date(left.submitted_at),
+    )[0];
+  const repeatedBody =
+    latestOwnReview && normalize(latestOwnReview.body) === normalize(body);
+  const decisionUnchanged =
+    latestOwnReview && latestOwnReview.state === reviewStateForEvent(event);
+  if (
+    (suppressed > 0 || repeatedBody) &&
+    comments.length === 0 &&
+    unplacedComments.length === 0 &&
+    decisionUnchanged
+  ) {
+    body = [
+      `### ${personaName} status`,
+      "",
+      `No materially new findings since my previous ${event} review. Previously reported duplicate finding(s) were not repeated.`,
+    ].join("\n");
+  } else {
+    const notes = [];
+    if (suppressed > 0) {
+      notes.push(
+        `${suppressed} duplicate inline comment(s) already appeared in an earlier ${personaName} review and were not repeated.`,
+      );
+    }
+    if (unplacedComments.length > 0) {
+      const unplacedLines = unplacedComments.slice(0, 5).map((comment) => {
+        const target =
+          comment.line == null
+            ? comment.path
+            : `${comment.path}:${comment.line}`;
+        return `- \`${target.replace(/`/g, "")}\`: ${comment.body.replace(/\s+/g, " ")}`;
+      });
+      const remaining = unplacedComments.length - unplacedLines.length;
+      if (remaining > 0) {
+        unplacedLines.push(
+          `- ${remaining} additional unplaced inline finding(s) omitted from this summary.`,
+        );
+      }
+      body += `\n\n### Unplaced inline findings\n${unplacedLines.join("\n")}`;
+      notes.push(
+        `${unplacedComments.length} inline finding(s) were moved into the review body because they did not target valid added diff lines.`,
+      );
+    }
+    if (dropped > unplacedComments.length) {
+      notes.push(
+        `${dropped - unplacedComments.length} malformed inline comment(s) were omitted because they did not include enough file, line, and body data.`,
+      );
+    }
+    if (notes.length > 0) {
+      body += `\n\n### Automation notes\n${notes.map((note) => `- ${note}`).join("\n")}`;
+    }
+  }
+
+  await github.rest.pulls.createReview({
+    owner,
+    repo,
+    pull_number,
+    event,
+    body,
+    comments: comments.length ? comments : undefined,
+  });
+}
+
+module.exports = { publishAiReview };
