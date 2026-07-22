@@ -7,9 +7,14 @@ on:
         description: "Branch or ref to check out for auto-fix commits."
         required: false
         type: string
+      enable_autofix:
+        description: "Allow lint fixes to be committed and pushed for a trusted same-repository branch."
+        required: false
+        default: false
+        type: boolean
     secrets:
       LINT_EASTWOOD_PRIVATE_KEY:
-        required: true
+        required: false
     outputs:
       lint_frontend_status:
         description: Frontend lint status (success/failure/not-applicable).
@@ -90,15 +95,19 @@ jobs:
         run: npm ci
 
       - name: Prettier (auto-fix)
+        if: inputs.enable_autofix
         run: npm run format
 
       - name: ESLint (auto-fix)
+        if: inputs.enable_autofix
         run: npm run lint -- --fix
 
       - name: Detect changes
         id: git-changes
+        env:
+          AUTOFIX_ENABLED: ${{ inputs.enable_autofix }}
         run: |
-          if git diff --quiet; then
+          if [ "$AUTOFIX_ENABLED" != "true" ] || git diff --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -205,15 +214,19 @@ jobs:
         run: pip install ruff
 
       - name: Ruff (auto-fix)
+        if: inputs.enable_autofix
         run: ruff check . --fix
 
       - name: Ruff format (auto-fix)
+        if: inputs.enable_autofix
         run: ruff format .
 
       - name: Detect changes
         id: git-changes
+        env:
+          AUTOFIX_ENABLED: ${{ inputs.enable_autofix }}
         run: |
-          if git diff --quiet; then
+          if [ "$AUTOFIX_ENABLED" != "true" ] || git diff --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"

@@ -23,6 +23,11 @@ jobs:
       LINT_EASTWOOD_PRIVATE_KEY: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
     with:
       checkout_ref: ${{ github.event.pull_request.head.ref }}
+      enable_autofix: >-
+        ${{
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.event.pull_request.user.login != 'dependabot[bot]'
+        }}
 
   tests:
     name: Tests
