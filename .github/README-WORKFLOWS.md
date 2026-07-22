@@ -35,19 +35,19 @@ What it does:
 - Runs the reusable malware gate: [`.github/workflows/gate-malware.yml`](workflows/gate-malware.yml)
   - Uses the local [npm malware review action](actions/review-npm-malware/action.yml) to compare changed `frontend/package-lock.json` packages against GitHub's npm malware advisories.
   - Emits a malware report output for RoboCop and fails when a changed package/version matches a known malware advisory.
-- For non-Dependabot PRs, runs [`.github/workflows/review-code.yml`](workflows/review-code.yml)
+- For trusted same-repository, non-Dependabot PRs, runs [`.github/workflows/review-code.yml`](workflows/review-code.yml)
   - Runs Obi-Wan Code-nobi, the AI Code Reviewer, for general implementation review
   - Reviews the repository file map, changed-file contents, prior Obi-Wan Code-nobi reviews on the PR, and line-numbered PR diff, then publishes one native PR review with inline comments when line placement is valid.
-- After frontend/backend lint and tests complete, runs [`.github/workflows/review-build.yml`](workflows/review-build.yml)
+- For trusted same-repository, non-Dependabot PRs, runs [`.github/workflows/review-build.yml`](workflows/review-build.yml) after frontend/backend lint and tests complete.
   - Runs Lint Eastwood, the AI Build Sheriff, to interpret lint, test, build, formatting, and CI evidence.
   - Consumes lint/test statuses, log tails, prior Lint Eastwood reviews on the PR, and the line-numbered PR diff before publishing one native PR review.
   - Requests changes when failed lint/test/build evidence appears caused by the PR; approves clean build evidence.
-- After the security checks, runs [`.github/workflows/review-security.yml`](workflows/review-security.yml)
-  - Runs RoboCop, the AI Security Officer, for every pull request after CodeQL, Dependency/Vulnerability Review, and Malware Review complete.
+- For trusted same-repository, non-Dependabot PRs, runs [`.github/workflows/review-security.yml`](workflows/review-security.yml) after the security checks.
+  - Runs RoboCop, the AI Security Officer, after CodeQL, Dependency/Vulnerability Review, and Malware Review complete.
   - Consumes explicit gate results, vulnerability/malware reports, security check summaries, check annotations, prior RoboCop reviews on the PR, and the line-numbered PR diff before publishing one native PR review.
   - Requests changes for actionable security findings; approves clean security evidence.
   - Dependency Review, malware scanning, and CodeQL remain independent required checks; RoboCop does not replace them.
-- For Dependabot PRs, runs AI reviews only when a gate fails: failed lint/test evidence routes to Lint Eastwood, failed CodeQL/vulnerability/malware evidence routes to RoboCop, and Obi-Wan Code-nobi never runs. When all gates pass, no AI review is requested and [`.github/workflows/ci-auto-merge.yml`](workflows/ci-auto-merge.yml) can run.
+- AI persona workflows run only for trusted same-repository, non-Dependabot pull requests because their GitHub App private keys are unavailable to fork and Dependabot-triggered workflows. Fork and Dependabot pull requests rely on the independent lint, test, CodeQL, vulnerability, and malware check output; a failed gate remains visible and blocks merge without attempting a secret-dependent AI review. Healthy Dependabot pull requests can continue to [`.github/workflows/ci-auto-merge.yml`](workflows/ci-auto-merge.yml).
 
 OpenAI and GitHub App inputs:
 - `OPENAI_API_KEY` secret. Triggered AI reviews fail visibly when the key is missing.
@@ -138,7 +138,7 @@ Dependabot configuration:
 
 Auto-merge behavior:
 - Dependabot PRs go through CI (`ci-orchestrator.yml`), and if all gates pass, `ci-auto-merge.yml` can enable auto-merge.
-- Passing Dependabot PRs do not receive AI reviews. Lint Eastwood runs only when lint or test gates fail; RoboCop runs only when CodeQL, vulnerability, or malware gates fail; Obi-Wan Code-nobi is always skipped for Dependabot.
+- Dependabot PRs do not receive secret-dependent AI reviews. Their independent lint, test, CodeQL, vulnerability, and malware gates provide failure details and block auto-merge when any gate fails.
 - Auto-merge is restricted to patch/minor updates.
 - If a security alert is present, the workflow requires CVSS <= 6.9.
 - The workflow uses `dependabot/fetch-metadata@v2` and can optionally use `DEPENDABOT_PAT` for metadata/alert lookup.

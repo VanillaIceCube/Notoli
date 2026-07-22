@@ -59,6 +59,7 @@ jobs:
   code-review:
     name: AI Code Review
     if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.login != 'dependabot[bot]'
     uses: ./.github/workflows/review-code.yml
     secrets: inherit
@@ -69,11 +70,8 @@ jobs:
     if: >-
       always() &&
       github.event_name == 'pull_request' &&
-      (
-        github.event.pull_request.user.login != 'dependabot[bot]' ||
-        needs.lints.result != 'success' ||
-        needs.tests.result != 'success'
-      )
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     uses: ./.github/workflows/review-build.yml
     secrets: inherit
     permissions:
@@ -99,12 +97,8 @@ jobs:
     if: >-
       always() &&
       github.event_name == 'pull_request' &&
-      (
-        github.event.pull_request.user.login != 'dependabot[bot]' ||
-        needs.codeql.result != 'success' ||
-        needs.dependency-vulnerability.result != 'success' ||
-        needs.dependency-malware.result != 'success'
-      )
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     uses: ./.github/workflows/review-security.yml
     secrets: inherit
     permissions:
