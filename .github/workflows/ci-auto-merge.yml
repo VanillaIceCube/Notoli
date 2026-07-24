@@ -28,7 +28,7 @@ jobs:
           alert-lookup: true
 
       - name: Enable auto-merge
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
           ALERT_STATE: ${{ steps.metadata.outputs.alert-state }}
