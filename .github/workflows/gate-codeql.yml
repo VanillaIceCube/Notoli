@@ -42,6 +42,7 @@ jobs:
       - name: Detect relevant changes
         id: filter
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
         with:
           filters: |
@@ -59,6 +60,21 @@ jobs:
               - '.github/actions/**'
               - '.github/workflows/**'
               - '.github/codeql/**'
+
+      - name: Report path detection failure
+        if: github.event_name == 'pull_request' && steps.filter.outcome == 'failure'
+        shell: bash
+        run: |
+          message="GitHub API path detection failed, so CodeQL scope was not evaluated. Rerun the workflow after the API limit or service error clears."
+          echo "::error title=CodeQL path detection unavailable::$message"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "### CodeQL path detection unavailable"
+              echo
+              echo "$message"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 1
 
       - name: Set analysis scope
         id: scope

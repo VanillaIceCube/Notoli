@@ -1,6 +1,19 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-24
+### Added
+- Added repository-automation regression coverage for unchanged, reordered, split, merged, added, and resolved security-alert groupings, including the known stale-ticket set tracked by issue #633.
+- Added one-per-commit native AI-review availability notices for exhausted OpenAI quota or tokens, invalid credentials, service failures, and unusable model responses.
+### Fixed
+- Reconciled workflow-managed security tickets by their underlying CodeQL or Dependabot alert references so AI grouping changes no longer leave overlapping open issues.
+- Closed superseded or empty managed tickets with retained source links and lifecycle context, including when a feed has no current alerts.
+### Changed
+- Reused current security tickets now preserve existing labels, assignees, and GitHub Project fields; only new or newly added Project items receive default planning fields.
+- OpenAI request failures now emit warning annotations and workflow summaries with quota, token, credential, and service-recovery guidance.
+- Path-filter API failures now emit explicit error annotations and workflow summaries explaining that scope detection did not run and the workflow must be retried.
+- Repository automation CI now runs the security-alert reconciler tests alongside the AI review publisher tests when either action changes.
+
 ## 2026-07-22
 ### Added
 - Added a dedicated repository automation test job and colocated Node regression coverage for preserving unplaceable AI review findings when duplicate inline comments are suppressed.

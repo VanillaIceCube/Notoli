@@ -38,8 +38,11 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
+
+      - name: Detect relevant changes
         id: filter
+        continue-on-error: true
+        uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
         with:
           filters: |
             frontend:
@@ -50,6 +53,22 @@ jobs:
               - '.github/actions/read-versions/**'
             automation:
               - '.github/actions/publish-ai-review/**'
+              - '.github/actions/security-alerts/**'
+
+      - name: Report path detection failure
+        if: steps.filter.outcome == 'failure'
+        shell: bash
+        run: |
+          message="GitHub API path detection failed, so test scope was not evaluated. Rerun the workflow after the API limit or service error clears."
+          echo "::error title=Test path detection unavailable::$message"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "### Test path detection unavailable"
+              echo
+              echo "$message"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 1
 
   frontend-tests:
     name: Frontend Tests (React)
@@ -210,7 +229,10 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          node --test .github/actions/publish-ai-review/publish-ai-review.test.js 2>&1 | tee automation_test_output.txt || status=$?
+          node --test \
+            .github/actions/publish-ai-review/publish-ai-review.test.js \
+            .github/actions/security-alerts/sync-security-alerts.test.js \
+            2>&1 | tee automation_test_output.txt || status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
       - name: Test summary

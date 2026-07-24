@@ -42,14 +42,17 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
-      backend:  ${{ steps.filter.outputs.backend }}
+      backend: ${{ steps.filter.outputs.backend }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ inputs.enable_autofix && inputs.checkout_ref || '' }}
-      - uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
+
+      - name: Detect relevant changes
         id: filter
+        continue-on-error: true
+        uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
         with:
           filters: |
             frontend:
@@ -60,6 +63,21 @@ jobs:
               - 'backend/**'
               - '.github/actions/read-versions/**'
               - '.github/actions/prepare-lint-commit/**'
+
+      - name: Report path detection failure
+        if: steps.filter.outcome == 'failure'
+        shell: bash
+        run: |
+          message="GitHub API path detection failed, so lint scope was not evaluated. Rerun the workflow after the API limit or service error clears."
+          echo "::error title=Lint path detection unavailable::$message"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "### Lint path detection unavailable"
+              echo
+              echo "$message"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 1
 
   lint-frontend:
     name: Lint Frontend (ESLint + Prettier)
