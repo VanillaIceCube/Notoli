@@ -17,15 +17,15 @@ What it does:
 - Runs the reusable test gate: [`.github/workflows/gate-test.yml`](workflows/gate-test.yml)
   - Frontend: `npm test` (CI mode)
   - Backend: `python manage.py test`
-  - Repository automation: Node's built-in test runner executes colocated tests for the path-filter fallback, AI review publisher, and security-alert reconciler when any of those actions changes.
+  - Repository automation: Node's built-in test runner executes colocated tests for the AI review publisher and security-alert reconciler when either action changes.
 - Lint and test jobs use the same change filters:
   - Frontend checks run for `frontend/**` changes.
   - Backend checks run for `backend/**` changes.
   - Changes to `.github/actions/read-versions/**` or `.github/actions/prepare-lint-commit/**` run both frontend and backend checks because those actions are shared by both lint jobs.
-  - Changes to `.github/actions/path-filter-fallback/**`, `.github/actions/publish-ai-review/**`, or `.github/actions/security-alerts/**` run the dedicated repository automation test job without coupling GitHub Action behavior to the frontend Jest suite.
+  - Changes to `.github/actions/publish-ai-review/**` or `.github/actions/security-alerts/**` run the dedicated repository automation test job without coupling GitHub Action behavior to the frontend Jest suite.
   - Other workflow/action changes are validated by Actionlint and CodeQL Actions analysis without forcing application test suites to run.
   - Jobs skipped because their paths are not relevant report `not-applicable` to downstream review workflows.
-  - Lint, test, and CodeQL change detection normally uses the pinned `dorny/paths-filter` action. If its GitHub API request fails, the gates emit a visible warning and use the checked-out pull-request base/head git diff with the same path profiles. If that local diff is also unavailable, every scope owned by the affected gate runs conservatively instead of silently skipping validation.
+  - Lint, test, and CodeQL change detection uses the pinned `dorny/paths-filter` action. If its GitHub API request fails, the detector remains failed but adds a titled error annotation and workflow summary explaining that no scope was evaluated and the workflow should be rerun.
 - Runs the reusable CodeQL gate: [`.github/workflows/gate-codeql.yml`](workflows/gate-codeql.yml)
   - Python/Django backend analysis for `backend/**`
   - JavaScript/TypeScript frontend analysis for `frontend/**`
@@ -77,7 +77,7 @@ Security-alert aggregation:
 - Required repository configuration: `OPENAI_API_KEY` secret, `SECURITY_ALERTS_TOKEN` secret, `OPENAI_PROJECT_ID` repository variable, and `SECURITY_ALERTS_PROJECT_ID` repository variable (the node ID of the Notoli GitHub Project v2). `SECURITY_ALERTS_TOKEN` must be a classic token with `repo`, `security_events`, and `project` scopes, or an equivalent GitHub App/fine-grained token that can read CodeQL and Dependabot alerts, write issues, and write to the Project.
 - The project must include these fields and options: `Status` → `Backlog`, `Domain` → `CI/CD`, `Type` → `Security`, `Priority` → `P1`/`P2`, `Size` → `M`, and numeric `Estimate` (set to `3`). CodeQL and malware groups use `P1`; non-urgent vulnerability groups use `P2`. The workflows require and write all of them.
 - `GITHUB_TOKEN` is limited to `contents: read` for checkout. `SECURITY_ALERTS_TOKEN` performs all alert, issue, label, assignment, and Project v2 API calls, because Project v2 writes require a token with Project access and Dependabot-alert access is token-specific.
-- Run the repository automation coverage locally with `node --test .github/actions/path-filter-fallback/path-filter-fallback.test.js .github/actions/publish-ai-review/publish-ai-review.test.js .github/actions/security-alerts/sync-security-alerts.test.js`. Coverage includes local and conservative path-filter fallback, unavailable AI-review notices, and security-alert reconciliation across unchanged and reordered groups, splits, merges, added alerts, resolved alerts, empty feeds, and the known stale-ticket set from issue #633.
+- Run the repository automation coverage locally with `node --test .github/actions/publish-ai-review/publish-ai-review.test.js .github/actions/security-alerts/sync-security-alerts.test.js`. Coverage includes unavailable AI-review notices and security-alert reconciliation across unchanged and reordered groups, splits, merges, added alerts, resolved alerts, empty feeds, and the known stale-ticket set from issue #633.
 
 Version pins:
 - Node version is read from `frontend/package.json` (`engines.node`)

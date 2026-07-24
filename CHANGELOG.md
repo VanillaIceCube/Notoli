@@ -8,11 +8,11 @@ All notable changes to this project are documented in this file.
 ### Fixed
 - Reconciled workflow-managed security tickets by their underlying CodeQL or Dependabot alert references so AI grouping changes no longer leave overlapping open issues.
 - Closed superseded or empty managed tickets with retained source links and lifecycle context, including when a feed has no current alerts.
-- Kept lint, test, and CodeQL scope detection running through a local git-diff fallback when the API-backed path filter is rate-limited, with a conservative all-scopes fallback if neither detector is available.
 ### Changed
 - Reused current security tickets now preserve existing labels, assignees, and GitHub Project fields; only new or newly added Project items receive default planning fields.
 - OpenAI request failures now emit warning annotations and workflow summaries with quota, token, credential, and service-recovery guidance.
-- Repository automation CI now runs the path-filter fallback and security-alert reconciler tests alongside the AI review publisher tests when any of those actions changes.
+- Path-filter API failures now emit explicit error annotations and workflow summaries explaining that scope detection did not run and the workflow must be retried.
+- Repository automation CI now runs the security-alert reconciler tests alongside the AI review publisher tests when either action changes.
 
 ## 2026-07-22
 ### Added

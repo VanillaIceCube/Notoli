@@ -31,9 +31,9 @@ jobs:
     name: Detect Changes
     runs-on: ubuntu-latest
     outputs:
-      frontend: ${{ steps.scope.outputs.frontend }}
-      backend: ${{ steps.scope.outputs.backend }}
-      automation: ${{ steps.scope.outputs.automation }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      automation: ${{ steps.filter.outputs.automation }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -52,49 +52,23 @@ jobs:
               - 'backend/**'
               - '.github/actions/read-versions/**'
             automation:
-              - '.github/actions/path-filter-fallback/**'
               - '.github/actions/publish-ai-review/**'
               - '.github/actions/security-alerts/**'
 
-      - name: Fall back to local path detection
-        id: fallback
+      - name: Report path detection failure
         if: steps.filter.outcome == 'failure'
-        uses: ./.github/actions/path-filter-fallback
-        with:
-          profile: test
-          base-sha: ${{ github.event.pull_request.base.sha }}
-          head-sha: ${{ github.event.pull_request.head.sha }}
-
-      - name: Resolve test scope
-        id: scope
-        if: always()
         shell: bash
-        env:
-          PRIMARY_OUTCOME: ${{ steps.filter.outcome }}
-          PRIMARY_FRONTEND: ${{ steps.filter.outputs.frontend }}
-          PRIMARY_BACKEND: ${{ steps.filter.outputs.backend }}
-          PRIMARY_AUTOMATION: ${{ steps.filter.outputs.automation }}
-          FALLBACK_OUTCOME: ${{ steps.fallback.outcome }}
-          FALLBACK_FRONTEND: ${{ steps.fallback.outputs.frontend }}
-          FALLBACK_BACKEND: ${{ steps.fallback.outputs.backend }}
-          FALLBACK_AUTOMATION: ${{ steps.fallback.outputs.automation }}
         run: |
-          if [ "$PRIMARY_OUTCOME" = "success" ]; then
+          message="GitHub API path detection failed, so test scope was not evaluated. Rerun the workflow after the API limit or service error clears."
+          echo "::error title=Test path detection unavailable::$message"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
             {
-              echo "frontend=$PRIMARY_FRONTEND"
-              echo "backend=$PRIMARY_BACKEND"
-              echo "automation=$PRIMARY_AUTOMATION"
-            } >> "$GITHUB_OUTPUT"
-          elif [ "$FALLBACK_OUTCOME" = "success" ]; then
-            {
-              echo "frontend=$FALLBACK_FRONTEND"
-              echo "backend=$FALLBACK_BACKEND"
-              echo "automation=$FALLBACK_AUTOMATION"
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "::error title=Path detection unavailable::Both primary and fallback test path detection failed."
-            exit 1
+              echo "### Test path detection unavailable"
+              echo
+              echo "$message"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
+          exit 1
 
   frontend-tests:
     name: Frontend Tests (React)
@@ -256,7 +230,6 @@ jobs:
           set -o pipefail
           status=0
           node --test \
-            .github/actions/path-filter-fallback/path-filter-fallback.test.js \
             .github/actions/publish-ai-review/publish-ai-review.test.js \
             .github/actions/security-alerts/sync-security-alerts.test.js \
             2>&1 | tee automation_test_output.txt || status=$?

@@ -38,8 +38,6 @@ jobs:
       actions: ${{ steps.scope.outputs.actions }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
       - name: Detect relevant changes
         id: filter
@@ -63,69 +61,40 @@ jobs:
               - '.github/workflows/**'
               - '.github/codeql/**'
 
-      - name: Fall back to local path detection
-        id: fallback
+      - name: Report path detection failure
         if: github.event_name == 'pull_request' && steps.filter.outcome == 'failure'
-        uses: ./.github/actions/path-filter-fallback
-        with:
-          profile: codeql
-          base-sha: ${{ github.event.pull_request.base.sha }}
-          head-sha: ${{ github.event.pull_request.head.sha }}
-
-      - name: Resolve pull-request scope
-        id: pr-scope
-        if: github.event_name == 'pull_request'
         shell: bash
-        env:
-          PRIMARY_OUTCOME: ${{ steps.filter.outcome }}
-          PRIMARY_PYTHON: ${{ steps.filter.outputs.python }}
-          PRIMARY_JAVASCRIPT: ${{ steps.filter.outputs.javascript }}
-          PRIMARY_ACTIONS: ${{ steps.filter.outputs.actions }}
-          FALLBACK_OUTCOME: ${{ steps.fallback.outcome }}
-          FALLBACK_PYTHON: ${{ steps.fallback.outputs.python }}
-          FALLBACK_JAVASCRIPT: ${{ steps.fallback.outputs.javascript }}
-          FALLBACK_ACTIONS: ${{ steps.fallback.outputs.actions }}
         run: |
-          if [ "$PRIMARY_OUTCOME" = "success" ]; then
+          message="GitHub API path detection failed, so CodeQL scope was not evaluated. Rerun the workflow after the API limit or service error clears."
+          echo "::error title=CodeQL path detection unavailable::$message"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
             {
-              echo "python=$PRIMARY_PYTHON"
-              echo "javascript=$PRIMARY_JAVASCRIPT"
-              echo "actions=$PRIMARY_ACTIONS"
-            } >> "$GITHUB_OUTPUT"
-          elif [ "$FALLBACK_OUTCOME" = "success" ]; then
-            {
-              echo "python=$FALLBACK_PYTHON"
-              echo "javascript=$FALLBACK_JAVASCRIPT"
-              echo "actions=$FALLBACK_ACTIONS"
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "::error title=Path detection unavailable::Both primary and fallback CodeQL path detection failed."
-            exit 1
+              echo "### CodeQL path detection unavailable"
+              echo
+              echo "$message"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
+          exit 1
 
       - name: Set analysis scope
         id: scope
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            {
-              echo "python=${{ steps.pr-scope.outputs.python }}"
-              echo "javascript=${{ steps.pr-scope.outputs.javascript }}"
-              # Keep the Actions configuration present for relevant PRs so
-              # GitHub can compare it with the configuration on the base branch.
-              if [ "${{ steps.pr-scope.outputs.actions }}" = "true" ] || \
-                 [ "${{ steps.pr-scope.outputs.python }}" = "true" ] || \
-                 [ "${{ steps.pr-scope.outputs.javascript }}" = "true" ]; then
-                echo "actions=true"
-              else
-                echo "actions=false"
-              fi
-            } >> "$GITHUB_OUTPUT"
+            echo "python=${{ steps.filter.outputs.python }}" >> "$GITHUB_OUTPUT"
+            echo "javascript=${{ steps.filter.outputs.javascript }}" >> "$GITHUB_OUTPUT"
+            # Keep the Actions configuration present for relevant PRs so
+            # GitHub can compare it with the configuration on the base branch.
+            if [ "${{ steps.filter.outputs.actions }}" = "true" ] || \
+               [ "${{ steps.filter.outputs.python }}" = "true" ] || \
+               [ "${{ steps.filter.outputs.javascript }}" = "true" ]; then
+              echo "actions=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "actions=false" >> "$GITHUB_OUTPUT"
+            fi
           else
-            {
-              echo "python=true"
-              echo "javascript=true"
-              echo "actions=true"
-            } >> "$GITHUB_OUTPUT"
+            echo "python=true" >> "$GITHUB_OUTPUT"
+            echo "javascript=true" >> "$GITHUB_OUTPUT"
+            echo "actions=true" >> "$GITHUB_OUTPUT"
           fi
 
   analyze-python:
