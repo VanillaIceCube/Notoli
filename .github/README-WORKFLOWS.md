@@ -9,14 +9,20 @@ What it does:
 - Runs the reusable lint gate: [`.github/workflows/gate-lint.yml`](workflows/gate-lint.yml)
   - Frontend: Prettier + ESLint (auto-fix, then strict checks)
   - Backend: Ruff (auto-fix, then strict checks)
-  - Auto-fix commits use `Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>` as both the author and committer identity when the workflow can push back to the pull request branch.
+  - Auto-fix jobs check out code without persisted Git credentials while package installation and lint commands run.
+  - Auto-fix commits create the Lint Eastwood GitHub App installation token only after changed files are detected, then use that token to push branch updates.
+  - Auto-fix commits resolve Lint Eastwood's bot noreply email at runtime from the app slug and bot user ID, then use `Lint Eastwood <bot-id+lint-eastwood[bot]@users.noreply.github.com>` as both the author and committer identity.
+  - The shared [`.github/actions/prepare-lint-commit`](actions/prepare-lint-commit/action.yml) action validates that identity, configures the token only as the Git remote's push URL, and the lint job restores the unauthenticated push URL immediately after the commit step.
+  - Auto-fix is enabled only for non-Dependabot pull requests whose head branch belongs to this repository. Those jobs explicitly check out the writable head branch. Fork and Dependabot pull requests receive no App secret, use GitHub's standard pull-request checkout, skip mutating lint steps, and still run strict formatting/lint checks against the submitted code.
 - Runs the reusable test gate: [`.github/workflows/gate-test.yml`](workflows/gate-test.yml)
   - Frontend: `npm test` (CI mode)
   - Backend: `python manage.py test`
+  - Repository automation: Node's built-in test runner executes colocated tests for the AI review publisher when `.github/actions/publish-ai-review/**` changes.
 - Lint and test jobs use the same change filters:
   - Frontend checks run for `frontend/**` changes.
   - Backend checks run for `backend/**` changes.
-  - Changes to `.github/actions/read-versions/**` run both frontend and backend checks because that shared action controls both toolchains.
+  - Changes to `.github/actions/read-versions/**` or `.github/actions/prepare-lint-commit/**` run both frontend and backend checks because those actions are shared by both lint jobs.
+  - Changes to `.github/actions/publish-ai-review/**` run the dedicated repository automation test job without coupling GitHub Action behavior to the frontend Jest suite.
   - Other workflow/action changes are validated by Actionlint and CodeQL Actions analysis without forcing application test suites to run.
   - Jobs skipped because their paths are not relevant report `not-applicable` to downstream review workflows.
 - Runs the reusable CodeQL gate: [`.github/workflows/gate-codeql.yml`](workflows/gate-codeql.yml)
@@ -29,29 +35,30 @@ What it does:
 - Runs the reusable malware gate: [`.github/workflows/gate-malware.yml`](workflows/gate-malware.yml)
   - Uses the local [npm malware review action](actions/review-npm-malware/action.yml) to compare changed `frontend/package-lock.json` packages against GitHub's npm malware advisories.
   - Emits a malware report output for RoboCop and fails when a changed package/version matches a known malware advisory.
-- For non-Dependabot PRs, runs [`.github/workflows/review-code.yml`](workflows/review-code.yml)
+- For trusted same-repository, non-Dependabot PRs, runs [`.github/workflows/review-code.yml`](workflows/review-code.yml)
   - Runs Obi-Wan Code-nobi, the AI Code Reviewer, for general implementation review
   - Reviews the repository file map, changed-file contents, prior Obi-Wan Code-nobi reviews on the PR, and line-numbered PR diff, then publishes one native PR review with inline comments when line placement is valid.
-- After frontend/backend lint and tests complete, runs [`.github/workflows/review-build.yml`](workflows/review-build.yml)
+- For trusted same-repository, non-Dependabot PRs, runs [`.github/workflows/review-build.yml`](workflows/review-build.yml) after frontend/backend lint and tests complete.
   - Runs Lint Eastwood, the AI Build Sheriff, to interpret lint, test, build, formatting, and CI evidence.
   - Consumes lint/test statuses, log tails, prior Lint Eastwood reviews on the PR, and the line-numbered PR diff before publishing one native PR review.
   - Requests changes when failed lint/test/build evidence appears caused by the PR; approves clean build evidence.
-- After the security checks, runs [`.github/workflows/review-security.yml`](workflows/review-security.yml)
-  - Runs RoboCop, the AI Security Officer, for every pull request after CodeQL, Dependency/Vulnerability Review, and Malware Review complete.
+- For trusted same-repository, non-Dependabot PRs, runs [`.github/workflows/review-security.yml`](workflows/review-security.yml) after the security checks.
+  - Runs RoboCop, the AI Security Officer, after CodeQL, Dependency/Vulnerability Review, and Malware Review complete.
   - Consumes explicit gate results, vulnerability/malware reports, security check summaries, check annotations, prior RoboCop reviews on the PR, and the line-numbered PR diff before publishing one native PR review.
   - Requests changes for actionable security findings; approves clean security evidence.
   - Dependency Review, malware scanning, and CodeQL remain independent required checks; RoboCop does not replace them.
-- For Dependabot PRs, runs AI reviews only when a gate fails: failed lint/test evidence routes to Lint Eastwood, failed CodeQL/vulnerability/malware evidence routes to RoboCop, and Obi-Wan Code-nobi never runs. When all gates pass, no AI review is requested and [`.github/workflows/ci-auto-merge.yml`](workflows/ci-auto-merge.yml) can run.
+- AI persona workflows run only for trusted same-repository, non-Dependabot pull requests because their GitHub App private keys are unavailable to fork and Dependabot-triggered workflows. Fork and Dependabot pull requests rely on the independent lint, test, CodeQL, vulnerability, and malware check output; a failed gate remains visible and blocks merge without attempting a secret-dependent AI review. Healthy Dependabot pull requests can continue to [`.github/workflows/ci-auto-merge.yml`](workflows/ci-auto-merge.yml).
 
 OpenAI and GitHub App inputs:
 - `OPENAI_API_KEY` secret. Triggered AI reviews fail visibly when the key is missing.
 - `OPENAI_PROJECT_ID` (repo variable)
 - `OBI_WAN_CODE_NOBI_APP_ID` repository variable and `OBI_WAN_CODE_NOBI_PRIVATE_KEY` repository secret authenticate the Obi-Wan Code-nobi GitHub App. Install it with `Contents: read` and `Pull requests: write`.
-- `LINT_EASTWOOD_APP_ID` repository variable and `LINT_EASTWOOD_PRIVATE_KEY` repository secret authenticate the Lint Eastwood GitHub App. Install it with `Contents: read` and `Pull requests: write`.
+- `LINT_EASTWOOD_APP_ID` repository variable and `LINT_EASTWOOD_PRIVATE_KEY` repository secret authenticate the Lint Eastwood GitHub App. Install it on this repository with `Contents: write` so lint auto-fix commits can be pushed, and `Pull requests: write` so build reviews can be published. The CI orchestrator passes only `LINT_EASTWOOD_PRIVATE_KEY` into the reusable lint workflow. The secret is optional so untrusted/fork and Dependabot pull requests can take the strict-check-only path; when auto-fix is enabled, a missing secret, invalid app identity, or insufficient app permission fails the auto-fix job instead of falling back to `GITHUB_TOKEN` attribution.
 - `ROBOCOP_APP_ID` repository variable and `ROBOCOP_PRIVATE_KEY` repository secret authenticate the RoboCop GitHub App. Install it with `Contents: read`, `Pull requests: write`, `Checks: read`, `Actions: read`, and `Security events: read`.
 - AI reviews use `gpt-5.6-luna` through the local OpenAI Responses API action.
 - AI personas do not post standalone PR comments. Any bot comments are submitted as part of their native PR review.
 - AI personas read prior native reviews authored by their own GitHub App identity, suppress duplicate inline findings when the evidence has not changed, and use concise review bodies with clear section line breaks plus restrained section-heading emojis. Persona voice is prompt-guided only: RoboCop uses procedural security-officer phrasing, Lint Eastwood uses clipped build-sheriff phrasing, and Obi-Wan Code-nobi uses calm senior-reviewer phrasing.
+- AI review publishing only sends inline comments that target valid added diff lines. Findings that cannot be placed inline are moved into the native review body with file and line context instead of being dropped. The publishing logic and its Node regression test are colocated under `.github/actions/publish-ai-review/`.
 
 Review personas:
 - **RoboCop - AI Security Officer:** owns CodeQL, Dependency/Vulnerability Review, Malware Review, security-sensitive code paths, permissions/auth risk, and security interpretation.
@@ -131,7 +138,7 @@ Dependabot configuration:
 
 Auto-merge behavior:
 - Dependabot PRs go through CI (`ci-orchestrator.yml`), and if all gates pass, `ci-auto-merge.yml` can enable auto-merge.
-- Passing Dependabot PRs do not receive AI reviews. Lint Eastwood runs only when lint or test gates fail; RoboCop runs only when CodeQL, vulnerability, or malware gates fail; Obi-Wan Code-nobi is always skipped for Dependabot.
+- Dependabot PRs do not receive secret-dependent AI reviews. Their independent lint, test, CodeQL, vulnerability, and malware gates provide failure details and block auto-merge when any gate fails.
 - Auto-merge is restricted to patch/minor updates.
 - If a security alert is present, the workflow requires CVSS <= 6.9.
 - The workflow uses `dependabot/fetch-metadata@v2` and can optionally use `DEPENDABOT_PAT` for metadata/alert lookup.

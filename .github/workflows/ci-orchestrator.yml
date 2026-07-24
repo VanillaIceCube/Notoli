@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
   issues: write
 
@@ -19,8 +19,15 @@ jobs:
   lints:
     name: Lints
     uses: ./.github/workflows/gate-lint.yml
+    secrets:
+      LINT_EASTWOOD_PRIVATE_KEY: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
     with:
       checkout_ref: ${{ github.event.pull_request.head.ref }}
+      enable_autofix: >-
+        ${{
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.event.pull_request.user.login != 'dependabot[bot]'
+        }}
 
   tests:
     name: Tests
@@ -52,6 +59,7 @@ jobs:
   code-review:
     name: AI Code Review
     if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.login != 'dependabot[bot]'
     uses: ./.github/workflows/review-code.yml
     secrets: inherit
@@ -62,11 +70,8 @@ jobs:
     if: >-
       always() &&
       github.event_name == 'pull_request' &&
-      (
-        github.event.pull_request.user.login != 'dependabot[bot]' ||
-        needs.lints.result != 'success' ||
-        needs.tests.result != 'success'
-      )
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     uses: ./.github/workflows/review-build.yml
     secrets: inherit
     permissions:
@@ -83,6 +88,8 @@ jobs:
       test_frontend_log: ${{ needs.tests.outputs.test_frontend_log }}
       test_backend_status: ${{ needs.tests.outputs.test_backend_status }}
       test_backend_log: ${{ needs.tests.outputs.test_backend_log }}
+      test_automation_status: ${{ needs.tests.outputs.test_automation_status }}
+      test_automation_log: ${{ needs.tests.outputs.test_automation_log }}
 
   security-review:
     name: AI Security Review
@@ -90,12 +97,8 @@ jobs:
     if: >-
       always() &&
       github.event_name == 'pull_request' &&
-      (
-        github.event.pull_request.user.login != 'dependabot[bot]' ||
-        needs.codeql.result != 'success' ||
-        needs.dependency-vulnerability.result != 'success' ||
-        needs.dependency-malware.result != 'success'
-      )
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     uses: ./.github/workflows/review-security.yml
     secrets: inherit
     permissions:

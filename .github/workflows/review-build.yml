@@ -33,6 +33,12 @@ on:
       test_backend_log:
         required: false
         type: string
+      test_automation_status:
+        required: false
+        type: string
+      test_automation_log:
+        required: false
+        type: string
     secrets:
       OPENAI_API_KEY:
         required: true
@@ -93,6 +99,8 @@ jobs:
           TEST_FRONTEND_LOG: ${{ inputs.test_frontend_log }}
           TEST_BACKEND_STATUS: ${{ inputs.test_backend_status || 'not-applicable' }}
           TEST_BACKEND_LOG: ${{ inputs.test_backend_log }}
+          TEST_AUTOMATION_STATUS: ${{ inputs.test_automation_status || 'not-applicable' }}
+          TEST_AUTOMATION_LOG: ${{ inputs.test_automation_log }}
         run: |
           {
             echo '=== BUILD, LINT, AND TEST EVIDENCE ==='
@@ -102,6 +110,7 @@ jobs:
             printf 'lint_backend_status: %s\n' "$LINT_BACKEND_STATUS"
             printf 'test_frontend_status: %s\n' "$TEST_FRONTEND_STATUS"
             printf 'test_backend_status: %s\n' "$TEST_BACKEND_STATUS"
+            printf 'test_automation_status: %s\n' "$TEST_AUTOMATION_STATUS"
             echo
             echo '--- lint_frontend_log ---'
             printf '%s\n' "$LINT_FRONTEND_LOG"
@@ -114,6 +123,9 @@ jobs:
             echo
             echo '--- test_backend_log ---'
             printf '%s\n' "$TEST_BACKEND_LOG"
+            echo
+            echo '--- test_automation_log ---'
+            printf '%s\n' "$TEST_AUTOMATION_LOG"
             echo
             echo '=== PRIOR LINT EASTWOOD REVIEWS ==='
             cat "$PRIOR_REVIEWS_PATH"

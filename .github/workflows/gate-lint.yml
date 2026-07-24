@@ -7,6 +7,14 @@ on:
         description: "Branch or ref to check out for auto-fix commits."
         required: false
         type: string
+      enable_autofix:
+        description: "Allow lint fixes to be committed and pushed for a trusted same-repository branch."
+        required: false
+        default: false
+        type: boolean
+    secrets:
+      LINT_EASTWOOD_PRIVATE_KEY:
+        required: false
     outputs:
       lint_frontend_status:
         description: Frontend lint status (success/failure/not-applicable).
@@ -26,7 +34,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   changes:
@@ -39,7 +47,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ inputs.checkout_ref || github.ref }}
+          ref: ${{ inputs.enable_autofix && inputs.checkout_ref || '' }}
       - uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
         id: filter
         with:
@@ -47,9 +55,11 @@ jobs:
             frontend:
               - 'frontend/**'
               - '.github/actions/read-versions/**'
+              - '.github/actions/prepare-lint-commit/**'
             backend:
               - 'backend/**'
               - '.github/actions/read-versions/**'
+              - '.github/actions/prepare-lint-commit/**'
 
   lint-frontend:
     name: Lint Frontend (ESLint + Prettier)
@@ -66,7 +76,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ inputs.checkout_ref || github.ref }}
+          ref: ${{ inputs.enable_autofix && inputs.checkout_ref || '' }}
+          persist-credentials: false
 
       - name: Read versions
         id: versions
@@ -84,20 +95,32 @@ jobs:
         run: npm ci
 
       - name: Prettier (auto-fix)
+        if: inputs.enable_autofix
         run: npm run format
 
       - name: ESLint (auto-fix)
+        if: inputs.enable_autofix
         run: npm run lint -- --fix
 
       - name: Detect changes
         id: git-changes
+        env:
+          AUTOFIX_ENABLED: ${{ inputs.enable_autofix }}
         run: |
-          if git diff --quiet; then
+          if [ "$AUTOFIX_ENABLED" != "true" ] || git diff --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
             git diff --name-only
           fi
+
+      - name: Prepare Lint Eastwood commit
+        id: lint-eastwood-bot
+        if: steps.git-changes.outputs.changed == 'true'
+        uses: ./.github/actions/prepare-lint-commit
+        with:
+          app_id: ${{ vars.LINT_EASTWOOD_APP_ID }}
+          private_key: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
 
       - name: Commit auto-fixes
         if: steps.git-changes.outputs.changed == 'true'
@@ -108,8 +131,13 @@ jobs:
           file_pattern: |
             frontend
           commit_user_name: "Lint Eastwood"
-          commit_user_email: "41898282+github-actions[bot]@users.noreply.github.com"
-          commit_author: "Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>"
+          commit_user_email: ${{ steps.lint-eastwood-bot.outputs.bot_email }}
+          commit_author: "Lint Eastwood <${{ steps.lint-eastwood-bot.outputs.bot_email }}>"
+
+      - name: Remove Lint Eastwood push credentials
+        if: always() && steps.git-changes.outputs.changed == 'true'
+        shell: bash
+        run: git remote set-url --push origin "https://github.com/${GITHUB_REPOSITORY}.git"
 
       - name: Lint checks
         id: lint_checks
@@ -167,7 +195,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ inputs.checkout_ref || github.ref }}
+          ref: ${{ inputs.enable_autofix && inputs.checkout_ref || '' }}
+          persist-credentials: false
 
       - name: Read versions
         id: versions
@@ -185,20 +214,32 @@ jobs:
         run: pip install ruff
 
       - name: Ruff (auto-fix)
+        if: inputs.enable_autofix
         run: ruff check . --fix
 
       - name: Ruff format (auto-fix)
+        if: inputs.enable_autofix
         run: ruff format .
 
       - name: Detect changes
         id: git-changes
+        env:
+          AUTOFIX_ENABLED: ${{ inputs.enable_autofix }}
         run: |
-          if git diff --quiet; then
+          if [ "$AUTOFIX_ENABLED" != "true" ] || git diff --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
             git diff --name-only
           fi
+
+      - name: Prepare Lint Eastwood commit
+        id: lint-eastwood-bot
+        if: steps.git-changes.outputs.changed == 'true'
+        uses: ./.github/actions/prepare-lint-commit
+        with:
+          app_id: ${{ vars.LINT_EASTWOOD_APP_ID }}
+          private_key: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
 
       - name: Commit auto-fixes
         if: steps.git-changes.outputs.changed == 'true'
@@ -209,8 +250,13 @@ jobs:
           file_pattern: |
             backend
           commit_user_name: "Lint Eastwood"
-          commit_user_email: "41898282+github-actions[bot]@users.noreply.github.com"
-          commit_author: "Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>"
+          commit_user_email: ${{ steps.lint-eastwood-bot.outputs.bot_email }}
+          commit_author: "Lint Eastwood <${{ steps.lint-eastwood-bot.outputs.bot_email }}>"
+
+      - name: Remove Lint Eastwood push credentials
+        if: always() && steps.git-changes.outputs.changed == 'true'
+        shell: bash
+        run: git remote set-url --push origin "https://github.com/${GITHUB_REPOSITORY}.git"
 
       - name: Ruff checks
         id: lint_checks
