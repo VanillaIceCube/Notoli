@@ -40,6 +40,30 @@ runs:
       run: |
         set -euo pipefail
 
+        write_content() {
+          local content="$1"
+          local delimiter
+          delimiter="OPENAI_CONTENT_$(uuidgen)"
+          {
+            printf 'content<<%s\n' "$delimiter"
+            printf '%s\n' "$content"
+            printf '%s\n' "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+        }
+
+        report_unavailable() {
+          local detail="$1"
+          echo "::warning title=OpenAI response unavailable::No usable OpenAI response was produced. Check quota or tokens, project access, credentials, and service availability."
+          printf 'OpenAI failure detail: %s\n' "$detail" >&2
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "### OpenAI response unavailable"
+              echo
+              echo "No usable OpenAI response was produced. Check API quota or tokens, project access, credentials, and service availability before rerunning."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+        }
+
         missing_secrets=()
         if [ -z "${OPENAI_API_KEY}" ]; then
           missing_secrets+=("OPENAI_API_KEY")
@@ -50,7 +74,9 @@ runs:
         fi
 
         if [ "${#missing_secrets[@]}" -gt 0 ]; then
-          echo "content=Missing secret(s): ${missing_secrets[*]}." >> "$GITHUB_OUTPUT"
+          CONTENT="Missing secret(s): ${missing_secrets[*]}."
+          write_content "$CONTENT"
+          report_unavailable "$CONTENT"
           exit 0
         fi
 
@@ -73,17 +99,22 @@ runs:
           ' > body.json
 
         # Make API request (project is passed via header)
-        RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/responses" \
+        if ! RESPONSE=$(curl -sS \
+          --connect-timeout 15 \
+          --max-time 180 \
+          -X POST "https://api.openai.com/v1/responses" \
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer $OPENAI_API_KEY" \
           -H "OpenAI-Project: $OPENAI_PROJECT_ID" \
-          --data @body.json)
-
-        echo "Raw response:"
-        echo "$RESPONSE"
+          --data @body.json); then
+          CONTENT="OpenAI request failed before a response was received."
+          write_content "$CONTENT"
+          report_unavailable "$CONTENT"
+          exit 0
+        fi
 
         # Extract content or error.
-        CONTENT=$(echo "$RESPONSE" | jq -r '
+        if ! CONTENT=$(echo "$RESPONSE" | jq -r '
           if .output then
             [
               .output[]
@@ -91,21 +122,25 @@ runs:
               | .content[]
               | select(.type == "output_text")
               | .text
-            ] | join("\n")
+            ] | join("\n") as $text
+            | if $text == "" then
+                "OpenAI did not return usable output."
+              else
+                $text
+              end
           elif .error and .error.message then
             "OpenAI API error: " + .error.message
           else
             "OpenAI did not return a response."
           end
-        ')
+        '); then
+          CONTENT="OpenAI API error: the response was not valid JSON."
+        fi
 
         echo "Response content:"
         echo "$CONTENT"
 
-        # Write multi-line output for GitHub Actions
-        delimiter="OPENAI_CONTENT_$(uuidgen)"
-        {
-          printf 'content<<%s\n' "$delimiter"
-          printf '%s\n' "$CONTENT"
-          printf '%s\n' "$delimiter"
-        } >> "$GITHUB_OUTPUT"
+        write_content "$CONTENT"
+        if [[ "$CONTENT" == OpenAI\ * ]]; then
+          report_unavailable "$CONTENT"
+        fi

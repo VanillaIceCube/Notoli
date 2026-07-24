@@ -41,15 +41,18 @@ jobs:
     name: Detect Changes
     runs-on: ubuntu-latest
     outputs:
-      frontend: ${{ steps.filter.outputs.frontend }}
-      backend:  ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.scope.outputs.frontend }}
+      backend: ${{ steps.scope.outputs.backend }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ inputs.enable_autofix && inputs.checkout_ref || '' }}
-      - uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
+
+      - name: Detect relevant changes
         id: filter
+        continue-on-error: true
+        uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
         with:
           filters: |
             frontend:
@@ -60,6 +63,42 @@ jobs:
               - 'backend/**'
               - '.github/actions/read-versions/**'
               - '.github/actions/prepare-lint-commit/**'
+
+      - name: Fall back to local path detection
+        id: fallback
+        if: steps.filter.outcome == 'failure'
+        uses: ./.github/actions/path-filter-fallback
+        with:
+          profile: lint
+          base-sha: ${{ github.event.pull_request.base.sha }}
+          head-sha: ${{ github.event.pull_request.head.sha }}
+
+      - name: Resolve lint scope
+        id: scope
+        if: always()
+        shell: bash
+        env:
+          PRIMARY_OUTCOME: ${{ steps.filter.outcome }}
+          PRIMARY_FRONTEND: ${{ steps.filter.outputs.frontend }}
+          PRIMARY_BACKEND: ${{ steps.filter.outputs.backend }}
+          FALLBACK_OUTCOME: ${{ steps.fallback.outcome }}
+          FALLBACK_FRONTEND: ${{ steps.fallback.outputs.frontend }}
+          FALLBACK_BACKEND: ${{ steps.fallback.outputs.backend }}
+        run: |
+          if [ "$PRIMARY_OUTCOME" = "success" ]; then
+            {
+              echo "frontend=$PRIMARY_FRONTEND"
+              echo "backend=$PRIMARY_BACKEND"
+            } >> "$GITHUB_OUTPUT"
+          elif [ "$FALLBACK_OUTCOME" = "success" ]; then
+            {
+              echo "frontend=$FALLBACK_FRONTEND"
+              echo "backend=$FALLBACK_BACKEND"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "::error title=Path detection unavailable::Both primary and fallback lint path detection failed."
+            exit 1
+          fi
 
   lint-frontend:
     name: Lint Frontend (ESLint + Prettier)

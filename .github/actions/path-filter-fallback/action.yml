@@ -1,0 +1,42 @@
+name: Local path-filter fallback
+description: Resolve CI change scopes from the local git checkout when API-backed path filtering fails.
+inputs:
+  profile:
+    description: Path profile to evaluate (lint, test, or codeql).
+    required: true
+  base-sha:
+    description: Pull-request base commit SHA.
+    required: true
+  head-sha:
+    description: Pull-request head commit SHA.
+    required: true
+outputs:
+  frontend:
+    description: Whether frontend paths changed.
+    value: ${{ steps.fallback.outputs.frontend }}
+  backend:
+    description: Whether backend paths changed.
+    value: ${{ steps.fallback.outputs.backend }}
+  automation:
+    description: Whether repository-automation paths changed.
+    value: ${{ steps.fallback.outputs.automation }}
+  python:
+    description: Whether Python CodeQL paths changed.
+    value: ${{ steps.fallback.outputs.python }}
+  javascript:
+    description: Whether JavaScript CodeQL paths changed.
+    value: ${{ steps.fallback.outputs.javascript }}
+  actions:
+    description: Whether GitHub Actions CodeQL paths changed.
+    value: ${{ steps.fallback.outputs.actions }}
+runs:
+  using: composite
+  steps:
+    - name: Detect changed paths locally
+      id: fallback
+      shell: bash
+      env:
+        PATH_FILTER_PROFILE: ${{ inputs.profile }}
+        PATH_FILTER_BASE_SHA: ${{ inputs.base-sha }}
+        PATH_FILTER_HEAD_SHA: ${{ inputs.head-sha }}
+      run: node "$GITHUB_ACTION_PATH/path-filter-fallback.js"

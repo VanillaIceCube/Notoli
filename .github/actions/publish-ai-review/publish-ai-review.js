@@ -60,6 +60,65 @@ function addedLinesByFile(files) {
   return valid;
 }
 
+function unavailableReviewMarker(personaName, headSha) {
+  const persona = personaName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  return `<!-- notoli-ai-review-unavailable:${persona}:${headSha} -->`;
+}
+
+async function publishUnavailableReview({
+  github,
+  context,
+  core,
+  personaName,
+  reason,
+}) {
+  const owner = context.repo.owner;
+  const repo = context.repo.repo;
+  const pull = context.payload.pull_request;
+  const pull_number = pull.number;
+  const marker = unavailableReviewMarker(
+    personaName,
+    pull.head?.sha || context.sha || "unknown",
+  );
+
+  try {
+    const priorReviews = await github.paginate(github.rest.pulls.listReviews, {
+      owner,
+      repo,
+      pull_number,
+      per_page: 100,
+    });
+    if (!priorReviews.some((review) => review.body?.includes(marker))) {
+      await github.rest.pulls.createReview({
+        owner,
+        repo,
+        pull_number,
+        event: "COMMENT",
+        body: [
+          marker,
+          `## ⚠️ ${personaName} unavailable`,
+          "",
+          `${personaName} could not generate a usable AI review for this commit because OpenAI access was unavailable. Common causes include exhausted quota or tokens, invalid credentials, and temporary service limits.`,
+          "",
+          "This is an availability notice, not an approval and not a finding. The independent lint, test, CodeQL, vulnerability, and malware gates remain authoritative.",
+          "",
+          "Restore the OpenAI quota or credentials, then rerun the failed review workflow.",
+        ].join("\n"),
+      });
+    } else {
+      core.warning(
+        `${personaName} already posted an unavailable notice for this commit.`,
+      );
+    }
+  } catch (error) {
+    core.warning(
+      `${personaName} could not publish its unavailable notice: ${error.message}`,
+    );
+  }
+
+  core.setFailed(reason);
+}
+
 async function publishAiReview({
   github,
   context,
@@ -74,7 +133,13 @@ async function publishAiReview({
     reviewJson.startsWith("Missing secret") ||
     reviewJson.startsWith("OpenAI ")
   ) {
-    core.setFailed(reviewJson || `${personaName} did not return a review.`);
+    await publishUnavailableReview({
+      github,
+      context,
+      core,
+      personaName,
+      reason: reviewJson || `${personaName} did not return a review.`,
+    });
     return;
   }
 
@@ -82,7 +147,13 @@ async function publishAiReview({
   try {
     parsed = JSON.parse(stripCodeFences(reviewJson));
   } catch (error) {
-    core.setFailed(`${personaName} returned invalid JSON: ${error.message}`);
+    await publishUnavailableReview({
+      github,
+      context,
+      core,
+      personaName,
+      reason: `${personaName} returned invalid JSON: ${error.message}`,
+    });
     return;
   }
 
@@ -261,4 +332,7 @@ async function publishAiReview({
   });
 }
 
-module.exports = { publishAiReview };
+module.exports = {
+  publishAiReview,
+  unavailableReviewMarker,
+};
