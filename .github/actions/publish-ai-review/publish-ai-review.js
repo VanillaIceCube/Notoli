@@ -34,6 +34,119 @@ function reviewStateForEvent(reviewEvent) {
   );
 }
 
+const PERSONA_FORMATS = {
+  "Obi-Wan Code-nobi": {
+    icon: "🧭",
+    findings: "🔎 Findings",
+    evidence: "📚 Evidence reviewed",
+    actions: "✅ Next step",
+  },
+  "Lint Eastwood": {
+    icon: "🤠",
+    findings: "🔧 Build findings",
+    evidence: "🧾 Check evidence",
+    actions: "🛠️ Fix",
+  },
+  RoboCop: {
+    icon: "🛡️",
+    findings: "⚠️ Security findings",
+    evidence: "📋 Evidence",
+    actions: "▶️ Directive",
+  },
+};
+
+function personaFormat(personaName) {
+  return (
+    PERSONA_FORMATS[personaName] || {
+      icon: "🤖",
+      findings: "🔎 Findings",
+      evidence: "📋 Evidence",
+      actions: "✅ Next step",
+    }
+  );
+}
+
+function compactText(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function cleanList(values) {
+  return (Array.isArray(values) ? values : [])
+    .map((value) => compactText(value))
+    .filter(Boolean);
+}
+
+function cleanFindings(values) {
+  return (Array.isArray(values) ? values : [])
+    .map((finding) => {
+      if (typeof finding === "string") {
+        return { body: compactText(finding), path: "", line: null };
+      }
+      const path = compactText(finding?.path).replace(/^b\//, "");
+      const line = Number(finding?.line);
+      return {
+        body: compactText(finding?.body),
+        path,
+        line: Number.isInteger(line) && line > 0 ? line : null,
+      };
+    })
+    .filter((finding) => finding.body);
+}
+
+function renderFinding(finding) {
+  if (!finding.path) return `- ${finding.body}`;
+  const target =
+    finding.line == null ? finding.path : `${finding.path}:${finding.line}`;
+  return `- \`${target.replace(/`/g, "")}\` — ${finding.body}`;
+}
+
+function renderReviewBody({
+  personaName,
+  summary,
+  findings = [],
+  evidence = [],
+  actions = [],
+}) {
+  const format = personaFormat(personaName);
+  const sections = [
+    `## ${format.icon} ${personaName}`,
+    "",
+    compactText(summary),
+  ];
+  const renderedFindings = cleanFindings(findings);
+  const renderedEvidence = cleanList(evidence);
+  const renderedActions = cleanList(actions);
+
+  if (renderedFindings.length > 0) {
+    sections.push(
+      "",
+      `## ${format.findings}`,
+      "",
+      ...renderedFindings.map(renderFinding),
+    );
+  }
+  if (renderedEvidence.length > 0) {
+    sections.push(
+      "",
+      `## ${format.evidence}`,
+      "",
+      ...renderedEvidence.map((item) => `- ${item}`),
+    );
+  }
+  if (renderedActions.length > 0) {
+    sections.push(
+      "",
+      `## ${format.actions}`,
+      "",
+      ...renderedActions.map((item) => `- ${item}`),
+    );
+  }
+
+  return sections.join("\n");
+}
+
 function addedLinesByFile(files) {
   const valid = new Map();
   for (const file of files) {
@@ -89,6 +202,7 @@ async function publishUnavailableReview({
       per_page: 100,
     });
     if (!priorReviews.some((review) => review.body?.includes(marker))) {
+      const format = personaFormat(personaName);
       await github.rest.pulls.createReview({
         owner,
         repo,
@@ -96,13 +210,11 @@ async function publishUnavailableReview({
         event: "COMMENT",
         body: [
           marker,
-          `## ⚠️ ${personaName} unavailable`,
+          `## ${format.icon} ${personaName}`,
           "",
-          `${personaName} could not generate a usable AI review for this commit because OpenAI access was unavailable. Common causes include exhausted quota or tokens, invalid credentials, and temporary service limits.`,
+          "**Review unavailable.** OpenAI could not produce a usable review for this commit.",
           "",
-          "This is an availability notice, not an approval and not a finding. The independent lint, test, CodeQL, vulnerability, and malware gates remain authoritative.",
-          "",
-          "Restore the OpenAI quota or credentials, then rerun the failed review workflow.",
+          "This is not an approval or a finding. Independent lint, test, CodeQL, vulnerability, and malware gates remain authoritative. Restore OpenAI access, then rerun this review.",
         ].join("\n"),
       });
     } else {
@@ -125,7 +237,6 @@ async function publishAiReview({
   core,
   raw,
   personaName = "AI reviewer",
-  defaultBody = `${personaName} completed a review.`,
 }) {
   const reviewJson = String(raw || "").trim();
   if (
@@ -157,10 +268,40 @@ async function publishAiReview({
     return;
   }
 
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    await publishUnavailableReview({
+      github,
+      context,
+      core,
+      personaName,
+      reason: `${personaName} returned a review with an invalid structure.`,
+    });
+    return;
+  }
+
   const events = new Set(["APPROVE", "REQUEST_CHANGES", "COMMENT"]);
   const event = events.has(parsed.event) ? parsed.event : "COMMENT";
-  let body = typeof parsed.body === "string" ? parsed.body.trim() : "";
-  if (!body) body = defaultBody;
+  const summary = compactText(parsed.summary);
+  if (!summary) {
+    await publishUnavailableReview({
+      github,
+      context,
+      core,
+      personaName,
+      reason: `${personaName} returned a review without a summary.`,
+    });
+    return;
+  }
+  const findings = cleanFindings(parsed.findings);
+  const evidence = cleanList(parsed.evidence);
+  const actions = cleanList(parsed.actions);
+  let body = renderReviewBody({
+    personaName,
+    summary,
+    findings,
+    evidence,
+    actions,
+  });
 
   const owner = context.repo.owner;
   const repo = context.repo.repo;
@@ -228,7 +369,7 @@ async function publishAiReview({
     );
   }
 
-  let dropped = 0;
+  let malformed = 0;
   let suppressed = 0;
   const comments = [];
   const unplacedComments = [];
@@ -241,13 +382,14 @@ async function publishAiReview({
     const text = typeof comment.body === "string" ? comment.body.trim() : "";
     const currentHunk = validLine ? valid.get(path)?.get(line) : undefined;
     if (!path || !text || !currentHunk) {
-      dropped += 1;
       if (text) {
         unplacedComments.push({
           path: path || "unknown file",
           line: validLine ? line : null,
           body: text,
         });
+      } else {
+        malformed += 1;
       }
       continue;
     }
@@ -275,50 +417,38 @@ async function publishAiReview({
     latestOwnReview && normalize(latestOwnReview.body) === normalize(body);
   const decisionUnchanged =
     latestOwnReview && latestOwnReview.state === reviewStateForEvent(event);
+  const declaredUnchanged = parsed.unchanged === true && decisionUnchanged;
   if (
-    (suppressed > 0 || repeatedBody) &&
+    (declaredUnchanged || suppressed > 0 || repeatedBody) &&
     comments.length === 0 &&
     unplacedComments.length === 0 &&
     decisionUnchanged
   ) {
-    body = [
-      `### ${personaName} status`,
-      "",
-      `No materially new findings since my previous ${event} review. Previously reported duplicate finding(s) were not repeated.`,
-    ].join("\n");
+    body = renderReviewBody({ personaName, summary });
   } else {
-    const notes = [];
-    if (suppressed > 0) {
-      notes.push(
-        `${suppressed} duplicate inline comment(s) already appeared in an earlier ${personaName} review and were not repeated.`,
-      );
-    }
     if (unplacedComments.length > 0) {
-      const unplacedLines = unplacedComments.slice(0, 5).map((comment) => {
-        const target =
-          comment.line == null
-            ? comment.path
-            : `${comment.path}:${comment.line}`;
-        return `- \`${target.replace(/`/g, "")}\`: ${comment.body.replace(/\s+/g, " ")}`;
+      body = renderReviewBody({
+        personaName,
+        summary,
+        findings: [...findings, ...unplacedComments],
+        evidence,
+        actions,
       });
-      const remaining = unplacedComments.length - unplacedLines.length;
-      if (remaining > 0) {
-        unplacedLines.push(
-          `- ${remaining} additional unplaced inline finding(s) omitted from this summary.`,
-        );
-      }
-      body += `\n\n### Unplaced inline findings\n${unplacedLines.join("\n")}`;
-      notes.push(
-        `${unplacedComments.length} inline finding(s) were moved into the review body because they did not target valid added diff lines.`,
+    }
+    if (suppressed > 0 && typeof core.info === "function") {
+      core.info(
+        `${suppressed} duplicate ${personaName} inline comment(s) were suppressed.`,
       );
     }
-    if (dropped > unplacedComments.length) {
-      notes.push(
-        `${dropped - unplacedComments.length} malformed inline comment(s) were omitted because they did not include enough file, line, and body data.`,
+    if (unplacedComments.length > 0 && typeof core.info === "function") {
+      core.info(
+        `${unplacedComments.length} ${personaName} finding(s) were moved into the review body.`,
       );
     }
-    if (notes.length > 0) {
-      body += `\n\n### Automation notes\n${notes.map((note) => `- ${note}`).join("\n")}`;
+    if (malformed > 0) {
+      core.warning(
+        `${malformed} malformed ${personaName} inline comment(s) were omitted.`,
+      );
     }
   }
 
@@ -334,5 +464,6 @@ async function publishAiReview({
 
 module.exports = {
   publishAiReview,
+  renderReviewBody,
   unavailableReviewMarker,
 };

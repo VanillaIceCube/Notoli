@@ -4,11 +4,13 @@ All notable changes to this project are documented in this file.
 ## 2026-07-25
 ### Added
 - Added regression coverage proving RoboCop performs every security-alert issue mutation while the personal credential is limited to Project v2 operations.
+- Added behavioral AI-review fixtures for persona approvals, actionable findings, infrastructure-only comments, unchanged reviews, duplicate suppression, unplaceable findings, malformed responses, and reviewer availability.
 ### Fixed
 - Added the missing `Dependabot alerts: read` permission to the vulnerability and malware RoboCop tokens using the token action's supported `vulnerability-alerts` input.
 ### Changed
 - CodeQL, vulnerability, and malware aggregation now uses a least-privilege RoboCop installation token for alert reads and all issue authoring, while `SECURITY_ALERTS_TOKEN` is isolated to personal Project v2 synchronization.
 - Security-alert workflows now fail closed when RoboCop credentials, installation permissions, Project configuration, or token separation are invalid.
+- AI review personas now return one structured semantic contract with varied, model-authored verdict prose: Obi-Wan and Lint Eastwood use natural, lightly characterful framing, while RoboCop keeps a bolder enforcement-terminal voice; the shared publisher renders emoji-led identity and every visible group as an underlined `##` heading, omits empty groups, and keeps automation diagnostics in workflow logs.
 
 ## 2026-07-24
 ### Added
