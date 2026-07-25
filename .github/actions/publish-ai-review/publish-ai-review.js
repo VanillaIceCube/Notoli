@@ -40,57 +40,18 @@ const PERSONA_FORMATS = {
     findings: "🔎 Findings",
     evidence: "📚 Evidence reviewed",
     actions: "✅ Next step",
-    verdicts: {
-      APPROVE: "Approved.",
-      REQUEST_CHANGES: "Changes requested.",
-      COMMENT: "Comment.",
-    },
-    unchanged: {
-      APPROVE:
-        "Approved — the path remains clear. No new code-quality findings since the previous review.",
-      REQUEST_CHANGES:
-        "Changes requested — the concern remains. No materially new code-quality findings since the previous review.",
-      COMMENT:
-        "Comment — no change in course. No materially new code-quality observations since the previous review.",
-    },
   },
   "Lint Eastwood": {
     icon: "🤠",
     findings: "🔧 Build findings",
     evidence: "🧾 Check evidence",
     actions: "🛠️ Fix",
-    verdicts: {
-      APPROVE: "Approved.",
-      REQUEST_CHANGES: "Changes requested.",
-      COMMENT: "Comment.",
-    },
-    unchanged: {
-      APPROVE:
-        "Approved — still clean. No new lint, test, build, or CI trouble since the previous review.",
-      REQUEST_CHANGES:
-        "Changes requested — the gate remains closed. No materially new build findings since the previous review.",
-      COMMENT:
-        "Comment — the evidence is unchanged. No materially new build observations since the previous review.",
-    },
   },
   RoboCop: {
     icon: "🛡️",
     findings: "⚠️ Security findings",
     evidence: "📋 Evidence",
     actions: "▶️ Directive",
-    verdicts: {
-      APPROVE: "APPROVED.",
-      REQUEST_CHANGES: "CHANGES REQUIRED.",
-      COMMENT: "COMMENT.",
-    },
-    unchanged: {
-      APPROVE:
-        "APPROVED — STATUS UNCHANGED. No new security findings are supported by the current diff or gate evidence.",
-      REQUEST_CHANGES:
-        "CHANGES REQUIRED — STATUS UNCHANGED. The prior security finding remains unresolved; no materially new finding is supported.",
-      COMMENT:
-        "COMMENT — STATUS UNCHANGED. The prior security evidence remains incomplete; no materially new finding is supported.",
-    },
   },
 };
 
@@ -101,19 +62,6 @@ function personaFormat(personaName) {
       findings: "🔎 Findings",
       evidence: "📋 Evidence",
       actions: "✅ Next step",
-      verdicts: {
-        APPROVE: "Approved.",
-        REQUEST_CHANGES: "Changes requested.",
-        COMMENT: "Comment.",
-      },
-      unchanged: {
-        APPROVE:
-          "Approved — unchanged. No new findings since the previous review.",
-        REQUEST_CHANGES:
-          "Changes requested — unchanged. The prior finding remains unresolved.",
-        COMMENT:
-          "Comment — unchanged. No new observations since the previous review.",
-      },
     }
   );
 }
@@ -156,7 +104,6 @@ function renderFinding(finding) {
 
 function renderReviewBody({
   personaName,
-  event,
   summary,
   findings = [],
   evidence = [],
@@ -166,7 +113,7 @@ function renderReviewBody({
   const sections = [
     `## ${format.icon} ${personaName}`,
     "",
-    `**${format.verdicts[event] || format.verdicts.COMMENT}** ${compactText(summary)}`,
+    compactText(summary),
   ];
   const renderedFindings = cleanFindings(findings);
   const renderedEvidence = cleanList(evidence);
@@ -175,7 +122,7 @@ function renderReviewBody({
   if (renderedFindings.length > 0) {
     sections.push(
       "",
-      `### ${format.findings}`,
+      `## ${format.findings}`,
       "",
       ...renderedFindings.map(renderFinding),
     );
@@ -183,7 +130,7 @@ function renderReviewBody({
   if (renderedEvidence.length > 0) {
     sections.push(
       "",
-      `### ${format.evidence}`,
+      `## ${format.evidence}`,
       "",
       ...renderedEvidence.map((item) => `- ${item}`),
     );
@@ -191,22 +138,13 @@ function renderReviewBody({
   if (renderedActions.length > 0) {
     sections.push(
       "",
-      `### ${format.actions}`,
+      `## ${format.actions}`,
       "",
       ...renderedActions.map((item) => `- ${item}`),
     );
   }
 
   return sections.join("\n");
-}
-
-function renderUnchangedReview({ personaName, event }) {
-  const format = personaFormat(personaName);
-  return [
-    `## ${format.icon} ${personaName}`,
-    "",
-    `**${format.unchanged[event] || format.unchanged.COMMENT}**`,
-  ].join("\n");
 }
 
 function addedLinesByFile(files) {
@@ -359,7 +297,6 @@ async function publishAiReview({
   const actions = cleanList(parsed.actions);
   let body = renderReviewBody({
     personaName,
-    event,
     summary,
     findings,
     evidence,
@@ -487,12 +424,11 @@ async function publishAiReview({
     unplacedComments.length === 0 &&
     decisionUnchanged
   ) {
-    body = renderUnchangedReview({ personaName, event });
+    body = renderReviewBody({ personaName, summary });
   } else {
     if (unplacedComments.length > 0) {
       body = renderReviewBody({
         personaName,
-        event,
         summary,
         findings: [...findings, ...unplacedComments],
         evidence,
@@ -529,6 +465,5 @@ async function publishAiReview({
 module.exports = {
   publishAiReview,
   renderReviewBody,
-  renderUnchangedReview,
   unavailableReviewMarker,
 };

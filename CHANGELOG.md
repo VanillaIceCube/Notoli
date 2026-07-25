@@ -10,7 +10,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 - CodeQL, vulnerability, and malware aggregation now uses a least-privilege RoboCop installation token for alert reads and all issue authoring, while `SECURITY_ALERTS_TOKEN` is isolated to personal Project v2 synchronization.
 - Security-alert workflows now fail closed when RoboCop credentials, installation permissions, Project configuration, or token separation are invalid.
-- AI review personas now return one structured semantic contract that the shared publisher renders with emoji-led identity, stronger persona voice, optional findings/evidence/action groups, concise unchanged statuses, and workflow-only automation diagnostics.
+- AI review personas now return one structured semantic contract with varied, model-authored verdict prose; the shared publisher renders emoji-led identity and every visible group as an underlined `##` heading, omits empty groups, and keeps automation diagnostics in workflow logs.
 
 ## 2026-07-24
 ### Added

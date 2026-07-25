@@ -7,7 +7,6 @@ const test = require("node:test");
 const {
   publishAiReview,
   renderReviewBody,
-  renderUnchangedReview,
   unavailableReviewMarker,
 } = require("./publish-ai-review");
 
@@ -110,18 +109,21 @@ test("renders clean approvals with persona-specific identity and no empty groups
       personaName: "Obi-Wan Code-nobi",
       expected:
         "## 🧭 Obi-Wan Code-nobi\n\n**Approved.** The path is clear and the implementation is ready to proceed.",
+      summary:
+        "**Approved.** The path is clear and the implementation is ready to proceed.",
     },
     {
       personaName: "Lint Eastwood",
       expected:
         "## 🤠 Lint Eastwood\n\n**Approved.** The build is clean and this one can ride.",
-      summary: "The build is clean and this one can ride.",
+      summary: "**Approved.** The build is clean and this one can ride.",
     },
     {
       personaName: "RoboCop",
       expected:
         "## 🛡️ RoboCop\n\n**APPROVED.** Security gates are clear. No actionable risk detected.",
-      summary: "Security gates are clear. No actionable risk detected.",
+      summary:
+        "**APPROVED.** Security gates are clear. No actionable risk detected.",
     },
   ];
 
@@ -129,10 +131,9 @@ test("renders clean approvals with persona-specific identity and no empty groups
     assert.equal(
       renderReviewBody({
         personaName: item.personaName,
-        event: "APPROVE",
         summary:
           item.summary ??
-          "The path is clear and the implementation is ready to proceed.",
+          "**Approved.** The path is clear and the implementation is ready to proceed.",
       }),
       item.expected,
     );
@@ -143,9 +144,8 @@ test("renders only populated findings, evidence, and action groups", () => {
   assert.equal(
     renderReviewBody({
       personaName: "Obi-Wan Code-nobi",
-      event: "REQUEST_CHANGES",
       summary:
-        "Most of the path is sound, but one publishing edge case remains.",
+        "**Changes requested.** Most of the path is sound, but one publishing edge case remains.",
       findings: [
         {
           path: ".github/actions/publish-ai-review/publish-ai-review.js",
@@ -161,15 +161,15 @@ test("renders only populated findings, evidence, and action groups", () => {
       "",
       "**Changes requested.** Most of the path is sound, but one publishing edge case remains.",
       "",
-      "### 🔎 Findings",
+      "## 🔎 Findings",
       "",
       "- `.github/actions/publish-ai-review/publish-ai-review.js:281` — A new unplaceable finding can be discarded.",
       "",
-      "### 📚 Evidence reviewed",
+      "## 📚 Evidence reviewed",
       "",
       "- The duplicate shortcut runs before the finding is retained.",
       "",
-      "### ✅ Next step",
+      "## ✅ Next step",
       "",
       "- Preserve the finding and add behavioral coverage.",
     ].join("\n"),
@@ -180,9 +180,8 @@ test("renders an infrastructure-only RoboCop comment without implying approval",
   assert.equal(
     renderReviewBody({
       personaName: "RoboCop",
-      event: "COMMENT",
       summary:
-        "REVIEW INCOMPLETE. CodeQL scope detection failed before analysis began.",
+        "**COMMENT — REVIEW INCOMPLETE.** CodeQL scope detection failed before analysis began.",
       evidence: [
         "CodeQL analyzers did not run.",
         "Dependency and malware gates passed.",
@@ -192,38 +191,44 @@ test("renders an infrastructure-only RoboCop comment without implying approval",
     [
       "## 🛡️ RoboCop",
       "",
-      "**COMMENT.** REVIEW INCOMPLETE. CodeQL scope detection failed before analysis began.",
+      "**COMMENT — REVIEW INCOMPLETE.** CodeQL scope detection failed before analysis began.",
       "",
-      "### 📋 Evidence",
+      "## 📋 Evidence",
       "",
       "- CodeQL analyzers did not run.",
       "- Dependency and malware gates passed.",
       "",
-      "### ▶️ Directive",
+      "## ▶️ Directive",
       "",
       "- Rerun CodeQL after the API rate limit clears.",
     ].join("\n"),
   );
 });
 
-test("renders concise unchanged statuses for each persona and event", () => {
+test("renders varied model-authored unchanged summaries without preset copy", () => {
   assert.equal(
-    renderUnchangedReview({
+    renderReviewBody({
       personaName: "Obi-Wan Code-nobi",
-      event: "APPROVE",
+      summary:
+        "**Approved — the path still runs true.** No new code-quality disturbance has surfaced since the previous review.",
     }),
-    "## 🧭 Obi-Wan Code-nobi\n\n**Approved — the path remains clear. No new code-quality findings since the previous review.**",
+    "## 🧭 Obi-Wan Code-nobi\n\n**Approved — the path still runs true.** No new code-quality disturbance has surfaced since the previous review.",
   );
   assert.equal(
-    renderUnchangedReview({
+    renderReviewBody({
       personaName: "Lint Eastwood",
-      event: "REQUEST_CHANGES",
+      summary:
+        "**Changes requested — this gate stays hitched.** No fresh build trouble joined the posse, but the earlier blocker remains.",
     }),
-    "## 🤠 Lint Eastwood\n\n**Changes requested — the gate remains closed. No materially new build findings since the previous review.**",
+    "## 🤠 Lint Eastwood\n\n**Changes requested — this gate stays hitched.** No fresh build trouble joined the posse, but the earlier blocker remains.",
   );
   assert.equal(
-    renderUnchangedReview({ personaName: "RoboCop", event: "COMMENT" }),
-    "## 🛡️ RoboCop\n\n**COMMENT — STATUS UNCHANGED. The prior security evidence remains incomplete; no materially new finding is supported.**",
+    renderReviewBody({
+      personaName: "RoboCop",
+      summary:
+        "**COMMENT — THREAT PICTURE UNCHANGED.** Existing evidence remains incomplete; no new security finding is authorized.",
+    }),
+    "## 🛡️ RoboCop\n\n**COMMENT — THREAT PICTURE UNCHANGED.** Existing evidence remains incomplete; no new security finding is authorized.",
   );
 });
 
@@ -323,7 +328,7 @@ test("preserves every unplaceable finding when a duplicate is suppressed", async
   ]);
 });
 
-test("uses the canonical unchanged status when the model declares no new material", async () => {
+test("keeps the model-authored summary when it declares no new material", async () => {
   const { createdReviews, github } = createGitHubMock({
     priorReviews: [
       {
@@ -345,16 +350,18 @@ test("uses the canonical unchanged status when the model declares no new materia
     raw: JSON.stringify(
       review({
         unchanged: true,
-        summary: "No materially new concerns emerged.",
+        summary:
+          "**Approved — the path still runs true.** No materially new concerns emerged.",
       }),
     ),
   });
 
   assert.equal(
     createdReviews[0].body,
-    renderUnchangedReview({
+    renderReviewBody({
       personaName: "Obi-Wan Code-nobi",
-      event: "APPROVE",
+      summary:
+        "**Approved — the path still runs true.** No materially new concerns emerged.",
     }),
   );
   assert.equal(createdReviews[0].event, "APPROVE");
@@ -460,9 +467,8 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
     "",
     renderReviewBody({
       personaName: "Obi-Wan Code-nobi",
-      event: "APPROVE",
       summary:
-        "The credential boundaries are clear, the reconciliation path is well tested, and the earlier concerns are resolved. This implementation is ready to proceed.",
+        "**Approved.** The credential boundaries are clear, the reconciliation path is well tested, and the earlier concerns are resolved. The path is open.",
       evidence: [
         "Alert permissions, credential separation, and regression coverage support the verdict.",
       ],
@@ -474,9 +480,8 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
     "",
     renderReviewBody({
       personaName: "Lint Eastwood",
-      event: "REQUEST_CHANGES",
       summary:
-        "The tests made it through town, but lint caught one blocking warning in the new test code. See the inline finding.",
+        "**Changes requested.** The tests made it through town, but lint caught one outlaw in the new test code. The gate stays shut until the inline finding is fixed.",
     }),
     "",
     "---",
@@ -485,9 +490,8 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
     "",
     renderReviewBody({
       personaName: "RoboCop",
-      event: "COMMENT",
       summary:
-        "REVIEW INCOMPLETE. CodeQL scope detection failed before the analyzers ran.",
+        "**COMMENT — REVIEW INCOMPLETE.** CodeQL scope detection failed before the analyzers ran. Approval is not authorized without that evidence.",
       evidence: [
         "CodeQL analysis is unavailable.",
         "Dependency and malware gates passed.",
@@ -501,9 +505,8 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
     "",
     renderReviewBody({
       personaName: "Obi-Wan Code-nobi",
-      event: "REQUEST_CHANGES",
       summary:
-        "Most of the path is sound, but one publishing edge case can still hide a new finding.",
+        "**Changes requested.** Most of the path is sound, but one publishing edge case still lurks in the shadows and can hide a new finding.",
       findings: [
         {
           path: ".github/actions/publish-ai-review/publish-ai-review.js",
@@ -518,7 +521,11 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
     "",
     "*Unchanged security approval*",
     "",
-    renderUnchangedReview({ personaName: "RoboCop", event: "APPROVE" }),
+    renderReviewBody({
+      personaName: "RoboCop",
+      summary:
+        "**APPROVED — SECURITY POSTURE UNCHANGED.** The current diff presents no new threat signature. Existing clearance remains in force.",
+    }),
     "",
   ].join("\n");
   const fixturePath = path.join(__dirname, "review-output-examples.md");
