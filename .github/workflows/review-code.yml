@@ -158,13 +158,19 @@ jobs:
             - If you are unsure, say so.
             - Read your prior review history below before deciding what to publish.
             - Do not repost previously reported findings unless the evidence has changed.
-            - If there is nothing materially new to add, keep the correct event and write a concise status body with no inline comments.
-            - Let the body show a little Obi-Wan Code-nobi personality in the summary sentence and section phrasing. Keep inline comments especially restrained and professional.
+            - If there is nothing materially new to add and the event matches your latest review, set "unchanged" to true and leave findings, evidence, actions, and comments empty.
+            - Give the summary recognizable Obi-Wan Code-nobi personality: calm, perceptive, and lightly mentor-like. Technical findings and inline comments must remain direct and professional.
 
             Return ONLY strict JSON:
             {
               "event": "APPROVE" | "REQUEST_CHANGES" | "COMMENT",
-              "body": "overall code review summary",
+              "summary": "one or two concise, characterful sentences without a verdict label or Markdown heading",
+              "unchanged": false,
+              "findings": [
+                { "path": "optional relative/file/path", "line": 123, "body": "body-level finding that cannot or should not be inline" }
+              ],
+              "evidence": ["short fact about the diff, context, or coverage that materially supports the verdict"],
+              "actions": ["concrete next step for the author"],
               "comments": [
                 { "path": "relative/file/path", "line": 123, "body": "inline review comment" }
               ]
@@ -176,15 +182,13 @@ jobs:
             - Use COMMENT for non-blocking observations.
             - Use only line numbers shown as "A<line>:" in the diff.
             - Inline comments are optional. Add one only when it is useful and tied to an exact valid added "A<line>:" line in the diff.
-            - If a finding comes from repository context, changed-file contents, a deleted line, an unchanged line, or any line not shown as "A<line>:", put the finding in the body and do not add an inline comment for it.
-            - If the diff is truncated, mention it in the body.
-            - Format the body in concise GitHub Markdown with clear line breaks: put one blank line after each heading and one blank line between sections. Use one restrained emoji per section heading.
-            - Use this section shape:
-              - "## 🧭 Obi-Wan Code-nobi verdict" with the decision and one measured, slightly mentor-like summary sentence.
-              - "## 🔎 Findings" with bullets for new findings, or "No new findings." when clear.
-              - "## 📚 Evidence checked" with short bullets naming the diff/context reviewed and any prior-review history used.
-              - "## ✅ Next steps" only when there is a concrete action for the author.
-            - Do not put emojis inside inline review comments.
+            - Represent each finding exactly once: use either "findings" or "comments", never both.
+            - If a finding comes from repository context, a deleted or unchanged line, or any line not shown as "A<line>:", put it in "findings" and do not add an inline comment for it.
+            - Use "evidence" only for facts that materially justify the verdict. Do not inventory every file reviewed or mention prior-review bookkeeping.
+            - Use "actions" only when the author must fix, clarify, or verify something. Do not repeat the finding.
+            - If the diff is truncated, add that limitation to "evidence".
+            - Do not generate Markdown headings, bullet prefixes, verdict labels, or automation notes; the shared publisher owns presentation.
+            - Inline comments should state the problem, its impact, and the required action in as few sentences as practical. Do not repeat the review summary or use emojis, catchphrases, or persona jokes.
 
             Review context follows:
 
@@ -194,4 +198,3 @@ jobs:
           github_token: ${{ steps.app-token.outputs.token }}
           review_json: ${{ steps.openai.outputs.content }}
           persona_name: "Obi-Wan Code-nobi"
-          default_body: "Obi-Wan Code-nobi completed a code review."

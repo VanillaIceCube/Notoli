@@ -52,8 +52,13 @@ jobs:
               - 'backend/**'
               - '.github/actions/read-versions/**'
             automation:
+              - '.github/actions/collect-prior-ai-reviews/**'
               - '.github/actions/publish-ai-review/**'
               - '.github/actions/security-alerts/**'
+              - '.github/workflows/gate-test.yml'
+              - '.github/workflows/review-build.yml'
+              - '.github/workflows/review-code.yml'
+              - '.github/workflows/review-security.yml'
 
       - name: Report path detection failure
         if: steps.filter.outcome == 'failure'

@@ -77,7 +77,7 @@ runs:
             authenticated_bot_login: botLogin || '(unresolved)',
             instruction: [
               'Use this prior-review history to avoid reposting the same findings.',
-              'If you have no materially new findings, keep the same native review event semantics but write a concise status body and leave comments empty.',
+              'If you have no materially new findings and the native review event is unchanged, set unchanged to true and leave findings, evidence, actions, and comments empty.',
               'Do not duplicate previously reported findings unless the evidence changed in the current diff, checks, or logs.',
             ],
             prior_reviews: ownReviews.map((review) => ({

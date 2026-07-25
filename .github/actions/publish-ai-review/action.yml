@@ -10,9 +10,6 @@ inputs:
   persona_name:
     description: Human-readable reviewer persona name.
     required: true
-  default_body:
-    description: Fallback body when the AI reviewer omits one.
-    required: true
 runs:
   using: composite
   steps:
@@ -21,7 +18,6 @@ runs:
       env:
         REVIEW_BODY: ${{ inputs.review_json }}
         PERSONA_NAME: ${{ inputs.persona_name }}
-        DEFAULT_BODY: ${{ inputs.default_body }}
       with:
         github-token: ${{ inputs.github_token }}
         script: |
@@ -35,5 +31,4 @@ runs:
             core,
             raw: process.env.REVIEW_BODY,
             personaName: process.env.PERSONA_NAME,
-            defaultBody: process.env.DEFAULT_BODY,
           });
