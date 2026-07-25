@@ -613,3 +613,89 @@ test("alert workflows scope RoboCop to alert and issue APIs while reserving the 
   assert.match(action, /issueGithub: github/);
   assert.match(action, /projectGithub,/);
 });
+
+test("reconcile GitHub Script constructs the separate Project client at runtime", async () => {
+  const repositoryRoot = path.resolve(__dirname, "../../..");
+  const action = fs.readFileSync(
+    path.join(
+      repositoryRoot,
+      ".github",
+      "actions",
+      "security-alerts",
+      "action.yml",
+    ),
+    "utf8",
+  );
+  const match = action.match(
+    /    - name: Reconcile grouped issues[\s\S]*?        script: \|\r?\n([\s\S]+)$/,
+  );
+  assert.ok(match, "reconcile GitHub Script should be present");
+  const script = match[1]
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^ {10}/, ""))
+    .join("\n");
+
+  const issueGithub = { kind: "issues" };
+  const projectGithub = { kind: "project" };
+  const core = { info() {} };
+  const context = { repo: { owner: "example", repo: "repo" } };
+  const calls = [];
+  const mockRequire = (request) => {
+    if (request === "fs") {
+      return {
+        readFileSync(file) {
+          if (file === "alerts.json") {
+            return JSON.stringify({ feed: "codeql", alerts: [] });
+          }
+          if (file === "groups.json") {
+            return JSON.stringify({ groups: [] });
+          }
+          throw new Error(`Unexpected file: ${file}`);
+        },
+      };
+    }
+    if (request === "@actions/github") {
+      return {
+        getOctokit(token) {
+          assert.equal(token, "project-token");
+          return projectGithub;
+        },
+      };
+    }
+    if (
+      request ===
+      "C:/repo/.github/actions/security-alerts/sync-security-alerts.js"
+    ) {
+      return {
+        async synchronizeSecurityAlerts(input) {
+          calls.push(input);
+        },
+      };
+    }
+    throw new Error(`Unexpected module: ${request}`);
+  };
+  const processMock = {
+    env: {
+      ALERT_PATH: "alerts.json",
+      GROUP_PATH: "groups.json",
+      GITHUB_WORKSPACE: "C:/repo",
+      PROJECT_ID: "project-id",
+      PROJECT_TOKEN: "project-token",
+    },
+  };
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+
+  await new AsyncFunction(
+    "require",
+    "github",
+    "core",
+    "context",
+    "process",
+    script,
+  )(mockRequire, issueGithub, core, context, processMock);
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].issueGithub, issueGithub);
+  assert.equal(calls[0].projectGithub, projectGithub);
+  assert.equal(calls[0].projectId, "project-id");
+});
