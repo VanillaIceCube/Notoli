@@ -588,6 +588,11 @@ test("alert workflows scope RoboCop to alert and issue APIs while reserving the 
       workflow,
       /robocop-token: \$\{\{ secrets\.SECURITY_ALERTS_TOKEN \}\}/,
     );
+    if (workflowName === "alert-codeql.yml") {
+      assert.doesNotMatch(workflow, /permission-dependabot-alerts: read/);
+    } else {
+      assert.match(workflow, /permission-dependabot-alerts: read/);
+    }
   }
 
   const action = fs.readFileSync(

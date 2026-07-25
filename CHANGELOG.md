@@ -1,11 +1,19 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-25
+### Added
+- Added regression coverage proving RoboCop performs every security-alert issue mutation while the personal credential is limited to Project v2 operations.
+### Fixed
+- Added the missing `Dependabot alerts: read` permission to the vulnerability and malware RoboCop tokens.
+### Changed
+- CodeQL, vulnerability, and malware aggregation now uses a least-privilege RoboCop installation token for alert reads and all issue authoring, while `SECURITY_ALERTS_TOKEN` is isolated to personal Project v2 synchronization.
+- Security-alert workflows now fail closed when RoboCop credentials, installation permissions, Project configuration, or token separation are invalid.
+
 ## 2026-07-24
 ### Added
 - Added repository-automation regression coverage for unchanged, reordered, split, merged, added, and resolved security-alert groupings, including the known stale-ticket set tracked by issue #633.
 - Added one-per-commit native AI-review availability notices for exhausted OpenAI quota or tokens, invalid credentials, service failures, and unusable model responses.
-- Added regression coverage proving RoboCop performs every security-alert issue mutation while the personal credential is limited to Project v2 operations.
 ### Fixed
 - Reconciled workflow-managed security tickets by their underlying CodeQL or Dependabot alert references so AI grouping changes no longer leave overlapping open issues.
 - Closed superseded or empty managed tickets with retained source links and lifecycle context, including when a feed has no current alerts.
@@ -14,8 +22,6 @@ All notable changes to this project are documented in this file.
 - OpenAI request failures now emit warning annotations and workflow summaries with quota, token, credential, and service-recovery guidance.
 - Path-filter API failures now emit explicit error annotations and workflow summaries explaining that scope detection did not run and the workflow must be retried.
 - Repository automation CI now runs the security-alert reconciler tests alongside the AI review publisher tests when either action changes.
-- CodeQL, vulnerability, and malware aggregation now uses a least-privilege RoboCop installation token for alert reads and all issue authoring, while `SECURITY_ALERTS_TOKEN` is isolated to personal Project v2 synchronization.
-- Security-alert workflows now fail closed when RoboCop credentials, installation permissions, Project configuration, or token separation are invalid.
 
 ## 2026-07-22
 ### Added
