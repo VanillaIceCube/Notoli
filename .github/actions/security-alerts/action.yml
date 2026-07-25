@@ -214,7 +214,6 @@ runs:
         github-token: ${{ inputs.robocop-token }}
         script: |
           const fs = require('fs');
-          const { getOctokit } = require('@actions/github');
           const source = JSON.parse(fs.readFileSync(process.env.ALERT_PATH, 'utf8'));
           const { groups } = JSON.parse(fs.readFileSync(process.env.GROUP_PATH, 'utf8'));
           const projectGithub = getOctokit(process.env.PROJECT_TOKEN);

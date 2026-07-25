@@ -589,9 +589,9 @@ test("alert workflows scope RoboCop to alert and issue APIs while reserving the 
       /robocop-token: \$\{\{ secrets\.SECURITY_ALERTS_TOKEN \}\}/,
     );
     if (workflowName === "alert-codeql.yml") {
-      assert.doesNotMatch(workflow, /permission-dependabot-alerts: read/);
+      assert.doesNotMatch(workflow, /permission-vulnerability-alerts: read/);
     } else {
-      assert.match(workflow, /permission-dependabot-alerts: read/);
+      assert.match(workflow, /permission-vulnerability-alerts: read/);
     }
   }
 
@@ -654,14 +654,6 @@ test("reconcile GitHub Script constructs the separate Project client at runtime"
         },
       };
     }
-    if (request === "@actions/github") {
-      return {
-        getOctokit(token) {
-          assert.equal(token, "project-token");
-          return projectGithub;
-        },
-      };
-    }
     if (
       request ===
       "C:/repo/.github/actions/security-alerts/sync-security-alerts.js"
@@ -684,6 +676,10 @@ test("reconcile GitHub Script constructs the separate Project client at runtime"
     },
   };
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  const getOctokit = (token) => {
+    assert.equal(token, "project-token");
+    return projectGithub;
+  };
 
   await new AsyncFunction(
     "require",
@@ -691,8 +687,9 @@ test("reconcile GitHub Script constructs the separate Project client at runtime"
     "core",
     "context",
     "process",
+    "getOctokit",
     script,
-  )(mockRequire, issueGithub, core, context, processMock);
+  )(mockRequire, issueGithub, core, context, processMock, getOctokit);
 
   assert.equal(calls.length, 1);
   assert.equal(calls[0].issueGithub, issueGithub);
