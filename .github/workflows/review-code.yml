@@ -28,7 +28,7 @@ jobs:
 
       - name: Create Obi-Wan Code-nobi GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ vars.OBI_WAN_CODE_NOBI_APP_ID }}
           private-key: ${{ secrets.OBI_WAN_CODE_NOBI_PRIVATE_KEY }}
