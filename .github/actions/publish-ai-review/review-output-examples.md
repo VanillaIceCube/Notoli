@@ -8,7 +8,7 @@ These fixtures show the canonical review states rendered by the shared publisher
 
 ## 🧭 Obi-Wan Code-nobi
 
-**Approved.** The credential boundaries are clear, the reconciliation path is well tested, and the earlier concerns are resolved. The path is open.
+**APPROVED — NO DISTURBANCE REMAINS IN THIS DIFF.** I searched the shadowed corners: the boundaries hold, the tests stand watch, and the earlier concern has vanished into hyperspace. This code is cleared to continue its journey.
 
 ## 📚 Evidence reviewed
 
@@ -20,7 +20,7 @@ These fixtures show the canonical review states rendered by the shared publisher
 
 ## 🤠 Lint Eastwood
 
-**Changes requested.** The tests made it through town, but lint caught one outlaw in the new test code. The gate stays shut until the inline finding is fixed.
+**CHANGES REQUESTED — ONE OUTLAW IS STILL RIDING WITH THIS BUILD.** Tests crossed the finish line, but lint caught a blocking warning hiding in the new test code. Holster that diagnostic, then send the build down the track again.
 
 ---
 
@@ -28,7 +28,7 @@ These fixtures show the canonical review states rendered by the shared publisher
 
 ## 🛡️ RoboCop
 
-**COMMENT — REVIEW INCOMPLETE.** CodeQL scope detection failed before the analyzers ran. Approval is not authorized without that evidence.
+**COMMENT. REVIEW INCOMPLETE. SECURITY VERDICT: WITHHELD.** CODEQL NEVER REPORTED FOR DUTY. Restore scanner evidence, then rerun the security assessment, citizen.
 
 ## 📋 Evidence
 
@@ -45,7 +45,7 @@ These fixtures show the canonical review states rendered by the shared publisher
 
 ## 🧭 Obi-Wan Code-nobi
 
-**Changes requested.** Most of the path is sound, but one publishing edge case still lurks in the shadows and can hide a new finding.
+**CHANGES REQUESTED — A DISTURBANCE REMAINS IN THE PUBLISHING PATH.** Most of this diff is balanced, but one edge case still moves in the shadows and can swallow a new finding. Bring it into the light before proceeding.
 
 ## 🔎 Findings
 
@@ -61,4 +61,4 @@ These fixtures show the canonical review states rendered by the shared publisher
 
 ## 🛡️ RoboCop
 
-**APPROVED — SECURITY POSTURE UNCHANGED.** The current diff presents no new threat signature. Existing clearance remains in force.
+**APPROVED. THREAT LEVEL: MINIMAL. STATUS: UNCHANGED.** No new threat signature detected. MERGE AUTHORIZATION REMAINS GRANTED, CITIZEN.

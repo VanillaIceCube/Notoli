@@ -468,7 +468,7 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
     renderReviewBody({
       personaName: "Obi-Wan Code-nobi",
       summary:
-        "**Approved.** The credential boundaries are clear, the reconciliation path is well tested, and the earlier concerns are resolved. The path is open.",
+        "**APPROVED — NO DISTURBANCE REMAINS IN THIS DIFF.** I searched the shadowed corners: the boundaries hold, the tests stand watch, and the earlier concern has vanished into hyperspace. This code is cleared to continue its journey.",
       evidence: [
         "Alert permissions, credential separation, and regression coverage support the verdict.",
       ],
@@ -481,7 +481,7 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
     renderReviewBody({
       personaName: "Lint Eastwood",
       summary:
-        "**Changes requested.** The tests made it through town, but lint caught one outlaw in the new test code. The gate stays shut until the inline finding is fixed.",
+        "**CHANGES REQUESTED — ONE OUTLAW IS STILL RIDING WITH THIS BUILD.** Tests crossed the finish line, but lint caught a blocking warning hiding in the new test code. Holster that diagnostic, then send the build down the track again.",
     }),
     "",
     "---",
@@ -491,7 +491,7 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
     renderReviewBody({
       personaName: "RoboCop",
       summary:
-        "**COMMENT — REVIEW INCOMPLETE.** CodeQL scope detection failed before the analyzers ran. Approval is not authorized without that evidence.",
+        "**COMMENT. REVIEW INCOMPLETE. SECURITY VERDICT: WITHHELD.** CODEQL NEVER REPORTED FOR DUTY. Restore scanner evidence, then rerun the security assessment, citizen.",
       evidence: [
         "CodeQL analysis is unavailable.",
         "Dependency and malware gates passed.",
@@ -506,7 +506,7 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
     renderReviewBody({
       personaName: "Obi-Wan Code-nobi",
       summary:
-        "**Changes requested.** Most of the path is sound, but one publishing edge case still lurks in the shadows and can hide a new finding.",
+        "**CHANGES REQUESTED — A DISTURBANCE REMAINS IN THE PUBLISHING PATH.** Most of this diff is balanced, but one edge case still moves in the shadows and can swallow a new finding. Bring it into the light before proceeding.",
       findings: [
         {
           path: ".github/actions/publish-ai-review/publish-ai-review.js",
@@ -524,7 +524,7 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
     renderReviewBody({
       personaName: "RoboCop",
       summary:
-        "**APPROVED — SECURITY POSTURE UNCHANGED.** The current diff presents no new threat signature. Existing clearance remains in force.",
+        "**APPROVED. THREAT LEVEL: MINIMAL. STATUS: UNCHANGED.** No new threat signature detected. MERGE AUTHORIZATION REMAINS GRANTED, CITIZEN.",
     }),
     "",
   ].join("\n");
