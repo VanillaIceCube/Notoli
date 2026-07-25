@@ -12,7 +12,7 @@ Also update the relevant README(s):
 - CI/CD, Dependabot, workflows: `.github/README-WORKFLOWS.md`
 Also update `CHANGELOG.md`.
 
-GitHub security-alert aggregation: The daily/manual CodeQL and Dependabot aggregation workflows require the `OPENAI_API_KEY` and `SECURITY_ALERTS_TOKEN` secrets, `OPENAI_PROJECT_ID` repository variable, and `SECURITY_ALERTS_PROJECT_ID` GitHub Project v2 node-ID variable. Keep their field/permission setup documented in `.github/README-WORKFLOWS.md` when changing these workflows.
+GitHub security-alert aggregation: The daily/manual CodeQL and Dependabot aggregation workflows require the `OPENAI_API_KEY`, `ROBOCOP_PRIVATE_KEY`, and `SECURITY_ALERTS_TOKEN` secrets; the `ROBOCOP_APP_ID`, `OPENAI_PROJECT_ID`, and `SECURITY_ALERTS_PROJECT_ID` repository variables; and a RoboCop installation with `Issues: write`, `Code scanning alerts: read`, and `Dependabot alerts: read`. RoboCop's short-lived token reads alerts and authors every issue mutation, while `SECURITY_ALERTS_TOKEN` is isolated to personal GitHub Project v2 synchronization. Keep their field/permission setup and fail-closed credential separation documented in `.github/README-WORKFLOWS.md` when changing these workflows.
 
 GitHub AI PR reviews: The three persona workflows require `OPENAI_API_KEY`, `OPENAI_PROJECT_ID`, and separate GitHub App credentials for RoboCop, Lint Eastwood, and Obi-Wan Code-nobi. Keep the app IDs, private-key secrets, permissions, trigger policy, and failure behavior documented in `.github/README-WORKFLOWS.md` when changing these workflows.
 

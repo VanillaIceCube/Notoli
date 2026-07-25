@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-07-25
+### Added
+- Added regression coverage proving RoboCop performs every security-alert issue mutation while the personal credential is limited to Project v2 operations.
+### Fixed
+- Added the missing `Dependabot alerts: read` permission to the vulnerability and malware RoboCop tokens using the token action's supported `vulnerability-alerts` input.
+### Changed
+- CodeQL, vulnerability, and malware aggregation now uses a least-privilege RoboCop installation token for alert reads and all issue authoring, while `SECURITY_ALERTS_TOKEN` is isolated to personal Project v2 synchronization.
+- Security-alert workflows now fail closed when RoboCop credentials, installation permissions, Project configuration, or token separation are invalid.
+
 ## 2026-07-24
 ### Added
 - Added repository-automation regression coverage for unchanged, reordered, split, merged, added, and resolved security-alert groupings, including the known stale-ticket set tracked by issue #633.

@@ -1,6 +1,8 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const test = require("node:test");
 
 const {
@@ -262,7 +264,7 @@ test("synchronization preserves canonical project fields and completes supersede
   const openIssues = [issue(10, ["dependabot:1"]), issue(11, ["dependabot:2"])];
   const issueUpdates = [];
   const projectUpdates = [];
-  const github = {
+  const issueGithub = {
     paginate: async () => openIssues,
     rest: {
       issues: {
@@ -288,6 +290,8 @@ test("synchronization preserves canonical project fields and completes supersede
         addAssignees: async () => {},
       },
     },
+  };
+  const projectGithub = {
     graphql: async (query, variables) => {
       if (query.includes("fields(first: 100)")) {
         return {
@@ -335,7 +339,8 @@ test("synchronization preserves canonical project fields and completes supersede
   };
   const messages = [];
   const result = await synchronizeSecurityAlerts({
-    github,
+    issueGithub,
+    projectGithub,
     core: { info: (message) => messages.push(message) },
     context: { repo: { owner: "example", repo: "repo" } },
     projectId: "PROJECT",
@@ -393,6 +398,141 @@ test("synchronization preserves canonical project fields and completes supersede
   assert.equal(messages.length, 2);
 });
 
+test("synchronization sends issue creation, labels, and assignment only through RoboCop", async () => {
+  const issueCalls = [];
+  const projectCalls = [];
+  const createdIssue = {
+    number: 20,
+    node_id: "ISSUE_20",
+    body: "",
+  };
+  const issueGithub = {
+    paginate: async () => [],
+    rest: {
+      issues: {
+        listForRepo() {},
+        create: async (input) => {
+          issueCalls.push({ operation: "create", input });
+          return { data: createdIssue };
+        },
+        update: async (input) => {
+          issueCalls.push({ operation: "update", input });
+          return { data: { ...createdIssue, ...input } };
+        },
+        addLabels: async (input) => {
+          issueCalls.push({ operation: "addLabels", input });
+        },
+        addAssignees: async (input) => {
+          issueCalls.push({ operation: "addAssignees", input });
+        },
+      },
+    },
+  };
+  const projectGithub = {
+    graphql: async (query, variables) => {
+      projectCalls.push({ query, variables });
+      if (query.includes("fields(first: 100)")) {
+        return {
+          node: {
+            fields: {
+              nodes: [
+                {
+                  id: "STATUS",
+                  name: "Status",
+                  dataType: "SINGLE_SELECT",
+                  options: [{ id: "BACKLOG", name: "Backlog" }],
+                },
+                {
+                  id: "DOMAIN",
+                  name: "Domain",
+                  dataType: "SINGLE_SELECT",
+                  options: [{ id: "CI_CD", name: "CI/CD" }],
+                },
+                {
+                  id: "TYPE",
+                  name: "Type",
+                  dataType: "SINGLE_SELECT",
+                  options: [{ id: "SECURITY", name: "Security" }],
+                },
+                {
+                  id: "PRIORITY",
+                  name: "Priority",
+                  dataType: "SINGLE_SELECT",
+                  options: [{ id: "P2", name: "P2" }],
+                },
+                {
+                  id: "SIZE",
+                  name: "Size",
+                  dataType: "SINGLE_SELECT",
+                  options: [{ id: "M", name: "M" }],
+                },
+                {
+                  id: "ESTIMATE",
+                  name: "Estimate",
+                  dataType: "NUMBER",
+                },
+              ],
+            },
+          },
+        };
+      }
+      if (query.includes("items(first: 100")) {
+        return {
+          node: {
+            items: {
+              nodes: [],
+              pageInfo: { hasNextPage: false, endCursor: null },
+            },
+          },
+        };
+      }
+      if (query.includes("addProjectV2ItemById")) {
+        return { addProjectV2ItemById: { item: { id: "ITEM_20" } } };
+      }
+      if (query.includes("updateProjectV2ItemFieldValue")) {
+        return { updateProjectV2ItemFieldValue: { projectV2Item: {} } };
+      }
+      throw new Error(`Unexpected GraphQL operation: ${query}`);
+    },
+  };
+
+  const result = await synchronizeSecurityAlerts({
+    issueGithub,
+    projectGithub,
+    core: { info: () => {} },
+    context: { repo: { owner: "example", repo: "repo" } },
+    projectId: "PROJECT",
+    source: {
+      feed,
+      alerts: [
+        {
+          ref: "dependabot:1",
+          url: "https://example.test/1",
+          package: "one",
+          severity: "medium",
+        },
+      ],
+    },
+    groups: [group(["dependabot:1"])],
+  });
+
+  assert.deepEqual(result, { created: 1, updated: 0, closed: 0 });
+  assert.deepEqual(
+    issueCalls.map(({ operation }) => operation),
+    ["create", "addLabels", "addAssignees"],
+  );
+  assert.equal(
+    projectCalls.some(({ query }) => query.includes("addProjectV2ItemById")),
+    true,
+  );
+  assert.equal(
+    projectCalls.filter(({ query }) =>
+      query.includes("updateProjectV2ItemFieldValue"),
+    ).length,
+    6,
+  );
+});
+
 test("source refs remain parseable and lifecycle notes are replaced idempotently", () => {
   const original = issue(10, ["dependabot:2", "dependabot:1"]).body;
   const first = withLifecycleNote(original, "_Closed once._");
@@ -402,4 +542,141 @@ test("source refs remain parseable and lifecycle notes are replaced idempotently
   assert.equal(second.match(/notoli-security-alert-lifecycle/g)?.length, 1);
   assert.match(second, /Closed with updated context/);
   assert.doesNotMatch(second, /Closed once/);
+});
+
+test("alert workflows scope RoboCop to alert and issue APIs while reserving the personal token for Projects", () => {
+  const repositoryRoot = path.resolve(__dirname, "../../..");
+  const workflowNames = [
+    "alert-codeql.yml",
+    "alert-vulnerability.yml",
+    "alert-malware.yml",
+  ];
+
+  for (const workflowName of workflowNames) {
+    const workflow = fs.readFileSync(
+      path.join(repositoryRoot, ".github", "workflows", workflowName),
+      "utf8",
+    );
+    assert.match(workflow, /uses: actions\/create-github-app-token@v2/);
+    assert.match(workflow, /permission-issues: write/);
+    assert.match(workflow, /permission-security-events: read/);
+    assert.match(
+      workflow,
+      /robocop-token: \$\{\{ steps\.robocop-token\.outputs\.token \}\}/,
+    );
+    assert.match(
+      workflow,
+      /project-token: \$\{\{ secrets\.SECURITY_ALERTS_TOKEN \}\}/,
+    );
+    assert.doesNotMatch(
+      workflow,
+      /robocop-token: \$\{\{ secrets\.SECURITY_ALERTS_TOKEN \}\}/,
+    );
+    if (workflowName === "alert-codeql.yml") {
+      assert.doesNotMatch(workflow, /permission-vulnerability-alerts: read/);
+    } else {
+      assert.match(workflow, /permission-vulnerability-alerts: read/);
+    }
+  }
+
+  const action = fs.readFileSync(
+    path.join(
+      repositoryRoot,
+      ".github",
+      "actions",
+      "security-alerts",
+      "action.yml",
+    ),
+    "utf8",
+  );
+  assert.match(action, /github-token: \$\{\{ inputs\.robocop-token \}\}/);
+  assert.match(
+    action,
+    /const projectGithub = getOctokit\(process\.env\.PROJECT_TOKEN\)/,
+  );
+  assert.match(action, /issueGithub: github/);
+  assert.match(action, /projectGithub,/);
+});
+
+test("reconcile GitHub Script constructs the separate Project client at runtime", async () => {
+  const repositoryRoot = path.resolve(__dirname, "../../..");
+  const action = fs.readFileSync(
+    path.join(
+      repositoryRoot,
+      ".github",
+      "actions",
+      "security-alerts",
+      "action.yml",
+    ),
+    "utf8",
+  );
+  const match = action.match(
+    /    - name: Reconcile grouped issues[\s\S]*?        script: \|\r?\n([\s\S]+)$/,
+  );
+  assert.ok(match, "reconcile GitHub Script should be present");
+  const script = match[1]
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^ {10}/, ""))
+    .join("\n");
+
+  const issueGithub = { kind: "issues" };
+  const projectGithub = { kind: "project" };
+  const core = { info() {} };
+  const context = { repo: { owner: "example", repo: "repo" } };
+  const calls = [];
+  const mockRequire = (request) => {
+    if (request === "fs") {
+      return {
+        readFileSync(file) {
+          if (file === "alerts.json") {
+            return JSON.stringify({ feed: "codeql", alerts: [] });
+          }
+          if (file === "groups.json") {
+            return JSON.stringify({ groups: [] });
+          }
+          throw new Error(`Unexpected file: ${file}`);
+        },
+      };
+    }
+    if (
+      request ===
+      "C:/repo/.github/actions/security-alerts/sync-security-alerts.js"
+    ) {
+      return {
+        async synchronizeSecurityAlerts(input) {
+          calls.push(input);
+        },
+      };
+    }
+    throw new Error(`Unexpected module: ${request}`);
+  };
+  const processMock = {
+    env: {
+      ALERT_PATH: "alerts.json",
+      GROUP_PATH: "groups.json",
+      GITHUB_WORKSPACE: "C:/repo",
+      PROJECT_ID: "project-id",
+      PROJECT_TOKEN: "project-token",
+    },
+  };
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  const getOctokit = (token) => {
+    assert.equal(token, "project-token");
+    return projectGithub;
+  };
+
+  await new AsyncFunction(
+    "require",
+    "github",
+    "core",
+    "context",
+    "process",
+    "getOctokit",
+    script,
+  )(mockRequire, issueGithub, core, context, processMock, getOctokit);
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].issueGithub, issueGithub);
+  assert.equal(calls[0].projectGithub, projectGithub);
+  assert.equal(calls[0].projectId, "project-id");
 });
