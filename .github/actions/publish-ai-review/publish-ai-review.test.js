@@ -468,7 +468,7 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
     renderReviewBody({
       personaName: "Obi-Wan Code-nobi",
       summary:
-        "**APPROVED — NO DISTURBANCE REMAINS IN THIS DIFF.** I searched the shadowed corners: the boundaries hold, the tests stand watch, and the earlier concern has vanished into hyperspace. This code is cleared to continue its journey.",
+        "**Approved.** The credential boundaries hold, the tests cover the risky paths, and the earlier concern is resolved. The course looks clear from here.",
       evidence: [
         "Alert permissions, credential separation, and regression coverage support the verdict.",
       ],
@@ -481,7 +481,7 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
     renderReviewBody({
       personaName: "Lint Eastwood",
       summary:
-        "**CHANGES REQUESTED — ONE OUTLAW IS STILL RIDING WITH THIS BUILD.** Tests crossed the finish line, but lint caught a blocking warning hiding in the new test code. Holster that diagnostic, then send the build down the track again.",
+        "**Changes requested.** Tests made it through, but lint caught one blocking warning in the new test code. Fix that holdout and send the build through again.",
     }),
     "",
     "---",
@@ -506,7 +506,7 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
     renderReviewBody({
       personaName: "Obi-Wan Code-nobi",
       summary:
-        "**CHANGES REQUESTED — A DISTURBANCE REMAINS IN THE PUBLISHING PATH.** Most of this diff is balanced, but one edge case still moves in the shadows and can swallow a new finding. Bring it into the light before proceeding.",
+        "**Changes requested.** Most of the publishing path is sound, but one edge case can still swallow a new finding. Bring that case into the light before proceeding.",
       findings: [
         {
           path: ".github/actions/publish-ai-review/publish-ai-review.js",
