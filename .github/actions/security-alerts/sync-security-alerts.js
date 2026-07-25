@@ -304,7 +304,8 @@ async function setProjectValues(
 }
 
 async function synchronizeSecurityAlerts({
-  github,
+  issueGithub,
+  projectGithub,
   core,
   context,
   projectId,
@@ -312,6 +313,16 @@ async function synchronizeSecurityAlerts({
   groups,
   currentDate = new Date().toISOString().slice(0, 10),
 }) {
+  if (!issueGithub || !projectGithub) {
+    throw new Error(
+      "Separate RoboCop issue and Project v2 GitHub clients are required.",
+    );
+  }
+  if (issueGithub === projectGithub) {
+    throw new Error(
+      "RoboCop issue operations and Project v2 synchronization cannot share a GitHub client.",
+    );
+  }
   const { owner, repo } = context.repo;
   const config = {
     codeql: { label: "codeql", priority: "P1" },
@@ -320,12 +331,15 @@ async function synchronizeSecurityAlerts({
   }[source.feed];
   if (!config) throw new Error(`Unsupported alert feed: ${source.feed}`);
 
-  const openIssues = await github.paginate(github.rest.issues.listForRepo, {
-    owner,
-    repo,
-    state: "open",
-    per_page: 100,
-  });
+  const openIssues = await issueGithub.paginate(
+    issueGithub.rest.issues.listForRepo,
+    {
+      owner,
+      repo,
+      state: "open",
+      per_page: 100,
+    },
+  );
   const plan = planReconciliation({
     feed: source.feed,
     groups,
@@ -336,7 +350,7 @@ async function synchronizeSecurityAlerts({
     return { created: 0, updated: 0, closed: 0 };
   }
 
-  const projectState = await loadProjectState(github, projectId);
+  const projectState = await loadProjectState(projectGithub, projectId);
   const alertByRef = new Map(source.alerts.map((alert) => [alert.ref, alert]));
   const canonicalByRef = new Map();
   let created = 0;
@@ -347,7 +361,7 @@ async function synchronizeSecurityAlerts({
     const body = buildIssueBody(source.feed, group, alertByRef);
     let issue;
     if (existingIssue) {
-      ({ data: issue } = await github.rest.issues.update({
+      ({ data: issue } = await issueGithub.rest.issues.update({
         owner,
         repo,
         issue_number: existingIssue.number,
@@ -356,7 +370,7 @@ async function synchronizeSecurityAlerts({
       }));
       updated += 1;
     } else {
-      ({ data: issue } = await github.rest.issues.create({
+      ({ data: issue } = await issueGithub.rest.issues.create({
         owner,
         repo,
         title: group.title,
@@ -367,27 +381,27 @@ async function synchronizeSecurityAlerts({
       created += 1;
     }
 
-    await github.rest.issues.addLabels({
+    await issueGithub.rest.issues.addLabels({
       owner,
       repo,
       issue_number: issue.number,
       labels: [config.label],
     });
-    await github.rest.issues.addAssignees({
+    await issueGithub.rest.issues.addAssignees({
       owner,
       repo,
       issue_number: issue.number,
       assignees: [owner],
     });
     const projectItem = await ensureProjectItem(
-      github,
+      projectGithub,
       projectId,
       projectState,
       issue,
     );
     if (!existingIssue || projectItem.added) {
       await setProjectValues(
-        github,
+        projectGithub,
         projectId,
         projectState,
         projectItem.itemId,
@@ -432,14 +446,14 @@ async function synchronizeSecurityAlerts({
         completedValues["End date"] = currentDate;
       }
       await setProjectValues(
-        github,
+        projectGithub,
         projectId,
         projectState,
         projectItemId,
         completedValues,
       );
     }
-    await github.rest.issues.update({
+    await issueGithub.rest.issues.update({
       owner,
       repo,
       issue_number: staleIssue.number,

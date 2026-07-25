@@ -4,8 +4,11 @@ inputs:
   feed:
     description: Alert feed to aggregate.
     required: true
-  github-token:
-    description: Token with alert, issue, label, and Project v2 access.
+  robocop-token:
+    description: RoboCop installation token with security-events read and issues write access.
+    required: true
+  project-token:
+    description: Token used only for GitHub Project v2 reads and writes.
     required: true
   openai-api-key:
     description: OpenAI API key.
@@ -27,11 +30,36 @@ runs:
       run: |
         echo "FEED=$FEED" >> "$GITHUB_ENV"
         echo "PROJECT_ID=$PROJECT_ID" >> "$GITHUB_ENV"
+    - name: Validate aggregation configuration
+      shell: bash
+      env:
+        ROBOCOP_TOKEN: ${{ inputs.robocop-token }}
+        PROJECT_TOKEN: ${{ inputs.project-token }}
+      run: |
+        if [ -z "$ROBOCOP_TOKEN" ]; then
+          echo "RoboCop did not produce an installation token." >&2
+          echo "Verify ROBOCOP_APP_ID, ROBOCOP_PRIVATE_KEY, the app installation, and its Issues/Security events permissions." >&2
+          exit 1
+        fi
+        if [ -z "$PROJECT_TOKEN" ]; then
+          echo "Missing SECURITY_ALERTS_TOKEN for GitHub Project v2 synchronization." >&2
+          exit 1
+        fi
+        if [ "$ROBOCOP_TOKEN" = "$PROJECT_TOKEN" ]; then
+          echo "RoboCop issue operations and Project v2 synchronization must use separate credentials." >&2
+          exit 1
+        fi
+        if [ -z "$PROJECT_ID" ]; then
+          echo "Missing repository variable SECURITY_ALERTS_PROJECT_ID." >&2
+          echo "Set it to the node ID of the Notoli GitHub Project before running this workflow." >&2
+          exit 1
+        fi
+
     - name: Fetch open structured alerts
       id: alerts
       uses: actions/github-script@v8
       with:
-        github-token: ${{ inputs.github-token }}
+        github-token: ${{ inputs.robocop-token }}
         script: |
           const fs = require('fs');
           const path = `${process.env.RUNNER_TEMP}/security-alerts.json`;
@@ -90,15 +118,6 @@ runs:
           core.setOutput('has_alerts', String(alerts.length > 0));
           core.info(`Found ${alerts.length} open ${feed} alert(s) eligible for aggregation.`);
 
-    - name: Validate aggregation configuration
-      shell: bash
-      run: |
-        if [ -z "$PROJECT_ID" ]; then
-          echo "Missing repository variable SECURITY_ALERTS_PROJECT_ID." >&2
-          echo "Set it to the node ID of the Notoli GitHub Project before running this workflow." >&2
-          exit 1
-        fi
-
     - name: Draft grouped work items with OpenAI
       if: steps.alerts.outputs.has_alerts == 'true'
       id: openai
@@ -126,7 +145,7 @@ runs:
         GROUP_PATH: ${{ runner.temp }}/security-alert-groups.json
         LLM_OUTPUT: ${{ steps.openai.outputs.content }}
       with:
-        github-token: ${{ inputs.github-token }}
+        github-token: ${{ inputs.robocop-token }}
         script: |
           const fs = require('fs');
           const source = JSON.parse(fs.readFileSync(process.env.ALERT_PATH, 'utf8'));
@@ -176,7 +195,7 @@ runs:
         ALERT_PATH: ${{ runner.temp }}/security-alerts.json
         GROUP_PATH: ${{ runner.temp }}/security-alert-groups.json
       with:
-        github-token: ${{ inputs.github-token }}
+        github-token: ${{ inputs.robocop-token }}
         script: |
           const fs = require('fs');
           const source = JSON.parse(fs.readFileSync(process.env.ALERT_PATH, 'utf8'));
@@ -186,21 +205,24 @@ runs:
           );
 
     - name: Reconcile grouped issues
-      uses: actions/github-script@v8
+      uses: actions/github-script@v9
       env:
         ALERT_PATH: ${{ runner.temp }}/security-alerts.json
         GROUP_PATH: ${{ runner.temp }}/security-alert-groups.json
+        PROJECT_TOKEN: ${{ inputs.project-token }}
       with:
-        github-token: ${{ inputs.github-token }}
+        github-token: ${{ inputs.robocop-token }}
         script: |
           const fs = require('fs');
           const source = JSON.parse(fs.readFileSync(process.env.ALERT_PATH, 'utf8'));
           const { groups } = JSON.parse(fs.readFileSync(process.env.GROUP_PATH, 'utf8'));
+          const projectGithub = getOctokit(process.env.PROJECT_TOKEN);
           const { synchronizeSecurityAlerts } = require(
             `${process.env.GITHUB_WORKSPACE}/.github/actions/security-alerts/sync-security-alerts.js`,
           );
           await synchronizeSecurityAlerts({
-            github,
+            issueGithub: github,
+            projectGithub,
             core,
             context,
             projectId: process.env.PROJECT_ID,
