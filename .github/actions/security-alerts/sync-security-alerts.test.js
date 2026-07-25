@@ -533,22 +533,6 @@ test("synchronization sends issue creation, labels, and assignment only through 
   );
 });
 
-test("synchronization rejects a shared issue and Project client", async () => {
-  const sharedGithub = {};
-  await assert.rejects(
-    synchronizeSecurityAlerts({
-      issueGithub: sharedGithub,
-      projectGithub: sharedGithub,
-      core: { info: () => {} },
-      context: { repo: { owner: "example", repo: "repo" } },
-      projectId: "PROJECT",
-      source: { feed, alerts: [] },
-      groups: [],
-    }),
-    /cannot share a GitHub client/,
-  );
-});
-
 test("source refs remain parseable and lifecycle notes are replaced idempotently", () => {
   const original = issue(10, ["dependabot:2", "dependabot:1"]).body;
   const first = withLifecycleNote(original, "_Closed once._");

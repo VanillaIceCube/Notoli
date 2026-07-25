@@ -318,11 +318,6 @@ async function synchronizeSecurityAlerts({
       "Separate RoboCop issue and Project v2 GitHub clients are required.",
     );
   }
-  if (issueGithub === projectGithub) {
-    throw new Error(
-      "RoboCop issue operations and Project v2 synchronization cannot share a GitHub client.",
-    );
-  }
   const { owner, repo } = context.repo;
   const config = {
     codeql: { label: "codeql", priority: "P1" },
