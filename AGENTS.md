@@ -104,9 +104,17 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - `npm start`
 
 ## Setup (Docker)
-1) Create a `.env` in `deploy/` (see `deploy/backend.env` for keys).
+1) For source iteration without the production proxy, use the hot-reload development stack:
+   - Create a `.env` in `deploy/` from `deploy/backend.env`.
+   - Create the SQLite bind-mount file with `New-Item -ItemType File -Path deploy/db.sqlite3 -Force`.
+   - Start with `docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml up --build -d`.
+   - Run migrations with `docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate`.
+   - Open `http://notoli.localhost:3000`; Django is available at `http://notoli.localhost:8000`.
+   - Both ports bind to localhost only. Override them with `NOTOLI_DEV_FRONTEND_PORT` and `NOTOLI_DEV_BACKEND_PORT` in `deploy/.env`.
+   - Stop with `docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml down`.
+2) The production-shaped Docker stack needs a `.env` in `deploy/` (see `deploy/backend.env` for keys).
    - On servers, ensure the `.env` lives next to `docker-compose.yml` (it is hidden).
-2) Ensure the TLS cert files exist for the reverse proxy:
+3) Ensure the TLS cert files exist for the reverse proxy:
    - Production (Cloudflare Origin Certificate):
      - `/root/apps/notoli/certs/origin.pem`
      - `/root/apps/notoli/certs/origin.key`
@@ -114,19 +122,19 @@ Use the same script as the Codex maintenance script so cached containers refresh
      - `CLOUDFLARE_ORIGIN_CERT_PEM` (raw PEM of `origin.pem`)
      - `CLOUDFLARE_ORIGIN_KEY_PEM` (raw PEM of `origin.key`)
    - These are mounted into the proxy container as `/etc/nginx/certs` (see `deploy/docker-compose.yml`).
-3) Ensure the SQLite file exists when using the bind mount:
+4) Ensure the SQLite file exists when using the bind mount:
    - `cd deploy`
    - `touch db.sqlite3` (prevents Docker from creating a directory named `db.sqlite3`).
    - If Docker already created `deploy/db.sqlite3` as a directory, stop the stack, remove the empty directory, and recreate it as a file.
-4) Start:
+5) Start:
    - `cd deploy`
    - `docker compose up -d`
-5) For local Docker runs that should use the current checkout rather than published GHCR images, rebuild first:
+6) For local Docker runs that should use the current checkout rather than published GHCR images, rebuild first:
    - `docker build -t ghcr.io/vanillaicecube/notoli-backend:latest ./backend`
    - `docker build --build-arg REACT_APP_API_BASE_URL= -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend`
    - The backend image uses the maintained `condaforge/miniforge3` base image.
    - The frontend image uses `npm ci`, so keep `frontend/package-lock.json` in sync with `frontend/package.json`.
-6) The included reverse proxy serves the production frontend at `https://notoli.judeandrewalaba.com/` when local DNS/hosts point that name at your machine. HTTP redirects to HTTPS.
+7) The included reverse proxy serves the production frontend at `https://notoli.judeandrewalaba.com/` when local DNS/hosts point that name at your machine. HTTP redirects to HTTPS.
    Backend is exposed on the direct port:
    - `http://localhost:8000`
    Frontend is still available at `http://localhost:3000`.

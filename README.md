@@ -36,6 +36,24 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - CI/CD + automation: [`.github/README-WORKFLOWS.md`](.github/README-WORKFLOWS.md)
 - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
 
+## Docker hot-reload development
+
+For fast source iteration without rebuilding the production images:
+
+```powershell
+Copy-Item deploy/backend.env deploy/.env
+New-Item -ItemType File -Path deploy/db.sqlite3 -Force
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml up --build -d
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate
+```
+
+Open `http://notoli.localhost:3000`. React and Django reload mounted source
+changes, and the frontend calls Django at `http://notoli.localhost:8000`.
+Both ports bind to localhost only. Set `NOTOLI_DEV_FRONTEND_PORT` or
+`NOTOLI_DEV_BACKEND_PORT` in `deploy/.env` to override them. See
+[`deploy/README.md`](deploy/README.md) for the separate production-shaped
+Nginx and TLS workflow.
+
 ## 📜 License
 This project is licensed under a **Modified MIT License (Non-Commercial Use Only)**.
 See the [LICENSE](./LICENSE) file for full details.

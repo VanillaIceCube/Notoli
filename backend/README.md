@@ -61,6 +61,20 @@ python backend/manage.py runserver 8000
 
 For local non-Docker runs, Django auto-loads `backend/.env` (via `python-dotenv`) before reading `DJANGO_*` settings.
 
+## Docker hot reload
+
+The development Compose workflow builds `backend/Dockerfile.dev`, mounts the
+backend source, and runs Django's autoreloading development server:
+
+```powershell
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml up --build -d backend
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate
+```
+
+The development backend listens on `http://notoli.localhost:8000` by default.
+Use the production Dockerfile and Compose file when testing Gunicorn, Nginx,
+HTTPS, or deployment-shaped behavior.
+
 Run tests:
 
 ```bash

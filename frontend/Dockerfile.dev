@@ -5,10 +5,12 @@ WORKDIR /frontend
 
 # Copy package.json and package-lock.json and install Node.js dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copy your React project code
 COPY . .
+
+ENV HOST=0.0.0.0
 
 # Document dev server port
 EXPOSE 3000

@@ -34,6 +34,32 @@ Optional: provision via GitHub Actions Secrets (recommended for repeatable deplo
 
 Local dev (optional): you can generate a self-signed cert for `localhost` and place it in `certs/`.
 
+## Docker hot-reload development
+
+Use the development Compose file for fast source iteration. It mounts both
+source trees, runs React's hot-reload server and Django's autoreloading
+development server, and does not start the production Nginx proxy or require a
+certificate:
+
+```powershell
+Copy-Item deploy/backend.env deploy/.env
+New-Item -ItemType File -Path deploy/db.sqlite3 -Force
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml up --build -d
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate
+```
+
+Open `http://notoli.localhost:3000`; the frontend calls Django at
+`http://notoli.localhost:8000`. Both host ports bind to localhost only. Set
+`NOTOLI_DEV_FRONTEND_PORT` or `NOTOLI_DEV_BACKEND_PORT` in `deploy/.env` to
+override the default ports. Stop the development stack with:
+
+```powershell
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml down
+```
+
+Use the production-shaped workflow below when testing Nginx, HTTPS, or the
+deployment images.
+
 ## Local Docker Setup
 These steps run the production-style Docker stack locally: frontend, backend, and the Nginx reverse proxy. For local subdomain testing, add `127.0.0.1 notoli.judeandrewalaba.com` to your hosts file or use `curl --resolve`.
 

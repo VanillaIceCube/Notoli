@@ -1,0 +1,14 @@
+FROM condaforge/miniforge3
+
+WORKDIR /backend
+
+COPY environment.yml requirements.txt ./
+RUN conda env create -f environment.yml && conda clean --all -y
+
+ENV PATH="/opt/conda/envs/notoli_env/bin:$PATH" \
+    DJANGO_SETTINGS_MODULE=app.settings \
+    PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

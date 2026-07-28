@@ -10,6 +10,12 @@ All notable changes to this project are documented in this file.
 - Followed GitHub Advisory API cursor pagination in the npm malware gate so Dependabot npm checks no longer loop over the first page until the job timeout.
 - Pinned `dependabot/fetch-metadata` to an immutable `v3.1.0` commit in the auto-merge workflow so CodeQL no longer reports an unpinned third-party action.
 
+## 2026-07-27
+### Added
+- Added a localhost-only Docker Compose development workflow with mounted
+  Django and React source for hot reload, independent of the production Nginx
+  and TLS stack.
+
 ## 2026-07-25
 ### Added
 - Added regression coverage proving RoboCop performs every security-alert issue mutation while the personal credential is limited to Project v2 operations.
