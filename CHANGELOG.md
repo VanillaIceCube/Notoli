@@ -23,8 +23,6 @@ All notable changes to this project are documented in this file.
 ### Changed
 - Pinned the Docker development backend's Miniforge 24.04 base image to a
   reviewed immutable digest.
-- Made the main-branch CodeQL trigger unfiltered so every default-branch push
-  refreshes the GitHub Security analysis baseline.
 
 ## 2026-07-25
 ### Added
