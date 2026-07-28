@@ -54,6 +54,14 @@ Both ports bind to localhost only. Set `NOTOLI_DEV_FRONTEND_PORT` or
 [`deploy/README.md`](deploy/README.md) for the separate production-shaped
 Nginx and TLS workflow.
 
+The frontend synchronizes its Docker `node_modules` volume with `package.json`
+and `package-lock.json` at container start. After changing either dependency
+file, restart the frontend service:
+
+```powershell
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart frontend
+```
+
 ## 📜 License
 This project is licensed under a **Modified MIT License (Non-Commercial Use Only)**.
 See the [LICENSE](./LICENSE) file for full details.

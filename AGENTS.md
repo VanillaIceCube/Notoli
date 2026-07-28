@@ -111,6 +111,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - Run migrations with `docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate`.
    - Open `http://notoli.localhost:3000`; Django is available at `http://notoli.localhost:8000`.
    - Both ports bind to localhost only. Override them with `NOTOLI_DEV_FRONTEND_PORT` and `NOTOLI_DEV_BACKEND_PORT` in `deploy/.env`.
+   - The frontend checks `package.json` and `package-lock.json` at each container start and runs `npm ci` when they change. After changing either file, restart the frontend service.
    - Stop with `docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml down`.
 2) The production-shaped Docker stack needs a `.env` in `deploy/` (see `deploy/backend.env` for keys).
    - On servers, ensure the `.env` lives next to `docker-compose.yml` (it is hidden).

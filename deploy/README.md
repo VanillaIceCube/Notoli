@@ -57,6 +57,15 @@ override the default ports. Stop the development stack with:
 docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml down
 ```
 
+The frontend's persistent `node_modules` volume is checked against
+`package.json` and `package-lock.json` whenever the container starts. After
+changing either dependency file, restart the frontend so it runs `npm ci` and
+refreshes that volume:
+
+```powershell
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart frontend
+```
+
 Use the production-shaped workflow below when testing Nginx, HTTPS, or the
 deployment images.
 

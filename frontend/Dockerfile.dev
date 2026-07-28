@@ -12,8 +12,12 @@ COPY . .
 
 ENV HOST=0.0.0.0
 
+COPY docker-entrypoint-dev.sh /usr/local/bin/docker-entrypoint-dev
+RUN chmod +x /usr/local/bin/docker-entrypoint-dev
+
 # Document dev server port
 EXPOSE 3000
 
 # Run React server
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint-dev"]
 CMD ["npm", "start"]

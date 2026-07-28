@@ -15,6 +15,9 @@ All notable changes to this project are documented in this file.
 - Added a localhost-only Docker Compose development workflow with mounted
   Django and React source for hot reload, independent of the production Nginx
   and TLS stack.
+### Fixed
+- Made the Docker development frontend refresh its persistent dependencies
+  when its package manifest or lockfile changes.
 
 ## 2026-07-25
 ### Added
