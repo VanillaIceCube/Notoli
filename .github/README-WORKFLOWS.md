@@ -96,10 +96,11 @@ CodeQL details:
 - Pull request CodeQL uses the reusable workflow's change-detection job, following the same skip-by-scope pattern as linting and testing; documentation-only and unrelated pull requests run the detector but skip analysis jobs.
 - For a CodeQL-relevant pull request, Python and JavaScript/TypeScript analysis use language-specific filters, while GitHub Actions analysis runs so the `/language:actions` configuration remains present for code-scanning comparisons.
 - CI ignores pull requests targeting `env-prod`, so CodeQL is not invoked for that deployment branch.
-- Every unfiltered push to `main`, weekly scheduled scans, and manual
-  `workflow_dispatch` runs are supported directly by `gate-codeql.yml`. The
-  unfiltered default-branch trigger keeps current CodeQL results and alerts
-  visible in GitHub Security.
+- Every unfiltered push to `main` invokes `gate-codeql.yml` through
+  `ci-orchestrator.yml`; only CodeQL runs for that event. This caller-level
+  trigger keeps current CodeQL results and alerts visible in GitHub Security.
+  Weekly scheduled scans and manual `workflow_dispatch` runs remain supported
+  directly by `gate-codeql.yml`.
 - CodeQL uploads SARIF results to GitHub Code Scanning with scoped permissions: `contents: read`, `pull-requests: read`, `actions: read`, and `security-events: write`.
 - Results appear in PR checks and under GitHub Security -> Code scanning when code scanning is enabled for the repository.
 - CodeQL uses the `security-extended` and `security-and-quality` query suites for Python, JavaScript/TypeScript, and GitHub Actions workflow analysis.
