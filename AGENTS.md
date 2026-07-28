@@ -111,6 +111,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - Run migrations with `docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate`.
    - Open `http://notoli.localhost:3000`; Django is available at `http://notoli.localhost:8000`.
    - Both ports bind to localhost only. Override them with `NOTOLI_DEV_FRONTEND_PORT` and `NOTOLI_DEV_BACKEND_PORT` in `deploy/.env`.
+   - A blank `DJANGO_SECRET_KEY` receives a Compose-only development fallback so the fresh stack can authenticate locally. Set a unique secret before using the production-shaped stack.
    - The frontend checks `package.json` and `package-lock.json` at each container start and runs `npm ci` when they change. After changing either file, restart the frontend service.
    - Stop with `docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml down`.
 2) The production-shaped Docker stack needs a `.env` in `deploy/` (see `deploy/backend.env` for keys).
@@ -133,7 +134,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
 6) For local Docker runs that should use the current checkout rather than published GHCR images, rebuild first:
    - `docker build -t ghcr.io/vanillaicecube/notoli-backend:latest ./backend`
    - `docker build --build-arg REACT_APP_API_BASE_URL= -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend`
-   - The backend image uses the maintained `condaforge/miniforge3` base image.
+   - The development backend image is pinned to the reviewed `condaforge/miniforge3` 24.04 digest. Update that digest only through an explicit image-version and security review.
    - The frontend image uses `npm ci`, so keep `frontend/package-lock.json` in sync with `frontend/package.json`.
 7) The included reverse proxy serves the production frontend at `https://notoli.judeandrewalaba.com/` when local DNS/hosts point that name at your machine. HTTP redirects to HTTPS.
    Backend is exposed on the direct port:

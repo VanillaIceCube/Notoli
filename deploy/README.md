@@ -57,6 +57,12 @@ override the default ports. Stop the development stack with:
 docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml down
 ```
 
+`deploy/backend.env` leaves `DJANGO_SECRET_KEY` blank because the
+production-shaped stack requires a unique deployment secret. The development
+Compose file supplies a local-only fallback for a blank value, allowing the
+fresh setup above to register and log in. Do not use that fallback outside
+local development.
+
 The frontend's persistent `node_modules` volume is checked against
 `package.json` and `package-lock.json` whenever the container starts. After
 changing either dependency file, restart the frontend so it runs `npm ci` and
@@ -122,7 +128,9 @@ docker build --build-arg REACT_APP_API_BASE_URL= \
   -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend
 ```
 
-The backend image builds from the maintained `condaforge/miniforge3` base image.
+The development backend image builds from the reviewed,
+digest-pinned `condaforge/miniforge3` 24.04 base image. Update its digest only
+through an explicit image-version and security review.
 The frontend image uses `npm ci`, so `frontend/package-lock.json` must stay in sync
 with `frontend/package.json`.
 

@@ -18,6 +18,11 @@ All notable changes to this project are documented in this file.
 ### Fixed
 - Made the Docker development frontend refresh its persistent dependencies
   when its package manifest or lockfile changes.
+- Made a freshly copied Docker development environment use a local-only Django
+  secret fallback so authentication and JWT issuance work without manual setup.
+### Changed
+- Pinned the Docker development backend's Miniforge 24.04 base image to a
+  reviewed immutable digest.
 
 ## 2026-07-25
 ### Added

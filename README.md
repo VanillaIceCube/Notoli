@@ -54,6 +54,11 @@ Both ports bind to localhost only. Set `NOTOLI_DEV_FRONTEND_PORT` or
 [`deploy/README.md`](deploy/README.md) for the separate production-shaped
 Nginx and TLS workflow.
 
+The development Compose file supplies a local-only fallback when
+`DJANGO_SECRET_KEY` is blank, so a newly copied `deploy/.env` can register and
+log in immediately. Set a unique secret before using the production-shaped
+stack.
+
 The frontend synchronizes its Docker `node_modules` volume with `package.json`
 and `package-lock.json` at container start. After changing either dependency
 file, restart the frontend service:
