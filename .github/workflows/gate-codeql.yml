@@ -3,14 +3,10 @@ name: CodeQL Gate
 on:
   workflow_call:
   push:
+    # Keep default-branch CodeQL unfiltered so every main commit uploads a
+    # current baseline to GitHub Security and code-scanning alerts stay visible.
     branches:
       - main
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - ".github/actions/**"
-      - ".github/workflows/**"
-      - ".github/codeql/**"
   schedule:
     - cron: "24 10 * * 1"
   workflow_dispatch:
