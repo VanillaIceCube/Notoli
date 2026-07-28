@@ -1,4 +1,5 @@
 # Changelog
+
 All notable changes to this project are documented in this file.
 
 ## 2026-08-22
@@ -11,74 +12,108 @@ All notable changes to this project are documented in this file.
 - Pinned `dependabot/fetch-metadata` to an immutable `v3.1.0` commit in the auto-merge workflow so CodeQL no longer reports an unpinned third-party action.
 
 ## 2026-07-27
+
 ### Added
+
 - Added a localhost-only Docker Compose development workflow with mounted
   Django and React source for hot reload, independent of the production Nginx
   and TLS stack.
+
 ### Fixed
+
 - Made the Docker development frontend refresh its persistent dependencies
   when its package manifest or lockfile changes.
 - Made a freshly copied Docker development environment use a local-only Django
   secret fallback so authentication and JWT issuance work without manual setup.
+
 ### Changed
+
 - Pinned the Docker development backend's Miniforge 24.04 base image to a
   reviewed immutable digest.
 - Made the main-branch CodeQL trigger unfiltered so every default-branch push
   refreshes the GitHub Security analysis baseline.
 
 ## 2026-07-25
+
 ### Added
+
 - Added regression coverage proving RoboCop performs every security-alert issue mutation while the personal credential is limited to Project v2 operations.
 - Added behavioral AI-review fixtures for persona approvals, actionable findings, infrastructure-only comments, unchanged reviews, duplicate suppression, unplaceable findings, malformed responses, and reviewer availability.
+
 ### Fixed
+
 - Added the missing `Dependabot alerts: read` permission to the vulnerability and malware RoboCop tokens using the token action's supported `vulnerability-alerts` input.
+
 ### Changed
+
 - CodeQL, vulnerability, and malware aggregation now uses a least-privilege RoboCop installation token for alert reads and all issue authoring, while `SECURITY_ALERTS_TOKEN` is isolated to personal Project v2 synchronization.
 - Security-alert workflows now fail closed when RoboCop credentials, installation permissions, Project configuration, or token separation are invalid.
 - AI review personas now return one structured semantic contract with varied, model-authored verdict prose: Obi-Wan and Lint Eastwood use natural, lightly characterful framing, while RoboCop keeps a bolder enforcement-terminal voice; the shared publisher renders emoji-led identity and every visible group as an underlined `##` heading, omits empty groups, and keeps automation diagnostics in workflow logs.
 
 ## 2026-07-24
+
 ### Added
+
 - Added repository-automation regression coverage for unchanged, reordered, split, merged, added, and resolved security-alert groupings, including the known stale-ticket set tracked by issue #633.
 - Added one-per-commit native AI-review availability notices for exhausted OpenAI quota or tokens, invalid credentials, service failures, and unusable model responses.
+
 ### Fixed
+
 - Reconciled workflow-managed security tickets by their underlying CodeQL or Dependabot alert references so AI grouping changes no longer leave overlapping open issues.
 - Closed superseded or empty managed tickets with retained source links and lifecycle context, including when a feed has no current alerts.
+
 ### Changed
+
 - Reused current security tickets now preserve existing labels, assignees, and GitHub Project fields; only new or newly added Project items receive default planning fields.
 - OpenAI request failures now emit warning annotations and workflow summaries with quota, token, credential, and service-recovery guidance.
 - Path-filter API failures now emit explicit error annotations and workflow summaries explaining that scope detection did not run and the workflow must be retried.
 - Repository automation CI now runs the security-alert reconciler tests alongside the AI review publisher tests when either action changes.
 
 ## 2026-07-22
+
 ### Added
+
 - Added a dedicated repository automation test job and colocated Node regression coverage for preserving unplaceable AI review findings when duplicate inline comments are suppressed.
+
 ### Changed
+
 - Automated frontend and backend lint-fix commits now use a short-lived Lint Eastwood GitHub App token and the app bot's dynamically resolved noreply identity, while fork and Dependabot pull requests use the standard pull-request checkout with a no-secret, strict-check-only lint path.
 - Lint jobs now share one local action for Lint Eastwood identity and push-credential setup, and remove the credential from the Git remote immediately after each auto-commit attempt.
 - Extracted AI review publishing into a directly testable helper beside its GitHub Action instead of testing workflow YAML through the frontend Jest suite.
 - Limited secret-dependent AI persona workflows to trusted same-repository, non-Dependabot pull requests; fork and Dependabot pull requests now rely on the independent required gate output when checks fail.
 
 ## 2026-07-21
+
 ### Fixed
+
 - Aligned daily security-alert project fields with the current Notoli board options so CodeQL and vulnerability issue synchronization no longer fails after creating or updating tickets.
 - Corrected npm malware advisory pagination for `actions/github-script@v8` so the scheduled malware aggregation can fetch all advisory pages.
 
 ## 2026-07-12
+
 ### Added
+
 - Added shared AI review actions that collect each persona's prior native PR reviews and publish deduplicated native reviews.
+
 ### Fixed
+
 - Reserved the notepad page title height while board and list titles are loading so existing rows do not shift when the title resolves.
 - Kept the current notepad page visible while the next board or list route loads, avoiding full-page loading flashes during navigation.
+
 ### Changed
+
 - AI review personas now receive prior-review context, use concise Markdown body sections with clearer line breaks and restrained section-heading emojis, and apply more recognizable prompt-guided persona voice.
 - Dependabot pull requests now request AI reviews only on failed gates: Lint Eastwood for lint/test failures and RoboCop for CodeQL, vulnerability, or malware failures, while Obi-Wan Code-nobi remains skipped.
 
 ## 2026-07-11
+
 ### Added
+
 - Added three AI pull-request review personas: RoboCop for security review, Lint Eastwood for build/lint/test failure review, and Obi-Wan Code-nobi for general code review.
 - Added reusable AI Build Sheriff and AI Security Review workflows with separate GitHub App identities for native pull request reviews.
+
 ### Changed
+
 - Security gates now provide evidence outputs for RoboCop instead of posting separate PR comments, while continuing to fail independently.
 - CI now routes lint/test evidence to Lint Eastwood, security evidence to RoboCop, and general implementation review to Obi-Wan Code-nobi.
 - Lint Eastwood and RoboCop now publish reviews on every pull request and request changes when their owned checks produce actionable failures.
@@ -95,24 +130,34 @@ All notable changes to this project are documented in this file.
 - Fixed Obi-Wan Code-nobi's changed-file context budget loop so byte accounting persists across files and fails if the budget is exceeded.
 
 ## 2026-07-10
+
 ### Changed
+
 - Run the AI code review for Dependabot pull requests only when linting or tests fail, while continuing to skip AI calls for healthy dependency updates.
 
 ## 2026-07-10
+
 ### Added
+
 - Added default personal-board starter lists and notes for newly registered users.
+
 ### Changed
+
 - Capitalized the first letter of email-prefix fallback names for new users' default boards.
 
 ## 2026-07-10
+
 ### Added
+
 - Added Notoli browser, install, and Apple-touch branding metadata with a native Notoli mark.
 - Added daily/manual LLM-based CodeQL, Dependabot vulnerability, and Dependabot malware alert aggregation workflows with validated, idempotent GitHub issue and project-field synchronization, repository-owner assignment, and gray feed tags.
 - Added PR-time dependency vulnerability and npm malware gates to the reusable CI flow.
 - Added PR-visible malware summaries and dependency checks to Dependabot auto-merge prerequisites.
 - Added notification board/list/note navigation context and `target_path` routing metadata for shared board activity.
 - Added completion-specific shared note notifications when a note transitions to `Complete`.
+
 ### Fixed
+
 - Capitalized default board names when registration auto-derives the username from the email prefix.
 - Updated OpenAI GitHub automation to use the Responses API with `gpt-5.6-luna` and omit unsupported temperature settings.
 - Prevented AppBar title flicker during list-to-board navigation by ignoring stale title requests.
@@ -123,7 +168,9 @@ All notable changes to this project are documented in this file.
 - Matched CodeQL pull-request scope detection to the lint/test pattern, skipping analysis for unrelated changes and retaining the Actions configuration for relevant PR comparisons.
 - Prevented repeated saves of an already-complete note from creating duplicate completion notifications.
 - Confirmed duplicate collaborator-add attempts do not create extra notifications.
+
 ### Changed
+
 - Capitalized the generated default board suffix to `Board` for new users.
 - Themed the notes empty state and slowed the active pull-to-refresh spinner.
 - Renamed the security-alert workflow files to concise `alerts-*` and `security-alerts` names, and corrected their Dependabot and Project-token permission model.
@@ -143,7 +190,9 @@ All notable changes to this project are documented in this file.
 - Reduced empty-state spacing in the notification panel.
 
 ## 2026-07-09
+
 ### Added
+
 - Added a CodeQL analysis workflow for backend Python, frontend JavaScript/TypeScript, and GitHub Actions workflow scanning.
 - Added recipient-scoped in-app notifications with API endpoints for listing and marking notifications read.
 - Added a dedicated backend `notifications` app to own notification models, API routes, admin, services, and tests.
@@ -152,23 +201,33 @@ All notable changes to this project are documented in this file.
 - Added board membership-change notifications when collaborators are added or removed.
 - Added notification generation for shared board list updates and board/list/note deletions, including board-name snapshots for deleted-board notifications.
 - Added notification generation for shared board renames.
+
 ### Fixed
+
 - Returned explicit 403 details when shared board collaborators try to update or delete board metadata.
 - Made shared board collaborator access read-only in the sharing dialog without presenting invite or remove controls.
 - Added regression coverage for collaborator attempts to remove board collaborators.
 - Kept existing board/list/note rows visible during background refreshes and refresh failures.
+
 ### Changed
+
 - Pinned the `dorny/paths-filter` GitHub Action to an immutable commit in CI workflows.
 
 ## 2026-07-08
+
 ### Fixed
+
 - Allowed BoardList row-started mobile pull-to-refresh gestures to refresh consistently.
 
 ## 2026-07-07
+
 ### Added
+
 - Remembered the last accessible board per logged-in browser user and reopened it by default.
 - Added shared frontend notepad page components for page layout, inline editing, action menus, and sortable rows.
+
 ### Changed
+
 - Renamed frontend app shell and collection page components to `AppHeader`, `BoardNavigationDrawer`, `AppSnackbar`, `BoardListsPage`, and `ListTasksPage`.
 - Refactored the board lists and list tasks pages to share reusable notepad page UI while keeping page-specific data behavior local.
 - Rebranded the product hierarchy from Workspace/TodoList/Note to Board/List/Note across backend models, API routes, frontend routes, UI copy, tests, and docs.
@@ -177,20 +236,30 @@ All notable changes to this project are documented in this file.
 - Made board membership the source of truth for list and note access, removing item-level owner and collaborator fields.
 
 ## 2026-07-06
+
 ### Added
+
 - Added mobile swipe gestures to open the right drawer and pull down to refresh note and todo-list pages.
+
 ### Fixed
+
 - Added matching edit, reorder, and delete icons to main todo-list and note row action menus.
 - Locked note and todo-list reorder drag previews to the vertical axis.
+
 ### Changed
+
 - Removed verification evidence guidance from the agent instructions.
 
 ## 2026-07-05
+
 ### Fixed
+
 - Enabled mobile touch dragging from reorder handles for todo lists and notes.
 
 ## 2026-07-04
+
 ### Added
+
 - Added drag-and-drop reorder mode for workspace todo-list rows and todo-list note rows.
 - Added scoped reorder API endpoints for todo lists and notes.
 - Added per-workspace todo-list positions and per-todo-list note membership positions.
@@ -201,10 +270,14 @@ All notable changes to this project are documented in this file.
 - Added backend and frontend tests for note status behavior.
 
 ## 2026-07-03
+
 ### Added
+
 - Added a frontend style guide with dialog divider guidance.
 - Moved workspace sharing access into the right sidebar workspace action menu.
+
 ### Fixed
+
 - Added matching icons to Edit and Delete workspace menu actions.
 - Moved workspace sharing add/remove errors to the app snackbar and refined sharing dialog member details.
 - Condensed the workspace sharing dialog into compact owner/collaborator sections with less repeated identity text.
@@ -216,29 +289,43 @@ All notable changes to this project are documented in this file.
 - Removed obsolete Docker Compose and Nginx HTTP/2 syntax warnings from local/proxy startup.
 - Switched the backend Docker image to the maintained `condaforge/miniforge3` base image.
 - Made frontend Prettier checks pass on Windows checkouts that use Git's default CRLF working-tree conversion.
+
 ### Changed
+
 - Removed the standalone Workspaces page; the root route now redirects authenticated users to their first workspace when possible.
 - Made frontend Docker builds use `npm ci` for lockfile-reproducible installs.
 - Applied existing backend Ruff and frontend Prettier formatting so local format checks pass.
 
 ## 2026-06-30
+
 ### Added
+
 - Added workspace sharing UI for viewing owners/collaborators and owner-only collaborator add/remove actions.
 - Added workspace collaborator API actions for adding users by username/email and removing collaborators.
+
 ### Fixed
+
 - Made shared workspace membership sufficient to retrieve newly created child todo lists and notes while preserving item-level collaborator access as additive sharing.
 
 ## 2026-06-29
+
 ### Changed
+
 - Renamed the Django project package from `backend/backend` to `backend/app` and updated settings, WSGI/ASGI, Docker, and documentation references.
 
 ## 2026-06-29
+
 ### Added
+
 - Added a Resend HTTPS API email backend for password-reset delivery on hosts where outbound SMTP is blocked.
+
 ### Fixed
+
 - Added JSON accept and application user-agent headers to Resend API email requests so production requests are not rejected by Resend's Cloudflare layer.
 - Preserved CC and BCC fields separately when building Resend API email payloads.
+
 ### Changed
+
 - Moved production routing from the `/apps/notoli` path prefix to the `https://notoli.judeandrewalaba.com` subdomain.
 - Updated Nginx, deploy workflow defaults, frontend build metadata, and documentation for subdomain-root hosting.
 - Documented the Codex cloud environment description and setup/maintenance script.
@@ -246,25 +333,37 @@ All notable changes to this project are documented in this file.
 - Added a default email timeout and deploy/env documentation for `DJANGO_EMAIL_TIMEOUT`.
 
 ## 2026-03-03
+
 ### Added
+
 - Deploy workflow now validates, exports, and writes backend email/password-reset environment variables to the server `.env` file (`DJANGO_FRONTEND_BASE_URL`, `DJANGO_EMAIL_*`, `DJANGO_DEFAULT_FROM_EMAIL`).
+
 ### Fixed
+
 - Backend startup no longer crashes when `DJANGO_EMAIL_PORT` is defined but blank; empty values now fall back to the default SMTP port `587`.
+
 ### Changed
+
 - Renamed backend mail credential env var from `DJANGO_EMAIL_HOST_PASSWORD` to `DJANGO_EMAIL_HOST_KEY` across Django settings, deploy templates, CI/CD workflow inputs, and documentation.
 
 ## 2026-03-03
+
 ### Added
+
 - Added backend password-reset endpoints: POST /auth/forgot-password/ and POST /auth/reset-password/.
 - Added frontend public auth pages/routes for forgot/reset password.
 - Added frontend and backend tests covering forgot/reset password flows.
+
 ### Changed
+
 - Backend email configuration now supports Resend SMTP-compatible environment variables (DJANGO_EMAIL_*) and frontend reset-link base URL (DJANGO_FRONTEND_BASE_URL).
 - Frontend auth 401 redirect exclusions now include forgot/reset password endpoints.
 - Local backend runs now auto-load `backend/.env` via `python-dotenv` so `python backend/manage.py runserver` picks up `DJANGO_*` values.
 
 ## 2026-02-10
+
 ### Changed
+
 - Renamed frontend service clients: `backendClient` -> `notoliApiClient`, `apiClient` -> `requestClient`.
 - Standardized frontend login/register response handling and session persistence via shared auth session helpers.
 - `POST /auth/register/` now returns `email` alongside `access`/`refresh` and `username`.
@@ -272,12 +371,16 @@ All notable changes to this project are documented in this file.
 - Logout now shows a success snackbar on the login screen after redirect.
 
 ## 2026-02-09
+
 ### Added
+
 - Added API regression tests to prevent moving todo lists and notes across workspaces after creation.
 - `POST /auth/login/` now returns `username` and `email` alongside `access`/`refresh`.
 - Added an app bar profile popover menu (username/email header + logout).
 - Added frontend unit tests for shared auth session, navigation, request, and Notoli API clients.
+
 ### Fixed
+
 - Allowed partial note PATCH updates without requiring clients to re-send `workspace` or `todo_list`.
 - Note update validation now prioritizes `workspace` immutability errors over derived `todo_list` mismatch errors when both are provided.
 - `?workspace=` list filters for todo lists/notes now return 403 when the workspace exists but the user doesn't have access to it.
@@ -285,21 +388,27 @@ All notable changes to this project are documented in this file.
 - `?workspace=` list filters now work for users who have item-level access (note/todolist collaborators) even if they are not workspace collaborators.
 - Frontend now clears auth tokens and redirects to `/login` when an API request returns `401 Unauthorized` (instead of showing a raw `HTTP 401` error).
 - Frontend now shows an error snackbar on `/login` after a `401` redirect so users understand why they were logged out.
+
 ### Changed
+
 - Improved Django admin list views for Workspaces, Todo Lists, and Notes to show owner/collaborators (and workspace for todo lists).
 - Notes now belong to a Workspace (tenancy boundary), and Todo Lists can only include Notes from the same Workspace.
 - Notes API now allows attaching an existing note to another todo list via PATCH `todo_list` (within the same workspace).
 - Login success snackbar now greets the user with `Welcome {username}!`.
 
 ## 2026-02-07
+
 ### Changed
+
 - Enabled full end-to-end HTTPS (Cloudflare -> origin) via Nginx TLS on port 443 using Cloudflare Origin Certificates; port 80 now redirects to HTTPS.
 - Updated Docker Compose/Nginx proxy config to publish `443` and mount origin certs into the proxy container.
 - Deploy workflow can now provision origin cert/key from GitHub Secrets (`CLOUDFLARE_ORIGIN_CERT_PEM`, `CLOUDFLARE_ORIGIN_KEY_PEM`) and uploads them to `certs/` on the server during deploy.
 - Updated documentation for Cloudflare `Full (strict)` and certificate provisioning.
 
 ## 2026-02-06
+
 ### Changed
+
 - Updated `README.md` wording around "multiple views" to be less personal/compare-y while still mentioning Diana.
 - Expanded project documentation substantially (features, routes, API overview, architecture, quick start, config, repo layout).
 - Expanded `README.md` tech stack to include DigitalOcean and Cloudflare.
@@ -307,24 +416,34 @@ All notable changes to this project are documented in this file.
 - Split documentation into component READMEs: `backend/README.md`, `frontend/README.md`, `deploy/README.md`, and `.github/README-WORKFLOWS.md` (and trimmed the root `README.md`).
 
 ## 2026-02-04
+
 ### Changed
+
 - Frontend API base URL defaults to `http://localhost:8000` for local dev; production should set `REACT_APP_API_BASE_URL` to `https://judeandrewalaba.com/apps/notoli`.
 - Nginx now serves the backend via `judeandrewalaba.com/apps/notoli/{api,auth,admin}` (and proxies Django admin/DRF static under `/apps/notoli/static/{admin,rest_framework}`).
 - Updated `AGENTS.md` with production routing notes and a docs update reminder.
+
 ### Removed
+
 - Removed the legacy `api.judeandrewalaba.com` reverse-proxy server block (API subdomain no longer used).
 
 ## 2026-02-03
+
 ### Changed
+
 - Frontend API base URL defaults to `http://localhost:8000` for local dev; production should set `REACT_APP_API_BASE_URL` to the API subdomain.
 - Nginx now serves the backend via `api.judeandrewalaba.com/apps/notoli/*` (API/Auth/Admin).
 - Backend uses `DJANGO_FORCE_SCRIPT_NAME` to generate admin URLs under `/apps/notoli`.
 
 ## 2026-02-02
+
 ### Added
+
 - Added an Nginx SPA fallback config for the frontend to support deep links/refresh-on-route.
 - Added a Docker reverse-proxy config for path-based routing under `/apps/notoli` with Cloudflare HTTPS header passthrough.
+
 ### Changed
+
 - Frontend Docker image now copies the custom Nginx config to serve `index.html` for client-side routes.
 - Updated login form fields to include autofill metadata for iOS/password managers.
 - Frontend router now uses the CRA public URL as a basename; API calls are prefixed by `REACT_APP_API_BASE_URL` (defaults to `http://localhost:8000`).
@@ -336,56 +455,80 @@ All notable changes to this project are documented in this file.
 - Commentary workflow now reads `OPENAI_PROJECT_ID` from repo variables instead of secrets.
 
 ## 2026-01-31
+
 ### Changed
+
 - Frontend Docker build now accepts CRA `REACT_APP_API_BASE_URL` as a build-time arg.
 - Deploy workflow passes the CRA API base URL secret into the frontend image build.
 - Backend environment variables are now prefixed with `DJANGO_` (including deploy-time `.env` generation).
 
 ## 2026-01-26
+
 ### Changed
+
 - Dependabot auto-merge now also allows CVSS-based auto-merge for low-severity security alerts (while keeping patch/minor auto-merge).
 - Dependabot metadata lookup now enables alert lookup with `DEPENDABOT_PAT` fallback and includes security-events read access.
 - Dependabot auto-merge now blocks major updates and requires low CVSS when a security alert is present.
 - Renamed GitHub Actions workflow files to use the `.yml` extension consistently.
+
 ### Removed
+
 - Removed unused OpenAI secrets from the Dependabot auto-merge workflow wiring.
 
 ## 2026-01-25
+
 ### Added
+
 - Added `backend/environment_conda_export.py` to export Conda environments with pinned versions.
+
 ### Changed
+
 - CI lint/test workflows now pin Node 18.20.8 and Python 3.12 via setup-node/setup-python v6 and no longer use `read-versions` or `checkout_ref`.
 - Lint auto-fix commits now target `github.head_ref` and scope file patterns to `frontend/**/*` and `backend/**/*`.
 - Backend env management now uses conda-pinned deps in `environment.yml`; tests install backend deps via explicit pip pins; Dockerfile installs from `environment.yml` only.
 - PR summary workflow now always updates the PR description (no comment fallback).
 - Frontend ESLint now extends Prettier; `eslint-config-prettier` moved to devDependencies; axios pinned to 1.13.2; icon imports consolidated.
 - Updated AGENTS maintenance instructions for the new env export script.
+
 ### Removed
+
 - Removed `read-versions`, `backend/environment_manager.py`, and `backend/requirements.txt` (pip section removed from `environment.yml`).
 - Removed the frontend ESLint config test and the Node engines field from `package.json`.
 
 ## 2026-01-24
+
 ### Changed
+
 - Standardized Conda environment management using a single `environment_conda_export.py` script.
 - Environment exports now always generate a minimal `environment.yml` and a separate `requirements.txt` for pip packages.
 - Pip dependencies are captured as top-level installs with pinned versions, excluding transitive dependencies.
+
 ### Removed
+
 - Removed unstable pip entries (e.g. `@ file:///…`) to ensure portable, reproducible environments.
 
 ## 2026-01-22
+
 ### Changed
+
 - CI now runs the PR summary workflow after lints and tests complete.
 - PR summary reports exactly which OpenAI secrets are missing when not configured.
 - PR summary is now a reusable workflow called by CI instead of a separate PR trigger.
 
 ## 2026-01-21
+
 ### Removed
+
 - Removed the limit to for dependabot PRs
 
 ## 2026-01-20
+
 ### Added
+
 - Added a reusable Dependabot auto-merge workflow (`.github/workflows/dependabot_auto_merge.yml`).
+
 ### Changed
+
 - Continuous Integration now calls the Dependabot auto-merge workflow after lints/tests for Dependabot PRs.
 - Continuous Integration now passes OpenAI secrets to the Dependabot auto-merge workflow.
 - Dependabot auto-merge now relies on mergeability checks (conflict/unknown/unstable handling) before enabling auto-merge.
@@ -393,7 +536,9 @@ All notable changes to this project are documented in this file.
 - Dependabot auto-merge now skips auto-approval and focuses on auto-merge actions only.
 
 ## 2026-01-19
+
 ### Added
+
 - Added a GitHub Actions workflow to run frontend and backend tests (`tests.yaml`).
 - Added a Dependabot auto-merge workflow for patch/minor updates.
 - Added a ChatGPT summary comment for Dependabot major version updates.
@@ -414,7 +559,9 @@ All notable changes to this project are documented in this file.
 - Added frontend tests for `Navigation` (`frontend/src/utils/Navigation.test.js`).
 - Added frontend tests for `App` (`frontend/src/App.test.js`).
 - Added frontend tests for `index` (`frontend/src/index.test.js`).
+
 ### Changed
+
 - Updated Dependabot config to run daily updates for npm, GitHub Actions, and Docker.
 - Renamed GitHub Actions workflow files to use plural names (`lints.yaml`, `pr_summary.yaml`).
 - Replaced the Dependabot auto-approval action with a GitHub API call to avoid the missing action repo.
@@ -428,11 +575,15 @@ All notable changes to this project are documented in this file.
 - Centralized MUI Menu mocking in the frontend test setup (`frontend/src/setupTests.js`).
 - Renamed `BackendClient.js` to `backendClient.js` for naming consistency.
 - Renamed `client.js` to `apiClient.js` for naming consistency.
+
 ### Removed
+
 - Removed inherited secrets from the Continuous Integration workflow calls.
 
 ## 2026-01-18
+
 ### Added
+
 - Added frontend test utilities for shared theme/router setup (`frontend/src/test-utils.js`).
 - Added distinct login messaging for workspace HTTP failures versus network errors.
 - Added a frontend login test to confirm tokens are not stored on failure.
@@ -445,7 +596,9 @@ All notable changes to this project are documented in this file.
 - Added email-aware JWT login serializer and view.
 - Added backend Ruff config for import grouping rules.
 - Added default workspace creation for new users and return of registration tokens/workspace id.
+
 ### Changed
+
 - Refactored frontend login tests to use shared test utilities.
 - Routed frontend login/register flows through `BackendClient` and added a register helper.
 - Updated login/register tests to mock `BackendClient` helpers instead of `apiFetch`.
@@ -460,27 +613,39 @@ All notable changes to this project are documented in this file.
 - Updated registration flow to auto-login and redirect to the new workspace.
 
 ## 2026-01-17
+
 ### Added
+
 - Added frontend login test covering a successful login flow (`Login.test.js`).
 - Added frontend login test covering failed login handling (`Login.test.js`).
+
 ### Changed
+
 - Updated frontend login test to silence React Router future-flag warnings and MUI ripple act() warnings.
 - Silenced expected auth failure logging noise in login tests.
 
 ## 2026-01-15
+
 ### Added
+
 - Added frontend login smoke test (`Login.test.js`).
 - Added Jest DOM setup for frontend tests (`src/setupTests.js`).
 
 ## 2026-01-13
+
 ### Added
+
 - Added Notes API tests covering many-to-many membership and removal filtering.
+
 ### Changed
+
 - Updated Notes API handling to support many-to-many `TodoList.notes` on create and filtering.
 - Iterated PR summary workflow behavior to overwrite the PR description summary.
 
 ## 2026-01-12
+
 ### Added
+
 - Added Codex-based PR summary automation.
 - Added `AGENTS.md`.
 - Added authentication tests:
@@ -488,97 +653,147 @@ All notable changes to this project are documented in this file.
   - `LoginTests`
   - `RefreshTokenTests`
   - `AuthMethodTests`
+
 ### Changed
+
 - Renamed `pr_review` to `pr_summary` and refined summary formatting.
 
 ## 2025-12-08
+
 ### Added
+
 - Added frontend environment defaults and API client helper (`frontend.env`, `src/services/client.js`).
 - Added CORS configuration to backend environment settings.
+
 ### Changed
+
 - Updated Docker Compose ordering and environment wiring.
 - Updated frontend pages to use environment-based API base URLs.
 
 ## 2025-12-07
+
 ### Added
+
 - Added root environment defaults (`.env` / `default.env`) for local configuration.
+
 ### Changed
+
 - Updated backend settings to support debug flags, secret keys, and SQLite persistence.
 - Updated Docker Compose to align with new environment defaults.
 
 ## 2025-11-24
+
 ### Changed
+
 - Updated Dockerfiles and backend environment settings for deployment.
+
 ### Removed
+
 - Removed dev Docker files.
 
 ## 2025-11-23
+
 ### Changed
+
 - Updated deployment configuration (Dockerfiles, ports, host allowlists, and performance settings).
 
 ## 2025-11-17
+
 ### Added
+
 - Added production Docker Compose file (`docker-compose.prod.yml`).
+
 ### Changed
+
 - Updated Docker Compose configuration for deployment needs.
 
 ## 2025-11-16
+
 ### Changed
+
 - Updated `environment.yml` and dependency configuration for Python 3.12 stability.
 
 ## 2025-11-15
+
 ### Added
+
 - Added frontend auto-fix and commit linting.
 - Added backend auto-fix and commit linting.
 - Added instructions to `environment.yml`.
+
 ### Removed
+
 - Removed `fetchWorkspaceName` and `workspaceData`.
 
 ## 2025-10-27
+
 ### Added
+
 - Added frontend linting tests and initial lint workflow setup.
+
 ### Fixed
+
 - Appbar header now removes the header within the TodoLists page.
 
 ## 2025-10-26
+
 ### Removed
+
 - Removed the header from the TodoLists page.
 
 ## 2025-10-25
+
 ### Changed
+
 - Updated login to redirect to the first workspace.
+
 ### Removed
+
 - Removed ability to navigate backwards from the TodoLists page.
 
 ## 2025-10-21
+
 ### Added
+
 - Added triple-dot menu support for workspace actions in `MyDrawer.js` (edit and delete).
 - <img width="447" height="953" alt="image" src="https://github.com/user-attachments/assets/288c6c69-9568-4c9b-9df7-d4a29946ab2c" />
 
 ## 2025-10-13
+
 ### Added
+
 - Drawer now dynamically expands when adding a new workspace.
 - <img width="452" height="960" alt="image" src="https://github.com/user-attachments/assets/74875f73-cc5c-4538-a85b-4fe4acd53dd6" />
 
 ## 2025-09-29
+
 ### Changed
+
 - Minor formatting updates in drawer-related components.
 
 ## 2025-09-28
+
 ### Added
+
 - Navigation via `MyDrawer.js`.
 - Basic add functionality in `MyDrawer.js`.
 - Added error and loading messages in `MyDrawer.js`.
+
 ### Changed
+
 - Aesthetic changes to workspace selector in `MyDrawer.js`.
 
 ## 2025-09-23
+
 ### Added
+
 - Workspaces are now in the drawer.
- - Can't navigate with them yet tho.
+- Can't navigate with them yet tho.
 
 ## 2025-09-22
+
 ### Added
+
 - `MyDrawer` now fetches workspace name.
 - <img width="452" height="953" alt="image" src="https://github.com/user-attachments/assets/b581481c-bc33-4c10-808f-01aefc8ff11c" />
 - `getWorkspaceId` in utils.
@@ -586,38 +801,54 @@ All notable changes to this project are documented in this file.
 - <img width="451" height="956" alt="image" src="https://github.com/user-attachments/assets/bcd079b1-beb5-4078-99a1-650beeb8d58a" />
 
 ## 2025-09-08
+
 ### Changed
+
 - Drawer styling.
 - <img width="449" height="953" alt="image" src="https://github.com/user-attachments/assets/86207c4d-ffa2-4e70-b6a1-58b6b5252287" />
 - Modularized `getParentPath` and `goBackToParent` into `Navigation.js`.
 
 ## 2025-09-02
+
 ### Added
+
 - Back button.
 - <img width="450" height="953" alt="image" src="https://github.com/user-attachments/assets/c95f7a88-6c38-4aa3-98c8-9e6a74b192de" />
 - Drawer.
 - <img width="445" height="955" alt="image" src="https://github.com/user-attachments/assets/e57e42de-9964-464f-b559-1c27575735f1" />
+
 ### Changed
+
 - Shifted the appbar components around.
 - Back button no longer renders on the `workspaces.js`.
 - Changing my branching strategy again.
   - No more dev, just main now.
   - When I deploy, I'll create a prod.
+
 ### Removed
+
 - Unnecessary `React` import from `MyAppBar.js`.
 
 ## 2025-08-11
+
 ### Added
+
 - App Bar added with dynamic header text for Workspace, Todo Lists, and Notes pages.
 - <img width="447" height="954" alt="image" src="https://github.com/user-attachments/assets/f7fd5187-9347-4b0a-8d99-4a31d3ac12bb" />
+
 ### Fixed
+
 - Filled in contact info placeholder in the `LICENSE.md`.
 - Fixed UI messages in `Notes.js`.
 
 ## 2025-07-28
+
 ### Added
+
 - Introduced a centralized Snackbar component in `App.js`, enabling consistent notifications across pages.
+
 ### Changed
+
 - Enhanced `Login.js` to utilize the global Snackbar for displaying login success and error messages.
 - Refactored `App.js` to manage Snackbar state and provide a unified Snackbar experience.
 - Updated `Login.js` to delegate Snackbar displays to the new centralized Snackbar management in `App.js`.
@@ -625,9 +856,11 @@ All notable changes to this project are documented in this file.
 - Updated import formatting in `App.js` to improve consistency.
 
 ## 2025-07-20
+
 ### Added
+
 - Finished `TodoLists.js` with full CRUD functionality.
-- <img width="443" height="952" alt="image" src="https://github.com/user-attachments/assets/dfd98820-40ce-487b-8037-6c156d5c2ff9" />  
+- <img width="443" height="952" alt="image" src="https://github.com/user-attachments/assets/dfd98820-40ce-487b-8037-6c156d5c2ff9" />
 - Finished `Notes.js` with full CRUD functionality.
 - <img width="447" height="956" alt="image" src="https://github.com/user-attachments/assets/82fa7dbd-b6a7-4adc-914c-5c91d4435d02" />
 - Introduced workspace-scoped and nested routes in `App.js`:
@@ -638,12 +871,16 @@ All notable changes to this project are documented in this file.
 - Added navigation improvements in `Workspaces.js`, `TodoLists.js`, and `Notes.js` via `useNavigate`.
 - Built initial fetch logic in `TodoLists.js` and `Notes.js` to load workspace-specific data.
 - Added `django-filter` to project dependencies.
+
 ### Fixed
+
 - Corrected typos and improved error handling in `views.py` (todos and notes).
 - Resolved workspace access validation issues in `views.py`.
 - Adjusted placement of `useNavigate` in `Login.js`.
 - Fixed variable naming inconsistency in `todo_list` and `note` across backend and frontend.
+
 ### Changed
+
 - Enhanced fetch logic in `TodoLists.js` and `Notes.js` to include `?workspace=<id>`.
 - Updated DRF settings to enable default filters and permissions for todos and notes.
 - Updated route paths in `App.js` for consistent workspace routing of todos and notes.
@@ -651,55 +888,79 @@ All notable changes to this project are documented in this file.
 - Renamed and reorganized branches for dev/prod workflow.
 
 ## 2025-07-18
+
 ### Changed
+
 - Refactored `Workspaces.js` to add missing Pessimistic Local Merge comments and adjust whitespace.
 
 ## 2025-07-17
+
 ### Added
+
 - Added editing functionality for workspaces in `Workspaces.js`.
 - <img width="443" height="949" alt="image" src="https://github.com/user-attachments/assets/b3c1bd23-555d-4681-b206-5af78d953213" />
+
 ### Changed
+
 - Refactored workspace name handling in `Workspaces.js` for create and edit flows.
 - Switched `Workspaces.js` to a pessimistic local merge approach.
 
 ## 2025-07-04
+
 ### Added
+
 - Added edit useStates, `isEditing`, and `editAnchorElement`.
+
 ### Fixed
+
 - Resolved an ESLint warning in `Workspaces.js` by refactoring `fetchWorkspaces` with `useCallback`.
 
 ## 2025-06-30
+
 ### Added
+
 - Deletion capabilities in `Workspaces.js`, allowing users to remove workspaces directly from the interface.
-- Introduced error handling and state management improvements in the `onSaveNew` function within `Workspaces.js`.  
-- Added a new `onDelete` function in `Workspaces.js` for handling workspace deletions seamlessly.  
+- Introduced error handling and state management improvements in the `onSaveNew` function within `Workspaces.js`.
+- Added a new `onDelete` function in `Workspaces.js` for handling workspace deletions seamlessly.
 - Implemented a pessimistic local-merge strategy in `Workspaces.js` to update the UI immediately after workspace creation.
+
 ### Fixed
-- Corrected the deletion process in `Workspaces.js` by ensuring proper API call syntax with template literals.  
+
+- Corrected the deletion process in `Workspaces.js` by ensuring proper API call syntax with template literals.
 - Updated error handling in the `onDelete` function to reset errors before attempting deletion.
+
 ### Changed
-- Improved UI update after deleting a workspace by modifying the state update logic.  
-- Refactored state management and menu handling in `Workspaces.js`:  
-  - Replaced `anchorEl` and `selectedList` with `tripleDotAnchorElement` and `selectedWorkspace` for clarity.  
-  - Enhanced function organization and naming for triple-dot menu interactions.  
-  - Streamlined MUI component handling for better code readability.  
-- Refactored workspace fetching mechanism in `Workspaces.js` by encapsulating it into a dedicated `fetchWorkspaces` function.  
+
+- Improved UI update after deleting a workspace by modifying the state update logic.
+- Refactored state management and menu handling in `Workspaces.js`:
+  - Replaced `anchorEl` and `selectedList` with `tripleDotAnchorElement` and `selectedWorkspace` for clarity.
+  - Enhanced function organization and naming for triple-dot menu interactions.
+  - Streamlined MUI component handling for better code readability.
+- Refactored workspace fetching mechanism in `Workspaces.js` by encapsulating it into a dedicated `fetchWorkspaces` function.
 - Refactored `Workspaces` component in `Workspaces.js`:
   - Renamed `onSaveNew` to `onAdd` for function clarity.
   - Renamed state variable `newName` to `WorkspaceName` for enhanced readability.
+
 ### Removed
+
 - Removed the unused `onStartAdding` function from `Workspaces.js` in the frontend to clean up the codebase.
 
 ## 2025-06-24
+
 ### Added
+
 - Basenames to the URL router in `urls.py` for enhanced reverse URL lookups.
 - Introduced a triple-dot menu for managing workspaces in `Workspaces.js`.
 - ![image](https://github.com/user-attachments/assets/a0277a31-b8be-4a1c-a854-0c5ccad291bd)
 - Added functionality to create new workspaces in the UI, allowing users to input workspace names directly.
 - ![image](https://github.com/user-attachments/assets/12794334-0ab8-4af9-9adf-fe3268992c30)
+
 ### Fixed
+
 - Resolved an issue preventing creation of new workspaces from the UI.
+
 ### Changed
+
 - Enhanced UI styling on the Workspaces page by adding background colors to `Divider` components and updating styles for `Menu` and `MenuItem` components.
 - ![image](https://github.com/user-attachments/assets/8ef1ae12-c2d9-4960-960b-ab4c4437cf34)
 - Aligned text to the left in workspace titles for improved readability.
@@ -711,9 +972,13 @@ All notable changes to this project are documented in this file.
 - Updated `Workspaces.js` header text from "Todo Lists" to "Workspaces".
 
 ## 2025-06-23
+
 ### Fixed
+
 - Filtered notes by user and removed frontend owner hacks.
+
 ### Changed
+
 - Refactored the `models.py` in the `notes` app for improved clarity and organization:
   - Renamed the `TodoList` model to `Workspace`.
   - Renamed `TodoListView` to `TodoList`, now representing a singular to-do list within a `Workspace`.
@@ -724,101 +989,155 @@ All notable changes to this project are documented in this file.
 - Refactored frontend to match refactored backend:
   - Replaced `TodoLists` with `Workspaces` in the App.js routing.
 - Token changes from local to session storage.
+
 ### Removed
+
 - Removed `TodoLists.js` file and its references.
 
 ## 2025-06-20
+
 ### Added
+
 - Implemented the `handleAddNew` function to allow creating new TODO lists from the frontend.
+
 ### Changed
+
 - Updated "Add New" button in `TodoLists.js` to trigger the new list creation functionality.
 - Refactored `Login.js` and `TodoLists.js` components to simplify JSX and consolidate `sx` prop configurations for improved readability.
+
 ### Removed
+
 - Removed comment related to hardcoding of the API URL in `TodoLists.js`.
 
 ## 2025-06-19
+
 ### Changed
+
 - Refactored global CSS to use theme variables for consistent theming.
 - Updated `Login.js` styling with secondary colors and custom backgrounds.
 - ![image](https://github.com/user-attachments/assets/539fea36-6cee-4bbd-9eb6-d88f92581fba)
 - Enhanced `TodoLists` UI with dividers and improved button layouts.
 - ![image](https://github.com/user-attachments/assets/5c51836d-4297-4686-958a-684312f98db6)
+
 ### Removed
+
 - Removed stray trailing lines in components.
 
 ## 2025-06-16
+
 ### Added
+
 - Introduced initial `TodoLists` interface using Material UI.
 - ![image](https://github.com/user-attachments/assets/50279d64-9d56-41e6-b3bd-e567e1b28a4e)
 - Fetches lists from the API with loading and error states.
 - Basic view to list existing todo lists.
+
 ### Changed
+
 - Replaced the old Homepage route with the TodoLists page.
 - Minor layout tweaks for vertical alignment.
 
 ## 2025-05-12
+
 ### Added
+
 - Snackbar notifications for login success and failure states.
 - `AuthenticatedRoute` wrapper for automatic redirect when not logged in.
+
 ### Changed
+
 - Reduced login redirect delay for a faster transition.
 
 ## 2025-05-11
+
 ### Added
+
 - React Router configuration and global styling utilities.
 - Preliminary snackbar logic for the login page.
 
 ## 2025-05-05
+
 ### Added
+
 - Placeholder home page component.
+
 ### Fixed
+
 - Minor bug fixes in App.js and login page.
 
 ## 2025-05-04
+
 ### Added
+
 - Login page wired to backend authentication via Axios.
 - ![image](https://github.com/user-attachments/assets/bf9cca23-1da6-4efd-a115-5f20f675b979)
 - CORS support in the backend using `django-cors-headers`.
+
 ### Removed
+
 - Removed unused CRA boilerplate and cleaned default styles.
 
 ## 2025-05-03
+
 ### Added
+
 - `TodoListView` model and REST endpoints for todo lists, notes, and views.
 - Simple JWT authentication endpoints for register, login, and token refresh.
+
 ### Changed
+
 - Renamed models (`Todi` -> `TodoList`, `Noti` -> `Note`) and updated admin and serializers.
+
 ### Removed
+
 - Default frontend assets and test files from CRA template.
 
 ## 2025-04-28
+
 ### Added
+
 - `notes` app with initial models, migrations, and API endpoints.
 - Owners and collaborators fields for todo lists and notes.
 - `environment_conda_export.py` helper script.
 - REST APIs using Django REST Framework.
+
 ### Fixed
+
 - Corrected model naming conventions in admin files.
+
 ### Changed
+
 - Updated LICENSE and README to credit `conda_export.py` by Andres Berejnoi.
+
 ### Removed
+
 - Temporary `users` app.
 
 ## 2025-04-26
+
 ### Added
+
 - Created project changelog.
 
 ## 2025-04-25
+
 ### Fixed
+
 - Minor formatting tweaks across Docker and configuration files.
 
 ## 2025-04-24
+
 ### Added
+
 - Frontend, backend, and Docker scaffolding.
 - Initial `environment.yml` and Docker Compose setup.
+
 ### Changed
+
 - README and `.gitignore` revisions.
 
 ## 2025-04-20
+
 ### Added
+
 - Initial repository with base README and LICENSE.

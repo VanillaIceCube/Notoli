@@ -1,11 +1,15 @@
 # 🤖 GitHub Automation
+
 This repo uses GitHub Actions for CI and deployments, plus Dependabot for dependency updates.
 
 ## ✅ Flow 1: CI (`.github/workflows/ci-orchestrator.yml`)
+
 Trigger:
+
 - Pull requests (opened/synchronize/reopened/ready_for_review)
 
 What it does:
+
 - Runs the reusable lint gate: [`.github/workflows/gate-lint.yml`](workflows/gate-lint.yml)
   - Frontend: Prettier + ESLint (auto-fix, then strict checks)
   - Backend: Ruff (auto-fix, then strict checks)
@@ -52,6 +56,7 @@ What it does:
 - AI persona workflows run only for trusted same-repository, non-Dependabot pull requests because their GitHub App private keys are unavailable to fork and Dependabot-triggered workflows. Fork and Dependabot pull requests rely on the independent lint, test, CodeQL, vulnerability, and malware check output; a failed gate remains visible and blocks merge without attempting a secret-dependent AI review. Healthy Dependabot pull requests can continue to [`.github/workflows/ci-auto-merge.yml`](workflows/ci-auto-merge.yml).
 
 OpenAI and GitHub App inputs:
+
 - `OPENAI_API_KEY` secret. Triggered AI reviews fail visibly when the key is missing or the OpenAI request cannot produce a usable response.
 - `OPENAI_PROJECT_ID` (repo variable)
 - `OBI_WAN_CODE_NOBI_APP_ID` repository variable and `OBI_WAN_CODE_NOBI_PRIVATE_KEY` repository secret authenticate the Obi-Wan Code-nobi GitHub App. Install it with `Contents: read` and `Pull requests: write`.
@@ -66,11 +71,13 @@ OpenAI and GitHub App inputs:
 - AI review publishing only sends inline comments that target valid added diff lines. Every finding that cannot be placed inline is preserved under the normal Findings group with file and line context; duplicate, placement, and malformed-comment diagnostics are recorded in workflow logs instead of visible automation notes. The publishing logic, visual Markdown examples, and Node regression tests are colocated under `.github/actions/publish-ai-review/`.
 
 Review personas:
+
 - **RoboCop - AI Security Officer:** owns CodeQL, Dependency/Vulnerability Review, Malware Review, security-sensitive code paths, permissions/auth risk, and security interpretation.
 - **Lint Eastwood - AI Build Sheriff:** owns lint failures, test failures, build/workflow failures, formatting/type-check style failures, and CI failure interpretation.
 - **Obi-Wan Code-nobi - AI Code Reviewer:** owns general implementation review: correctness, maintainability, architecture, edge cases, missing tests, API/UX concerns, and overall code quality.
 
 Security-alert aggregation:
+
 - Daily workflows collect open CodeQL alerts plus non-urgent Dependabot vulnerability alerts and npm malware-classified Dependabot alerts. Each workflow also supports **Run workflow** from the Actions tab.
 - The alert workflows keep scheduling in [`alert-codeql.yml`](workflows/alert-codeql.yml), [`alert-vulnerability.yml`](workflows/alert-vulnerability.yml), and [`alert-malware.yml`](workflows/alert-malware.yml). The fetching, grouping, validation, and synchronization implementation lives in the [Security Alerts composite action](actions/security-alerts/action.yml). The response must be valid JSON and must account for every source alert exactly once; validation happens before any issue is created or updated.
 - OpenAI request failures, including exhausted quota/tokens, missing credentials, transport errors, and unusable responses, produce a warning and workflow summary with recovery guidance. Alert synchronization then fails validation before changing tickets.
@@ -87,11 +94,13 @@ Security-alert aggregation:
 - Run the repository automation coverage locally with `node --test .github/actions/publish-ai-review/publish-ai-review.test.js .github/actions/security-alerts/sync-security-alerts.test.js`. AI review coverage includes persona-specific clean approvals, populated semantic groups, infrastructure-only comments, exact-line comments, unchanged reviews, duplicate suppression, preservation of multiple unplaceable findings, malformed-response diagnostics, unavailable notices, and synchronization of the rendered [`review-output-examples.md`](actions/publish-ai-review/review-output-examples.md) fixture. Security-alert coverage includes credential separation and RoboCop-only issue mutations; reconciliation across unchanged and reordered groups, splits, merges, added alerts, resolved alerts, empty feeds; and the known stale-ticket set from issue #633.
 
 Version pins:
+
 - Node version is read from `frontend/package.json` (`engines.node`)
 - Python version is read from `backend/environment.yml` (`python=<version>`)
 - Third-party `dorny/paths-filter` workflow steps are pinned to an immutable commit hash.
 
 CodeQL details:
+
 - Pull requests run CodeQL through `ci-orchestrator.yml`, keeping PR feedback under the main CI workflow.
 - Pull request CodeQL uses the reusable workflow's change-detection job, following the same skip-by-scope pattern as linting and testing; documentation-only and unrelated pull requests run the detector but skip analysis jobs.
 - For a CodeQL-relevant pull request, Python and JavaScript/TypeScript analysis use language-specific filters, while GitHub Actions analysis runs so the `/language:actions` configuration remains present for code-scanning comparisons.
@@ -106,6 +115,7 @@ CodeQL details:
 - CodeQL is not a scanner for Dockerfiles, Nginx config, or env example files. Those remain covered by Dependabot updates, review, and deployment validation unless a separate scanner is added.
 
 Merge blocking:
+
 - The active `main` ruleset requires the Vulnerability and Malware checks alongside the existing lint, test, and CodeQL checks.
 - Dependency vulnerability review fails at `high` severity or above and posts its summary directly on the PR.
 - Dependency malware review is npm-focused because GitHub's malware advisory coverage is currently npm-focused; it checks only changed lockfile package versions.
@@ -116,11 +126,14 @@ Merge blocking:
 - When code fixes remove a finding, GitHub closes the matching code scanning alert after the protected branch is reanalyzed. False positives or accepted risks should be dismissed in GitHub Code Scanning with a clear reason.
 
 ## 🚀 Flow 2: Deploy (`.github/workflows/ci-deploy.yml`)
+
 Trigger:
+
 - Push to the `env-prod` branch
 - Manual `workflow_dispatch`
 
 What it does:
+
 - Builds and pushes Docker images to GHCR:
   - `notoli-backend` (from `backend/Dockerfile`)
   - `notoli-frontend` (from `frontend/Dockerfile`)
@@ -131,11 +144,13 @@ What it does:
   - Runs Django migrations inside the backend container
 
 Deployment prerequisite:
+
 - For Cloudflare Full (strict), the origin must have a Cloudflare Origin Certificate.
 - Option A (manual): provision on the server at `certs/origin.pem` and `certs/origin.key` (see `deploy/README.md`).
 - Option B (automated): set GitHub Secrets `CLOUDFLARE_ORIGIN_CERT_PEM` and `CLOUDFLARE_ORIGIN_KEY_PEM` so the workflow uploads the files to `certs/` during deploy.
 
 Deploy inputs (GitHub repo vars / secrets):
+
 - Server connection: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`, optional `DEPLOY_PORT`, secret `DEPLOY_SSH_KEY`
 - Backend config:
   - Secret: `DJANGO_SECRET_KEY`
@@ -145,7 +160,9 @@ Deploy inputs (GitHub repo vars / secrets):
 - Frontend build arg: optional `REACT_APP_API_BASE_URL` (leave blank/unset for same-origin subdomain calls on `https://notoli.judeandrewalaba.com`; use `https://notoli.judeandrewalaba.com` only if an absolute URL is required)
 
 ## 📦 Flow 3: Dependabot (`.github/dependabot.yml` + CI/Auto Merge)
+
 Dependabot configuration:
+
 - [`.github/dependabot.yml`](dependabot.yml) opens daily PRs for:
   - npm (`/frontend`)
   - pip (`/backend`)
@@ -153,6 +170,7 @@ Dependabot configuration:
   - Docker (`/backend`, `/frontend`)
 
 Auto-merge behavior:
+
 - Dependabot PRs go through CI (`ci-orchestrator.yml`), and if all gates pass, `ci-auto-merge.yml` can enable auto-merge.
 - Dependabot PRs do not receive secret-dependent AI reviews. Their independent lint, test, CodeQL, vulnerability, and malware gates provide failure details and block auto-merge when any gate fails.
 - Auto-merge is restricted to patch/minor updates.
