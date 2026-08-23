@@ -35,6 +35,7 @@ What it does:
   - Emits a vulnerability report output for RoboCop instead of posting a standalone PR comment.
 - Runs the reusable malware gate: [`.github/workflows/gate-malware.yml`](workflows/gate-malware.yml)
   - Uses the local [npm malware review action](actions/review-npm-malware/action.yml) to compare changed `frontend/package-lock.json` packages against GitHub's npm malware advisories.
+  - Follows GitHub's cursor-based advisory pagination and applies a per-request timeout so the gate terminates reliably as the advisory feed grows.
   - Emits a malware report output for RoboCop and fails when a changed package/version matches a known malware advisory.
 - For trusted same-repository, non-Dependabot PRs, runs [`.github/workflows/review-code.yml`](workflows/review-code.yml)
   - Runs Obi-Wan Code-nobi, the AI Code Reviewer, for general implementation review
@@ -153,4 +154,4 @@ Auto-merge behavior:
 - Dependabot PRs do not receive secret-dependent AI reviews. Their independent lint, test, CodeQL, vulnerability, and malware gates provide failure details and block auto-merge when any gate fails.
 - Auto-merge is restricted to patch/minor updates.
 - If a security alert is present, the workflow requires CVSS <= 6.9.
-- The workflow uses `dependabot/fetch-metadata@v2` and can optionally use `DEPENDABOT_PAT` for metadata/alert lookup.
+- The workflow uses `dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98` (`v3.1.0`) and can optionally use `DEPENDABOT_PAT` for metadata/alert lookup.

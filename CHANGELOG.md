@@ -7,6 +7,8 @@ All notable changes to this project are documented in this file.
   after GitHub reports that an issue already exists on the project board.
 - Removed the invalid root-level Docker Dependabot scan; Docker checks remain
   configured for the backend and frontend directories.
+- Followed GitHub Advisory API cursor pagination in the npm malware gate so Dependabot npm checks no longer loop over the first page until the job timeout.
+- Pinned `dependabot/fetch-metadata` to an immutable `v3.1.0` commit in the auto-merge workflow so CodeQL no longer reports an unpinned third-party action.
 
 ## 2026-07-25
 ### Added
