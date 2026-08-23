@@ -252,9 +252,14 @@ async function findProjectItemId(github, projectId, contentId) {
 const projectItemRetryDelays = [0, 250, 500, 1000, 2000, 4000];
 
 function isProjectItemAlreadyExistsError(error) {
-  return error?.errors?.some(
-    (entry) => entry.message === "Content already exists in this project",
-  );
+  return error?.errors?.some((entry) => {
+    const message = String(entry.message ?? "").trim();
+    const typeMatches = !entry.type || entry.type === "UNPROCESSABLE";
+    return (
+      typeMatches &&
+      /^Content already exists in (?:this|the) project\.?$/i.test(message)
+    );
+  });
 }
 
 async function findProjectItemIdEventually(github, projectId, contentId) {

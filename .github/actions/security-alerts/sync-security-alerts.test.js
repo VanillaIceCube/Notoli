@@ -493,7 +493,12 @@ test("synchronization sends issue creation, labels, and assignment only through 
       }
       if (query.includes("addProjectV2ItemById")) {
         throw {
-          errors: [{ message: "Content already exists in this project" }],
+          errors: [
+            {
+              type: "UNPROCESSABLE",
+              message: "Content already exists in this project",
+            },
+          ],
         };
       }
       if (query.includes("updateProjectV2ItemFieldValue")) {
