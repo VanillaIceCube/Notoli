@@ -146,7 +146,7 @@ Dependabot configuration:
   - npm (`/frontend`)
   - pip (`/backend`)
   - GitHub Actions (`/`)
-  - Docker (`/`, `/backend`, `/frontend`)
+  - Docker (`/backend`, `/frontend`)
 
 Auto-merge behavior:
 - Dependabot PRs go through CI (`ci-orchestrator.yml`), and if all gates pass, `ci-auto-merge.yml` can enable auto-merge.

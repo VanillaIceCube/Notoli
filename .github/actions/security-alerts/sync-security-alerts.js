@@ -249,6 +249,28 @@ async function findProjectItemId(github, projectId, contentId) {
   return null;
 }
 
+const projectItemRetryDelays = [0, 250, 500, 1000, 2000, 4000];
+
+function isProjectItemAlreadyExistsError(error) {
+  return error?.errors?.some((entry) => {
+    const message = String(entry.message ?? "").trim();
+    const typeMatches = !entry.type || entry.type === "UNPROCESSABLE";
+    return (
+      typeMatches &&
+      /^Content already exists in (?:this|the) project\.?$/i.test(message)
+    );
+  });
+}
+
+async function findProjectItemIdEventually(github, projectId, contentId) {
+  for (const delay of projectItemRetryDelays) {
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+    const itemId = await findProjectItemId(github, projectId, contentId);
+    if (itemId) return itemId;
+  }
+  return null;
+}
+
 async function ensureProjectItem(github, projectId, projectState, issue) {
   const existingItemId = projectState.itemsByContentId.get(issue.node_id);
   if (existingItemId) return { itemId: existingItemId, added: false };
@@ -262,7 +284,12 @@ async function ensureProjectItem(github, projectId, projectState, issue) {
     projectState.itemsByContentId.set(issue.node_id, itemId);
     return { itemId, added: true };
   } catch (error) {
-    const itemId = await findProjectItemId(github, projectId, issue.node_id);
+    if (!isProjectItemAlreadyExistsError(error)) throw error;
+    const itemId = await findProjectItemIdEventually(
+      github,
+      projectId,
+      issue.node_id,
+    );
     if (!itemId) throw error;
     projectState.itemsByContentId.set(issue.node_id, itemId);
     return { itemId, added: false };

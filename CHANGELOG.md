@@ -1,6 +1,13 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-08-22
+### Fixed
+- Made security-alert Project v2 reconciliation tolerate eventual consistency
+  after GitHub reports that an issue already exists on the project board.
+- Removed the invalid root-level Docker Dependabot scan; Docker checks remain
+  configured for the backend and frontend directories.
+
 ## 2026-07-25
 ### Added
 - Added regression coverage proving RoboCop performs every security-alert issue mutation while the personal credential is limited to Project v2 operations.
