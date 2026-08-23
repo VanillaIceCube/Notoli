@@ -68,6 +68,29 @@ npm install
 npm start
 ```
 
+## Docker hot reload
+
+From the repository root:
+
+```powershell
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml up --build -d
+```
+
+The development image uses `Dockerfile.dev`, mounts `frontend/`, and keeps
+`node_modules` in a Docker volume. React watches the mounted source and reloads
+without rebuilding the production image. Open `http://notoli.localhost:3000`;
+the development API runs at `http://notoli.localhost:8000`. Both ports are
+localhost-only by default and can be changed with the `NOTOLI_DEV_*_PORT`
+variables in `deploy/.env`.
+
+At container start, the development entrypoint compares `package.json` and
+`package-lock.json` with the dependencies in its Docker volume and runs
+`npm ci` when they differ. After changing either file, restart the frontend:
+
+```powershell
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart frontend
+```
+
 ## 🧰 Useful Commands
 
 ```bash

@@ -1,0 +1,16 @@
+# Miniforge 24.04, pinned for reproducible development builds. Update this
+# digest only after an explicit image-version and security review.
+FROM condaforge/miniforge3@sha256:70ce395025aeec0d011eb64b6d6dc870fcc1a774a163965bc6dd8e8f6bf5da0d
+
+WORKDIR /backend
+
+COPY environment.yml requirements.txt ./
+RUN conda env create -f environment.yml && conda clean --all -y
+
+ENV PATH="/opt/conda/envs/notoli_env/bin:$PATH" \
+    DJANGO_SETTINGS_MODULE=app.settings \
+    PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
