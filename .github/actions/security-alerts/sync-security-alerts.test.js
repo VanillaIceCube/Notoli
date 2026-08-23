@@ -401,6 +401,7 @@ test("synchronization preserves canonical project fields and completes supersede
 test("synchronization sends issue creation, labels, and assignment only through RoboCop", async () => {
   const issueCalls = [];
   const projectCalls = [];
+  let projectItemQueryCount = 0;
   const createdIssue = {
     number: 20,
     node_id: "ISSUE_20",
@@ -477,17 +478,23 @@ test("synchronization sends issue creation, labels, and assignment only through 
         };
       }
       if (query.includes("items(first: 100")) {
+        projectItemQueryCount += 1;
         return {
           node: {
             items: {
-              nodes: [],
+              nodes:
+                projectItemQueryCount >= 3
+                  ? [{ id: "ITEM_20", content: { id: "ISSUE_20" } }]
+                  : [],
               pageInfo: { hasNextPage: false, endCursor: null },
             },
           },
         };
       }
       if (query.includes("addProjectV2ItemById")) {
-        return { addProjectV2ItemById: { item: { id: "ITEM_20" } } };
+        throw {
+          errors: [{ message: "Content already exists in this project" }],
+        };
       }
       if (query.includes("updateProjectV2ItemFieldValue")) {
         return { updateProjectV2ItemFieldValue: { projectV2Item: {} } };
