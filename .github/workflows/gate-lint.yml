@@ -222,7 +222,7 @@ jobs:
         with:
           read_node: "false"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ steps.versions.outputs.python_version }}
           cache: 'pip'
