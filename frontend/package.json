@@ -23,7 +23,7 @@
     "react-dom": "^19.2.8",
     "react-router-dom": "^6.30.6",
     "react-scripts": "5.0.1",
-    "web-vitals": "^6.1.1"
+    "web-vitals": "^6.2.0"
   },
   "devDependencies": {
     "eslint": "^8.57.1",
