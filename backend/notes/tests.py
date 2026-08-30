@@ -1469,7 +1469,10 @@ class NotificationErrorHandlingTests(APITestCase):
         )
         self.list.notes.add(self.note)
 
-    @patch("notes.views.notify_board_members", side_effect=Exception("Notification service down"))
+    @patch(
+        "notes.views.notify_board_members",
+        side_effect=Exception("Notification service down"),
+    )
     def test_board_operations_succeed_when_notifications_fail(self, mock_notify):
         self.client.force_authenticate(user=self.owner)
 
@@ -1488,9 +1491,17 @@ class NotificationErrorHandlingTests(APITestCase):
         self.assertEqual(delete_res.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Board.objects.filter(pk=self.board.id).exists())
 
-    @patch("notes.views.notify_board_members", side_effect=Exception("Notification service down"))
-    @patch("notifications.models.Notification.objects.create", side_effect=Exception("Notification service down"))
-    def test_collaborator_operations_succeed_when_notifications_fail(self, mock_create, mock_notify):
+    @patch(
+        "notes.views.notify_board_members",
+        side_effect=Exception("Notification service down"),
+    )
+    @patch(
+        "notifications.models.Notification.objects.create",
+        side_effect=Exception("Notification service down"),
+    )
+    def test_collaborator_operations_succeed_when_notifications_fail(
+        self, mock_create, mock_notify
+    ):
         new_user = User.objects.create_user(
             username="newuser",
             email="newuser@example.com",
@@ -1514,8 +1525,13 @@ class NotificationErrorHandlingTests(APITestCase):
         self.assertEqual(rem_res.status_code, status.HTTP_200_OK, rem_res.data)
         self.assertFalse(self.board.collaborators.filter(pk=new_user.pk).exists())
 
-    @patch("notes.views.notify_board_members", side_effect=Exception("Notification service down"))
-    def test_list_and_note_operations_succeed_when_notifications_fail(self, mock_notify):
+    @patch(
+        "notes.views.notify_board_members",
+        side_effect=Exception("Notification service down"),
+    )
+    def test_list_and_note_operations_succeed_when_notifications_fail(
+        self, mock_notify
+    ):
         self.client.force_authenticate(user=self.owner)
 
         # List update
@@ -1524,7 +1540,9 @@ class NotificationErrorHandlingTests(APITestCase):
             {"name": "Updated List Name"},
             format="json",
         )
-        self.assertEqual(list_update_res.status_code, status.HTTP_200_OK, list_update_res.data)
+        self.assertEqual(
+            list_update_res.status_code, status.HTTP_200_OK, list_update_res.data
+        )
 
         # Note create
         note_create_res = self.client.post(
@@ -1532,7 +1550,9 @@ class NotificationErrorHandlingTests(APITestCase):
             {"note": "New Test Note", "list": self.list.id},
             format="json",
         )
-        self.assertEqual(note_create_res.status_code, status.HTTP_201_CREATED, note_create_res.data)
+        self.assertEqual(
+            note_create_res.status_code, status.HTTP_201_CREATED, note_create_res.data
+        )
         new_note_id = note_create_res.data["id"]
 
         # Note update
@@ -1541,7 +1561,9 @@ class NotificationErrorHandlingTests(APITestCase):
             {"status": Note.STATUS_COMPLETE},
             format="json",
         )
-        self.assertEqual(note_update_res.status_code, status.HTTP_200_OK, note_update_res.data)
+        self.assertEqual(
+            note_update_res.status_code, status.HTTP_200_OK, note_update_res.data
+        )
 
         # Note delete
         note_del_res = self.client.delete(f"/api/notes/{new_note_id}/")

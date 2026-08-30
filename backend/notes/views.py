@@ -112,7 +112,9 @@ class BoardViewSet(viewsets.ModelViewSet):
                     f'{display_name(self.request.user)} renamed "{previous_name}" to "{board.name}".',
                 )
             except Exception:
-                logger.exception("Board update notification failed for board_id=%s", board.pk)
+                logger.exception(
+                    "Board update notification failed for board_id=%s", board.pk
+                )
 
     def perform_destroy(self, instance):
         self._require_owner(instance, "Only the board owner can delete this board.")
@@ -125,7 +127,9 @@ class BoardViewSet(viewsets.ModelViewSet):
                 f'{display_name(self.request.user)} deleted the shared board "{instance.name}".',
             )
         except Exception:
-            logger.exception("Board deletion notification failed for board_id=%s", instance.pk)
+            logger.exception(
+                "Board deletion notification failed for board_id=%s", instance.pk
+            )
         instance.delete()
 
     def _require_owner(self, board, message="Only the board owner can manage access."):
@@ -182,7 +186,11 @@ class BoardViewSet(viewsets.ModelViewSet):
                 target_path=board_path(board),
             )
         except Exception:
-            logger.exception("Collaborator added notification failed for board_id=%s, user_id=%s", board.pk, user.pk)
+            logger.exception(
+                "Collaborator added notification failed for board_id=%s, user_id=%s",
+                board.pk,
+                user.pk,
+            )
         serializer = self.get_serializer(board)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -230,7 +238,11 @@ class BoardViewSet(viewsets.ModelViewSet):
                 target_path=board_path(board),
             )
         except Exception:
-            logger.exception("Collaborator removed notification failed for board_id=%s, user_id=%s", board.pk, user_id)
+            logger.exception(
+                "Collaborator removed notification failed for board_id=%s, user_id=%s",
+                board.pk,
+                user_id,
+            )
         serializer = self.get_serializer(board)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -312,7 +324,9 @@ class ListViewSet(viewsets.ModelViewSet):
                 target_path=list_path(note_list),
             )
         except Exception:
-            logger.exception("List update notification failed for list_id=%s", note_list.pk)
+            logger.exception(
+                "List update notification failed for list_id=%s", note_list.pk
+            )
 
     def perform_destroy(self, instance):
         board = instance.board
@@ -327,7 +341,9 @@ class ListViewSet(viewsets.ModelViewSet):
                 target_path=board_path(board),
             )
         except Exception:
-            logger.exception("List deletion notification failed for list_id=%s", instance.pk)
+            logger.exception(
+                "List deletion notification failed for list_id=%s", instance.pk
+            )
         instance.delete()
 
     @action(detail=False, methods=["patch"], url_path="reorder")
@@ -444,7 +460,9 @@ class NoteViewSet(viewsets.ModelViewSet):
                 else board_path(note.board),
             )
         except Exception:
-            logger.exception("Note creation notification failed for note_id=%s", note.pk)
+            logger.exception(
+                "Note creation notification failed for note_id=%s", note.pk
+            )
 
     def perform_update(self, serializer):
         previous_status = serializer.instance.status
@@ -495,7 +513,9 @@ class NoteViewSet(viewsets.ModelViewSet):
                 target_path=board_path(board),
             )
         except Exception:
-            logger.exception("Note deletion notification failed for note_id=%s", instance.pk)
+            logger.exception(
+                "Note deletion notification failed for note_id=%s", instance.pk
+            )
         instance.delete()
 
     @action(detail=False, methods=["patch"], url_path="reorder")
