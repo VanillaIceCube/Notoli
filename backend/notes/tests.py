@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -1433,3 +1435,118 @@ class NoteApiTests(APITestCase):
             response.data,
             f"Expected board error to be raised first: {response.data}",
         )
+
+
+class NotificationErrorHandlingTests(APITestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(
+            username="owner",
+            email="owner_email@example.com",
+            password="owner-password",
+        )
+        self.collaborator = User.objects.create_user(
+            username="collaborator",
+            email="collaborator_email@example.com",
+            password="collaborator-password",
+        )
+        self.board = Board.objects.create(
+            name="Owner Board",
+            description="Owner Board Description",
+            created_by=self.owner,
+        )
+        self.board.collaborators.add(self.collaborator)
+        self.list = List.objects.create(
+            name="Owner List",
+            description="Owned List Description",
+            board=self.board,
+            created_by=self.owner,
+        )
+        self.note = Note.objects.create(
+            note="Owner Note",
+            description="Owner Note Description",
+            board=self.board,
+            created_by=self.owner,
+        )
+        self.list.notes.add(self.note)
+
+    @patch("notes.views.notify_board_members", side_effect=Exception("Notification service down"))
+    def test_board_operations_succeed_when_notifications_fail(self, mock_notify):
+        self.client.force_authenticate(user=self.owner)
+
+        # Board update
+        update_res = self.client.patch(
+            f"/api/boards/{self.board.id}/",
+            {"name": "Renamed Board"},
+            format="json",
+        )
+        self.assertEqual(update_res.status_code, status.HTTP_200_OK, update_res.data)
+        self.board.refresh_from_db()
+        self.assertEqual(self.board.name, "Renamed Board")
+
+        # Board delete
+        delete_res = self.client.delete(f"/api/boards/{self.board.id}/")
+        self.assertEqual(delete_res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Board.objects.filter(pk=self.board.id).exists())
+
+    @patch("notes.views.notify_board_members", side_effect=Exception("Notification service down"))
+    @patch("notifications.models.Notification.objects.create", side_effect=Exception("Notification service down"))
+    def test_collaborator_operations_succeed_when_notifications_fail(self, mock_create, mock_notify):
+        new_user = User.objects.create_user(
+            username="newuser",
+            email="newuser@example.com",
+            password="password",
+        )
+        self.client.force_authenticate(user=self.owner)
+
+        # Add collaborator
+        add_res = self.client.post(
+            f"/api/boards/{self.board.id}/collaborators/",
+            {"identifier": new_user.email},
+            format="json",
+        )
+        self.assertEqual(add_res.status_code, status.HTTP_200_OK, add_res.data)
+        self.assertTrue(self.board.collaborators.filter(pk=new_user.pk).exists())
+
+        # Remove collaborator
+        rem_res = self.client.delete(
+            f"/api/boards/{self.board.id}/collaborators/{new_user.id}/"
+        )
+        self.assertEqual(rem_res.status_code, status.HTTP_200_OK, rem_res.data)
+        self.assertFalse(self.board.collaborators.filter(pk=new_user.pk).exists())
+
+    @patch("notes.views.notify_board_members", side_effect=Exception("Notification service down"))
+    def test_list_and_note_operations_succeed_when_notifications_fail(self, mock_notify):
+        self.client.force_authenticate(user=self.owner)
+
+        # List update
+        list_update_res = self.client.patch(
+            f"/api/lists/{self.list.id}/",
+            {"name": "Updated List Name"},
+            format="json",
+        )
+        self.assertEqual(list_update_res.status_code, status.HTTP_200_OK, list_update_res.data)
+
+        # Note create
+        note_create_res = self.client.post(
+            "/api/notes/",
+            {"note": "New Test Note", "list": self.list.id},
+            format="json",
+        )
+        self.assertEqual(note_create_res.status_code, status.HTTP_201_CREATED, note_create_res.data)
+        new_note_id = note_create_res.data["id"]
+
+        # Note update
+        note_update_res = self.client.patch(
+            f"/api/notes/{new_note_id}/",
+            {"status": Note.STATUS_COMPLETE},
+            format="json",
+        )
+        self.assertEqual(note_update_res.status_code, status.HTTP_200_OK, note_update_res.data)
+
+        # Note delete
+        note_del_res = self.client.delete(f"/api/notes/{new_note_id}/")
+        self.assertEqual(note_del_res.status_code, status.HTTP_204_NO_CONTENT)
+
+        # List delete
+        list_del_res = self.client.delete(f"/api/lists/{self.list.id}/")
+        self.assertEqual(list_del_res.status_code, status.HTTP_204_NO_CONTENT)

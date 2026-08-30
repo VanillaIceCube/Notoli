@@ -103,23 +103,29 @@ class BoardViewSet(viewsets.ModelViewSet):
         previous_name = serializer.instance.name
         board = serializer.save()
         if board.name != previous_name:
-            notify_board_members(
-                board,
-                self.request.user,
-                Notification.EVENT_BOARD_UPDATED,
-                f"Board renamed: {board.name}",
-                f'{display_name(self.request.user)} renamed "{previous_name}" to "{board.name}".',
-            )
+            try:
+                notify_board_members(
+                    board,
+                    self.request.user,
+                    Notification.EVENT_BOARD_UPDATED,
+                    f"Board renamed: {board.name}",
+                    f'{display_name(self.request.user)} renamed "{previous_name}" to "{board.name}".',
+                )
+            except Exception:
+                logger.exception("Board update notification failed for board_id=%s", board.pk)
 
     def perform_destroy(self, instance):
         self._require_owner(instance, "Only the board owner can delete this board.")
-        notify_board_members(
-            instance,
-            self.request.user,
-            Notification.EVENT_BOARD_DELETED,
-            f"Board deleted: {instance.name}",
-            f'{display_name(self.request.user)} deleted the shared board "{instance.name}".',
-        )
+        try:
+            notify_board_members(
+                instance,
+                self.request.user,
+                Notification.EVENT_BOARD_DELETED,
+                f"Board deleted: {instance.name}",
+                f'{display_name(self.request.user)} deleted the shared board "{instance.name}".',
+            )
+        except Exception:
+            logger.exception("Board deletion notification failed for board_id=%s", instance.pk)
         instance.delete()
 
     def _require_owner(self, board, message="Only the board owner can manage access."):
@@ -155,25 +161,28 @@ class BoardViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         board.collaborators.add(user)
-        Notification.objects.create(
-            recipient=user,
-            actor=request.user,
-            board=board,
-            board_name=board.name,
-            event_type=Notification.EVENT_COLLABORATOR_ADDED,
-            title=f"You were added to {board.name}",
-            message=f"{display_name(request.user)} added you as a collaborator.",
-            target_path=board_path(board),
-        )
-        notify_board_members(
-            board,
-            request.user,
-            Notification.EVENT_COLLABORATOR_ADDED,
-            f"Collaborator added to {board.name}",
-            f'{display_name(request.user)} added {display_name(user)} to "{board.name}".',
-            exclude_user_ids={user.id},
-            target_path=board_path(board),
-        )
+        try:
+            Notification.objects.create(
+                recipient=user,
+                actor=request.user,
+                board=board,
+                board_name=board.name,
+                event_type=Notification.EVENT_COLLABORATOR_ADDED,
+                title=f"You were added to {board.name}",
+                message=f"{display_name(request.user)} added you as a collaborator.",
+                target_path=board_path(board),
+            )
+            notify_board_members(
+                board,
+                request.user,
+                Notification.EVENT_COLLABORATOR_ADDED,
+                f"Collaborator added to {board.name}",
+                f'{display_name(request.user)} added {display_name(user)} to "{board.name}".',
+                exclude_user_ids={user.id},
+                target_path=board_path(board),
+            )
+        except Exception:
+            logger.exception("Collaborator added notification failed for board_id=%s, user_id=%s", board.pk, user.pk)
         serializer = self.get_serializer(board)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -201,24 +210,27 @@ class BoardViewSet(viewsets.ModelViewSet):
             )
         removed_user = User.objects.get(pk=user_id)
         board.collaborators.remove(user_id)
-        Notification.objects.create(
-            recipient=removed_user,
-            actor=request.user,
-            board=board,
-            board_name=board.name,
-            event_type=Notification.EVENT_COLLABORATOR_REMOVED,
-            title=f"You were removed from {board.name}",
-            message=f"{display_name(request.user)} removed you from this board.",
-            target_path=board_path(board),
-        )
-        notify_board_members(
-            board,
-            request.user,
-            Notification.EVENT_COLLABORATOR_REMOVED,
-            f"Collaborator removed from {board.name}",
-            f'{display_name(request.user)} removed {display_name(removed_user)} from "{board.name}".',
-            target_path=board_path(board),
-        )
+        try:
+            Notification.objects.create(
+                recipient=removed_user,
+                actor=request.user,
+                board=board,
+                board_name=board.name,
+                event_type=Notification.EVENT_COLLABORATOR_REMOVED,
+                title=f"You were removed from {board.name}",
+                message=f"{display_name(request.user)} removed you from this board.",
+                target_path=board_path(board),
+            )
+            notify_board_members(
+                board,
+                request.user,
+                Notification.EVENT_COLLABORATOR_REMOVED,
+                f"Collaborator removed from {board.name}",
+                f'{display_name(request.user)} removed {display_name(removed_user)} from "{board.name}".',
+                target_path=board_path(board),
+            )
+        except Exception:
+            logger.exception("Collaborator removed notification failed for board_id=%s, user_id=%s", board.pk, user_id)
         serializer = self.get_serializer(board)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -289,27 +301,33 @@ class ListViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         note_list = serializer.save()
-        notify_board_members(
-            note_list.board,
-            self.request.user,
-            Notification.EVENT_LIST_UPDATED,
-            f"List updated in {note_list.board.name}",
-            f'{display_name(self.request.user)} updated the list "{note_list.name}".',
-            note_list=note_list,
-            target_path=list_path(note_list),
-        )
+        try:
+            notify_board_members(
+                note_list.board,
+                self.request.user,
+                Notification.EVENT_LIST_UPDATED,
+                f"List updated in {note_list.board.name}",
+                f'{display_name(self.request.user)} updated the list "{note_list.name}".',
+                note_list=note_list,
+                target_path=list_path(note_list),
+            )
+        except Exception:
+            logger.exception("List update notification failed for list_id=%s", note_list.pk)
 
     def perform_destroy(self, instance):
         board = instance.board
         list_name = instance.name
-        notify_board_members(
-            board,
-            self.request.user,
-            Notification.EVENT_LIST_DELETED,
-            f"List deleted in {board.name}",
-            f'{display_name(self.request.user)} deleted the list "{list_name}".',
-            target_path=board_path(board),
-        )
+        try:
+            notify_board_members(
+                board,
+                self.request.user,
+                Notification.EVENT_LIST_DELETED,
+                f"List deleted in {board.name}",
+                f'{display_name(self.request.user)} deleted the list "{list_name}".',
+                target_path=board_path(board),
+            )
+        except Exception:
+            logger.exception("List deletion notification failed for list_id=%s", instance.pk)
         instance.delete()
 
     @action(detail=False, methods=["patch"], url_path="reorder")
@@ -412,18 +430,21 @@ class NoteViewSet(viewsets.ModelViewSet):
 
         serializer.save(created_by=self.request.user)
         note = serializer.instance
-        notify_board_members(
-            note.board,
-            self.request.user,
-            Notification.EVENT_NOTE_CREATED,
-            f"New note in {note.board.name}",
-            f'{display_name(self.request.user)} created "{note.note}".',
-            note_list=note_list,
-            note=note,
-            target_path=list_path(note_list)
-            if note_list is not None
-            else board_path(note.board),
-        )
+        try:
+            notify_board_members(
+                note.board,
+                self.request.user,
+                Notification.EVENT_NOTE_CREATED,
+                f"New note in {note.board.name}",
+                f'{display_name(self.request.user)} created "{note.note}".',
+                note_list=note_list,
+                note=note,
+                target_path=list_path(note_list)
+                if note_list is not None
+                else board_path(note.board),
+            )
+        except Exception:
+            logger.exception("Note creation notification failed for note_id=%s", note.pk)
 
     def perform_update(self, serializer):
         previous_status = serializer.instance.status
@@ -432,44 +453,49 @@ class NoteViewSet(viewsets.ModelViewSet):
         target_path = (
             list_path(note_list) if note_list is not None else board_path(note.board)
         )
-        if (
-            previous_status != Note.STATUS_COMPLETE
-            and note.status == Note.STATUS_COMPLETE
-        ):
-            notify_board_members(
-                note.board,
-                self.request.user,
-                Notification.EVENT_NOTE_COMPLETED,
-                f"Item completed in {note.board.name}",
-                f'{display_name(self.request.user)} completed "{note.note}".',
-                note_list=note_list,
-                note=note,
-                target_path=target_path,
-            )
-            return
-
-        notify_board_members(
-            note.board,
-            self.request.user,
-            Notification.EVENT_NOTE_UPDATED,
-            f"Note updated in {note.board.name}",
-            f'{display_name(self.request.user)} updated "{note.note}".',
-            note_list=note_list,
-            note=note,
-            target_path=target_path,
-        )
+        try:
+            if (
+                previous_status != Note.STATUS_COMPLETE
+                and note.status == Note.STATUS_COMPLETE
+            ):
+                notify_board_members(
+                    note.board,
+                    self.request.user,
+                    Notification.EVENT_NOTE_COMPLETED,
+                    f"Item completed in {note.board.name}",
+                    f'{display_name(self.request.user)} completed "{note.note}".',
+                    note_list=note_list,
+                    note=note,
+                    target_path=target_path,
+                )
+            else:
+                notify_board_members(
+                    note.board,
+                    self.request.user,
+                    Notification.EVENT_NOTE_UPDATED,
+                    f"Note updated in {note.board.name}",
+                    f'{display_name(self.request.user)} updated "{note.note}".',
+                    note_list=note_list,
+                    note=note,
+                    target_path=target_path,
+                )
+        except Exception:
+            logger.exception("Note update notification failed for note_id=%s", note.pk)
 
     def perform_destroy(self, instance):
         board = instance.board
         note_text = instance.note
-        notify_board_members(
-            board,
-            self.request.user,
-            Notification.EVENT_NOTE_DELETED,
-            f"Note deleted in {board.name}",
-            f'{display_name(self.request.user)} deleted "{note_text}".',
-            target_path=board_path(board),
-        )
+        try:
+            notify_board_members(
+                board,
+                self.request.user,
+                Notification.EVENT_NOTE_DELETED,
+                f"Note deleted in {board.name}",
+                f'{display_name(self.request.user)} deleted "{note_text}".',
+                target_path=board_path(board),
+            )
+        except Exception:
+            logger.exception("Note deletion notification failed for note_id=%s", instance.pk)
         instance.delete()
 
     @action(detail=False, methods=["patch"], url_path="reorder")
