@@ -69,6 +69,17 @@ class AuthMethodTests(APITestCase):
         )
 
 
+class TestSettingsConfigTests(APITestCase):
+    def test_fast_password_hasher_configured_for_test_suite(self):
+        from django.conf import settings
+
+        self.assertIn(
+            "django.contrib.auth.hashers.MD5PasswordHasher",
+            settings.PASSWORD_HASHERS,
+            "MD5PasswordHasher should be configured in settings during test runs to optimize execution time.",
+        )
+
+
 class RegistrationTests(APITestCase):
     def test_register_success(self):
         response = self.client.post(
