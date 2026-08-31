@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-08-31
+### Fixed
+- Fixed backend test suite performance by overriding `PASSWORD_HASHERS` with `MD5PasswordHasher` during test execution, reducing total test runtime from >400s (timeout) to ~13 seconds.
+- Eliminated PyJWT `InsecureKeyLengthWarning` during local dev and tests by setting a secure 32+ byte fallback default `DJANGO_SECRET_KEY` in Django settings.
+
 ## 2026-08-22
 ### Fixed
 - Made security-alert Project v2 reconciliation tolerate eventual consistency
