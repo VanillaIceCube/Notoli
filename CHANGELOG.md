@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-08-31
+### Changed
+- Configured backend test settings in `backend/app/settings.py` to use `MD5PasswordHasher` during test execution (`'test' in sys.argv`), reducing backend test suite execution time from >400s down to ~14s.
+
 ## 2026-08-22
 ### Fixed
 - Made security-alert Project v2 reconciliation tolerate eventual consistency

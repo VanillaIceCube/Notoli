@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -45,6 +46,12 @@ FRONTEND_BASE_URL = os.getenv(
     "DJANGO_FRONTEND_BASE_URL", "http://localhost:3000"
 ).rstrip("/")
 
+
+# Use faster password hasher during tests to speed up test execution
+if len(sys.argv) > 1 and sys.argv[1] == "test":
+    PASSWORD_HASHERS = [
+        "django.contrib.auth.hashers.MD5PasswordHasher",
+    ]
 
 # Application definition
 INSTALLED_APPS = [
