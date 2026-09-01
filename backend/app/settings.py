@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -138,9 +139,7 @@ DATABASES = {
 }
 
 
-import sys
-
-if "test" in sys.argv:
+if len(sys.argv) > 1 and sys.argv[1] == "test":
     PASSWORD_HASHERS = [
         "django.contrib.auth.hashers.MD5PasswordHasher",
     ]
