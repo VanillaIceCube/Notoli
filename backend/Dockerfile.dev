@@ -1,6 +1,6 @@
 # Miniforge 24.04, pinned for reproducible development builds. Update this
 # digest only after an explicit image-version and security review.
-FROM condaforge/miniforge3@sha256:70ce395025aeec0d011eb64b6d6dc870fcc1a774a163965bc6dd8e8f6bf5da0d
+FROM condaforge/miniforge3@sha256:c7af1b9e9a2877b1aa7604fd250f8ad311876f6f0f52849acbff0a7011508eb7
 
 WORKDIR /backend
 
