@@ -1,0 +1,3 @@
+# 🦀 Marty's Journal — Critical Learnings
+
+## 2026-09-02 - Fast Backend Test Hasher & Fallback Secret Key **Learning:** Django uses PBKDF2 password hashing by default with 870,000 iterations, causing backend tests (~123 tests creating users) to time out after 400s unless `PASSWORD_HASHERS` is overridden with `MD5PasswordHasher` during test execution. Furthermore, PyJWT requires secret keys of at least 32 bytes to avoid `InsecureKeyLengthWarning`. **Action:** Keep `'test' in sys.argv` password hasher override and 32+ character default `DJANGO_SECRET_KEY` in `backend/app/settings.py` so test runs complete cleanly in ~15s.
