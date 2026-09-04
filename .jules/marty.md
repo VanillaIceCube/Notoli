@@ -1,0 +1,3 @@
+## 2026-03-31 - Backend Test Performance
+**Learning:** Django defaults to PBKDF2 password hashing with 720,000 iterations, causing backend test execution to take over 5 minutes and time out in standard CLI test runs. Overriding `PASSWORD_HASHERS` with `MD5PasswordHasher` when `'test' in sys.argv` in `backend/app/settings.py` speeds test execution up ~25x (from >300s to ~13s). Additionally, using a 32-byte fallback `SECRET_KEY` prevents `InsecureKeyLengthWarning` output during test runs.
+**Action:** Preserve fast test password hashing and 32-byte secret key defaults in `backend/app/settings.py` so backend test execution remains fast and clean.
