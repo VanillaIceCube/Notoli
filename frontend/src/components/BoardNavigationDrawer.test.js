@@ -580,6 +580,8 @@ describe('BoardNavigationDrawer', () => {
 
     await waitFor(() => {
       expect(fetchBoardsApi).not.toHaveBeenCalled();
+    });
+    await waitFor(() => {
       expect(fetchBoardApi).not.toHaveBeenCalled();
     });
   });
