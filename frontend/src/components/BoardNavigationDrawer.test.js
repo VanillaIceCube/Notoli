@@ -437,4 +437,152 @@ describe('BoardNavigationDrawer', () => {
     expect(screen.queryByRole('button', { name: /^add$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /remove collab/i })).not.toBeInTheDocument();
   });
+
+  test('when creating a board fails with a custom backend error, it shows snackbar and drawer error', async () => {
+    const showSnackbar = jest.fn();
+    createBoard.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'Board limit reached.' }),
+    });
+
+    await renderDrawer({ showSnackbar });
+
+    await openBoardList();
+
+    await userEvent.click(screen.getByRole('button', { name: /add new/i }));
+    const input = screen.getByPlaceholderText('New Board Name...');
+    await userEvent.type(input, 'New Board{enter}');
+
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith('error', 'Board limit reached.');
+    });
+    expect(await screen.findByText('Error: Board limit reached.')).toBeInTheDocument();
+  });
+
+  test('when creating a board succeeds, it notifies via snackbar', async () => {
+    const showSnackbar = jest.fn();
+    createBoard.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: 99, name: 'Fresh Board' }),
+    });
+
+    await renderDrawer({ showSnackbar });
+
+    await openBoardList();
+
+    await userEvent.click(screen.getByRole('button', { name: /add new/i }));
+    const input = screen.getByPlaceholderText('New Board Name...');
+    await userEvent.type(input, 'Fresh Board{enter}');
+
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith('success', 'Board "Fresh Board" created!');
+    });
+  });
+
+  test('when renaming a board fails with a custom backend error, it shows snackbar', async () => {
+    const showSnackbar = jest.fn();
+    updateBoard.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      json: async () => ({ error: 'Only the owner can rename this board.' }),
+    });
+
+    await renderDrawer({ showSnackbar });
+
+    await openBoardList();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
+
+    const input = screen.getByRole('textbox');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'Renamed Board{enter}');
+
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith('error', 'Only the owner can rename this board.');
+    });
+  });
+
+  test('when renaming a board succeeds, it notifies via snackbar', async () => {
+    const showSnackbar = jest.fn();
+    updateBoard.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: 1, name: 'Renamed Board' }),
+    });
+
+    await renderDrawer({ showSnackbar });
+
+    await openBoardList();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /rename/i }));
+
+    const input = screen.getByRole('textbox');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'Renamed Board{enter}');
+
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith('success', 'Board renamed to "Renamed Board".');
+    });
+  });
+
+  test('when removing a board fails with a custom backend error, it shows snackbar', async () => {
+    const showSnackbar = jest.fn();
+    deleteBoard.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      json: async () => ({ error: 'Cannot delete primary board.' }),
+    });
+
+    await renderDrawer({ showSnackbar });
+
+    await openBoardList();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /remove/i }));
+
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith('error', 'Cannot delete primary board.');
+    });
+  });
+
+  test('when the active board is removed, it redirects to root route and notifies via snackbar', async () => {
+    const showSnackbar = jest.fn();
+    deleteBoard.mockResolvedValueOnce({ ok: true });
+
+    // Active board is ID 1 (matches mock getBoardId)
+    await renderDrawer({ showSnackbar });
+
+    await openBoardList();
+
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /remove/i }));
+
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith('success', 'Board deleted.');
+    });
+    expect(mockNavigate).toHaveBeenCalledWith('/');
+  });
+
+  test('when unauthenticated, it does not call board API endpoints', async () => {
+    sessionStorage.removeItem('accessToken');
+
+    renderWithProviders(
+      <BoardNavigationDrawer
+        open
+        setDrawerOpen={jest.fn()}
+        drawerBoardsLabel=""
+        setDrawerBoardsLabel={jest.fn()}
+        showSnackbar={jest.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(fetchBoardsApi).not.toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(fetchBoardApi).not.toHaveBeenCalled();
+    });
+  });
 });
