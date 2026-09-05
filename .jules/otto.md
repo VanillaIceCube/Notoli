@@ -1,0 +1,7 @@
+# Otto's Backlog Organization Journal
+
+## 2026-09-05 - Direct GitHub REST API Backlog Inspection **Learning:** When `gh` CLI is absent in execution environments, query `https://api.github.com/repos/VanillaIceCube/Notoli/issues` and `/pulls` via Python/curl to inspect open backlog items, active agent PRs, and completion states accurately. **Action:** Future runs without `gh` CLI should query GitHub REST API endpoints directly for full backlog visibility.
+
+## 2026-09-05 - Protecting Active Specialist Work **Learning:** Active PRs from specialist implementation agents (e.g., Marty's performance optimizations, Nora's hook refactor, Kira's workflow parity, Forge's resilience fixes) represent in-flight implementation against active issues (such as #563). Restructuring issue scope underneath active PRs disrupts implementation cycles. **Action:** Do not split, merge, or re-scope active issues while specialist implementation PRs are open and in progress.
+
+## 2026-09-05 - Automated Security Alert Sync **Learning:** Security alert issues (tagged with `<!-- notoli-security-alert:...`) are automatically reconciled and synchronized by scheduled workflows (`alert-codeql.yml`, `alert-vulnerability.yml`, `alert-malware.yml`). Manual issue updates should preserve their source references and canonical Project metadata. **Action:** Leave automated security alert tickets to workflow reconciliation and focus manual backlog organization on product, engineering, and architecture issues.
