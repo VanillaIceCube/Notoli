@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -23,8 +24,17 @@ load_dotenv(BASE_DIR / ".env")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "default-key")
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "default-key-32-bytes-long-for-jwt-signing-safety-and-warnings",
+)
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
+
+IS_TESTING = "test" in sys.argv or "pytest" in sys.modules
+if IS_TESTING:
+    PASSWORD_HASHERS = [
+        "django.contrib.auth.hashers.MD5PasswordHasher",
+    ]
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
@@ -176,6 +186,8 @@ else:
 
 # Where collectstatic will put all static files in prod
 STATIC_ROOT = BASE_DIR / "staticfiles"
+if IS_TESTING:
+    STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
