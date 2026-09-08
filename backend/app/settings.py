@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -22,8 +23,6 @@ load_dotenv(BASE_DIR / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
-
-import sys
 
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY", "django-insecure-default-key-for-development-32chars"
