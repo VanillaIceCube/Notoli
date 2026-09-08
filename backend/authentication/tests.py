@@ -857,3 +857,31 @@ class ResendApiEmailBackendTests(APITestCase):
                     )
                 ]
             )
+
+
+class SettingsConfigurationTests(APITestCase):
+    def test_test_password_hasher_configured(self):
+        from django.conf import settings
+
+        self.assertIn(
+            "django.contrib.auth.hashers.MD5PasswordHasher",
+            settings.PASSWORD_HASHERS,
+            "MD5PasswordHasher should be configured during test execution for speed.",
+        )
+
+    def test_default_secret_key_length(self):
+        from django.conf import settings
+
+        self.assertGreaterEqual(
+            len(settings.SECRET_KEY),
+            32,
+            "SECRET_KEY must be at least 32 characters to prevent JWT HMAC warnings.",
+        )
+
+    def test_static_root_directory_exists(self):
+        from django.conf import settings
+
+        self.assertTrue(
+            settings.STATIC_ROOT.exists(),
+            "STATIC_ROOT directory should exist to prevent WhiteNoise warnings.",
+        )
