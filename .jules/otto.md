@@ -1,0 +1,3 @@
+# 🦦 Otto's Journal — Backlog & Project Organizational Learnings
+
+## 2026-03-31 - Notoli GitHub Project v2 Schema & Field Boundaries **Learning:** Notoli's GitHub Project v2 board schema mandates `Status` (`Backlog`, `Done`), `Domain` (`CI/CD`), `Type` (`Security`), `Priority` (`P1`/`P2`), `Size` (`M`), and numeric `Estimate` (`3`). Issues created by security alert workflows maintain isolated credential separation where RoboCop authors issue mutations and `SECURITY_ALERTS_TOKEN` handles Project v2 field synchronization. **Action:** Respect existing Project metadata fields and automated lifecycle notes when reconciling managed security issues.
