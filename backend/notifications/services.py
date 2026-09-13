@@ -1,8 +1,11 @@
+import logging
+
 from django.contrib.auth import get_user_model
 
 from .models import Notification
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def display_name(user):
@@ -68,3 +71,23 @@ def notify_board_members(
             for recipient in recipients
         ]
     )
+
+
+def safe_notify_board_members(*args, **kwargs):
+    try:
+        notify_board_members(*args, **kwargs)
+    except Exception:
+        event_type = kwargs.get("event_type") or (args[2] if len(args) > 2 else "unknown")
+        logger.exception("Failed to dispatch notification for event_type=%s", event_type)
+
+
+def safe_create_notification(**kwargs):
+    try:
+        return Notification.objects.create(**kwargs)
+    except Exception:
+        recipient = kwargs.get("recipient")
+        logger.exception(
+            "Failed to create notification for recipient_id=%s",
+            getattr(recipient, "id", None),
+        )
+        return None

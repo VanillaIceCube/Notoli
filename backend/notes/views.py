@@ -16,7 +16,8 @@ from notifications.services import (
     display_name,
     first_note_list,
     list_path,
-    notify_board_members,
+    safe_create_notification,
+    safe_notify_board_members,
 )
 
 from .models import Board, ListNote, Note
@@ -103,7 +104,7 @@ class BoardViewSet(viewsets.ModelViewSet):
         previous_name = serializer.instance.name
         board = serializer.save()
         if board.name != previous_name:
-            notify_board_members(
+            safe_notify_board_members(
                 board,
                 self.request.user,
                 Notification.EVENT_BOARD_UPDATED,
@@ -113,7 +114,7 @@ class BoardViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         self._require_owner(instance, "Only the board owner can delete this board.")
-        notify_board_members(
+        safe_notify_board_members(
             instance,
             self.request.user,
             Notification.EVENT_BOARD_DELETED,
@@ -155,7 +156,7 @@ class BoardViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         board.collaborators.add(user)
-        Notification.objects.create(
+        safe_create_notification(
             recipient=user,
             actor=request.user,
             board=board,
@@ -165,7 +166,7 @@ class BoardViewSet(viewsets.ModelViewSet):
             message=f"{display_name(request.user)} added you as a collaborator.",
             target_path=board_path(board),
         )
-        notify_board_members(
+        safe_notify_board_members(
             board,
             request.user,
             Notification.EVENT_COLLABORATOR_ADDED,
@@ -201,7 +202,7 @@ class BoardViewSet(viewsets.ModelViewSet):
             )
         removed_user = User.objects.get(pk=user_id)
         board.collaborators.remove(user_id)
-        Notification.objects.create(
+        safe_create_notification(
             recipient=removed_user,
             actor=request.user,
             board=board,
@@ -211,7 +212,7 @@ class BoardViewSet(viewsets.ModelViewSet):
             message=f"{display_name(request.user)} removed you from this board.",
             target_path=board_path(board),
         )
-        notify_board_members(
+        safe_notify_board_members(
             board,
             request.user,
             Notification.EVENT_COLLABORATOR_REMOVED,
@@ -269,27 +270,19 @@ class ListViewSet(viewsets.ModelViewSet):
             position=next_position,
         )
         note_list = serializer.instance
-        try:
-            notify_board_members(
-                board,
-                self.request.user,
-                Notification.EVENT_LIST_CREATED,
-                f"New list in {board.name}",
-                f'{display_name(self.request.user)} created the list "{note_list.name}".',
-                note_list=note_list,
-                target_path=list_path(note_list),
-            )
-        except Exception:
-            # A notification failure must not turn a successful list write into a
-            # misleading 500 response. The list is already persisted, so log the
-            # failure and let the API return the created resource.
-            logger.exception(
-                "List creation notification failed for list_id=%s", note_list.pk
-            )
+        safe_notify_board_members(
+            board,
+            self.request.user,
+            Notification.EVENT_LIST_CREATED,
+            f"New list in {board.name}",
+            f'{display_name(self.request.user)} created the list "{note_list.name}".',
+            note_list=note_list,
+            target_path=list_path(note_list),
+        )
 
     def perform_update(self, serializer):
         note_list = serializer.save()
-        notify_board_members(
+        safe_notify_board_members(
             note_list.board,
             self.request.user,
             Notification.EVENT_LIST_UPDATED,
@@ -302,7 +295,7 @@ class ListViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         board = instance.board
         list_name = instance.name
-        notify_board_members(
+        safe_notify_board_members(
             board,
             self.request.user,
             Notification.EVENT_LIST_DELETED,
@@ -412,7 +405,7 @@ class NoteViewSet(viewsets.ModelViewSet):
 
         serializer.save(created_by=self.request.user)
         note = serializer.instance
-        notify_board_members(
+        safe_notify_board_members(
             note.board,
             self.request.user,
             Notification.EVENT_NOTE_CREATED,
@@ -436,7 +429,7 @@ class NoteViewSet(viewsets.ModelViewSet):
             previous_status != Note.STATUS_COMPLETE
             and note.status == Note.STATUS_COMPLETE
         ):
-            notify_board_members(
+            safe_notify_board_members(
                 note.board,
                 self.request.user,
                 Notification.EVENT_NOTE_COMPLETED,
@@ -448,7 +441,7 @@ class NoteViewSet(viewsets.ModelViewSet):
             )
             return
 
-        notify_board_members(
+        safe_notify_board_members(
             note.board,
             self.request.user,
             Notification.EVENT_NOTE_UPDATED,
@@ -462,7 +455,7 @@ class NoteViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         board = instance.board
         note_text = instance.note
-        notify_board_members(
+        safe_notify_board_members(
             board,
             self.request.user,
             Notification.EVENT_NOTE_DELETED,

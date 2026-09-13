@@ -337,12 +337,12 @@ class NotificationApiTests(APITestCase):
         )
 
     @patch(
-        "notes.views.notify_board_members",
+        "notifications.services.notify_board_members",
         side_effect=Exception("notifications table is unavailable"),
     )
     def test_list_create_succeeds_when_notification_fails(self, mock_notify):
         self.client.force_authenticate(user=self.collaborator)
-        with self.assertLogs("notes.views", level="ERROR") as logs:
+        with self.assertLogs("notifications.services", level="ERROR") as logs:
             response = self.client.post(
                 "/api/lists/",
                 {
@@ -357,7 +357,123 @@ class NotificationApiTests(APITestCase):
         created_list = List.objects.get(name="List Without Notification")
         self.assertEqual(response.data["id"], created_list.id)
         mock_notify.assert_called_once()
-        self.assertIn("List creation notification failed", logs.output[0])
+        self.assertIn("Failed to dispatch notification", logs.output[0])
+
+    @patch(
+        "notifications.services.notify_board_members",
+        side_effect=Exception("notification error"),
+    )
+    def test_board_update_and_delete_succeed_when_notification_fails(self, mock_notify):
+        self.client.force_authenticate(user=self.owner)
+        with self.assertLogs("notifications.services", level="ERROR") as logs:
+            response = self.client.patch(
+                f"/api/boards/{self.board.id}/",
+                {"name": "Renamed Board Direct"},
+                format="json",
+            )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.board.refresh_from_db()
+        self.assertEqual(self.board.name, "Renamed Board Direct")
+        self.assertIn("Failed to dispatch notification", logs.output[0])
+
+        with self.assertLogs("notifications.services", level="ERROR") as logs:
+            delete_response = self.client.delete(f"/api/boards/{self.board.id}/")
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Board.objects.filter(pk=self.board.id).exists())
+
+    @patch(
+        "notifications.services.safe_create_notification",
+        side_effect=Exception("single notification failure"),
+    )
+    @patch(
+        "notifications.services.notify_board_members",
+        side_effect=Exception("bulk notification failure"),
+    )
+    def test_collaborator_add_and_remove_succeed_when_notification_fails(
+        self, mock_notify, mock_create
+    ):
+        new_collaborator = User.objects.create_user(
+            username="resilient_user",
+            email="resilient@example.com",
+            password="password",
+        )
+        self.client.force_authenticate(user=self.owner)
+        add_response = self.client.post(
+            f"/api/boards/{self.board.id}/collaborators/",
+            {"identifier": new_collaborator.email},
+            format="json",
+        )
+        self.assertEqual(add_response.status_code, status.HTTP_200_OK, add_response.data)
+        self.assertTrue(
+            self.board.collaborators.filter(pk=new_collaborator.pk).exists()
+        )
+
+        remove_response = self.client.delete(
+            f"/api/boards/{self.board.id}/collaborators/{new_collaborator.id}/"
+        )
+        self.assertEqual(
+            remove_response.status_code, status.HTTP_200_OK, remove_response.data
+        )
+        self.assertFalse(
+            self.board.collaborators.filter(pk=new_collaborator.pk).exists()
+        )
+
+    @patch(
+        "notifications.services.notify_board_members",
+        side_effect=Exception("notification failure"),
+    )
+    def test_list_update_and_delete_succeed_when_notification_fails(self, mock_notify):
+        self.client.force_authenticate(user=self.collaborator)
+        update_response = self.client.patch(
+            f"/api/lists/{self.list.id}/",
+            {"name": "Resilient List Rename"},
+            format="json",
+        )
+        self.assertEqual(
+            update_response.status_code, status.HTTP_200_OK, update_response.data
+        )
+        self.list.refresh_from_db()
+        self.assertEqual(self.list.name, "Resilient List Rename")
+
+        delete_response = self.client.delete(f"/api/lists/{self.list.id}/")
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(List.objects.filter(pk=self.list.id).exists())
+
+    @patch(
+        "notifications.services.notify_board_members",
+        side_effect=Exception("notification failure"),
+    )
+    def test_note_create_update_and_delete_succeed_when_notification_fails(
+        self, mock_notify
+    ):
+        self.client.force_authenticate(user=self.collaborator)
+        create_response = self.client.post(
+            "/api/notes/",
+            {
+                "note": "Resilient Note",
+                "list": self.list.id,
+            },
+            format="json",
+        )
+        self.assertEqual(
+            create_response.status_code, status.HTTP_201_CREATED, create_response.data
+        )
+        note_id = create_response.data["id"]
+
+        update_response = self.client.patch(
+            f"/api/notes/{note_id}/",
+            {"status": Note.STATUS_COMPLETE},
+            format="json",
+        )
+        self.assertEqual(
+            update_response.status_code, status.HTTP_200_OK, update_response.data
+        )
+        created_note = Note.objects.get(pk=note_id)
+        self.assertEqual(created_note.status, Note.STATUS_COMPLETE)
+
+        delete_response = self.client.delete(f"/api/notes/{note_id}/")
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Note.objects.filter(pk=note_id).exists())
 
     def test_owner_board_rename_notifies_collaborators(self):
         self.client.force_authenticate(user=self.owner)
