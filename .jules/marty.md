@@ -1,0 +1,1 @@
+## 2026-03-31 - Accelerate Backend Tests with MD5PasswordHasher **Learning:** Django default password hashers (Argon2/PBKDF2) slow backend test execution to over 300s. Setting MD5PasswordHasher when IS_TESTING is True drops runtime to ~15s. **Action:** Maintain IS_TESTING check in backend/app/settings.py and ensure default fallback secret key length is 32+ bytes.
