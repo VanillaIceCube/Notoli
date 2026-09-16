@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -137,8 +138,6 @@ DATABASES = {
     }
 }
 
-
-import sys
 
 # Fast password hasher during testing to accelerate test suite execution
 IS_TESTING = "test" in sys.argv or "pytest" in sys.modules or os.getenv("DJANGO_TESTING") == "true"
