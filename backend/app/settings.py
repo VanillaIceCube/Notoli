@@ -138,6 +138,13 @@ DATABASES = {
 }
 
 
+import sys
+
+# Fast password hasher during testing to accelerate test suite execution
+IS_TESTING = "test" in sys.argv or "pytest" in sys.modules or os.getenv("DJANGO_TESTING") == "true"
+if IS_TESTING:
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
