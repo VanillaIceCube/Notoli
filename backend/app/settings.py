@@ -129,7 +129,11 @@ TEMPLATES = [
 WSGI_APPLICATION = "app.wsgi.application"
 
 
-IS_TESTING = "test" in sys.argv or "pytest" in sys.modules or os.environ.get("DJANGO_TESTING") == "1"
+IS_TESTING = (
+    "test" in sys.argv
+    or "pytest" in sys.modules
+    or os.environ.get("DJANGO_TESTING") == "1"
+)
 
 if IS_TESTING:
     PASSWORD_HASHERS = [
