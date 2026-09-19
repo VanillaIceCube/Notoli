@@ -1,0 +1,3 @@
+# Kira's Downstream Parity Journal
+
+## 2026-09-04 - GitHub App Token Action Version Parity **Learning:** When upgrading `actions/create-github-app-token` across workflow files (e.g. from `@v2` to `@v3`), composite helper actions (`.github/actions/prepare-lint-commit/action.yml`) and repository automation tests (`.github/actions/security-alerts/sync-security-alerts.test.js`) must be updated in tandem to prevent action drift and test assertion failures. **Action:** Ensure any future Action version upgrades are applied consistently across workflow triggers, composite actions, and test assertions in `.github/`.
