@@ -24,7 +24,10 @@ load_dotenv(BASE_DIR / ".env")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "default-key")
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-dev-fallback-secret-key-32-chars-min",
+)
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
@@ -129,16 +132,15 @@ TEMPLATES = [
 WSGI_APPLICATION = "app.wsgi.application"
 
 
-IS_TESTING = (
-    "test" in sys.argv
-    or "pytest" in sys.modules
-    or os.environ.get("DJANGO_TESTING") == "1"
-)
+IS_TESTING = "test" in sys.argv or "pytest" in sys.modules or os.environ.get("DJANGO_TESTING") == "1"
 
 if IS_TESTING:
     PASSWORD_HASHERS = [
         "django.contrib.auth.hashers.MD5PasswordHasher",
     ]
+    # Ensure staticfiles directory exists during tests to suppress WhiteNoise warnings
+    STATIC_ROOT = BASE_DIR / "staticfiles"
+    STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 
 
 # Database
