@@ -16,7 +16,7 @@ runs:
   steps:
     - name: Create Lint Eastwood GitHub App token
       id: app-token
-      uses: actions/create-github-app-token@v2
+      uses: actions/create-github-app-token@v3
       with:
         app-id: ${{ inputs.app_id }}
         private-key: ${{ inputs.private_key }}
