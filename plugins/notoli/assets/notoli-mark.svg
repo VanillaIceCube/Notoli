@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <linearGradient id="circle" x1="512" y1="72" x2="512" y2="952" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F6DD63"/>
+      <stop offset="1" stop-color="#F2CF45"/>
+    </linearGradient>
+    <linearGradient id="letter" x1="300" y1="260" x2="720" y2="760" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3A210F"/>
+      <stop offset="1" stop-color="#241206"/>
+    </linearGradient>
+    <clipPath id="circleClip">
+      <circle cx="512" cy="512" r="440"/>
+    </clipPath>
+  </defs>
+
+  <circle cx="512" cy="512" r="440" fill="url(#circle)"/>
+
+  <g clip-path="url(#circleClip)" opacity="0.18" stroke="#8D6B16" stroke-width="2">
+    <line x1="96" y1="240" x2="928" y2="240"/>
+    <line x1="96" y1="288" x2="928" y2="288"/>
+    <line x1="96" y1="336" x2="928" y2="336"/>
+    <line x1="96" y1="384" x2="928" y2="384"/>
+    <line x1="96" y1="432" x2="928" y2="432"/>
+    <line x1="96" y1="480" x2="928" y2="480"/>
+    <line x1="96" y1="528" x2="928" y2="528"/>
+    <line x1="96" y1="576" x2="928" y2="576"/>
+    <line x1="96" y1="624" x2="928" y2="624"/>
+    <line x1="96" y1="672" x2="928" y2="672"/>
+    <line x1="96" y1="720" x2="928" y2="720"/>
+    <line x1="96" y1="768" x2="928" y2="768"/>
+  </g>
+
+  <path d="M290 766V258H426L653 591V258H765V766H629L402 434V766H290Z" fill="url(#letter)"/>
+</svg>
