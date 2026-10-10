@@ -4,6 +4,7 @@ All notable changes to this project are documented in this file.
 ## 2026-10-10
 ### Added
 - Add complete Notoli plugin listing descriptions, developer branding, support link, and the existing product logo; add a ZIP builder that retains the installed personal plugin identity and app mapping.
+- Cover listing ZIP identity/file preservation, bundled icons, release version ordering, and validation failures with standalone temporary-fixture regression tests.
 ### Fixed
 - Document why the custom-MCP cloud listing used generic metadata despite the portable source manifest, and provide the correct upload-new-version workflow instead of relying on backend deployment or tool refresh.
 ### Changed

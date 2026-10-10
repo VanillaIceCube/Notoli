@@ -60,6 +60,13 @@ Track those pages and public-submission prerequisites in
    export's version. `1.0.1` is the installed listing release from `1.0.0`;
    it is independent of the portable package's `0.3.1` and the MCP SDK version.
    Do not commit the account-specific export or generated ZIP.
+
+   Before uploading, run the builder's standalone regression checks (no
+   Django, Node, or third-party dependencies needed):
+
+   ```powershell
+   python -m unittest discover -s plugins/notoli -p "test_*.py" -v
+   ```
 4. In the **same plugin's** More actions menu, choose **Upload new version**
    and upload the generated ZIP. Verify developer, category, website, text,
    logo, and version in the resulting listing. Inspect the app mapping and
