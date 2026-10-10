@@ -5,7 +5,7 @@ This repo deploys Notoli at the subdomain root `https://notoli.judeandrewalaba.c
 ## What Runs
 Docker Compose (`deploy/docker-compose.yml`) starts:
 - `proxy`: Nginx reverse proxy (ports 80 and 443)
-- `backend`: Django/Gunicorn (port 8000)
+- `backend`: Django + MCP through Uvicorn ASGI (port 8000, host mapping localhost only)
 - `frontend`: Nginx serving the built SPA (port 3000)
 
 The compose file uses the current Compose Specification syntax without a top-level
@@ -37,8 +37,8 @@ Local dev (optional): you can generate a self-signed cert for `localhost` and pl
 ## Docker hot-reload development
 
 Use the development Compose file for fast source iteration. It mounts both
-source trees, runs React's hot-reload server and Django's autoreloading
-development server, and does not start the production Nginx proxy or require a
+source trees, runs React's hot-reload server and Uvicorn's autoreloading
+ASGI server, and does not start the production Nginx proxy or require a
 certificate:
 
 ```powershell
@@ -169,9 +169,90 @@ The forgot-password check should return `{"error":"Email is required."}`. If it 
 ## Nginx Host Routing
 Routing rules live in `deploy/nginx-proxy.conf` and are ordered so backend routes win before the SPA catch-all.
 
+## ChatGPT MCP deployment
+
+MCP runs inside the existing backend process at
+`https://notoli.judeandrewalaba.com/mcp`. No new service, DNS record, or port is
+required. `backend/Dockerfile` uses Uvicorn ASGI with one worker for SQLite.
+Production's direct backend port is bound to `127.0.0.1` because Uvicorn trusts
+forwarded headers from the reverse proxy; remote traffic must go through Nginx.
+
+1. Back up the production SQLite database, deploy the new backend image and
+   `nginx-proxy.conf`, and apply migrations:
+
+   ```bash
+   docker compose exec -T backend python manage.py migrate
+   docker compose exec -T backend python manage.py check --deploy
+   docker compose exec -T proxy nginx -t
+   ```
+
+2. Use production settings:
+
+   ```env
+   DJANGO_DEBUG=0
+   DJANGO_MCP_BASE_URL=https://notoli.judeandrewalaba.com
+   DJANGO_FRONTEND_BASE_URL=https://notoli.judeandrewalaba.com
+   DJANGO_ALLOWED_HOSTS=notoli.judeandrewalaba.com
+   DJANGO_CSRF_TRUSTED_ORIGINS=https://notoli.judeandrewalaba.com
+   DJANGO_CORS_ALLOWED_ORIGINS=https://notoli.judeandrewalaba.com
+   DJANGO_FORCE_SCRIPT_NAME=
+   ```
+
+   Keep a unique `DJANGO_SECRET_KEY`. The deploy workflow carries optional repo
+   variable `DJANGO_MCP_BASE_URL` into `.env`; leaving it blank uses the production
+   domain above. Changing the issuer invalidates old resource-bound grants, so
+   reconnect clients and update `plugins/notoli/mcp.json` when changing domains.
+
+3. In Cloudflare, reuse the existing proxied DNS record and Full (strict) TLS.
+   Review Redirect, WAF, Bot, Access, and Caching rules: preserve `/mcp` and
+   discovery paths without slash redirects or interactive challenges, and bypass
+   cache for `/mcp` and `/auth/mcp/*`. Keep metadata publicly readable. Set
+   appropriate login/token rate limits. These are operator changes; repository
+   configuration does not change Cloudflare automatically.
+
+4. Register the exact OAuth callback shown in ChatGPT's connection page:
+
+   ```bash
+   docker compose exec -T backend python manage.py register_mcp_client \
+     --redirect-uri "<exact ChatGPT callback URI>"
+   ```
+
+   Use client ID `notoli-chatgpt`, token authentication method `none`, and scopes
+   `notoli:read notoli:write`. No client secret is needed. See the
+   [personal connection walkthrough](../plugins/notoli/README.md).
+
+5. Verify discovery and an unauthenticated challenge before linking:
+
+   ```bash
+   curl -i https://notoli.judeandrewalaba.com/.well-known/oauth-authorization-server
+   curl -i https://notoli.judeandrewalaba.com/.well-known/oauth-protected-resource/mcp
+   curl -i https://notoli.judeandrewalaba.com/mcp
+   ```
+
+   Metadata returns JSON; `/mcp` returns `401` with a `WWW-Authenticate` resource
+   metadata URL. After linking, try discovery, add one item, mark it complete,
+   and revoke the connection at `/auth/mcp/connections/`. Check ordinary REST/JWT
+   login, list ordering, and collaborator notifications as well. MCP Inspector
+   can exercise the protocol before testing ChatGPT. Register its exact HTTPS
+   callback as a separate public client if needed.
+
+Nginx passes `/mcp` with buffering disabled, a 120-second read timeout, and
+`Cache-Control: no-store`; `/.well-known/*` goes to Django, and OAuth pages use
+the existing `/auth/` proxy location with caching disabled. `/mcp/` is not the
+canonical endpoint. The development Compose stack overrides the issuer to
+`http://notoli.localhost:8000` (or the selected backend port); ChatGPT testing
+requires a reachable HTTPS origin or an appropriate secure tunnel. Set the
+issuer, allowed host, and trusted CSRF origin consistently when using a tunnel.
+
+Run `docker compose exec -T backend python manage.py cleartokens` periodically
+to remove expired OAuth rows. Never put access/refresh tokens or codes into
+deployment logs. Rolling back the code does not require removing OAuth tables;
+restore a database backup only if a migration rollback is specifically needed.
+
 High level behavior on `notoli.judeandrewalaba.com`:
 - `/` and frontend SPA routes -> `frontend`
 - `/api/*` -> `backend`
+- `/mcp` and `/.well-known/*` -> `backend` (MCP and OAuth discovery)
 - `/auth/*` -> `backend`
 - `/admin/*` -> `backend`
 - `/static/admin/*` and `/static/rest_framework/*` -> `backend` (admin/DRF assets)

@@ -86,6 +86,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - `DJANGO_CSRF_TRUSTED_ORIGINS` (comma-separated)
    - `DJANGO_FORCE_SCRIPT_NAME` (default: unset; keep blank for subdomain-root routing)
    - `DJANGO_FRONTEND_BASE_URL` (default: `http://localhost:3000`; used in password-reset email links)
+   - `DJANGO_MCP_BASE_URL` (origin only, no path; defaults to `http://localhost:8000` in debug or `https://notoli.judeandrewalaba.com` in production; OAuth issuer and MCP resource base)
    - `DJANGO_EMAIL_BACKEND` (default: `django.core.mail.backends.console.EmailBackend`)
    - `DJANGO_EMAIL_HOST` (default: `smtp.resend.com`)
    - `DJANGO_EMAIL_PORT` (default: `587`)
@@ -95,7 +96,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - `DJANGO_EMAIL_TIMEOUT` (default: `10`)
    - `DJANGO_DEFAULT_FROM_EMAIL` (default: `notoli@example.com`)
 5) Run backend migrations: `python backend/manage.py migrate`
-6) Start backend: `python backend/manage.py runserver 8000`
+6) Start backend including MCP: `cd backend` then `python -m uvicorn app.asgi:application --port 8000 --reload` (Django `runserver` serves only REST/auth, not `/mcp`). Return to the repo root for the frontend steps.
 7) Frontend setup:
    - `cd frontend`
    - `npm install`
@@ -111,6 +112,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - Run migrations with `docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate`.
    - Open `http://notoli.localhost:3000`; Django is available at `http://notoli.localhost:8000`.
    - Both ports bind to localhost only. Override them with `NOTOLI_DEV_FRONTEND_PORT` and `NOTOLI_DEV_BACKEND_PORT` in `deploy/.env`.
+   - The backend runs Uvicorn with reload so `/mcp` is available; Compose sets `DJANGO_MCP_BASE_URL` to the development backend origin.
    - A blank `DJANGO_SECRET_KEY` receives a Compose-only development fallback so the fresh stack can authenticate locally. Set a unique secret before using the production-shaped stack.
    - The frontend checks `package.json` and `package-lock.json` at each container start and runs `npm ci` when they change. After changing either file, restart the frontend service.
    - Stop with `docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml down`.
@@ -145,6 +147,9 @@ Use the same script as the Codex maintenance script so cached containers refresh
 - Public URLs (subdomain-root):
   - Frontend: `https://notoli.judeandrewalaba.com`
   - Backend:
+    - `https://notoli.judeandrewalaba.com/mcp` (exact path, no trailing slash; Streamable HTTP)
+    - `https://notoli.judeandrewalaba.com/.well-known/oauth-protected-resource/mcp`
+    - `https://notoli.judeandrewalaba.com/.well-known/oauth-authorization-server`
     - `https://notoli.judeandrewalaba.com/api`
       - Board sharing uses `POST /api/boards/<id>/collaborators/` and `DELETE /api/boards/<id>/collaborators/<user_id>/`.
       - Notifications use `GET /api/notifications/`, `PATCH` or `DELETE /api/notifications/<id>/`, `PATCH /api/notifications/mark-all-read/`, and `DELETE /api/notifications/clear-all/`.
@@ -168,6 +173,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
   - `DJANGO_CORS_ALLOWED_ORIGINS=https://notoli.judeandrewalaba.com`
   - `DJANGO_CSRF_TRUSTED_ORIGINS=https://notoli.judeandrewalaba.com`
   - `DJANGO_FRONTEND_BASE_URL=https://notoli.judeandrewalaba.com`
+  - `DJANGO_MCP_BASE_URL=https://notoli.judeandrewalaba.com`
 - Frontend API base for production builds:
   - Prefer `REACT_APP_API_BASE_URL=` (blank/unset) so requests resolve to same-origin `/api/...`.
   - If blank handling is not possible in a deploy environment, use `REACT_APP_API_BASE_URL=https://notoli.judeandrewalaba.com`.
@@ -179,6 +185,10 @@ Use the same script as the Codex maintenance script so cached containers refresh
     - `POST /auth/reset-password/` accepts `uid`, `token`, and `password`.
 
 ## Maintenance
+- MCP deployment: install requirements, apply Django OAuth Toolkit's supplied migrations with `migrate`, and run `python manage.py check --deploy` under production settings. Serve `app.asgi:application` using Uvicorn (one worker for SQLite); WSGI does not serve MCP. Production's direct backend port is bound to localhost because forwarded headers are trusted from the proxy.
+- Register the predefined public ChatGPT OAuth client once: `python manage.py register_mcp_client --redirect-uri "<exact ChatGPT callback URI>"`. Copy the callback from ChatGPT's management page; use S256 PKCE and token auth method `none`. No client secret, password grant, dynamic registration, or unverified OIDC email claims are exposed. Existing registrations must be edited explicitly in Django admin.
+- Connection login/consent/revocation live under `/auth/mcp/`; users revoke their own application grants and tokens at `/auth/mcp/connections/`. Run `python manage.py cleartokens` periodically to clean expired OAuth rows. Keep access/refresh tokens and authorization codes out of logs.
+- When changing MCP routes or the issuer, review Cloudflare Redirect/WAF/Caching rules for `/mcp`, `/.well-known/*`, and `/auth/mcp/*`: no interactive challenges or path rewriting for MCP/discovery, no caching of authenticated responses, and rate limits for login/token endpoints. Existing DNS and Full (strict) TLS are reused. Details and connection steps: `deploy/README.md` and `plugins/notoli/README.md`.
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
 - Update Conda env: `conda env update --file backend/environment.yml --prune`
 - Regenerate Conda env + requirements:

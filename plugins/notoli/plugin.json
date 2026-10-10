@@ -1,0 +1,26 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "notoli",
+  "version": "0.1.0",
+  "description": "Read your Notoli lists, add to-do items, and mark them complete.",
+  "homepage": "https://notoli.judeandrewalaba.com",
+  "repository": "https://github.com/VanillaIceCube/Notoli",
+  "keywords": ["productivity", "todo", "lists"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Notoli",
+        "shortDescription": "Manage your Notoli to-do lists",
+        "category": "Productivity",
+        "capabilities": ["Read", "Write"],
+        "websiteURL": "https://notoli.judeandrewalaba.com",
+        "defaultPrompt": [
+          "Show my Notoli to-do lists.",
+          "Add milk to my Notoli grocery list.",
+          "Mark laundry complete in Notoli."
+        ],
+        "brandColor": "#296d42"
+      }
+    }
+  }
+}

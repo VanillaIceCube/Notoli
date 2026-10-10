@@ -12,6 +12,15 @@ UI styling conventions live in [`STYLE_GUIDE.md`](STYLE_GUIDE.md).
 - Public auth routes: `/login`, `/register`, `/forgot-password`, `/reset-password?uid=<...>&token=<...>`
 - Everything else requires auth
 
+ChatGPT integration pages live on the backend at `/auth/mcp/login/`,
+`/auth/mcp/authorize/`, and `/auth/mcp/connections/`. These use a separate
+Django session for sign-in and consent; the React application's JWTs stay in
+`sessionStorage`. Navigate to those backend URLs as full pages rather than
+React Router routes. In development use `http://notoli.localhost:8000`; in
+production Nginx routes them on the normal Notoli domain. MCP item results link
+back to `/board/:boardId/list/:listId`. See the
+[plugin connection instructions](../plugins/notoli/README.md).
+
 Authentication tokens are stored in `sessionStorage` (`accessToken` and `refreshToken`).
 The refresh token is stored for later use, but the frontend currently does not auto-refresh access tokens.
 If an API request returns `401 Unauthorized` (expired/invalid token), the frontend clears stored tokens, redirects to `/login`, and shows an error snackbar explaining the logout.

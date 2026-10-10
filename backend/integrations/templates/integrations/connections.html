@@ -1,0 +1,11 @@
+{% extends "integrations/base.html" %}
+{% block title %}Your Notoli connections{% endblock %}
+{% block content %}
+<h1>Your connections</h1><p>Signed in as {{ user.get_username }}.</p>
+{% for application in applications %}
+<form method="post">{% csrf_token %}<input type="hidden" name="application_id" value="{{ application.pk }}">
+<h2>{{ application.name }}</h2><p>Revoking removes this application's access and refresh tokens for your account.</p>
+<button type="submit" class="secondary">Revoke connection</button></form>
+{% empty %}<p>You have no connected applications.</p>{% endfor %}
+<form method="post" action="{% url 'mcp-logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form>
+{% endblock %}

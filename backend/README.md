@@ -1,12 +1,13 @@
 # 🛠️ Backend (Django)
 
-The Notoli backend is a Django + Django REST Framework API, served by Gunicorn in production.
+The Notoli backend is a Django + Django REST Framework API and authenticated MCP server, served by Uvicorn ASGI in production.
 
 ## 🧭 What Lives Here
 - `backend/app/`: Django project settings/urls (`settings.py`, `urls.py`)
 - `backend/authentication/`: custom user model + JWT auth endpoints
 - `backend/notes/`: boards, lists, and notes (DRF viewsets)
 - `backend/notifications/`: recipient-scoped in-app notifications, API endpoints, and notification helper services
+- `backend/integrations/`: OAuth policy/pages/client registration and MCP tools
 - `backend/manage.py`: Django management entrypoint
 
 ## 🗺️ API Routes
@@ -14,8 +15,64 @@ Top-level routes (without any path prefix):
 - Auth: `/auth/` (register/login/refresh)
 - API: `/api/` (boards/lists/notes/notifications)
 - Admin: `/admin/`
+- MCP: `/mcp` (Streamable HTTP, exact path without trailing slash)
+- OAuth for MCP: `/auth/mcp/` and discovery at `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource/mcp`
 
 Production serves these routes from the subdomain root at `https://notoli.judeandrewalaba.com`.
+
+## ChatGPT MCP authentication and tools
+
+The official Python MCP SDK serves a stateless JSON Streamable HTTP endpoint
+at `/mcp`. Django OAuth Toolkit supplies migrations and the authorization-code
+flow. Run the ASGI entrypoint, not WSGI or Django `runserver`, to expose MCP.
+`DJANGO_MCP_BASE_URL` is the issuer origin (no path); the exact token audience
+is `<origin>/mcp`. Production must use HTTPS. The origin must also be in
+`DJANGO_ALLOWED_HOSTS` and, for browser consent, `DJANGO_CSRF_TRUSTED_ORIGINS`.
+
+Users sign in at `/auth/mcp/login/` with email or username and approve scopes
+at `/auth/mcp/authorize/`. These pages use Django session cookies and CSRF
+protection, separate from frontend JWT authentication. Session and CSRF cookies
+are secure when debug is disabled. `/auth/mcp/connections/` lists their connected
+applications and revokes their access tokens, refresh tokens, and pending
+authorization codes. The RFC 7009 token revocation endpoint is
+`POST /auth/mcp/revoke/`; token exchange/refresh is `POST /auth/mcp/token/`
+with a form-encoded body.
+
+Register a public client after migrations:
+
+```bash
+python manage.py register_mcp_client --redirect-uri "<exact callback URI shown by ChatGPT>"
+```
+
+The default client ID is `notoli-chatgpt`; token authentication is `none` and
+S256 PKCE is mandatory. Repeat `--redirect-uri` for multiple exact HTTPS
+callbacks. Review changes to existing registrations in Django admin; the command
+does not silently replace them. Client registration is operator controlled;
+there is no dynamic registration endpoint or OIDC email verification claim.
+
+The issuer is included as `iss` in OAuth callback responses. Authorization
+requires `state`, S256, and the exact MCP `resource`. The server validates
+resource binding, expiry, active user, scopes, and revocation on each HTTP
+request and rechecks them inside each tool. JWTs are not accepted by MCP and
+OAuth MCP tokens are not accepted by the REST API. Access tokens expire after
+one hour; refresh tokens rotate with reuse protection and a 30-day idle limit.
+The toolkit stores token checksums rather than bearer tokens. Run
+`python manage.py cleartokens` periodically; do not log token bodies or headers.
+
+`notoli:read` grants discovery/read tools; `notoli:write` additionally grants
+`add_item` and `update_item`. Read pagination defaults to 50 and is capped at
+100. Write titles are capped at 255 characters, descriptions at 10,000. Tool
+schemas and annotations include each tool's OAuth scopes. Missing write scope
+returns an MCP authentication challenge so ChatGPT can request reauthorization.
+Board/list permission failures return ordinary tool errors without data.
+
+Tools reuse the REST querysets, note serializer, and `perform_create`/
+`perform_update` services inside a transaction, preserving validation, ordering,
+and notifications. MCP also rechecks board membership even for an item's original
+creator after collaboration is removed. No deletion or sharing tools are exposed.
+See [plugin tools and evaluation prompts](../plugins/notoli/README.md).
+
+Run the OAuth and HTTP protocol tests with `python manage.py test integrations`.
 
 ## 🔐 Authentication
 JWT auth is provided by `djangorestframework-simplejwt`.
@@ -56,7 +113,8 @@ Full setup (Conda, env vars) lives in [`AGENTS.md`](../AGENTS.md). Common comman
 
 ```bash
 python backend/manage.py migrate
-python backend/manage.py runserver 8000
+cd backend
+python -m uvicorn app.asgi:application --port 8000 --reload
 ```
 
 For local non-Docker runs, Django auto-loads `backend/.env` (via `python-dotenv`) before reading `DJANGO_*` settings.
@@ -64,7 +122,7 @@ For local non-Docker runs, Django auto-loads `backend/.env` (via `python-dotenv`
 ## Docker hot reload
 
 The development Compose workflow builds `backend/Dockerfile.dev`, mounts the
-backend source, and runs Django's autoreloading development server:
+backend source, and runs Uvicorn with source reload:
 
 ```powershell
 docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml up --build -d backend
@@ -72,7 +130,7 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T b
 ```
 
 The development backend listens on `http://notoli.localhost:8000` by default.
-Use the production Dockerfile and Compose file when testing Gunicorn, Nginx,
+Use the production Dockerfile and Compose file when testing Uvicorn, Nginx,
 HTTPS, or deployment-shaped behavior.
 
 The development Compose configuration supplies a local-only fallback when
@@ -85,7 +143,8 @@ image-version and security review.
 Run tests:
 
 ```bash
-python backend/manage.py test
+cd backend
+python manage.py test
 ```
 
 Migrations:
@@ -114,6 +173,7 @@ Key environment variables (see `backend/app/settings.py` for defaults):
 - `DJANGO_CSRF_TRUSTED_ORIGINS` (comma-separated)
 - `DJANGO_FORCE_SCRIPT_NAME` (leave unset/blank for subdomain-root hosting)
 - `DJANGO_FRONTEND_BASE_URL` (base URL used in password-reset links, for example `https://notoli.judeandrewalaba.com`)
+- `DJANGO_MCP_BASE_URL` (OAuth issuer origin; exact MCP resource is `<origin>/mcp`)
 - `DJANGO_EMAIL_BACKEND` (default `django.core.mail.backends.console.EmailBackend`)
 - `DJANGO_EMAIL_HOST` / `DJANGO_EMAIL_PORT` / `DJANGO_EMAIL_USE_TLS`
 - `DJANGO_EMAIL_HOST_USER` / `DJANGO_EMAIL_HOST_KEY`

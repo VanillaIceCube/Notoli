@@ -1,0 +1,12 @@
+{% extends "integrations/base.html" %}
+{% block title %}Sign in to connect Notoli{% endblock %}
+{% block content %}
+<h1>Connect your Notoli account</h1>
+<p>Sign in to review the permissions for this connection.</p>
+<form method="post">
+  {% csrf_token %}{{ form.non_field_errors }}
+  {% for field in form %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% endfor %}
+  <input type="hidden" name="next" value="{{ next }}">
+  <button type="submit">Sign in</button>
+</form>
+{% endblock %}

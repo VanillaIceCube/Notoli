@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-10-09
+### Added
+- Added a hosted, authenticated MCP endpoint with tools to discover boards/lists, read items, add items, and update statuses using existing Notoli validation and notifications.
+- Added OAuth authorization-code/S256 PKCE, resource-bound tokens, consent and connection revocation pages, and a predefined ChatGPT client registration command.
+- Added a portable Notoli plugin package, connection/deployment instructions, and OAuth/MCP integration tests.
+### Changed
+- Serve backend containers through Uvicorn ASGI, route MCP/OAuth discovery through Nginx, and configure `DJANGO_MCP_BASE_URL` for local and production deployments.
+- Bind the production backend's direct port to localhost while trusting forwarded headers from its reverse proxy.
+
 ## 2026-08-22
 ### Fixed
 - Made security-alert Project v2 reconciliation tolerate eventual consistency
