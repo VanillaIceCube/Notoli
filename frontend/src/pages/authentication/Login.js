@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchBoards as fetchBoardsApi, login } from '../../services/notoliApiClient';
 import { persistAuthSession, readOkJson } from '../../services/authSession';
 import { getPreferredBoardId } from '../../services/lastBoard';
+import { connectionReturnTo } from '../../services/authRedirect';
 
 export default function Login({ showSnackbar }) {
   // Basics
@@ -11,6 +12,8 @@ export default function Login({ showSnackbar }) {
   const [password, setPassword] = useState('');
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = connectionReturnTo(new URLSearchParams(location.search).get('next'));
 
   useEffect(() => {
     const raw = sessionStorage.getItem('pendingSnackbar');
@@ -64,6 +67,11 @@ export default function Login({ showSnackbar }) {
         email.trim().split?.('@')?.[0] ||
         'there';
       showSnackbar('success', `Welcome ${welcomeName}!`);
+
+      if (returnTo) {
+        navigate(returnTo, { replace: true });
+        return;
+      }
 
       // Navigate to first Board, if empty, navigate to root
       const boards = await fetchBoards(data.access, true);

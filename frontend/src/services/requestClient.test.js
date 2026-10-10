@@ -1,6 +1,59 @@
 const originalEnv = process.env;
 
 describe('requestClient', () => {
+  test('background requests preserve the active consent URL when authentication expires', async () => {
+    const { setNavigate } = await import('./navigationService');
+    const mockNavigate = jest.fn();
+    setNavigate(mockNavigate);
+    const pending = '/connections/authorize?state=pending%26state';
+    window.history.replaceState({}, '', pending);
+    global.fetch.mockResolvedValue({ ok: false, status: 401 });
+    const { apiFetch } = await import('./requestClient');
+    await apiFetch('/api/notifications/');
+    expect(mockNavigate).toHaveBeenCalledWith(`/login?next=${encodeURIComponent(pending)}`, {
+      replace: true,
+    });
+  });
+  test('expired connection authentication returns to the pending consent after login', async () => {
+    const { setNavigate } = await import('./navigationService');
+    const mockNavigate = jest.fn();
+    setNavigate(mockNavigate);
+    global.fetch.mockResolvedValue({ ok: false, status: 401 });
+    sessionStorage.setItem('accessToken', 'EXPIRED');
+    const { apiFetch } = await import('./requestClient');
+    const pending =
+      '/connections/authorize?state=a%26b&resource=https%3A%2F%2Fnotoli.example%2Fmcp';
+    await apiFetch('/auth/mcp/authorize/', {
+      headers: { Authorization: 'Bearer EXPIRED' },
+      authReturnTo: pending,
+    });
+    expect(mockNavigate).toHaveBeenCalledWith(`/login?next=${encodeURIComponent(pending)}`, {
+      replace: true,
+    });
+    expect(global.fetch.mock.calls[0][1]).not.toHaveProperty('authReturnTo');
+  });
+
+  test('connection requests refresh expired JWTs without forcing a second login', async () => {
+    const { setNavigate } = await import('./navigationService');
+    const mockNavigate = jest.fn();
+    setNavigate(mockNavigate);
+    global.fetch
+      .mockResolvedValueOnce({ ok: false, status: 401 })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ access: 'FRESH' }) })
+      .mockResolvedValueOnce({ ok: true, status: 200 });
+    sessionStorage.setItem('refreshToken', 'REFRESH');
+    const { apiFetch } = await import('./requestClient');
+    await apiFetch('/auth/mcp/authorize/', {
+      credentials: 'omit',
+      headers: { Authorization: 'Bearer EXPIRED' },
+      authReturnTo: '/connections/authorize?state=state',
+    });
+    expect(global.fetch.mock.calls[2][1]).toEqual({
+      credentials: 'omit',
+      headers: { Authorization: 'Bearer FRESH' },
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     jest.resetModules();
     process.env = { ...originalEnv };

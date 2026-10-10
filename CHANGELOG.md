@@ -13,10 +13,28 @@ All notable changes to this project are documented in this file.
 - Matched MacroMapper's shared 512 KiB source-diff budget, generated-lockfile diff exclusions, 16,000-token OpenAI output cap, and major-upgrade automation tests. The shared missing-final-dependency bug remains tracked separately in #890.
 
 ## 2026-10-09
+### Added
+- Added a hosted, authenticated MCP endpoint with tools to discover boards/lists, read items, add items, and update statuses using existing Notoli validation and notifications.
+- Added OAuth authorization-code/S256 PKCE, resource-bound tokens, consent and connection revocation pages, and a predefined ChatGPT client registration command.
+- Added a portable Notoli plugin package, connection/deployment instructions, and OAuth/MCP integration tests.
+- Added MCP tools to inspect board owners/collaborators and add/remove collaborators using existing board sharing, owner checks, and notifications.
+- Added explicit `notoli:share` consent for board-wide access changes; existing read/write tokens cannot upgrade sharing permissions through refresh.
+- Expanded MCP coverage to 31 tools for board/list creation, editing and deletion, board-wide items, item deletion, list membership, ordering, and recipient-only notification management using existing REST services.
+- Added separate organization, notification, and deletion OAuth permissions, explicit deletion confirmation, bounded membership/order inputs, and regression coverage for cascades, scope escalation, removed creators, and cross-board access.
 ### Fixed
+- Reject ambiguous collaborator usernames/emails before sharing or sending notifications in REST and MCP; disclose owner/collaborator identity and email access in read consent.
+- Show apps with unexpired pending authorization codes in Connected Apps so users can revoke before exchange, excluding expired/foreign grants and duplicate app rows; correct the documented six-scope setup.
+- Explicitly pin the ASGI HTTP client used by MCP protocol tests instead of relying on the SDK's transitive dependency.
+- Reuse the existing React JWT login for OAuth consent, preserving pending authorization through login and token refresh without a duplicate Django session sign-in.
+- Bind consent to the displayed application, permissions, callback, and authenticated account with a short-lived signed ticket; add frontend consent and Connected Apps revocation coverage.
+- Restrict forwarded headers to Nginx's exact private IP, ignore untrusted forwarding metadata in Django, and replace incoming forwarding headers at Nginx.
 - Removed the conditional standalone `CodeQL` requirement from the live main-branch ruleset so documentation-only PRs can merge after successful scope detection and skipped analysis. Retained all existing scope, analyzer, lint, test, vulnerability, and malware requirements.
 ### Changed
+- Serve backend containers through Uvicorn ASGI, route MCP/OAuth discovery through Nginx, and configure `DJANGO_MCP_BASE_URL` for local and production deployments.
+- Remove the production backend's published port and isolate it from the frontend on a private proxy network while preserving outbound email on a separate bridge.
 - Documented the exact main-branch required-check list and the scope-aware CodeQL policy for ruleset maintenance and recovery.
+### Removed
+- Remove Django integration HTML templates and separate connection login/logout routes; consent and Connected Apps now use React with Django JSON endpoints.
 
 ## 2026-08-22
 ### Fixed

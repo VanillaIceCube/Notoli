@@ -25,4 +25,4 @@ RUN python manage.py collectstatic --noinput
 EXPOSE 8000
 
 # Run Django server
-CMD ["gunicorn", "app.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1"]
+CMD ["uvicorn", "app.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-proxy-headers"]
