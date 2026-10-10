@@ -15,6 +15,15 @@ class ConnectionPermissionDenied(PermissionDenied):
         self.oauth_error = oauth_error
 
 
+def required_scopes(operation):
+    scopes = ["notoli:read"]
+    if operation in {"add_item", "update_item"}:
+        scopes.append("notoli:write")
+    if operation in {"add_board_collaborator", "remove_board_collaborator"}:
+        scopes.append("notoli:share")
+    return scopes
+
+
 class NotoliOAuthValidator(OAuth2Validator):
     def validate_grant_type(
         self, client_id, grant_type, client, request, *args, **kwargs

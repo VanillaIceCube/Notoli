@@ -8,9 +8,10 @@ from django.db import transaction
 from rest_framework.exceptions import APIException
 
 from notes.models import Board
+from notes.serializers import UserSummarySerializer
 from notes.views import BoardViewSet, ListViewSet, NoteViewSet
 
-from .oauth import ConnectionPermissionDenied, resolve_token
+from .oauth import ConnectionPermissionDenied, required_scopes, resolve_token
 
 
 def view_for(view_class, user, data=None, query=None):
@@ -55,14 +56,12 @@ def page(queryset, limit, offset, serialize):
 
 
 def execute(raw_token, operation, **arguments):
-    scope = (
-        "notoli:write" if operation in {"add_item", "update_item"} else "notoli:read"
-    )
+    scopes = required_scopes(operation)
     with transaction.atomic():
         token = resolve_token(raw_token)
-        if not token.is_valid([scope]):
+        if not token.is_valid(scopes):
             raise ConnectionPermissionDenied(
-                "This connection does not have write permission. Reconnect with notoli:write.",
+                f"This connection lacks required permissions. Reconnect with {' '.join(scopes)}.",
                 "insufficient_scope",
             )
         user = token.user
@@ -96,6 +95,58 @@ def execute(raw_token, operation, **arguments):
                     "description": row.description,
                 },
             )
+        if operation in {
+            "get_board_collaborators",
+            "add_board_collaborator",
+            "remove_board_collaborator",
+        }:
+            board = (
+                Board.objects.accessible_to(user)
+                .select_related("owner")
+                .filter(pk=arguments["board_id"])
+                .first()
+            )
+            if board is None:
+                raise PermissionDenied("Board not found or no longer accessible.")
+            if operation == "get_board_collaborators":
+                return {
+                    "board_id": board.pk,
+                    "board_name": board.name,
+                    "sharing_level": "board",
+                    "can_manage_collaborators": board.owner_id == user.pk,
+                    "owner": dict(UserSummarySerializer(board.owner).data),
+                    **page(
+                        board.collaborators.order_by("username", "id"),
+                        arguments["limit"],
+                        arguments["offset"],
+                        lambda member: dict(UserSummarySerializer(member).data),
+                    ),
+                }
+            view = view_for(
+                BoardViewSet, user, data={"identifier": arguments.get("identifier")}
+            )
+            view.kwargs = {"pk": board.pk}
+            try:
+                if operation == "add_board_collaborator":
+                    response = view.add_collaborator(view.request, pk=board.pk)
+                else:
+                    response = view.remove_collaborator(
+                        view.request, pk=board.pk, user_id=arguments["user_id"]
+                    )
+            except APIException as error:
+                raise PermissionDenied(str(error.detail)) from None
+            if response.status_code >= 400:
+                raise ValueError(
+                    response.data.get("error", "Notoli rejected the sharing change.")
+                )
+            return {
+                "board_id": board.pk,
+                "board_name": board.name,
+                "sharing_level": "board",
+                "action": "added"
+                if operation == "add_board_collaborator"
+                else "removed",
+            }
         note_list = accessible_list(user, arguments["list_id"])
         view = view_for(
             NoteViewSet, user, query={"list": note_list.pk, "board": note_list.board_id}

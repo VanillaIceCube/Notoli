@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file.
 - Added a hosted, authenticated MCP endpoint with tools to discover boards/lists, read items, add items, and update statuses using existing Notoli validation and notifications.
 - Added OAuth authorization-code/S256 PKCE, resource-bound tokens, consent and connection revocation pages, and a predefined ChatGPT client registration command.
 - Added a portable Notoli plugin package, connection/deployment instructions, and OAuth/MCP integration tests.
+- Added MCP tools to inspect board owners/collaborators and add/remove collaborators using existing board sharing, owner checks, and notifications.
+- Added explicit `notoli:share` consent for board-wide access changes; existing read/write tokens cannot upgrade sharing permissions through refresh.
 ### Fixed
 - Reuse the existing React JWT login for OAuth consent, preserving pending authorization through login and token refresh without a duplicate Django session sign-in.
 - Bind consent to the displayed application, permissions, callback, and authenticated account with a short-lived signed ticket; add frontend consent and Connected Apps revocation coverage.

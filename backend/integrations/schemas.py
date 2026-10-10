@@ -37,3 +37,27 @@ class ListPage(TypedDict):
 class ItemPage(TypedDict):
     results: list[Item]
     next_offset: int | None
+
+
+class UserSummary(TypedDict):
+    id: int
+    username: str
+    email: str
+    display_name: str
+
+
+class BoardCollaboratorPage(TypedDict):
+    board_id: int
+    board_name: str
+    sharing_level: Literal["board"]
+    can_manage_collaborators: bool
+    owner: UserSummary
+    results: list[UserSummary]
+    next_offset: int | None
+
+
+class BoardSharingChange(TypedDict):
+    board_id: int
+    board_name: str
+    sharing_level: Literal["board"]
+    action: Literal["added", "removed"]

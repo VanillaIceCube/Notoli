@@ -323,6 +323,40 @@ class OAuthTests(TestCase):
             )
             self.assertIn(response.status_code, (400, 401))
 
+    def test_sharing_requires_explicit_consent_and_cannot_be_added_on_refresh(self):
+        consent = self.consent(scope="notoli:read notoli:write notoli:share")
+        self.assertEqual(consent.status_code, 200)
+        permissions = {
+            p["scope"]: p["description"] for p in consent.json()["permissions"]
+        }
+        self.assertIn("every list and item", permissions["notoli:share"])
+        approved = self.client.post(
+            "/auth/mcp/authorize/",
+            {"ticket": consent.json()["ticket"], "decision": "allow"},
+        )
+        code = parse_qs(urlsplit(approved.json()["redirect_url"]).query)["code"][0]
+        issued = self.exchange(code).json()
+        self.assertTrue(
+            resolve_token(issued["access_token"]).is_valid(
+                ["notoli:read", "notoli:share"]
+            )
+        )
+        legacy = self.issue()
+        response = self.client.post(
+            "/auth/mcp/token/",
+            urlencode(
+                {
+                    "grant_type": "refresh_token",
+                    "client_id": self.app.client_id,
+                    "refresh_token": legacy["refresh_token"],
+                    "resource": settings.MCP_RESOURCE_URL,
+                    "scope": "notoli:read notoli:write notoli:share",
+                }
+            ),
+            content_type="application/x-www-form-urlencoded",
+        )
+        self.assertEqual(response.status_code, 400)
+
     def consent(self, **changes):
         params = {
             "client_id": self.app.client_id,
@@ -617,6 +651,192 @@ class ToolTests(TestCase):
             )
 
 
+class SharingToolTests(TestCase):
+    def setUp(self):
+        self.owner = get_user_model().objects.create_user(
+            "sharing-owner", email="owner@example.com"
+        )
+        self.member = get_user_model().objects.create_user(
+            "sharing-member", email="member@example.com"
+        )
+        self.target = get_user_model().objects.create_user(
+            "sharing-target", email="target@example.com"
+        )
+        self.outsider = get_user_model().objects.create_user("sharing-outsider")
+        self.app = make_client()
+        self.board = Board.objects.create(
+            name="Team", owner=self.owner, created_by=self.owner
+        )
+        self.board.collaborators.add(self.member)
+        self.lists = [
+            NoteList.objects.create(
+                name=f"Team list {index}", board=self.board, created_by=self.owner
+            )
+            for index in range(2)
+        ]
+        self.owner_token = make_token(
+            self.owner, self.app, "owner-sharing", scope="notoli:read notoli:share"
+        )
+        make_token(
+            self.member,
+            self.app,
+            "member-sharing",
+            scope="notoli:read notoli:write notoli:share",
+        )
+        make_token(
+            self.outsider,
+            self.app,
+            "outsider-sharing",
+            scope="notoli:read notoli:share",
+        )
+        make_token(self.target, self.app, "target-reading", scope="notoli:read")
+
+    def call(self, operation, token="owner-sharing", **arguments):
+        return execute(token, operation, board_id=self.board.pk, **arguments)
+
+    def test_member_can_read_owner_and_paginated_collaborators(self):
+        self.board.collaborators.add(self.target)
+        result = self.call(
+            "get_board_collaborators", token="member-sharing", limit=1, offset=0
+        )
+        self.assertEqual(result["owner"]["id"], self.owner.pk)
+        self.assertEqual(result["sharing_level"], "board")
+        self.assertFalse(result["can_manage_collaborators"])
+        self.assertEqual(result["results"][0]["email"], self.member.email)
+        self.assertEqual(result["next_offset"], 1)
+        next_page = self.call(
+            "get_board_collaborators", token="member-sharing", limit=1, offset=1
+        )
+        self.assertEqual(next_page["results"][0]["id"], self.target.pk)
+        self.assertIsNone(next_page["next_offset"])
+        self.board.collaborators.remove(self.member)
+        for token in ("member-sharing", "outsider-sharing"):
+            with self.assertRaises(PermissionDenied):
+                self.call("get_board_collaborators", token=token, limit=50, offset=0)
+
+    def test_owner_adds_by_email_shares_all_lists_and_preserves_notifications(self):
+        result = self.call("add_board_collaborator", identifier=" TARGET@EXAMPLE.COM ")
+        self.assertEqual(result["action"], "added")
+        self.assertEqual(result["sharing_level"], "board")
+        self.assertTrue(self.board.collaborators.filter(pk=self.target.pk).exists())
+        self.assertEqual(
+            {
+                row["id"]
+                for row in execute(
+                    "target-reading",
+                    "list_lists",
+                    board_id=self.board.pk,
+                    limit=50,
+                    offset=0,
+                )["results"]
+            },
+            {note_list.pk for note_list in self.lists},
+        )
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.target,
+                board=self.board,
+                event_type=Notification.EVENT_COLLABORATOR_ADDED,
+            ).exists()
+        )
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.member,
+                board=self.board,
+                event_type=Notification.EVENT_COLLABORATOR_ADDED,
+            ).exists()
+        )
+
+    def test_owner_removes_collaborator_and_access_ends_immediately(self):
+        self.call("add_board_collaborator", identifier=self.target.username)
+        result = self.call("remove_board_collaborator", user_id=self.target.pk)
+        self.assertEqual(result["action"], "removed")
+        self.assertFalse(self.board.collaborators.filter(pk=self.target.pk).exists())
+        self.assertTrue(
+            Notification.objects.filter(
+                recipient=self.target,
+                board=self.board,
+                event_type=Notification.EVENT_COLLABORATOR_REMOVED,
+            ).exists()
+        )
+        for note_list in self.lists:
+            with self.assertRaises(PermissionDenied):
+                execute(
+                    "target-reading",
+                    "get_items",
+                    list_id=note_list.pk,
+                    limit=50,
+                    offset=0,
+                )
+        with self.assertRaises(PermissionDenied):
+            self.call(
+                "get_board_collaborators", token="target-reading", limit=50, offset=0
+            )
+
+    def test_nonowners_cannot_manage_members_even_with_sharing_scope(self):
+        before = Notification.objects.count()
+        for token in ("member-sharing", "outsider-sharing"):
+            for operation, arguments in (
+                ("add_board_collaborator", {"identifier": self.target.email}),
+                ("remove_board_collaborator", {"user_id": self.member.pk}),
+            ):
+                with self.assertRaises(PermissionDenied):
+                    self.call(operation, token=token, **arguments)
+        self.assertFalse(self.board.collaborators.filter(pk=self.target.pk).exists())
+        self.assertTrue(self.board.collaborators.filter(pk=self.member.pk).exists())
+        self.assertEqual(Notification.objects.count(), before)
+
+    def test_existing_read_write_tokens_cannot_change_sharing(self):
+        AccessToken.objects.filter(pk=self.owner_token.pk).update(
+            scope="notoli:read notoli:write"
+        )
+        result = self.call("get_board_collaborators", limit=50, offset=0)
+        self.assertEqual(result["owner"]["id"], self.owner.pk)
+        self.assertTrue(result["can_manage_collaborators"])
+        for operation, arguments in (
+            ("add_board_collaborator", {"identifier": self.target.email}),
+            ("remove_board_collaborator", {"user_id": self.member.pk}),
+        ):
+            with self.assertRaises(PermissionDenied):
+                self.call(operation, **arguments)
+        self.assertTrue(self.board.collaborators.filter(pk=self.member.pk).exists())
+        self.assertFalse(self.board.collaborators.filter(pk=self.target.pk).exists())
+
+    def test_duplicates_unknown_users_and_owner_removal_are_rejected_without_changes(
+        self,
+    ):
+        before = Notification.objects.count()
+        for operation, arguments in (
+            ("add_board_collaborator", {"identifier": self.owner.email}),
+            ("add_board_collaborator", {"identifier": self.member.username}),
+            ("add_board_collaborator", {"identifier": "missing@example.com"}),
+            ("add_board_collaborator", {"identifier": " "}),
+            ("remove_board_collaborator", {"user_id": self.owner.pk}),
+            ("remove_board_collaborator", {"user_id": self.target.pk}),
+        ):
+            with self.assertRaises(ValueError):
+                self.call(operation, **arguments)
+        self.assertEqual(Notification.objects.count(), before)
+        self.assertEqual(
+            list(self.board.collaborators.values_list("pk", flat=True)),
+            [self.member.pk],
+        )
+
+    def test_notification_failure_rolls_back_membership(self):
+        with patch(
+            "notes.views.notify_board_members",
+            side_effect=RuntimeError("notification failure"),
+        ):
+            with self.assertRaises(RuntimeError):
+                self.call("add_board_collaborator", identifier=self.target.email)
+        self.assertFalse(self.board.collaborators.filter(pk=self.target.pk).exists())
+        self.assertFalse(
+            Notification.objects.filter(
+                recipient=self.target, board=self.board
+            ).exists()
+        )
+
+
 class MCPHTTPTests(TransactionTestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(
@@ -683,6 +903,9 @@ class MCPHTTPTests(TransactionTestCase):
                             "get_items",
                             "add_item",
                             "update_item",
+                            "get_board_collaborators",
+                            "add_board_collaborator",
+                            "remove_board_collaborator",
                         },
                     )
                     self.assertTrue(tools["get_items"]["annotations"]["readOnlyHint"])
@@ -696,6 +919,15 @@ class MCPHTTPTests(TransactionTestCase):
                             "maximum"
                         ],
                         100,
+                    )
+                    self.assertEqual(
+                        tools["add_board_collaborator"]["_meta"]["securitySchemes"],
+                        [{"type": "oauth2", "scopes": ["notoli:read", "notoli:share"]}],
+                    )
+                    self.assertTrue(
+                        tools["remove_board_collaborator"]["annotations"][
+                            "destructiveHint"
+                        ]
                     )
                     response = await client.post(
                         "/mcp",
@@ -756,6 +988,53 @@ class MCPHTTPTests(TransactionTestCase):
                     self.assertIn(
                         "insufficient_scope", denied["_meta"]["mcp/www_authenticate"][0]
                     )
+                    board_id = note_list.board_id
+                    target = await sync_to_async(get_user_model().objects.create_user)(
+                        "http-collaborator", email="http-collaborator@example.com"
+                    )
+                    denied = await invoke(
+                        "add_board_collaborator",
+                        {"board_id": board_id, "identifier": target.email},
+                    )
+                    self.assertTrue(denied["isError"])
+                    challenge = denied["_meta"]["mcp/www_authenticate"][0]
+                    self.assertIn("insufficient_scope", challenge)
+                    self.assertIn('scope="notoli:read notoli:share"', challenge)
+                    await sync_to_async(
+                        AccessToken.objects.filter(pk=self.token.pk).update
+                    )(scope="notoli:read notoli:share")
+                    added = await invoke(
+                        "add_board_collaborator",
+                        {"board_id": board_id, "identifier": target.email},
+                    )
+                    self.assertFalse(added.get("isError"), added)
+                    self.assertEqual(
+                        added["structuredContent"]["sharing_level"], "board"
+                    )
+                    members = await invoke(
+                        "get_board_collaborators", {"board_id": board_id}
+                    )
+                    self.assertEqual(
+                        members["structuredContent"]["owner"]["id"], self.user.pk
+                    )
+                    self.assertEqual(
+                        members["structuredContent"]["results"][0]["id"], target.pk
+                    )
+                    invalid = await invoke(
+                        "get_board_collaborators", {"board_id": board_id, "limit": 101}
+                    )
+                    self.assertTrue(invalid["isError"])
+                    invalid = await invoke(
+                        "remove_board_collaborator",
+                        {"board_id": board_id, "user_id": 0},
+                    )
+                    self.assertTrue(invalid["isError"])
+                    removed = await invoke(
+                        "remove_board_collaborator",
+                        {"board_id": board_id, "user_id": target.pk},
+                    )
+                    self.assertFalse(removed.get("isError"), removed)
+                    self.assertEqual(removed["structuredContent"]["action"], "removed")
                     jwt_response = await client.post(
                         "/mcp",
                         json=payload,

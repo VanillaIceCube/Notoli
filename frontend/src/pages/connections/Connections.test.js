@@ -91,6 +91,21 @@ test('an authenticated user goes directly to consent with application, identity 
   expect(login).not.toHaveBeenCalled();
 });
 
+test('sharing consent explains that collaborators receive access to every list and item in owned boards', async () => {
+  const description =
+    'Add and remove collaborators on boards you own, granting access to every list and item in those boards';
+  connections.loadConsent.mockResolvedValue({
+    ...consent,
+    permissions: [...consent.permissions, { scope: 'notoli:share', description }],
+  });
+  renderFlow();
+  expect(await screen.findByText(description)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Allow' }));
+  await waitFor(() =>
+    expect(connections.decideConsent).toHaveBeenCalledWith('SIGNED-CONSENT', 'allow', query),
+  );
+});
+
 test('signed-out users use existing login, preserve the exact request, and return to consent', async () => {
   sessionStorage.clear();
   renderFlow();

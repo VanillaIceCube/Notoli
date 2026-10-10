@@ -233,7 +233,10 @@ use a wildcard or trust the whole bridge. Keep backend ports unpublished.
    ```
 
    Use client ID `notoli-chatgpt`, token authentication method `none`, and scopes
-   `notoli:read notoli:write`. No client secret is needed. See the
+   `notoli:read notoli:write notoli:share`. No client secret is needed. Existing
+   read/write connections must reconnect and approve sharing before managing
+   collaborators. Sharing affects all lists/items in the selected board and
+   remains owner-only. See the
    [personal connection walkthrough](../plugins/notoli/README.md).
 
 5. Verify discovery and an unauthenticated challenge before linking:
@@ -249,7 +252,9 @@ use a wildcard or trust the whole bridge. Keep backend ports unpublished.
    and revoke the connection in React's `/connections` (**Connected Apps** in the
    profile menu). Verify already-signed-in consent, signed-out login → consent →
    callback, Cancel returning `access_denied` with the original state/issuer, and
-   revocation preventing access and refresh. Check ordinary REST/JWT
+   revocation preventing access and refresh. Test reading board collaborators,
+   owner-only add/remove with notifications, and rejection of sharing when
+   `notoli:share` is missing. Check ordinary REST/JWT
    login, list ordering, and collaborator notifications as well. MCP Inspector
    can exercise the protocol before testing ChatGPT. Register its exact HTTPS
    callback as a separate public client if needed.

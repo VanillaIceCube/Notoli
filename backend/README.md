@@ -76,17 +76,28 @@ one hour; refresh tokens rotate with reuse protection and a 30-day idle limit.
 The toolkit stores token checksums rather than bearer tokens. Run
 `python manage.py cleartokens` periodically; do not log token bodies or headers.
 
-`notoli:read` grants discovery/read tools; `notoli:write` additionally grants
-`add_item` and `update_item`. Read pagination defaults to 50 and is capped at
+`notoli:read` grants discovery/read tools, including `get_board_collaborators`
+(owner, usernames/emails, collaborator IDs, and whether the current user can
+manage access). `notoli:write` additionally grants `add_item` and `update_item`.
+`notoli:share` additionally grants `add_board_collaborator` by exact username/email
+and `remove_board_collaborator` by a discovered user ID, only on boards the token's
+user owns. Sharing covers every list/item in the board; there are no separate
+workspace or list-only permissions. Consent explicitly describes that access.
+Existing read/write connections must reconnect and approve sharing; refresh
+cannot upgrade their scope. Membership reads are board-scoped, not a user directory.
+Read pagination defaults to 50 and is capped at
 100. Write titles are capped at 255 characters, descriptions at 10,000. Tool
-schemas and annotations include each tool's OAuth scopes. Missing write scope
+schemas and annotations include each tool's OAuth scopes. Missing write or sharing scope
 returns an MCP authentication challenge so ChatGPT can request reauthorization.
 Board/list permission failures return ordinary tool errors without data.
 
 Tools reuse the REST querysets, note serializer, and `perform_create`/
 `perform_update` services inside a transaction, preserving validation, ordering,
 and notifications. MCP also rechecks board membership even for an item's original
-creator after collaboration is removed. No deletion or sharing tools are exposed.
+creator after collaboration is removed. Sharing reuses `BoardViewSet`'s owner-only
+collaborator actions inside a transaction, preserving validation and notifications.
+Removal immediately blocks that collaborator's MCP access to the board and its
+lists. Board/list/item deletion tools are not exposed.
 See [plugin tools and evaluation prompts](../plugins/notoli/README.md).
 
 Run the OAuth and HTTP protocol tests with `python manage.py test integrations`.

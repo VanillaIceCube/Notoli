@@ -149,6 +149,7 @@ OAUTH2_PROVIDER = {
     "SCOPES": {
         "notoli:read": "Read your accessible Notoli boards, lists, and items",
         "notoli:write": "Add and update items in your accessible Notoli lists",
+        "notoli:share": "Add and remove collaborators on boards you own, granting access to every list and item in those boards",
     },
     "DEFAULT_SCOPES": ["notoli:read"],
     "PKCE_REQUIRED": True,
