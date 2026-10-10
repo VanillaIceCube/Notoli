@@ -138,7 +138,6 @@ jobs:
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
-          max_bytes: "60000"
 
       - name: Create RoboCop GitHub App token
         id: app-token
@@ -150,6 +149,7 @@ jobs:
           repositories: ${{ github.event.repository.name }}
 
       - name: Collect prior RoboCop reviews
+        if: steps.pr-diff.outputs.truncated != 'true'
         uses: ./.github/actions/collect-prior-ai-reviews
         with:
           github_token: ${{ steps.app-token.outputs.token }}
@@ -157,6 +157,7 @@ jobs:
           output_path: ${{ runner.temp }}/security-prior-reviews.json
 
       - name: Combine security evidence and diff
+        if: steps.pr-diff.outputs.truncated != 'true'
         shell: bash
         env:
           EVIDENCE_PATH: ${{ runner.temp }}/security-evidence.json
@@ -176,6 +177,7 @@ jobs:
           } > "$CONTEXT_PATH"
 
       - name: Call RoboCop
+        if: steps.pr-diff.outputs.truncated != 'true'
         id: openai
         uses: ./.github/actions/openai-chat
         with:
@@ -238,8 +240,33 @@ jobs:
             Security evidence follows:
 
       - name: Publish RoboCop native review
+        if: steps.pr-diff.outputs.truncated != 'true'
         uses: ./.github/actions/publish-ai-review
         with:
           github_token: ${{ steps.app-token.outputs.token }}
           review_json: ${{ steps.openai.outputs.content }}
           persona_name: "RoboCop"
+
+      - name: Publish incomplete RoboCop review
+        if: steps.pr-diff.outputs.truncated == 'true'
+        uses: ./.github/actions/publish-ai-review
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          persona_name: "RoboCop"
+          review_json: |
+            {
+              "event": "COMMENT",
+              "summary": "**REVIEW INCOMPLETE. DIRECTIVE: CHECK FAILED. SECURITY VERDICT: WITHHELD.** DIFF SIZE EXCEEDS AUTHORIZED REVIEW PARAMETERS. PARTIAL EVIDENCE DOES NOT CONSTITUTE SECURITY CLEARANCE.",
+              "unchanged": false,
+              "findings": [],
+              "evidence": ["The complete diff is ${{ steps.pr-diff.outputs.diff_bytes }} bytes; my review budget is ${{ steps.pr-diff.outputs.max_bytes }} bytes."],
+              "actions": ["REDUCE DIFF SCOPE OR AUTHORIZE A HIGHER REVIEW BUDGET, THEN RESUBMIT FOR SECURITY SCAN."],
+              "comments": []
+            }
+
+      - name: Fail incomplete RoboCop review
+        if: steps.pr-diff.outputs.truncated == 'true'
+        shell: bash
+        run: |
+          echo "::error::RoboCop could not review the complete pull-request diff."
+          exit 1

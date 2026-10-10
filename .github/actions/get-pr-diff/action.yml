@@ -1,5 +1,5 @@
 name: Get PR Diff
-description: Generate a unified PR diff and truncate it if too large.
+description: Generate a reviewable PR diff and report when it exceeds the review budget.
 inputs:
   base_sha:
     description: Base commit SHA for the PR.
@@ -10,7 +10,7 @@ inputs:
   max_bytes:
     description: Maximum diff size in bytes before truncation.
     required: false
-    default: "45000"
+    default: "524288"
 outputs:
   diff_path:
     description: Path to the generated diff file.
@@ -21,6 +21,9 @@ outputs:
   diff_bytes:
     description: Size of the original diff in bytes.
     value: ${{ steps.diff.outputs.diff_bytes }}
+  max_bytes:
+    description: Configured maximum diff size in bytes.
+    value: ${{ steps.diff.outputs.max_bytes }}
   truncated:
     description: Whether the diff was truncated.
     value: ${{ steps.diff.outputs.truncated }}
@@ -39,8 +42,15 @@ runs:
         echo "Base: $BASE_SHA"
         echo "Head: $HEAD_SHA"
 
-        # Get unified diff between base and head
-        git diff --unified=3 "$BASE_SHA" "$HEAD_SHA" > pr.diff
+        # Generated dependency lockfiles are covered by the dedicated dependency
+        # and malware gates. Keep their raw payloads out of AI prompts so a
+        # mechanical lockfile rewrite cannot crowd out reviewable source changes.
+        git diff --unified=3 "$BASE_SHA" "$HEAD_SHA" -- . \
+          ':(exclude)**/package-lock.json' \
+          ':(exclude)**/yarn.lock' \
+          ':(exclude)**/pnpm-lock.yaml' \
+          ':(exclude)**/poetry.lock' \
+          > pr.diff
 
         # Truncate if it's huge so we don't blow up token limits
         ACTUAL_BYTES=$(wc -c < pr.diff || echo 0)
@@ -105,5 +115,6 @@ runs:
           echo "diff_path=pr.diff"
           echo "linediff_path=pr_lines.diff"
           echo "diff_bytes=$ACTUAL_BYTES"
+          echo "max_bytes=$MAX_BYTES"
           echo "truncated=$TRUNCATED"
         } >> "$GITHUB_OUTPUT"

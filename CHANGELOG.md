@@ -7,6 +7,17 @@ All notable changes to this project are documented in this file.
 
 ## 2026-10-09
 ### Added
+- Ported MacroMapper's Dependabot major-upgrade briefs to Obi-Wan, including bounded upstream/repository evidence, major-only web search, complete-brief validation, and behavioral tests.
+### Fixed
+- Updated the security-alert workflow test to expect the GitHub App token action v3 already used on main.
+- Ported MacroMapper's incomplete-review handling for all three personas, withholding normal verdicts on truncated diffs and failing checks after a native explanation.
+- Matched MacroMapper's publisher behavior so request-changes verdicts fail the reviewer check.
+### Changed
+- Enabled the three AI reviewers for same-repository Dependabot PRs using the separate Dependabot secret store, while retaining fork exclusions and strict-only Dependabot linting.
+- Matched MacroMapper's shared 512 KiB source-diff budget, generated-lockfile diff exclusions, 16,000-token OpenAI output cap, and major-upgrade automation tests. The shared missing-final-dependency bug remains tracked separately in #890.
+
+## 2026-10-09
+### Added
 - Added a hosted, authenticated MCP endpoint with tools to discover boards/lists, read items, add items, and update statuses using existing Notoli validation and notifications.
 - Added OAuth authorization-code/S256 PKCE, resource-bound tokens, consent and connection revocation pages, and a predefined ChatGPT client registration command.
 - Added a portable Notoli plugin package, connection/deployment instructions, and OAuth/MCP integration tests.
