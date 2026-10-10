@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/5.0/howto/deployment/asgi/
 import os
 from contextlib import asynccontextmanager
 
+from django.conf import settings
 from django.core.asgi import get_asgi_application
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "app.settings")
@@ -18,8 +19,10 @@ django_application = get_asgi_application()
 
 # Django must initialize before importing the MCP tools and their models.
 from starlette.applications import Starlette  # noqa: E402
+from starlette.middleware import Middleware  # noqa: E402
 from starlette.routing import Mount, Route  # noqa: E402
 
+from app.proxy import TrustedProxyHeadersMiddleware  # noqa: E402
 from integrations.server import mcp_application, server  # noqa: E402
 
 
@@ -37,4 +40,9 @@ application = Starlette(
         Mount("/", app=django_application),
     ],
     lifespan=lifespan,
+    middleware=[
+        Middleware(
+            TrustedProxyHeadersMiddleware, trusted_ips=settings.TRUSTED_PROXY_IPS
+        )
+    ],
 )

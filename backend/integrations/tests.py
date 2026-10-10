@@ -2,6 +2,7 @@ import base64
 import hashlib
 import io
 from datetime import timedelta
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 import httpx2
@@ -13,7 +14,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import Client, TestCase, TransactionTestCase
 from django.utils import timezone
-from oauth2_provider.models import AccessToken, Application, RefreshToken
+from oauth2_provider.models import AccessToken, Application, Grant, RefreshToken
 from rest_framework_simplejwt.tokens import RefreshToken as JWTRefreshToken
 
 from notes.models import Board, ListNote, Note
@@ -61,7 +62,10 @@ class OAuthTests(TestCase):
             "oauth-user", email="oauth@example.com", password="Strong-password-789!"
         )
         self.app = make_client()
-        self.client.force_login(self.user)
+        self.jwt = str(JWTRefreshToken.for_user(self.user).access_token)
+        self.client.defaults.update(
+            HTTP_AUTHORIZATION=f"Bearer {self.jwt}", HTTP_ACCEPT="application/json"
+        )
 
     def authorize(self, **changes):
         params = {
@@ -76,14 +80,9 @@ class OAuthTests(TestCase):
         }
         params.update(changes)
         response = self.client.get("/auth/mcp/authorize/", params)
-        if response.status_code != 200 or "form" not in response.context:
+        if response.status_code != 200 or "ticket" not in response.json():
             return response
-        data = {
-            field.name: field.value() or ""
-            for field in response.context["form"]
-            if field.is_hidden
-        }
-        data["allow"] = "Authorize"
+        data = {"ticket": response.json()["ticket"], "decision": "allow"}
         return self.client.post("/auth/mcp/authorize/", data)
 
     def exchange(self, code, **changes):
@@ -104,8 +103,8 @@ class OAuthTests(TestCase):
 
     def issue(self):
         response = self.authorize()
-        self.assertEqual(response.status_code, 302, response.content)
-        params = parse_qs(urlsplit(response.url).query)
+        self.assertEqual(response.status_code, 200, response.content)
+        params = parse_qs(urlsplit(response.json()["redirect_url"]).query)
         self.assertEqual(params["state"], ["unguessable-client-state"])
         self.assertEqual(params["iss"], [settings.MCP_BASE_URL])
         response = self.exchange(params["code"][0])
@@ -132,12 +131,32 @@ class OAuthTests(TestCase):
         self.assertEqual(refresh.status_code, 200, refresh.content)
         self.assertNotEqual(issued["refresh_token"], refresh.json()["refresh_token"])
         response = self.client.get("/auth/mcp/connections/")
-        self.assertContains(response, "Notoli for ChatGPT")
+        self.assertEqual(
+            response.json()["applications"][0]["name"], "Notoli for ChatGPT"
+        )
         self.client.post("/auth/mcp/connections/", {"application_id": self.app.pk})
         with self.assertRaises(PermissionDenied):
             resolve_token(refresh.json()["access_token"])
         self.assertFalse(
             RefreshToken.objects.filter(user=self.user, revoked__isnull=True).exists()
+        )
+        self.assertEqual(
+            self.client.get("/auth/mcp/connections/").json()["applications"], []
+        )
+        self.assertEqual(
+            self.client.post(
+                "/auth/mcp/token/",
+                urlencode(
+                    {
+                        "grant_type": "refresh_token",
+                        "client_id": self.app.client_id,
+                        "refresh_token": refresh.json()["refresh_token"],
+                        "resource": settings.MCP_RESOURCE_URL,
+                    }
+                ),
+                content_type="application/x-www-form-urlencoded",
+            ).status_code,
+            400,
         )
 
     def test_pkce_resource_and_callback_checks(self):
@@ -148,9 +167,9 @@ class OAuthTests(TestCase):
         ):
             self.assertEqual(self.authorize(**changes).status_code, 400)
         response = self.authorize(redirect_uri="https://unregistered.example/callback")
-        self.assertNotEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 400)
         response = self.authorize()
-        code = parse_qs(urlsplit(response.url).query)["code"][0]
+        code = parse_qs(urlsplit(response.json()["redirect_url"]).query)["code"][0]
         self.assertEqual(
             self.exchange(code, code_verifier="incorrect-verifier").status_code, 400
         )
@@ -188,33 +207,29 @@ class OAuthTests(TestCase):
         with self.assertRaises(PermissionDenied):
             resolve_token(rotated.json()["access_token"])
 
-    def test_login_csrf_denial_and_metadata(self):
+    def test_existing_login_jwt_bridge_cookie_rejection_and_metadata(self):
         client = Client(enforce_csrf_checks=True)
-        page = client.get("/auth/mcp/login/")
-        self.assertContains(page, "Email or username")
-        self.assertEqual(
-            client.post(
-                "/auth/mcp/login/",
-                {"username": self.user.email, "password": "Strong-password-789!"},
-            ).status_code,
-            403,
-        )
+        client.force_login(self.user)
+        # An ambient Django/admin cookie is never sufficient authorization.
+        self.assertEqual(client.get("/auth/mcp/connections/").status_code, 401)
+        client.logout()
         response = client.post(
-            "/auth/mcp/login/",
-            {
-                "username": self.user.email,
-                "password": "Strong-password-789!",
-                "csrfmiddlewaretoken": client.cookies["csrftoken"].value,
-            },
+            "/auth/login/",
+            {"email": self.user.email, "password": "Strong-password-789!"},
+            content_type="application/json",
         )
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 200, response.content)
+        jwt = response.json()["access"]
         self.assertEqual(
             client.post(
-                "/auth/mcp/connections/", {"application_id": self.app.pk}
+                "/auth/mcp/connections/",
+                {"application_id": self.app.pk},
+                HTTP_AUTHORIZATION=f"Bearer {jwt}",
             ).status_code,
-            403,
+            200,
         )
-        self.assertEqual(client.post("/auth/mcp/logout/").status_code, 403)
+        self.assertEqual(client.get("/auth/mcp/login/").status_code, 404)
+        self.assertEqual(client.post("/auth/mcp/logout/").status_code, 404)
         self.assertEqual(
             self.client.post(
                 "/auth/mcp/connections/", {"application_id": "bad"}
@@ -288,20 +303,18 @@ class OAuthTests(TestCase):
                 "code_challenge_method": "S256",
             },
         )
-        data = {
-            field.name: field.value() or ""
-            for field in response.context["form"]
-            if field.is_hidden
-        }
+        data = {"ticket": response.json()["ticket"], "decision": "cancel"}
         denied = self.client.post("/auth/mcp/authorize/", data)
-        self.assertEqual(denied.status_code, 302)
-        params = parse_qs(urlsplit(denied.url).query)
+        self.assertEqual(denied.status_code, 200)
+        params = parse_qs(urlsplit(denied.json()["redirect_url"]).query)
         self.assertEqual(params["error"], ["access_denied"])
         self.assertEqual(params["iss"], [settings.MCP_BASE_URL])
+        self.assertEqual(params["state"], ["deny-state"])
         self.assertFalse(AccessToken.objects.exists())
+        self.assertFalse(Grant.objects.exists())
         csrf = Client(enforce_csrf_checks=True)
         csrf.force_login(self.user)
-        self.assertEqual(csrf.post("/auth/mcp/authorize/", data).status_code, 403)
+        self.assertEqual(csrf.post("/auth/mcp/authorize/", data).status_code, 401)
         for grant in ("password", "client_credentials"):
             response = self.client.post(
                 "/auth/mcp/token/",
@@ -309,6 +322,168 @@ class OAuthTests(TestCase):
                 content_type="application/x-www-form-urlencoded",
             )
             self.assertIn(response.status_code, (400, 401))
+
+    def consent(self, **changes):
+        params = {
+            "client_id": self.app.client_id,
+            "response_type": "code",
+            "redirect_uri": CALLBACK,
+            "scope": "notoli:read notoli:write",
+            "state": "pending-state",
+            "resource": settings.MCP_RESOURCE_URL,
+            "code_challenge": CHALLENGE,
+            "code_challenge_method": "S256",
+        }
+        params.update(changes)
+        return self.client.get("/auth/mcp/authorize/", params)
+
+    def test_browser_redirect_and_existing_jwt_consent(self):
+        query = urlencode({"state": "a&b=?", "resource": settings.MCP_RESOURCE_URL})
+        response = Client().get(f"/auth/mcp/authorize/?{query}")
+        self.assertEqual(
+            response.url, f"{settings.FRONTEND_BASE_URL}/connections/authorize?{query}"
+        )
+        response = self.consent()
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["application"]["client_id"], self.app.client_id)
+        self.assertEqual(data["user"]["username"], self.user.username)
+        self.assertEqual(
+            [p["scope"] for p in data["permissions"]], ["notoli:read", "notoli:write"]
+        )
+        self.assertNotIn("sessionid", response.cookies)
+        self.assertFalse(Grant.objects.exists())
+        expired = JWTRefreshToken.for_user(self.user).access_token
+        expired.set_exp(lifetime=timedelta(seconds=-1))
+        for bearer in (
+            "invalid",
+            str(expired),
+            str(JWTRefreshToken.for_user(self.user)),
+            "oauth-access",
+        ):
+            self.assertEqual(
+                self.client.get(
+                    "/auth/mcp/authorize/", HTTP_AUTHORIZATION=f"Bearer {bearer}"
+                ).status_code,
+                401,
+            )
+
+    def test_consent_ticket_expiry_tampering_and_account_binding(self):
+        with patch(
+            "django.core.signing.time.time",
+            return_value=timezone.now().timestamp() - 601,
+        ):
+            expired = self.consent().json()["ticket"]
+        ticket = self.consent().json()["ticket"]
+        for value in (expired, ticket + "tampered", "", "malformed"):
+            response = self.client.post(
+                "/auth/mcp/authorize/", {"ticket": value, "decision": "allow"}
+            )
+            self.assertEqual(response.status_code, 400)
+        other = get_user_model().objects.create_user("ticket-other")
+        response = self.client.post(
+            "/auth/mcp/authorize/",
+            {"ticket": ticket, "decision": "allow"},
+            HTTP_AUTHORIZATION=f"Bearer {JWTRefreshToken.for_user(other).access_token}",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Grant.objects.exists())
+        # Client-supplied fields cannot replace the request shown in consent.
+        approved = self.client.post(
+            "/auth/mcp/authorize/",
+            {
+                "ticket": ticket,
+                "decision": "allow",
+                "redirect_uri": "https://evil.example",
+                "scope": "unknown",
+                "state": "changed",
+                "user_id": other.pk,
+            },
+        )
+        self.assertEqual(approved.status_code, 200, approved.content)
+        callback = urlsplit(approved.json()["redirect_url"])
+        self.assertEqual(callback.netloc, urlsplit(CALLBACK).netloc)
+        self.assertEqual(parse_qs(callback.query)["state"], ["pending-state"])
+        grant = Grant.objects.get()
+        self.assertEqual(grant.user_id, self.user.pk)
+        self.assertEqual(grant.scope, "notoli:read notoli:write")
+
+    def test_signed_consent_revalidates_client_callback_and_user(self):
+        ticket = self.consent().json()["ticket"]
+        self.app.redirect_uris = "https://chatgpt.com/other"
+        self.app.save()
+        response = self.client.post(
+            "/auth/mcp/authorize/", {"ticket": ticket, "decision": "allow"}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Grant.objects.exists())
+        self.user.is_active = False
+        self.user.save()
+        self.assertEqual(
+            self.client.post(
+                "/auth/mcp/authorize/", {"ticket": ticket, "decision": "allow"}
+            ).status_code,
+            401,
+        )
+
+    def test_client_deleted_after_consent_cannot_issue_a_grant(self):
+        ticket = self.consent().json()["ticket"]
+        self.app.delete()
+        response = self.client.post(
+            "/auth/mcp/authorize/", {"ticket": ticket, "decision": "allow"}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(Grant.objects.exists())
+
+    def test_existing_login_to_consent_to_callback_without_session_cookies(self):
+        client = Client(enforce_csrf_checks=True)
+        jwt = client.post(
+            "/auth/login/",
+            {"email": self.user.email, "password": "Strong-password-789!"},
+            content_type="application/json",
+        ).json()["access"]
+        client.defaults.update(
+            HTTP_AUTHORIZATION=f"Bearer {jwt}", HTTP_ACCEPT="application/json"
+        )
+        fields = {
+            "client_id": self.app.client_id,
+            "response_type": "code",
+            "redirect_uri": CALLBACK,
+            "scope": "notoli:read",
+            "state": "login-return-state",
+            "resource": settings.MCP_RESOURCE_URL,
+            "code_challenge": CHALLENGE,
+            "code_challenge_method": "S256",
+        }
+        response = client.get("/auth/mcp/authorize/", fields)
+        self.assertEqual(response.status_code, 200)
+        approved = client.post(
+            "/auth/mcp/authorize/",
+            {"ticket": response.json()["ticket"], "decision": "allow"},
+        )
+        self.assertEqual(approved.status_code, 200, approved.content)
+        params = parse_qs(urlsplit(approved.json()["redirect_url"]).query)
+        self.assertEqual(params["state"], ["login-return-state"])
+        self.assertEqual(params["iss"], [settings.MCP_BASE_URL])
+        self.assertEqual(self.exchange(params["code"][0]).status_code, 200)
+        self.assertNotIn("sessionid", client.cookies)
+        self.assertNotIn("csrftoken", client.cookies)
+
+    def test_revoke_removes_pending_codes_and_uses_jwt_owner(self):
+        response = self.authorize()
+        code = parse_qs(urlsplit(response.json()["redirect_url"]).query)["code"][0]
+        other = get_user_model().objects.create_user("revoke-other")
+        mine = make_token(self.user, self.app)
+        theirs = make_token(other, self.app, "other-connection-access")
+        response = self.client.post(
+            "/auth/mcp/connections/",
+            {"application_id": self.app.pk, "user_id": other.pk},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(AccessToken.objects.filter(pk=mine.pk).exists())
+        self.assertTrue(AccessToken.objects.filter(pk=theirs.pk).exists())
+        self.assertFalse(Grant.objects.filter(user=self.user).exists())
+        self.assertEqual(self.exchange(code).status_code, 400)
 
 
 class ToolTests(TestCase):

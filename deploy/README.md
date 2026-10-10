@@ -5,7 +5,7 @@ This repo deploys Notoli at the subdomain root `https://notoli.judeandrewalaba.c
 ## What Runs
 Docker Compose (`deploy/docker-compose.yml`) starts:
 - `proxy`: Nginx reverse proxy (ports 80 and 443)
-- `backend`: Django + MCP through Uvicorn ASGI (port 8000, host mapping localhost only)
+- `backend`: Django + MCP through Uvicorn ASGI (port 8000 on private container networks; no published host port)
 - `frontend`: Nginx serving the built SPA (port 3000)
 
 The compose file uses the current Compose Specification syntax without a top-level
@@ -149,7 +149,7 @@ docker compose exec -T backend python manage.py migrate
 
 Local URLs:
 - Frontend (reverse-proxy subdomain): `https://notoli.judeandrewalaba.com`
-- Backend (direct): `http://localhost:8000`
+- Backend: through the reverse proxy's `/api/`, `/auth/`, and `/mcp` routes
 - Frontend (direct): `http://localhost:3000`
 
 The browser will warn about a local self-signed certificate. That is expected for local dev.
@@ -174,11 +174,26 @@ Routing rules live in `deploy/nginx-proxy.conf` and are ordered so backend route
 MCP runs inside the existing backend process at
 `https://notoli.judeandrewalaba.com/mcp`. No new service, DNS record, or port is
 required. `backend/Dockerfile` uses Uvicorn ASGI with one worker for SQLite.
-Production's direct backend port is bound to `127.0.0.1` because Uvicorn trusts
-forwarded headers from the reverse proxy; remote traffic must go through Nginx.
+Production publishes no backend port. Nginx alone shares its internal
+`backend_private` network and has the fixed IP `172.30.88.2` in `172.30.88.0/29`.
+Compose supplies that exact IP as `DJANGO_TRUSTED_PROXY_IPS`; the frontend uses
+the default network and cannot join the backend network. A separate backend-only
+`backend_egress` bridge preserves outbound SMTP/HTTPS email access. Restrict VM
+access and Docker/network administration to trusted operators.
 
-1. Back up the production SQLite database, deploy the new backend image and
-   `nginx-proxy.conf`, and apply migrations:
+Uvicorn starts with `--no-proxy-headers`; Notoli's ASGI middleware checks the
+original peer before accepting forwarded scheme/client. Django itself ignores
+forwarded host/proto headers. Nginx replaces client-supplied forwarding values
+with `$scheme` and `$remote_addr`, so Cloudflare Full (strict) TLS supplies HTTPS
+without trusting an incoming header. Local development trusts no proxy. If the
+private subnet conflicts with an existing network, change the IPAM subnet,
+Nginx's fixed address, and the backend's trusted IP together in Compose. Do not
+use a wildcard or trust the whole bridge. Keep backend ports unpublished.
+
+1. Back up the production SQLite database, deploy both frontend and backend
+   images, the updated Compose file, and `nginx-proxy.conf`. Recreate the services
+   with `docker compose up -d --force-recreate` to apply network isolation, then
+   apply migrations:
 
    ```bash
    docker compose exec -T backend python manage.py migrate
@@ -231,14 +246,20 @@ forwarded headers from the reverse proxy; remote traffic must go through Nginx.
 
    Metadata returns JSON; `/mcp` returns `401` with a `WWW-Authenticate` resource
    metadata URL. After linking, try discovery, add one item, mark it complete,
-   and revoke the connection at `/auth/mcp/connections/`. Check ordinary REST/JWT
+   and revoke the connection in React's `/connections` (**Connected Apps** in the
+   profile menu). Verify already-signed-in consent, signed-out login → consent →
+   callback, Cancel returning `access_denied` with the original state/issuer, and
+   revocation preventing access and refresh. Check ordinary REST/JWT
    login, list ordering, and collaborator notifications as well. MCP Inspector
    can exercise the protocol before testing ChatGPT. Register its exact HTTPS
    callback as a separate public client if needed.
 
 Nginx passes `/mcp` with buffering disabled, a 120-second read timeout, and
-`Cache-Control: no-store`; `/.well-known/*` goes to Django, and OAuth pages use
-the existing `/auth/` proxy location with caching disabled. `/mcp/` is not the
+`Cache-Control: no-store`; `/.well-known/*` goes to Django. OAuth JSON endpoints use
+the existing `/auth/` proxy location with caching disabled; React's `/connections`
+and `/connections/authorize` use the SPA catch-all. `DJANGO_FRONTEND_BASE_URL`
+must point to that frontend origin for the browser authorization redirect. Never
+cache authenticated consent or connection responses. `/mcp/` is not the
 canonical endpoint. The development Compose stack overrides the issuer to
 `http://notoli.localhost:8000` (or the selected backend port); ChatGPT testing
 requires a reachable HTTPS origin or an appropriate secure tunnel. Set the

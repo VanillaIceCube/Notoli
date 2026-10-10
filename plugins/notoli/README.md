@@ -6,7 +6,7 @@ It does not create a custom GPT or publish to the public plugin directory.
 
 ## Connect your personal ChatGPT account
 
-1. Deploy the backend, apply migrations, and update Nginx using the
+1. Deploy the frontend and backend, apply migrations, and update Compose/Nginx using the
    [deployment instructions](../../deploy/README.md#chatgpt-mcp-deployment).
 2. Open [ChatGPT Plugins](https://chatgpt.com/plugins), select **Add custom MCP
    server**, and enter `https://notoli.judeandrewalaba.com/mcp`.
@@ -19,8 +19,10 @@ It does not create a custom GPT or publish to the public plugin directory.
    advertising issuer identification is
    `https://chatgpt.com/connector_platform_oauth_redirect`; verify it matches
    the connection's management page. Do not allow callback wildcards.
-5. Finish creation, sign in with your existing Notoli account, and approve the
-   displayed permissions. Install/select Notoli in a regular ChatGPT chat.
+5. Finish creation. React displays consent directly if you're already signed in
+   to Notoli; otherwise the existing Notoli login returns you to the pending
+   request. Review the application identity and permissions, then select
+   **Allow** (or **Cancel** to deny). Install/select Notoli in a regular ChatGPT chat.
 6. Try the prompts below, checking the affected list in Notoli after each write.
 
 The authorization URL is `/auth/mcp/authorize/`, the token URL is
@@ -29,7 +31,8 @@ The authorization URL is `/auth/mcp/authorize/`, the token URL is
 and workspace policies may limit custom MCP connections.
 
 Revoke your account's connection at
-`https://notoli.judeandrewalaba.com/auth/mcp/connections/`. Removing a connection
+`https://notoli.judeandrewalaba.com/connections` (**Connected Apps** in the profile
+menu). Revocation blocks access, refresh, and pending authorization codes. Removing a connection
 from ChatGPT alone is separate from revoking tokens in Notoli.
 
 The portable `plugin.json` and `mcp.json` follow the

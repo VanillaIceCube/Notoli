@@ -32,8 +32,14 @@ extra_hosts = os.getenv("DJANGO_ALLOWED_HOSTS")
 if extra_hosts:
     ALLOWED_HOSTS.extend(extra_hosts.split(","))
 
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-USE_X_FORWARDED_HOST = True
+# ASGI validates the actual proxy peer before accepting forwarded metadata.
+SECURE_PROXY_SSL_HEADER = None
+USE_X_FORWARDED_HOST = False
+TRUSTED_PROXY_IPS = [
+    value.strip()
+    for value in os.getenv("DJANGO_TRUSTED_PROXY_IPS", "").split(",")
+    if value.strip()
+]
 
 FORCE_SCRIPT_NAME = os.getenv("DJANGO_FORCE_SCRIPT_NAME")
 if FORCE_SCRIPT_NAME:
@@ -136,8 +142,6 @@ MCP_BASE_URL = os.getenv("DJANGO_MCP_BASE_URL") or (
 )
 MCP_BASE_URL = MCP_BASE_URL.rstrip("/")
 MCP_RESOURCE_URL = f"{MCP_BASE_URL}/mcp"
-LOGIN_URL = "/auth/mcp/login/"
-LOGIN_REDIRECT_URL = "/auth/mcp/connections/"
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 OAUTH2_PROVIDER = {

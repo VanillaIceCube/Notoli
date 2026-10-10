@@ -7,7 +7,7 @@ The Notoli backend is a Django + Django REST Framework API and authenticated MCP
 - `backend/authentication/`: custom user model + JWT auth endpoints
 - `backend/notes/`: boards, lists, and notes (DRF viewsets)
 - `backend/notifications/`: recipient-scoped in-app notifications, API endpoints, and notification helper services
-- `backend/integrations/`: OAuth policy/pages/client registration and MCP tools
+- `backend/integrations/`: OAuth policy/JSON consent/client registration and MCP tools
 - `backend/manage.py`: Django management entrypoint
 
 ## 🗺️ API Routes
@@ -27,14 +27,31 @@ at `/mcp`. Django OAuth Toolkit supplies migrations and the authorization-code
 flow. Run the ASGI entrypoint, not WSGI or Django `runserver`, to expose MCP.
 `DJANGO_MCP_BASE_URL` is the issuer origin (no path); the exact token audience
 is `<origin>/mcp`. Production must use HTTPS. The origin must also be in
-`DJANGO_ALLOWED_HOSTS` and, for browser consent, `DJANGO_CSRF_TRUSTED_ORIGINS`.
+`DJANGO_ALLOWED_HOSTS`. Configure `DJANGO_FRONTEND_BASE_URL` for browser redirects
+and allow the React origin in `DJANGO_CORS_ALLOWED_ORIGINS` during development.
 
-Users sign in at `/auth/mcp/login/` with email or username and approve scopes
-at `/auth/mcp/authorize/`. These pages use Django session cookies and CSRF
-protection, separate from frontend JWT authentication. Session and CSRF cookies
-are secure when debug is disabled. `/auth/mcp/connections/` lists their connected
-applications and revokes their access tokens, refresh tokens, and pending
-authorization codes. The RFC 7009 token revocation endpoint is
+The browser's `GET /auth/mcp/authorize/` redirects to React's
+`/connections/authorize`, preserving the OAuth query. Already-signed-in users
+see consent immediately; signed-out users use the existing `/login?next=...`
+and return to the pending request. React requests consent with
+`Accept: application/json` and an explicit Notoli JWT bearer header.
+Django validates the request and returns application identity, permissions,
+and a signed, account-bound consent ticket valid for 10 minutes. React submits
+`ticket` and `decision=allow|cancel` as a form-encoded POST to the same endpoint;
+Django revalidates the grant and returns a validated `redirect_url` for the browser
+to follow, including state and issuer on success or denial. Expired tickets
+require reopening the authorization request.
+
+React's `/connections` page (also in the profile menu as **Connected Apps**) uses
+JWT-authenticated `GET /auth/mcp/connections/` to list applications and
+`POST /auth/mcp/connections/` with `application_id` to revoke the current user's
+access tokens, refresh tokens, and pending authorization codes. These JSON
+endpoints accept JWT access tokens only: session cookies, OAuth MCP tokens, and
+posted user IDs cannot supply the user's identity. Browser requests omit cookies,
+so consent does not create a second login session or require cookie CSRF tokens.
+JWTs stay in the existing `sessionStorage`; they are never placed in redirect
+URLs or OAuth callbacks. The separate Django login/logout pages have been removed.
+The RFC 7009 token revocation endpoint is
 `POST /auth/mcp/revoke/`; token exchange/refresh is `POST /auth/mcp/token/`
 with a form-encoded body.
 
@@ -114,7 +131,7 @@ Full setup (Conda, env vars) lives in [`AGENTS.md`](../AGENTS.md). Common comman
 ```bash
 python backend/manage.py migrate
 cd backend
-python -m uvicorn app.asgi:application --port 8000 --reload
+python -m uvicorn app.asgi:application --port 8000 --reload --no-proxy-headers
 ```
 
 For local non-Docker runs, Django auto-loads `backend/.env` (via `python-dotenv`) before reading `DJANGO_*` settings.
@@ -174,6 +191,8 @@ Key environment variables (see `backend/app/settings.py` for defaults):
 - `DJANGO_FORCE_SCRIPT_NAME` (leave unset/blank for subdomain-root hosting)
 - `DJANGO_FRONTEND_BASE_URL` (base URL used in password-reset links, for example `https://notoli.judeandrewalaba.com`)
 - `DJANGO_MCP_BASE_URL` (OAuth issuer origin; exact MCP resource is `<origin>/mcp`)
+- `DJANGO_TRUSTED_PROXY_IPS` (comma-separated individual proxy IPs; default empty,
+  production Compose supplies Nginx's private address `172.30.88.2`)
 - `DJANGO_EMAIL_BACKEND` (default `django.core.mail.backends.console.EmailBackend`)
 - `DJANGO_EMAIL_HOST` / `DJANGO_EMAIL_PORT` / `DJANGO_EMAIL_USE_TLS`
 - `DJANGO_EMAIL_HOST_USER` / `DJANGO_EMAIL_HOST_KEY`
@@ -193,7 +212,15 @@ SMTP alternative:
 - `DJANGO_EMAIL_HOST_KEY=<RESEND_API_KEY>`
 
 Proxy / HTTPS:
-- Django trusts `X-Forwarded-Proto` (`SECURE_PROXY_SSL_HEADER`) and uses forwarded hosts (`USE_X_FORWARDED_HOST=True`).
+- Start Uvicorn with `--no-proxy-headers` so its outer middleware never trusts
+  or rewrites peers before Notoli checks them. Notoli's ASGI middleware accepts
+  forwarded scheme/client only from `DJANGO_TRUSTED_PROXY_IPS`; wildcards,
+  subnets, and hostnames are rejected. Other peers' forwarded headers are stripped.
+  Django uses ASGI's validated scheme and the ordinary `Host` header, with
+  `SECURE_PROXY_SSL_HEADER=None` and `USE_X_FORWARDED_HOST=False`.
+- Production Compose publishes no backend port. Only Nginx shares the internal
+  backend network; a separate backend-only bridge permits outbound email.
+  Local development trusts no proxy. See `deploy/README.md` for network details.
 
 Static files:
 - Collected during the Docker build (`python manage.py collectstatic --noinput`)

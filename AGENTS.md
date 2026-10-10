@@ -87,6 +87,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - `DJANGO_FORCE_SCRIPT_NAME` (default: unset; keep blank for subdomain-root routing)
    - `DJANGO_FRONTEND_BASE_URL` (default: `http://localhost:3000`; used in password-reset email links)
    - `DJANGO_MCP_BASE_URL` (origin only, no path; defaults to `http://localhost:8000` in debug or `https://notoli.judeandrewalaba.com` in production; OAuth issuer and MCP resource base)
+   - `DJANGO_TRUSTED_PROXY_IPS` (individual proxy IPs only; default empty; production Compose sets Nginx's private address `172.30.88.2`; never use wildcards or CIDRs)
    - `DJANGO_EMAIL_BACKEND` (default: `django.core.mail.backends.console.EmailBackend`)
    - `DJANGO_EMAIL_HOST` (default: `smtp.resend.com`)
    - `DJANGO_EMAIL_PORT` (default: `587`)
@@ -96,7 +97,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - `DJANGO_EMAIL_TIMEOUT` (default: `10`)
    - `DJANGO_DEFAULT_FROM_EMAIL` (default: `notoli@example.com`)
 5) Run backend migrations: `python backend/manage.py migrate`
-6) Start backend including MCP: `cd backend` then `python -m uvicorn app.asgi:application --port 8000 --reload` (Django `runserver` serves only REST/auth, not `/mcp`). Return to the repo root for the frontend steps.
+6) Start backend including MCP: `cd backend` then `python -m uvicorn app.asgi:application --port 8000 --reload --no-proxy-headers` (Django `runserver` serves only REST/auth, not `/mcp`). Return to the repo root for the frontend steps.
 7) Frontend setup:
    - `cd frontend`
    - `npm install`
@@ -139,8 +140,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - The development backend image is pinned to the reviewed `condaforge/miniforge3` 24.04 digest. Update that digest only through an explicit image-version and security review.
    - The frontend image uses `npm ci`, so keep `frontend/package-lock.json` in sync with `frontend/package.json`.
 7) The included reverse proxy serves the production frontend at `https://notoli.judeandrewalaba.com/` when local DNS/hosts point that name at your machine. HTTP redirects to HTTPS.
-   Backend is exposed on the direct port:
-   - `http://localhost:8000`
+   Backend routes are available through the reverse proxy; production-shaped Compose publishes no direct backend port.
    Frontend is still available at `http://localhost:3000`.
 
 ## Production Routing Notes
@@ -160,6 +160,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
     - `https://notoli.judeandrewalaba.com/register`
     - `https://notoli.judeandrewalaba.com/forgot-password`
     - `https://notoli.judeandrewalaba.com/reset-password`
+  - Authenticated React integration routes: `/connections/authorize` (OAuth consent) and `/connections` (Connected Apps; also in the profile menu).
 - Cloudflare -> origin TLS (Full strict):
   - Add/verify DNS for `notoli.judeandrewalaba.com` pointing to the same origin as the base site.
   - Generate a Cloudflare Origin Certificate for `judeandrewalaba.com` and `*.judeandrewalaba.com`.
@@ -179,15 +180,15 @@ Use the same script as the Codex maintenance script so cached containers refresh
   - If blank handling is not possible in a deploy environment, use `REACT_APP_API_BASE_URL=https://notoli.judeandrewalaba.com`.
 - Frontend auth behavior:
   - Tokens live in `sessionStorage` (`accessToken`/`refreshToken`).
-  - Any backend `401` from non-auth endpoints clears tokens and redirects to `/login` and shows an error snackbar on the login page.
+  - Backend `401` from non-auth endpoints attempts one JWT refresh/retry. Invalid refresh credentials clear tokens, redirect to `/login`, and show an error snackbar. Connection requests preserve a validated local `next` path/query through login; ordinary login retains the preferred-board landing.
   - Forgot/reset password endpoints:
     - `POST /auth/forgot-password/` accepts `email` and always returns a generic success message.
     - `POST /auth/reset-password/` accepts `uid`, `token`, and `password`.
 
 ## Maintenance
-- MCP deployment: install requirements, apply Django OAuth Toolkit's supplied migrations with `migrate`, and run `python manage.py check --deploy` under production settings. Serve `app.asgi:application` using Uvicorn (one worker for SQLite); WSGI does not serve MCP. Production's direct backend port is bound to localhost because forwarded headers are trusted from the proxy.
+- MCP deployment: install requirements, apply Django OAuth Toolkit's supplied migrations with `migrate`, and run `python manage.py check --deploy` under production settings. Serve `app.asgi:application` using Uvicorn with `--no-proxy-headers` (one worker for SQLite); WSGI does not serve MCP. Production publishes no backend port. Only Nginx shares `backend_private` (`172.30.88.0/29`, Nginx `172.30.88.2`); `backend_egress` is backend-only for outbound email. ASGI accepts forwarded scheme/client only from the configured exact proxy IP, strips all other forwarded metadata, and Django ignores forwarded host/proto headers. If changing the subnet, update IPAM, proxy fixed IP, and trusted IP together, then recreate services.
 - Register the predefined public ChatGPT OAuth client once: `python manage.py register_mcp_client --redirect-uri "<exact ChatGPT callback URI>"`. Copy the callback from ChatGPT's management page; use S256 PKCE and token auth method `none`. No client secret, password grant, dynamic registration, or unverified OIDC email claims are exposed. Existing registrations must be edited explicitly in Django admin.
-- Connection login/consent/revocation live under `/auth/mcp/`; users revoke their own application grants and tokens at `/auth/mcp/connections/`. Run `python manage.py cleartokens` periodically to clean expired OAuth rows. Keep access/refresh tokens and authorization codes out of logs.
+- Browser `GET /auth/mcp/authorize/` redirects to React `/connections/authorize` using `DJANGO_FRONTEND_BASE_URL` and the original query. React reuses the existing JWT login (no second Django session). JSON GET consent and POST ticket/decision require a verified JWT header; signed tickets bind the displayed request to the account for 10 minutes. Allow/Cancel returns Django's validated callback URL. React `/connections` calls JWT-only `GET/POST /auth/mcp/connections/` to list/revoke the current user's tokens and pending grants. Cookies and posted user IDs cannot authorize these endpoints. Keep JWTs out of URLs and retain PKCE/resource/scope checks in Django. Run `python manage.py cleartokens` periodically; keep access/refresh tokens, consent tickets, and authorization codes out of logs.
 - When changing MCP routes or the issuer, review Cloudflare Redirect/WAF/Caching rules for `/mcp`, `/.well-known/*`, and `/auth/mcp/*`: no interactive challenges or path rewriting for MCP/discovery, no caching of authenticated responses, and rate limits for login/token endpoints. Existing DNS and Full (strict) TLS are reused. Details and connection steps: `deploy/README.md` and `plugins/notoli/README.md`.
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
 - Update Conda env: `conda env update --file backend/environment.yml --prune`

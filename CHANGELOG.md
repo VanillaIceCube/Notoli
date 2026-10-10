@@ -6,9 +6,15 @@ All notable changes to this project are documented in this file.
 - Added a hosted, authenticated MCP endpoint with tools to discover boards/lists, read items, add items, and update statuses using existing Notoli validation and notifications.
 - Added OAuth authorization-code/S256 PKCE, resource-bound tokens, consent and connection revocation pages, and a predefined ChatGPT client registration command.
 - Added a portable Notoli plugin package, connection/deployment instructions, and OAuth/MCP integration tests.
+### Fixed
+- Reuse the existing React JWT login for OAuth consent, preserving pending authorization through login and token refresh without a duplicate Django session sign-in.
+- Bind consent to the displayed application, permissions, callback, and authenticated account with a short-lived signed ticket; add frontend consent and Connected Apps revocation coverage.
+- Restrict forwarded headers to Nginx's exact private IP, ignore untrusted forwarding metadata in Django, and replace incoming forwarding headers at Nginx.
 ### Changed
 - Serve backend containers through Uvicorn ASGI, route MCP/OAuth discovery through Nginx, and configure `DJANGO_MCP_BASE_URL` for local and production deployments.
-- Bind the production backend's direct port to localhost while trusting forwarded headers from its reverse proxy.
+- Remove the production backend's published port and isolate it from the frontend on a private proxy network while preserving outbound email on a separate bridge.
+### Removed
+- Remove Django integration HTML templates and separate connection login/logout routes; consent and Connected Apps now use React with Django JSON endpoints.
 
 ## 2026-08-22
 ### Fixed

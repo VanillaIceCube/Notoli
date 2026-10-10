@@ -126,7 +126,7 @@ What it does:
   - Prunes Docker images (`docker system prune -af`)
   - Pulls images + recreates containers
   - Runs Django migrations inside the backend container
-  - Backend images now serve `app.asgi:application` with Uvicorn so the MCP endpoint and REST API share the deployment. OAuth client registration remains a one-time operator step after migration; see `deploy/README.md`.
+  - Backend images serve `app.asgi:application` with Uvicorn `--no-proxy-headers` so the MCP endpoint and REST API share the deployment. Compose injects the exact Nginx private IP as `DJANGO_TRUSTED_PROXY_IPS`; no backend port is published. Deploy the Compose/network changes and frontend image together for React OAuth consent. OAuth client registration remains a one-time operator step after migration; see `deploy/README.md`.
 
 Deployment prerequisite:
 - For Cloudflare Full (strict), the origin must have a Cloudflare Origin Certificate.

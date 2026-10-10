@@ -15,6 +15,7 @@ services:
       DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost:${NOTOLI_DEV_FRONTEND_PORT:-3000},http://notoli.localhost:${NOTOLI_DEV_FRONTEND_PORT:-3000}
       DJANGO_FRONTEND_BASE_URL: http://notoli.localhost:${NOTOLI_DEV_FRONTEND_PORT:-3000}
       DJANGO_MCP_BASE_URL: http://notoli.localhost:${NOTOLI_DEV_BACKEND_PORT:-8000}
+      DJANGO_TRUSTED_PROXY_IPS: ""
       DJANGO_SQLITE_PATH: /backend/db.sqlite3
     volumes:
       - ../backend:/backend

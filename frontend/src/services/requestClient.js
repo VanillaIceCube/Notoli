@@ -1,4 +1,5 @@
 import { navigate } from './navigationService';
+import { connectionReturnTo, loginPath } from './authRedirect';
 
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL ??
@@ -25,15 +26,16 @@ export function clearAuthSession() {
   }
 }
 
-export function redirectToLogin() {
-  const didNavigate = navigate('/login', { replace: true });
+export function redirectToLogin(returnTo) {
+  const destination = loginPath(returnTo);
+  const didNavigate = navigate(destination, { replace: true });
 
   if (didNavigate || typeof window === 'undefined') return;
 
   const publicUrl = process.env.PUBLIC_URL || '';
   const normalizedBase = publicUrl.replace(/\/+$/, '');
-  const loginPath = normalizedBase ? `${normalizedBase}/login` : '/login';
-  const loginUrl = `${window.location?.origin ?? ''}${loginPath.startsWith('/') ? '' : '/'}${loginPath}`;
+  const path = normalizedBase ? `${normalizedBase}${destination}` : destination;
+  const loginUrl = `${window.location?.origin ?? ''}${path.startsWith('/') ? '' : '/'}${path}`;
   if (window.location?.replace) {
     window.location.replace(loginUrl);
   } else {
@@ -57,7 +59,7 @@ export function logout() {
   redirectToLogin();
 }
 
-function handleUnauthorized() {
+function handleUnauthorized(returnTo) {
   clearAuthSession();
 
   if (typeof window === 'undefined') return;
@@ -85,7 +87,12 @@ function handleUnauthorized() {
     // ignore
   }
 
-  redirectToLogin();
+  // Background board/notification requests can expire alongside consent.
+  // Preserve the active connection URL regardless of which request fails first.
+  const pending =
+    connectionReturnTo(returnTo) ||
+    connectionReturnTo(`${window.location?.pathname || ''}${window.location?.search || ''}`);
+  redirectToLogin(pending);
 }
 
 let refreshRequest = null;
@@ -129,15 +136,18 @@ function withAccessToken(options, accessToken) {
 }
 
 export async function apiFetch(path, options = {}) {
+  const { authReturnTo, ...requestOptions } = options;
   const url = `${API_BASE_URL}${path}`;
-  const response = await fetch(url, options);
+  const response = await fetch(url, requestOptions);
 
   if (response?.status === 401 && shouldRedirectToLogin(path)) {
     const refreshResult = await refreshAccessToken();
     if (refreshResult.status === 'refreshed') {
-      return fetch(url, withAccessToken(options, refreshResult.accessToken));
+      const retried = await fetch(url, withAccessToken(requestOptions, refreshResult.accessToken));
+      if (retried?.status === 401 && authReturnTo) handleUnauthorized(authReturnTo);
+      return retried;
     }
-    if (refreshResult.status === 'invalid') handleUnauthorized();
+    if (refreshResult.status === 'invalid') handleUnauthorized(authReturnTo);
   }
 
   return response;

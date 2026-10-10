@@ -6,6 +6,7 @@ import Login from './pages/authentication/Login';
 import Register from './pages/authentication/Register';
 import ForgotPassword from './pages/authentication/ForgotPassword';
 import ResetPassword from './pages/authentication/ResetPassword';
+import ConnectedApps, { OAuthConsent } from './pages/connections/Connections';
 import BoardListsPage from './pages/boards/BoardListsPage';
 import ListTasksPage from './pages/lists/ListTasksPage';
 import AppHeader from './components/AppHeader';
@@ -153,6 +154,22 @@ function App() {
           <Route path="/register" element={<Register showSnackbar={showSnackbar} />} />
           <Route path="/forgot-password" element={<ForgotPassword showSnackbar={showSnackbar} />} />
           <Route path="/reset-password" element={<ResetPassword showSnackbar={showSnackbar} />} />
+          <Route
+            path="/connections/authorize"
+            element={
+              <AuthenticatedRoute>
+                <OAuthConsent />
+              </AuthenticatedRoute>
+            }
+          />
+          <Route
+            path="/connections"
+            element={
+              <AuthenticatedRoute>
+                <ConnectedApps />
+              </AuthenticatedRoute>
+            }
+          />
 
           <Route path="*" element={<NotepadRoutes setAppBarHeader={setAppBarHeader} />} />
         </Routes>
