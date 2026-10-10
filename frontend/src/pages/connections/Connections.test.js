@@ -91,15 +91,36 @@ test('an authenticated user goes directly to consent with application, identity 
   expect(login).not.toHaveBeenCalled();
 });
 
-test('sharing consent explains that collaborators receive access to every list and item in owned boards', async () => {
-  const description =
-    'Add and remove collaborators on boards you own, granting access to every list and item in those boards';
+test('expanded consent explains sharing, organization, notifications and permanent deletion', async () => {
+  const permissions = [
+    {
+      scope: 'notoli:share',
+      description:
+        'Add and remove collaborators on boards you own, granting access to every list and item in those boards',
+    },
+    {
+      scope: 'notoli:organize',
+      description:
+        'Create and edit boards and lists, reorder lists and items, and change which lists contain items',
+    },
+    {
+      scope: 'notoli:notifications',
+      description: 'Read your activity notifications and mark them read or unread',
+    },
+    {
+      scope: 'notoli:delete',
+      description:
+        'Permanently delete accessible items and lists, boards you own with all their contents, and your notifications',
+    },
+  ];
   connections.loadConsent.mockResolvedValue({
     ...consent,
-    permissions: [...consent.permissions, { scope: 'notoli:share', description }],
+    permissions: [...consent.permissions, ...permissions],
   });
   renderFlow();
-  expect(await screen.findByText(description)).toBeInTheDocument();
+  for (const permission of permissions) {
+    expect(await screen.findByText(permission.description)).toBeInTheDocument();
+  }
   await userEvent.click(screen.getByRole('button', { name: 'Allow' }));
   await waitFor(() =>
     expect(connections.decideConsent).toHaveBeenCalledWith('SIGNED-CONSENT', 'allow', query),

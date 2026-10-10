@@ -23,8 +23,11 @@ routes; external URLs cannot become login redirects. React shows application
 name, client ID, account, requested permissions, and **Allow** / **Cancel**.
 The optional sharing permission explicitly grants collaborator management on
 owned boards and access to every list/item in those boards. Existing connections
-must reconnect to approve it; the generic consent UI displays this new permission
-from Django without changing the login flow.
+must reconnect to approve new permissions. Organization, notification management,
+and permanent deletion have separate permission descriptions. The generic consent
+UI displays every requested permission from Django without changing the login flow.
+Deletion consent describes accessible list/item deletion, owned board cascades, and
+notification removal; clients must also confirm each requested deletion's impact.
 
 `connectionsClient` uses explicit JWT headers and `credentials: omit` for
 Django's JSON consent and connection-management endpoints. Django issues a

@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "notoli",
-  "version": "0.2.0",
-  "description": "Read your Notoli lists, manage to-do items, and share boards with collaborators.",
+  "version": "0.3.0",
+  "description": "Manage Notoli boards, lists, items, ordering, collaborators, and activity notifications.",
   "homepage": "https://notoli.judeandrewalaba.com",
   "repository": "https://github.com/VanillaIceCube/Notoli",
   "keywords": ["productivity", "todo", "lists"],

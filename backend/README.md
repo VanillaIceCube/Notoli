@@ -78,16 +78,28 @@ The toolkit stores token checksums rather than bearer tokens. Run
 
 `notoli:read` grants discovery/read tools, including `get_board_collaborators`
 (owner, usernames/emails, collaborator IDs, and whether the current user can
-manage access). `notoli:write` additionally grants `add_item` and `update_item`.
+manage access). `notoli:write` grants list and board item creation/updates.
 `notoli:share` additionally grants `add_board_collaborator` by exact username/email
 and `remove_board_collaborator` by a discovered user ID, only on boards the token's
 user owns. Sharing covers every list/item in the board; there are no separate
 workspace or list-only permissions. Consent explicitly describes that access.
-Existing read/write connections must reconnect and approve sharing; refresh
-cannot upgrade their scope. Membership reads are board-scoped, not a user directory.
-Read pagination defaults to 50 and is capped at
-100. Write titles are capped at 255 characters, descriptions at 10,000. Tool
-schemas and annotations include each tool's OAuth scopes. Missing write or sharing scope
+`notoli:organize` permits board/list creation and name/description edits, list/item
+ordering, item attachment, and full list-membership replacement. Board edits remain
+owner-only; accessible board members can manage lists/items as in REST. Ownership,
+creator IDs, collaborator fields, and board transfers never enter these serializers
+from MCP input. `notoli:notifications` permits recipient-only activity reads and
+read/unread changes. `notoli:delete` permits deletion of accessible lists/items and
+owned boards; deleting notifications also requires `notoli:notifications`.
+Existing connections must reconnect and approve new permissions; refresh cannot
+upgrade their scope. Membership reads are board-scoped, not a user directory.
+There are 31 tools; see the complete [tool catalog](../plugins/notoli/README.md).
+Read pagination defaults to 50 and is capped at 100. Write titles are capped at
+255 characters, descriptions at 10,000. Membership/order arrays contain at most
+1000 positive IDs. Reordering requires the complete current ID set without duplicates.
+`set_list_items` replaces the entire membership/order and accepts an empty array
+without deleting items. Attachments stay inside one board. Board-wide item reads
+include unlisted items and return `list_id: null`.
+Tool schemas and annotations include each tool's OAuth scopes. Missing operation scope
 returns an MCP authentication challenge so ChatGPT can request reauthorization.
 Board/list permission failures return ordinary tool errors without data.
 
@@ -97,10 +109,19 @@ and notifications. MCP also rechecks board membership even for an item's origina
 creator after collaboration is removed. Sharing reuses `BoardViewSet`'s owner-only
 collaborator actions inside a transaction, preserving validation and notifications.
 Removal immediately blocks that collaborator's MCP access to the board and its
-lists. Board/list/item deletion tools are not exposed.
+lists. Organization, item deletion, and notification tools reuse the same viewset
+services inside that transaction. Notification reads/updates/deletes are limited
+to the current recipient, including their historical activity. List deletion keeps
+items; item deletion removes all list occurrences; board deletion cascades to every
+list/item. All deletion tools require literal `confirm: true`, checked again at the
+service boundary, and instruct the client to explain impact and obtain explicit user
+confirmation. This records the caller's assertion, not an independently verified
+human approval. Normal auth/account/admin flows remain outside the MCP tool surface.
 See [plugin tools and evaluation prompts](../plugins/notoli/README.md).
 
 Run the OAuth and HTTP protocol tests with `python manage.py test integrations`.
+Their ASGI HTTP client, `httpx2==2.13.1`, is pinned directly in requirements
+(also required transitively by MCP) so fresh test environments declare it explicitly.
 
 ## 🔐 Authentication
 JWT auth is provided by `djangorestframework-simplejwt`.

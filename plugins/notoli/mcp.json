@@ -15,7 +15,14 @@
             },
             "authorizationUrl": "https://notoli.judeandrewalaba.com/auth/mcp/authorize/",
             "tokenUrl": "https://notoli.judeandrewalaba.com/auth/mcp/token/",
-            "baseScopes": ["notoli:read", "notoli:write", "notoli:share"]
+            "baseScopes": [
+              "notoli:read",
+              "notoli:write",
+              "notoli:share",
+              "notoli:organize",
+              "notoli:notifications",
+              "notoli:delete"
+            ]
           }
         }
       }

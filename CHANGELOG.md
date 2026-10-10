@@ -8,7 +8,10 @@ All notable changes to this project are documented in this file.
 - Added a portable Notoli plugin package, connection/deployment instructions, and OAuth/MCP integration tests.
 - Added MCP tools to inspect board owners/collaborators and add/remove collaborators using existing board sharing, owner checks, and notifications.
 - Added explicit `notoli:share` consent for board-wide access changes; existing read/write tokens cannot upgrade sharing permissions through refresh.
+- Expanded MCP coverage to 31 tools for board/list creation, editing and deletion, board-wide items, item deletion, list membership, ordering, and recipient-only notification management using existing REST services.
+- Added separate organization, notification, and deletion OAuth permissions, explicit deletion confirmation, bounded membership/order inputs, and regression coverage for cascades, scope escalation, removed creators, and cross-board access.
 ### Fixed
+- Explicitly pin the ASGI HTTP client used by MCP protocol tests instead of relying on the SDK's transitive dependency.
 - Reuse the existing React JWT login for OAuth consent, preserving pending authorization through login and token refresh without a duplicate Django session sign-in.
 - Bind consent to the displayed application, permissions, callback, and authenticated account with a short-lived signed ticket; add frontend consent and Connected Apps revocation coverage.
 - Restrict forwarded headers to Nginx's exact private IP, ignore untrusted forwarding metadata in Django, and replace incoming forwarding headers at Nginx.

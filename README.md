@@ -15,7 +15,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **Flexible organization**: notes can appear in multiple lists with per-list ordering
 - **Subdomain hosting**: designed to run at `https://notoli.judeandrewalaba.com`
 - **Dockerized deployment**: frontend + backend + Nginx reverse proxy
-- **ChatGPT integration**: authenticated MCP tools to read lists, manage items, inspect collaborators, and share owned boards with a separate sharing permission; React consent uses your existing login, and Connected Apps lets you revoke access
+- **ChatGPT integration**: 31 authenticated MCP tools for boards, lists, items, ordering, sharing, and notifications, with separate permissions for organization, sharing, notifications, and confirmed deletion; React consent uses your existing login, and Connected Apps lets you revoke access
 
 ## 🚀 Tech Stack
 - **Backend:** Django

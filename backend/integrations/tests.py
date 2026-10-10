@@ -357,6 +357,37 @@ class OAuthTests(TestCase):
         )
         self.assertEqual(response.status_code, 400)
 
+    def test_product_scopes_require_consent_and_cannot_escalate_on_refresh(self):
+        scopes = " ".join(settings.OAUTH2_PROVIDER["SCOPES"])
+        consent = self.consent(scope=scopes)
+        self.assertEqual(consent.status_code, 200)
+        displayed = {p["scope"] for p in consent.json()["permissions"]}
+        self.assertEqual(displayed, set(scopes.split()))
+        approved = self.client.post(
+            "/auth/mcp/authorize/",
+            {"ticket": consent.json()["ticket"], "decision": "allow"},
+        )
+        code = parse_qs(urlsplit(approved.json()["redirect_url"]).query)["code"][0]
+        token = self.exchange(code).json()
+        self.assertTrue(resolve_token(token["access_token"]).is_valid(scopes.split()))
+        for scope in ("notoli:organize", "notoli:notifications", "notoli:delete"):
+            with self.subTest(scope=scope):
+                legacy = self.issue()
+                response = self.client.post(
+                    "/auth/mcp/token/",
+                    urlencode(
+                        {
+                            "grant_type": "refresh_token",
+                            "client_id": self.app.client_id,
+                            "refresh_token": legacy["refresh_token"],
+                            "resource": settings.MCP_RESOURCE_URL,
+                            "scope": f"notoli:read notoli:write {scope}",
+                        }
+                    ),
+                    content_type="application/x-www-form-urlencoded",
+                )
+                self.assertEqual(response.status_code, 400)
+
     def consent(self, **changes):
         params = {
             "client_id": self.app.client_id,
@@ -906,6 +937,29 @@ class MCPHTTPTests(TransactionTestCase):
                             "get_board_collaborators",
                             "add_board_collaborator",
                             "remove_board_collaborator",
+                            "get_board",
+                            "create_board",
+                            "update_board",
+                            "delete_board",
+                            "get_list",
+                            "create_list",
+                            "update_list",
+                            "delete_list",
+                            "reorder_lists",
+                            "list_board_items",
+                            "get_item",
+                            "add_board_item",
+                            "update_board_item",
+                            "delete_item",
+                            "attach_item",
+                            "set_list_items",
+                            "reorder_items",
+                            "list_notifications",
+                            "get_notification",
+                            "update_notification",
+                            "mark_all_notifications_read",
+                            "delete_notification",
+                            "clear_notifications",
                         },
                     )
                     self.assertTrue(tools["get_items"]["annotations"]["readOnlyHint"])
@@ -1035,6 +1089,68 @@ class MCPHTTPTests(TransactionTestCase):
                     )
                     self.assertFalse(removed.get("isError"), removed)
                     self.assertEqual(removed["structuredContent"]["action"], "removed")
+                    for name, args, scope in (
+                        ("create_board", {"name": "Denied"}, "notoli:organize"),
+                        ("list_notifications", {}, "notoli:notifications"),
+                        (
+                            "delete_item",
+                            {"board_id": board_id, "item_id": item_id, "confirm": True},
+                            "notoli:delete",
+                        ),
+                    ):
+                        denied = await invoke(name, args)
+                        self.assertTrue(denied["isError"])
+                        self.assertIn(scope, denied["_meta"]["mcp/www_authenticate"][0])
+                    await sync_to_async(
+                        AccessToken.objects.filter(pk=self.token.pk).update
+                    )(scope=" ".join(settings.OAUTH2_PROVIDER["SCOPES"]))
+                    new_board = await invoke("create_board", {"name": "Protocol board"})
+                    self.assertFalse(new_board.get("isError"), new_board)
+                    new_board_id = new_board["structuredContent"]["id"]
+                    new_list = await invoke(
+                        "create_list",
+                        {"board_id": new_board_id, "name": "Protocol list"},
+                    )
+                    self.assertFalse(new_list.get("isError"), new_list)
+                    invalid = await invoke(
+                        "delete_board", {"board_id": new_board_id, "confirm": False}
+                    )
+                    self.assertTrue(invalid["isError"])
+                    invalid = await invoke("delete_board", {"board_id": new_board_id})
+                    self.assertTrue(invalid["isError"])
+                    invalid = await invoke(
+                        "set_list_items",
+                        {
+                            "list_id": new_list["structuredContent"]["id"],
+                            "item_ids": [0],
+                        },
+                    )
+                    self.assertTrue(invalid["isError"])
+                    invalid = await invoke(
+                        "reorder_items",
+                        {"list_id": note_list.pk, "ordered_ids": [item_id] * 1001},
+                    )
+                    self.assertTrue(invalid["isError"])
+                    orphan = await invoke(
+                        "add_board_item", {"board_id": new_board_id, "note": "Unlisted"}
+                    )
+                    self.assertFalse(orphan.get("isError"), orphan)
+                    self.assertIsNone(orphan["structuredContent"]["list_id"])
+                    attached = await invoke(
+                        "attach_item",
+                        {
+                            "list_id": new_list["structuredContent"]["id"],
+                            "item_id": orphan["structuredContent"]["id"],
+                        },
+                    )
+                    self.assertFalse(attached.get("isError"), attached)
+                    history = await invoke("list_notifications", {})
+                    self.assertFalse(history.get("isError"), history)
+                    deleted = await invoke(
+                        "delete_board", {"board_id": new_board_id, "confirm": True}
+                    )
+                    self.assertFalse(deleted.get("isError"), deleted)
+                    self.assertEqual(deleted["structuredContent"]["action"], "deleted")
                     jwt_response = await client.post(
                         "/mcp",
                         json=payload,

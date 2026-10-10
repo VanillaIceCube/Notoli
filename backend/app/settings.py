@@ -148,8 +148,11 @@ OAUTH2_PROVIDER = {
     "OAUTH2_VALIDATOR_CLASS": "integrations.oauth.NotoliOAuthValidator",
     "SCOPES": {
         "notoli:read": "Read your accessible Notoli boards, lists, and items",
-        "notoli:write": "Add and update items in your accessible Notoli lists",
+        "notoli:write": "Add and update items in your accessible Notoli boards and lists",
         "notoli:share": "Add and remove collaborators on boards you own, granting access to every list and item in those boards",
+        "notoli:organize": "Create and edit boards and lists, reorder lists and items, and change which lists contain items",
+        "notoli:notifications": "Read your activity notifications and mark them read or unread",
+        "notoli:delete": "Permanently delete accessible items and lists, boards you own with all their contents, and your notifications",
     },
     "DEFAULT_SCOPES": ["notoli:read"],
     "PKCE_REQUIRED": True,

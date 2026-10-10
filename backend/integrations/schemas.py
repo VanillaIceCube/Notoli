@@ -15,7 +15,7 @@ class ListSummary(BoardSummary):
 
 class Item(TypedDict):
     id: int
-    list_id: int
+    list_id: int | None
     board_id: int
     note: str
     description: str
@@ -61,3 +61,37 @@ class BoardSharingChange(TypedDict):
     board_name: str
     sharing_level: Literal["board"]
     action: Literal["added", "removed"]
+
+
+class MutationResult(TypedDict):
+    id: int
+    action: str
+
+
+class OrderResult(TypedDict):
+    id: int
+    ordered_ids: list[int]
+
+
+class CountResult(TypedDict):
+    count: int
+
+
+class NotificationSummary(TypedDict):
+    id: int
+    event_type: str
+    title: str
+    message: str
+    is_read: bool
+    created_at: str
+    read_at: str | None
+    board_id: int | None
+    board_name: str
+    list_id: int | None
+    item_id: int | None
+    target_path: str
+
+
+class NotificationPage(TypedDict):
+    results: list[NotificationSummary]
+    next_offset: int | None

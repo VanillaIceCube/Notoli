@@ -233,10 +233,12 @@ use a wildcard or trust the whole bridge. Keep backend ports unpublished.
    ```
 
    Use client ID `notoli-chatgpt`, token authentication method `none`, and scopes
-   `notoli:read notoli:write notoli:share`. No client secret is needed. Existing
-   read/write connections must reconnect and approve sharing before managing
-   collaborators. Sharing affects all lists/items in the selected board and
-   remains owner-only. See the
+   `notoli:read notoli:write notoli:share notoli:organize notoli:notifications notoli:delete`
+   for complete coverage, or request a subset. No client secret is needed. Existing
+   connections must reconnect and approve new permissions. Sharing affects all
+   lists/items in the selected board and remains owner-only. Delete tools require
+   explicit confirmation of their impact: board deletion removes all lists/items,
+   item deletion removes every occurrence, and list deletion preserves items. See the
    [personal connection walkthrough](../plugins/notoli/README.md).
 
 5. Verify discovery and an unauthenticated challenge before linking:
@@ -254,7 +256,11 @@ use a wildcard or trust the whole bridge. Keep backend ports unpublished.
    callback, Cancel returning `access_denied` with the original state/issuer, and
    revocation preventing access and refresh. Test reading board collaborators,
    owner-only add/remove with notifications, and rejection of sharing when
-   `notoli:share` is missing. Check ordinary REST/JWT
+   `notoli:share` is missing. On disposable data, test board/list creation and edits,
+   complete-set reordering, same-board membership changes, board-wide orphan items,
+   deletion cascades/confirmation, and recipient-only notification management.
+   Verify missing organize/notifications/delete permissions prompt reauthorization
+   and refresh cannot escalate any scope. Check ordinary REST/JWT
    login, list ordering, and collaborator notifications as well. MCP Inspector
    can exercise the protocol before testing ChatGPT. Register its exact HTTPS
    callback as a separate public client if needed.
