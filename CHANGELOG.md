@@ -2,6 +2,10 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-10-09
+### Removed
+- Removed the backend deployment path-prefix setting from Django, environment examples, and CI deployment inputs. Notoli uses subdomain-root routing and `/static/` assets; stale path-prefix environment values are ignored.
+
+## 2026-10-09
 ### Added
 - Added a hosted, authenticated MCP endpoint with tools to discover boards/lists, read items, add items, and update statuses using existing Notoli validation and notifications.
 - Added OAuth authorization-code/S256 PKCE, resource-bound tokens, consent and connection revocation pages, and a predefined ChatGPT client registration command.

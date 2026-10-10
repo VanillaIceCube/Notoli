@@ -56,6 +56,9 @@ Production is hosted at the subdomain root:
 
 - `https://notoli.judeandrewalaba.com`
 
+Backend routes also use the subdomain root (`/api/`, `/auth/`, `/admin/`, and
+`/mcp`); no backend deployment path prefix is configured.
+
 Important pieces:
 
 - `frontend/package.json` does not set a CRA `homepage`, so production assets resolve from `/`.

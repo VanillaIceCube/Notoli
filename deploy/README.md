@@ -89,7 +89,6 @@ DJANGO_SQLITE_PATH=/backend/db.sqlite3
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,notoli.judeandrewalaba.com
 DJANGO_CORS_ALLOWED_ORIGINS=https://localhost,http://localhost:3000,https://notoli.judeandrewalaba.com
 DJANGO_CSRF_TRUSTED_ORIGINS=https://localhost,http://localhost:3000,https://notoli.judeandrewalaba.com
-DJANGO_FORCE_SCRIPT_NAME=
 DJANGO_FRONTEND_BASE_URL=https://notoli.judeandrewalaba.com
 ```
 
@@ -210,7 +209,6 @@ use a wildcard or trust the whole bridge. Keep backend ports unpublished.
    DJANGO_ALLOWED_HOSTS=notoli.judeandrewalaba.com
    DJANGO_CSRF_TRUSTED_ORIGINS=https://notoli.judeandrewalaba.com
    DJANGO_CORS_ALLOWED_ORIGINS=https://notoli.judeandrewalaba.com
-   DJANGO_FORCE_SCRIPT_NAME=
    ```
 
    Keep a unique `DJANGO_SECRET_KEY`. The deploy workflow carries optional repo
@@ -302,8 +300,8 @@ Cloudflare (TLS/DNS)
 ```
 
 ## Backend Subdomain Settings
-When running at the subdomain root, Django should not use a script-name prefix:
-- `DJANGO_FORCE_SCRIPT_NAME=`
+Notoli serves backend routes at the subdomain root and static assets at `/static/`.
+No deployment path-prefix variable is needed.
 
 Production allowlists should include the Notoli subdomain:
 - `DJANGO_ALLOWED_HOSTS=notoli.judeandrewalaba.com`

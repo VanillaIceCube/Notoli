@@ -226,7 +226,6 @@ Key environment variables (see `backend/app/settings.py` for defaults):
 - `DJANGO_ALLOWED_HOSTS` (comma-separated)
 - `DJANGO_CORS_ALLOWED_ORIGINS` (comma-separated)
 - `DJANGO_CSRF_TRUSTED_ORIGINS` (comma-separated)
-- `DJANGO_FORCE_SCRIPT_NAME` (leave unset/blank for subdomain-root hosting)
 - `DJANGO_FRONTEND_BASE_URL` (base URL used in password-reset links, for example `https://notoli.judeandrewalaba.com`)
 - `DJANGO_MCP_BASE_URL` (OAuth issuer origin; exact MCP resource is `<origin>/mcp`)
 - `DJANGO_TRUSTED_PROXY_IPS` (comma-separated individual proxy IPs; default empty,
@@ -262,4 +261,4 @@ Proxy / HTTPS:
 
 Static files:
 - Collected during the Docker build (`python manage.py collectstatic --noinput`)
-- With subdomain-root hosting, `DJANGO_FORCE_SCRIPT_NAME` should stay blank so `STATIC_URL` remains `/static/`. If a future deployment uses a path prefix, `STATIC_URL` is generated under `<prefix>/static/`.
+- `STATIC_URL` is `/static/`. Notoli serves backend routes at the subdomain root and does not configure a deployment path prefix.

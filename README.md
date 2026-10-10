@@ -13,7 +13,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **Access scoping**: the API limits objects by `owner`/`created_by`/`collaborators`
 - **In-app notifications**: shared board activity appears under the app bar bell with persistent read state and links back to the relevant board or list
 - **Flexible organization**: notes can appear in multiple lists with per-list ordering
-- **Subdomain hosting**: designed to run at `https://notoli.judeandrewalaba.com`
+- **Subdomain hosting**: runs at the root of `https://notoli.judeandrewalaba.com`, with backend URLs and static assets served without a configurable path prefix
 - **Dockerized deployment**: frontend + backend + Nginx reverse proxy
 - **ChatGPT integration**: 31 authenticated MCP tools for boards, lists, items, ordering, sharing, and notifications, with separate permissions for organization, sharing, notifications, and confirmed deletion; React consent uses your existing login, and Connected Apps lets you revoke access
 
