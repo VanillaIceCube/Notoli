@@ -2,6 +2,12 @@
 
 The Notoli frontend is a Create React App (CRA) single-page app with React Router and Material UI.
 
+Material UI and its icons use the compatible v9 package family. Upgrade them
+together and regenerate the lockfile; isolated major bumps fail peer resolution.
+Use `sx` for layout system props and `slotProps` for component slots, including
+checkbox input labels. Supported browser minimums are Chrome 117, Edge 121,
+Firefox 121, and Safari 17. The migration follows MacroMapper PRs #103 and #130.
+
 UI styling conventions live in [`STYLE_GUIDE.md`](STYLE_GUIDE.md).
 
 ## 🧭 App Routes

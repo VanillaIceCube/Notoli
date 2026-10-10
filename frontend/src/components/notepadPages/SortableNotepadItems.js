@@ -85,13 +85,15 @@ export default function SortableNotepadItems({
         data-testid={`${testIdPrefix}-empty-state`}
         variant="body1"
         align="center"
-        fontWeight="bold"
         sx={{
+          fontWeight: 'bold',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+
           // Match one rendered list item: 42px row + 8px list gap + 2px divider.
           minHeight: NOTEPAD_ITEM_FOOTPRINT_HEIGHT,
+
           boxSizing: 'border-box',
           px: 2,
           borderRadius: 1,

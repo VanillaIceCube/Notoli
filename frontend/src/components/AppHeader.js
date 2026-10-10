@@ -245,7 +245,14 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
             }}
           >
             <Box sx={{ p: 1.5 }}>
-              <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 1,
+                }}
+              >
                 <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                   Notifications
                 </Typography>

@@ -46,9 +46,8 @@ export default function ResetPassword({ showSnackbar }) {
   return (
     <Stack
       spacing={2}
-      alignItems="center"
-      maxWidth="sm"
       sx={{
+        maxWidth: 'sm',
         p: 5.5,
         mx: 'auto',
         display: 'flex',
