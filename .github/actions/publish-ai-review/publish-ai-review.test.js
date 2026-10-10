@@ -176,6 +176,167 @@ test("renders only populated findings, evidence, and action groups", () => {
   );
 });
 
+test("renders a structured major-upgrade brief without treating it as a finding", () => {
+  assert.equal(
+    renderReviewBody({
+      personaName: "Obi-Wan Code-nobi",
+      summary:
+        "**Approved.** The update is ready for the normal gates to decide.",
+      majorUpgradeBrief: {
+        dependency: "react-router 6.30.4 → 7.18.1 (npm)",
+        upgrade_story:
+          "Dependabot found a new major version during its version scan; no security trigger is evidenced. The upstream router changed compatibility requirements and public behavior, and the application gains the maintained router line and its documented fixes.",
+        repository_impact:
+          "Routing is configured in `frontend/src/App.js`; the supplied evidence identifies no removed API usage.",
+        recommendation:
+          "The path is clear: merge after the normal required checks pass.",
+        sources: [
+          "https://github.com/remix-run/react-router/releases/tag/react-router%407.18.1",
+        ],
+      },
+    }),
+    [
+      "## \ud83e\udded Obi-Wan Code-nobi",
+      "",
+      "**Approved.** The update is ready for the normal gates to decide.",
+      "",
+      "## Major upgrade brief",
+      "",
+      "- **Dependency:** react-router 6.30.4 → 7.18.1 (npm)",
+      "- **Why this upgrade matters:** Dependabot found a new major version during its version scan; no security trigger is evidenced. The upstream router changed compatibility requirements and public behavior, and the application gains the maintained router line and its documented fixes.",
+      "- **Repository impact:** Routing is configured in `frontend/src/App.js`; the supplied evidence identifies no removed API usage.",
+      "- **Recommendation:** The path is clear: merge after the normal required checks pass.",
+      "- **Sources:** https://github.com/remix-run/react-router/releases/tag/react-router%407.18.1",
+    ].join("\n"),
+  );
+});
+
+test("folds the legacy major-upgrade fields into the compact brief", () => {
+  const body = renderReviewBody({
+    personaName: "Obi-Wan Code-nobi",
+    summary: "**Approved.** The upgrade is compatible.",
+    majorUpgradeBrief: {
+      dependency: "example 1.0.0 → 2.0.0 (npm)",
+      upgrade_trigger:
+        "Dependabot found the new major during its version scan.",
+      why_major: "Upstream removed a deprecated API.",
+      repository_exposure: "The repository does not call that API.",
+      benefits: "The maintained release includes parser hardening.",
+      recommendation: "Merge after the normal checks pass.",
+      sources: ["https://example.com/releases/2.0.0"],
+    },
+  });
+
+  assert.match(body, /Why this upgrade matters/);
+  assert.match(
+    body,
+    /Dependabot found.*removed a deprecated API.*parser hardening/s,
+  );
+  assert.match(body, /Repository impact.*does not call that API/s);
+  assert.match(body, /Recommendation.*Merge after/s);
+  assert.doesNotMatch(body, /Why this update appeared/);
+});
+
+test("fails visibly instead of publishing an incomplete required major-upgrade brief", async () => {
+  const { createdReviews, github } = createGitHubMock();
+  const { core, failures } = createCore();
+
+  await publishAiReview({
+    github,
+    context: context(),
+    core,
+    personaName: "Obi-Wan Code-nobi",
+    requireMajorUpgradeBrief: true,
+    raw: JSON.stringify(
+      review({
+        major_upgrade_brief: {
+          dependency: "example 1.0.0 → 2.0.0 (npm)",
+        },
+      }),
+    ),
+  });
+
+  assert.equal(failures.length, 1);
+  assert.match(
+    failures[0],
+    /missing upgrade_story, repository_impact, recommendation, sources/,
+  );
+  assert.equal(createdReviews.length, 1);
+  assert.match(createdReviews[0].body, /Review unavailable/);
+});
+
+test("publishes every compact major-upgrade field after normalization", async () => {
+  const { createdReviews, github } = createGitHubMock();
+  const { core, failures } = createCore();
+
+  await publishAiReview({
+    github,
+    context: context(),
+    core,
+    personaName: "Obi-Wan Code-nobi",
+    requireMajorUpgradeBrief: true,
+    raw: JSON.stringify(
+      review({
+        summary:
+          "**Approved.** The breaking change does not touch this deployment; the path is clear after one smoke test.",
+        major_upgrade_brief: {
+          dependency: "gunicorn 25.3.0 → 26.0.0 (pip)",
+          upgrade_story:
+            "Dependabot discovered the new major during its version scan; no security trigger is evidenced. Gunicorn removed the Eventlet worker, while the service gains stricter HTTP validation and request-smuggling hardening.",
+          repository_impact:
+            "`backend/Dockerfile` invokes the default synchronous worker, so no Eventlet migration is identified.",
+          recommendation:
+            "Merge after a production-container startup smoke test.",
+          sources: ["https://github.com/benoitc/gunicorn/releases/tag/26.0.0"],
+        },
+      }),
+    ),
+  });
+
+  assert.deepEqual(failures, []);
+  assert.equal(createdReviews.length, 1);
+  assert.match(createdReviews[0].body, /Why this upgrade matters/);
+  assert.match(createdReviews[0].body, /Repository impact/);
+  assert.match(createdReviews[0].body, /backend\/Dockerfile/);
+  assert.match(createdReviews[0].body, /request-smuggling hardening/);
+  assert.match(createdReviews[0].body, /gunicorn\/releases\/tag\/26\.0\.0/);
+});
+
+test("preserves a major-upgrade brief on an unchanged review", async () => {
+  const { createdReviews, github } = createGitHubMock({
+    priorReviews: [
+      {
+        id: 42,
+        state: "APPROVED",
+        submitted_at: "2026-07-12T00:00:00Z",
+        body: "Previous approval",
+        user: { login: "obi-wan-code-nobi-reviewer[bot]" },
+      },
+    ],
+  });
+  const { core } = createCore();
+
+  await publishAiReview({
+    github,
+    context: context(),
+    core,
+    personaName: "Obi-Wan Code-nobi",
+    raw: JSON.stringify(
+      review({
+        unchanged: true,
+        summary: "**Approved.** The earlier verdict remains sound.",
+        major_upgrade_brief: {
+          dependency: "react-router 6.30.4 → 7.18.1 (npm)",
+          recommendation: "Merge after the required checks pass.",
+        },
+      }),
+    ),
+  });
+
+  assert.match(createdReviews[0].body, /## Major upgrade brief/);
+  assert.match(createdReviews[0].body, /react-router 6\.30\.4 → 7\.18\.1/);
+});
+
 test("renders an infrastructure-only RoboCop comment without implying approval", () => {
   assert.equal(
     renderReviewBody({

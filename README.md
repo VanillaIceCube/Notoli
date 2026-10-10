@@ -27,6 +27,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **CI/CD & Workflows:** GitHub Actions
 - **Scope-aware security checks:** Required CodeQL scope and analyzer jobs let documentation-only PRs skip analysis without waiting for an absent standalone results check; see the [branch-protection policy](.github/README-WORKFLOWS.md#main-branch-required-checks).
 - **PR dependency gates:** high/critical vulnerability review and npm malware advisory review
+- **Major dependency upgrade briefs:** Obi-Wan explains upstream breaking changes, Notoli impact, and verification recommendations with primary sources on Dependabot major updates.
 - **Daily security planning:** LLM-grouped CodeQL and Dependabot alert issues, synchronized with the Notoli GitHub Project
 
 ## 📚 Documentation

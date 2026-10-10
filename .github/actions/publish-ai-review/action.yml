@@ -10,6 +10,10 @@ inputs:
   persona_name:
     description: Human-readable reviewer persona name.
     required: true
+  require_major_upgrade_brief:
+    description: Require a complete major-upgrade brief rather than publishing a partial one.
+    required: false
+    default: "false"
 runs:
   using: composite
   steps:
@@ -18,6 +22,7 @@ runs:
       env:
         REVIEW_BODY: ${{ inputs.review_json }}
         PERSONA_NAME: ${{ inputs.persona_name }}
+        REQUIRE_MAJOR_UPGRADE_BRIEF: ${{ inputs.require_major_upgrade_brief }}
       with:
         github-token: ${{ inputs.github_token }}
         script: |
@@ -31,4 +36,5 @@ runs:
             core,
             raw: process.env.REVIEW_BODY,
             personaName: process.env.PERSONA_NAME,
+            requireMajorUpgradeBrief: process.env.REQUIRE_MAJOR_UPGRADE_BRIEF === "true",
           });
