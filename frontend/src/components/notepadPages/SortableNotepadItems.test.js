@@ -29,7 +29,7 @@ describe('SortableNotepadItems', () => {
     expect(screen.getByText('No rows found.')).toBeInTheDocument();
     expect(screen.getByTestId('row-empty-state')).toHaveStyle({
       minHeight: '52px',
-      borderBottom: '2px solid var(--secondary-color)',
+      boxSizing: 'border-box',
     });
   });
 

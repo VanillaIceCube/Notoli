@@ -11,11 +11,11 @@ RUN npm ci
 # Copy your React project code
 COPY . .
 
-# Build-time envs for CRA
+# Build-time API setting, explicitly exposed by Vite
 ARG REACT_APP_API_BASE_URL
 ENV REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL
 
-# Build optimized React app (outputs to /frontend/build)
+# Build optimized React app (Vite outputs to /frontend/build)
 RUN npm run build
 
 # ---- Run stage (Nginx) ----

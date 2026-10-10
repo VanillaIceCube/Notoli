@@ -133,6 +133,13 @@ through an explicit image-version and security review.
 The frontend image uses `npm ci`, so `frontend/package-lock.json` must stay in sync
 with `frontend/package.json`.
 
+The frontend now builds with Vite and strict ESLint 10. Vite retains the
+`build/` output copied by Nginx and the `REACT_APP_API_BASE_URL` Docker build
+argument. The development server still runs on port 3000, accepts
+`notoli.localhost`, and uses `CHOKIDAR_USEPOLLING` for mounted-source watching.
+The subdomain, proxy routes, Cloudflare rules, and deployment environment
+values continue to use the documented root paths.
+
 5. Start the stack:
 
 ```bash

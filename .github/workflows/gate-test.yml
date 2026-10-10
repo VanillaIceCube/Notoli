@@ -114,6 +114,9 @@ jobs:
           set -o pipefail
           status=0
           npm test -- --watchAll=false --verbose --runInBand 2>&1 | tee test_output.txt || status=$?
+          if [ "$status" = "0" ]; then
+            npm run build 2>&1 | tee -a test_output.txt || status=$?
+          fi
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
       - name: Test summary

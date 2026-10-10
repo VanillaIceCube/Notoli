@@ -19,7 +19,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 
 ## 🚀 Tech Stack
 - **Backend:** Django
-- **Frontend:** React + Material UI 9 (Material and icons upgraded together)
+- **Frontend:** React + Vite, standalone Jest, ESLint 10, and Material UI 9 (Material and icons upgraded together)
 - **Environment Management:** Conda
 - **Deployment:** Docker
 - **Hosting:** DigitalOcean
