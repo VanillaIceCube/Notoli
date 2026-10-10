@@ -8,10 +8,14 @@ All notable changes to this project are documented in this file.
 - Updated the security-alert workflow test to expect the GitHub App token action v3 already used on main.
 - Ported MacroMapper's incomplete-review handling for all three personas, withholding normal verdicts on truncated diffs and failing checks after a native explanation.
 - Matched MacroMapper's publisher behavior so request-changes verdicts fail the reviewer check.
-- Removed the conditional standalone `CodeQL` requirement from the live main-branch ruleset so documentation-only PRs can merge after successful scope detection and skipped analysis. Retained all existing scope, analyzer, lint, test, vulnerability, and malware requirements.
 ### Changed
 - Enabled the three AI reviewers for same-repository Dependabot PRs using the separate Dependabot secret store, while retaining fork exclusions and strict-only Dependabot linting.
 - Matched MacroMapper's shared 512 KiB source-diff budget, generated-lockfile diff exclusions, 16,000-token OpenAI output cap, and major-upgrade automation tests. The shared missing-final-dependency bug remains tracked separately in #890.
+
+## 2026-10-09
+### Fixed
+- Removed the conditional standalone `CodeQL` requirement from the live main-branch ruleset so documentation-only PRs can merge after successful scope detection and skipped analysis. Retained all existing scope, analyzer, lint, test, vulnerability, and malware requirements.
+### Changed
 - Documented the exact main-branch required-check list and the scope-aware CodeQL policy for ruleset maintenance and recovery.
 
 ## 2026-08-22
