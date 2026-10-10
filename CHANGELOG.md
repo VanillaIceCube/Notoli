@@ -2,6 +2,10 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-10-09
+### Fixed
+- Assign the production backend a distinct fixed private-network IP (`172.30.88.3`) so it cannot claim Nginx's trusted address (`172.30.88.2`) before proxy startup; add regression coverage and document container recreation and deployment checks.
+
+## 2026-10-09
 ### Removed
 - Removed the backend deployment path-prefix setting from Django, environment examples, and CI deployment inputs. Notoli uses subdomain-root routing and `/static/` assets; stale path-prefix environment values are ignored.
 

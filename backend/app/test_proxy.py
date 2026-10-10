@@ -1,3 +1,4 @@
+from ipaddress import ip_address, ip_network
 from pathlib import Path
 
 import yaml
@@ -96,3 +97,28 @@ class ProxyTrustTests(SimpleTestCase):
             dockerfile = (root / "backend" / filename).read_text()
             self.assertIn('"--no-proxy-headers"', dockerfile)
             self.assertNotIn('"--forwarded-allow-ips"', dockerfile)
+
+    def test_private_network_members_have_distinct_fixed_addresses(self):
+        root = Path(__file__).resolve().parents[2]
+        compose = yaml.safe_load((root / "deploy/docker-compose.yml").read_text())
+        private_network = compose["networks"]["backend_private"]
+        subnet = ip_network(private_network["ipam"]["config"][0]["subnet"])
+        addresses = []
+        for service in ("backend", "proxy"):
+            with self.subTest(service=service):
+                address = ip_address(
+                    compose["services"][service]["networks"]["backend_private"][
+                        "ipv4_address"
+                    ]
+                )
+                self.assertIn(address, subnet)
+                self.assertNotIn(
+                    address,
+                    (
+                        subnet.network_address,
+                        subnet.network_address + 1,
+                        subnet.broadcast_address,
+                    ),
+                )
+                addresses.append(address)
+        self.assertEqual(len(set(addresses)), len(addresses))
