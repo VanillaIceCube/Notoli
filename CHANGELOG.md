@@ -11,6 +11,8 @@ All notable changes to this project are documented in this file.
 - Expanded MCP coverage to 31 tools for board/list creation, editing and deletion, board-wide items, item deletion, list membership, ordering, and recipient-only notification management using existing REST services.
 - Added separate organization, notification, and deletion OAuth permissions, explicit deletion confirmation, bounded membership/order inputs, and regression coverage for cascades, scope escalation, removed creators, and cross-board access.
 ### Fixed
+- Reject ambiguous collaborator usernames/emails before sharing or sending notifications in REST and MCP; disclose owner/collaborator identity and email access in read consent.
+- Show apps with unexpired pending authorization codes in Connected Apps so users can revoke before exchange, excluding expired/foreign grants and duplicate app rows; correct the documented six-scope setup.
 - Explicitly pin the ASGI HTTP client used by MCP protocol tests instead of relying on the SDK's transitive dependency.
 - Reuse the existing React JWT login for OAuth consent, preserving pending authorization through login and token refresh without a duplicate Django session sign-in.
 - Bind consent to the displayed application, permissions, callback, and authenticated account with a short-lived signed ticket; add frontend consent and Connected Apps revocation coverage.

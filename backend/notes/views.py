@@ -6,7 +6,7 @@ from django.db.models import Max, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotFound, PermissionDenied
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -130,9 +130,20 @@ class BoardViewSet(viewsets.ModelViewSet):
         identifier = identifier.strip() if isinstance(identifier, str) else ""
         if not identifier:
             return None
-        return User.objects.filter(
-            Q(username__iexact=identifier) | Q(email__iexact=identifier)
-        ).first()
+        # An exact value can match one account's username and another's email,
+        # or case variants of usernames. Never choose a recipient by row order.
+        matches = list(
+            User.objects.filter(
+                Q(username__iexact=identifier) | Q(email__iexact=identifier)
+            )[:2]
+        )
+        if len(matches) > 1:
+            raise ValidationError(
+                {
+                    "error": "That username or email matches multiple accounts. Use an unambiguous username or email."
+                }
+            )
+        return matches[0] if matches else None
 
     @action(detail=True, methods=["post"], url_path="collaborators")
     def add_collaborator(self, request, pk=None):

@@ -28,12 +28,14 @@ It does not create a custom GPT or publish to the public plugin directory.
 
 The authorization URL is `/auth/mcp/authorize/`, the token URL is
 `/auth/mcp/token/`, and both are discovered from metadata. The package's
-`mcp.json` also supplies these URLs and requests both scopes. ChatGPT account
+`mcp.json` also supplies these URLs and requests all six scopes listed above. ChatGPT account
 and workspace policies may limit custom MCP connections.
 
 Revoke your account's connection at
 `https://notoli.judeandrewalaba.com/connections` (**Connected Apps** in the profile
-menu). Revocation blocks access, refresh, and pending authorization codes. Removing a connection
+menu). Apps with an unexpired pending authorization code also appear, allowing
+revocation before token exchange. Expired codes and other users' grants stay hidden.
+Revocation blocks access, refresh, and pending authorization codes. Removing a connection
 from ChatGPT alone is separate from revoking tokens in Notoli.
 
 The portable `plugin.json` and `mcp.json` follow the
@@ -89,7 +91,11 @@ shared between lists updates all its occurrences. Sharing grants access to
 **every list and item in the board**. Explain that scope and confirm the board
 and person before changing collaborators. Only owners can add/remove collaborators;
 the owner cannot be removed. Members can inspect the board's owner and collaborators,
-but there is no global user directory. Normal sharing notifications are preserved.
+but there is no global user directory. Read consent explicitly discloses the owner
+and collaborator IDs, usernames, and email addresses. Adding a collaborator rejects
+values matching multiple accounts, including username/email collisions and case
+variants; ask for an unambiguous alternative instead of selecting the first match.
+Normal sharing notifications are preserved.
 
 The 31 tools cover normal board, list, item, sharing, ordering, and notification
 actions. `notoli:write` edits items; `notoli:organize` creates/edits boards and lists

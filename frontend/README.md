@@ -34,7 +34,10 @@ Django's JSON consent and connection-management endpoints. Django issues a
 signed consent ticket; React posts only that ticket and the selected decision,
 then follows Django's validated OAuth callback. OAuth tokens, PKCE validation,
 resource binding, and permission enforcement stay in Django. Revocation removes
-the current user's access/refresh tokens and pending codes. There is no separate
+the current user's access/refresh tokens and pending codes. Connected Apps also lists
+applications with only an unexpired pending code, so **Revoke** works before token
+exchange. Read consent names the board owner/collaborator IDs, usernames, and email
+addresses that the app can access. There is no separate
 Django session login, and JWTs never travel through OAuth URLs. MCP item results link
 back to `/board/:boardId/list/:listId`. See the
 [plugin connection instructions](../plugins/notoli/README.md).

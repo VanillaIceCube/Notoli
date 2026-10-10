@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse, QueryDict
 from django.shortcuts import redirect
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
@@ -226,6 +227,9 @@ def connections(request):
     apps = Application.objects.filter(
         Q(accesstoken__user=request.user)
         | Q(refreshtoken__user=request.user, refreshtoken__revoked__isnull=True)
+        # Consent creates a grant before any token exists. Keep pending apps
+        # visible so the same account can revoke the code before exchange.
+        | Q(grant__user=request.user, grant__expires__gt=timezone.now())
     ).distinct()
     return JsonResponse(
         {

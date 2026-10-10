@@ -94,6 +94,10 @@ def execute(raw_token, operation, **arguments):
                         view.request, pk=board.pk, user_id=arguments["user_id"]
                     )
             except APIException as error:
+                if error.status_code == 400:
+                    raise ValueError(
+                        f"Notoli rejected the sharing change: {error.detail}"
+                    ) from None
                 raise PermissionDenied(str(error.detail)) from None
             if response.status_code >= 400:
                 raise ValueError(

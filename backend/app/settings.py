@@ -147,7 +147,7 @@ CSRF_COOKIE_SECURE = not DEBUG
 OAUTH2_PROVIDER = {
     "OAUTH2_VALIDATOR_CLASS": "integrations.oauth.NotoliOAuthValidator",
     "SCOPES": {
-        "notoli:read": "Read your accessible Notoli boards, lists, and items",
+        "notoli:read": "Read your accessible Notoli boards, lists, and items, including board owner and collaborator IDs, usernames, and email addresses",
         "notoli:write": "Add and update items in your accessible Notoli boards and lists",
         "notoli:share": "Add and remove collaborators on boards you own, granting access to every list and item in those boards",
         "notoli:organize": "Create and edit boards and lists, reorder lists and items, and change which lists contain items",

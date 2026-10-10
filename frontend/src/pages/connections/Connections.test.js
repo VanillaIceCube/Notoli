@@ -13,11 +13,13 @@ jest.mock('../../services/notoliApiClient', () => ({ login: jest.fn(), fetchBoar
 
 const query =
   '?client_id=notoli-chatgpt&state=a%26b%3D%3F&resource=https%3A%2F%2Fnotoli.example%2Fmcp';
+const readDescription =
+  'Read your accessible Notoli boards, lists, and items, including board owner and collaborator IDs, usernames, and email addresses';
 const consent = {
   application: { name: 'Notoli for ChatGPT', client_id: 'notoli-chatgpt' },
   user: { username: 'alice' },
   permissions: [
-    { scope: 'notoli:read', description: 'Read your lists' },
+    { scope: 'notoli:read', description: readDescription },
     { scope: 'notoli:write', description: 'Add and update items' },
   ],
   ticket: 'SIGNED-CONSENT',
@@ -85,7 +87,7 @@ test('an authenticated user goes directly to consent with application, identity 
   expect(await screen.findByText('Signed in as alice')).toBeInTheDocument();
   expect(screen.getByText('Notoli for ChatGPT')).toBeInTheDocument();
   expect(screen.getByText('Application ID: notoli-chatgpt')).toBeInTheDocument();
-  expect(screen.getByText('Read your lists')).toBeInTheDocument();
+  expect(screen.getByText(readDescription)).toBeInTheDocument();
   expect(screen.getByText('Add and update items')).toBeInTheDocument();
   expect(connections.loadConsent).toHaveBeenCalledWith(query);
   expect(login).not.toHaveBeenCalled();
@@ -192,6 +194,17 @@ test('Connected Apps lists and revokes an application', async () => {
   await userEvent.click(await screen.findByRole('button', { name: 'Revoke ChatGPT' }));
   expect(await screen.findByText('No connected apps.')).toBeInTheDocument();
   expect(connections.revokeConnection).toHaveBeenCalledWith(1);
+});
+
+test('Connected Apps can revoke a pending-only authorization before token exchange', async () => {
+  connections.loadConnections.mockResolvedValue({
+    applications: [{ id: 7, name: 'Pending app', client_id: 'pending-client' }],
+  });
+  renderFlow('/connections');
+  expect(await screen.findByText('pending-client')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Revoke Pending app' }));
+  expect(await screen.findByText('No connected apps.')).toBeInTheDocument();
+  expect(connections.revokeConnection).toHaveBeenCalledWith(7);
 });
 
 test('failed revocation keeps the connection visible', async () => {

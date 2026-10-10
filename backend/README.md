@@ -45,7 +45,9 @@ require reopening the authorization request.
 React's `/connections` page (also in the profile menu as **Connected Apps**) uses
 JWT-authenticated `GET /auth/mcp/connections/` to list applications and
 `POST /auth/mcp/connections/` with `application_id` to revoke the current user's
-access tokens, refresh tokens, and pending authorization codes. These JSON
+access tokens, refresh tokens, and pending authorization codes. Applications with
+only an unexpired code also appear, so users can revoke before token exchange;
+expired codes and other accounts' grants do not make an application visible. These JSON
 endpoints accept JWT access tokens only: session cookies, OAuth MCP tokens, and
 posted user IDs cannot supply the user's identity. Browser requests omit cookies,
 so consent does not create a second login session or require cookie CSRF tokens.
@@ -78,11 +80,15 @@ The toolkit stores token checksums rather than bearer tokens. Run
 
 `notoli:read` grants discovery/read tools, including `get_board_collaborators`
 (owner, usernames/emails, collaborator IDs, and whether the current user can
-manage access). `notoli:write` grants list and board item creation/updates.
+manage access). Consent explicitly discloses board owner/collaborator IDs, usernames,
+and email addresses. `notoli:write` grants list and board item creation/updates.
 `notoli:share` additionally grants `add_board_collaborator` by exact username/email
 and `remove_board_collaborator` by a discovered user ID, only on boards the token's
 user owns. Sharing covers every list/item in the board; there are no separate
 workspace or list-only permissions. Consent explicitly describes that access.
+Sharing rejects identifiers matching multiple accounts (including username/email
+collisions and case variants) without changing membership or sending notifications.
+Use an unambiguous alternative username or email; the same validation applies to REST.
 `notoli:organize` permits board/list creation and name/description edits, list/item
 ordering, item attachment, and full list-membership replacement. Board edits remain
 owner-only; accessible board members can manage lists/items as in REST. Ownership,

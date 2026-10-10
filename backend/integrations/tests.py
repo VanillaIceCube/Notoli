@@ -159,6 +159,88 @@ class OAuthTests(TestCase):
             400,
         )
 
+    def test_pending_grant_app_is_visible_and_revocable_before_exchange(self):
+        approved = self.authorize()
+        self.assertEqual(approved.status_code, 200)
+        code = parse_qs(urlsplit(approved.json()["redirect_url"]).query)["code"][0]
+        second = self.authorize()
+        self.assertEqual(second.status_code, 200)
+        self.assertFalse(AccessToken.objects.filter(user=self.user).exists())
+        self.assertFalse(RefreshToken.objects.filter(user=self.user).exists())
+        self.assertEqual(Grant.objects.filter(user=self.user).count(), 2)
+        response = self.client.get("/auth/mcp/connections/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["applications"],
+            [
+                {
+                    "id": self.app.pk,
+                    "name": self.app.name,
+                    "client_id": self.app.client_id,
+                }
+            ],
+        )
+        response = self.client.post(
+            "/auth/mcp/connections/", {"application_id": self.app.pk}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Grant.objects.filter(user=self.user).exists())
+        self.assertEqual(
+            self.client.get("/auth/mcp/connections/").json()["applications"], []
+        )
+        self.assertEqual(self.exchange(code).status_code, 400)
+
+    def test_pending_connections_exclude_expired_and_other_account_grants(self):
+        approved = self.authorize()
+        self.assertEqual(approved.status_code, 200)
+        Grant.objects.filter(user=self.user).update(
+            expires=timezone.now() - timedelta(seconds=1)
+        )
+        other = get_user_model().objects.create_user(
+            "pending-other", email="pending-other@example.com"
+        )
+        foreign_grant = Grant.objects.create(
+            user=other,
+            application=self.app,
+            code="other-pending-code",
+            expires=timezone.now() + timedelta(minutes=5),
+            redirect_uri=CALLBACK,
+            scope="notoli:read",
+            code_challenge=CHALLENGE,
+            code_challenge_method="S256",
+            resource=[settings.MCP_RESOURCE_URL],
+        )
+        self.assertEqual(
+            self.client.get("/auth/mcp/connections/").json()["applications"], []
+        )
+        response = self.client.post(
+            "/auth/mcp/connections/", {"application_id": self.app.pk}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(Grant.objects.filter(pk=foreign_grant.pk).exists())
+        other_client = Client(
+            HTTP_AUTHORIZATION=f"Bearer {JWTRefreshToken.for_user(other).access_token}"
+        )
+        self.assertEqual(
+            other_client.get("/auth/mcp/connections/").json()["applications"][0]["id"],
+            self.app.pk,
+        )
+
+    def test_token_and_pending_grant_show_only_one_connection(self):
+        self.issue()
+        self.assertEqual(self.authorize().status_code, 200)
+        self.assertEqual(
+            len(self.client.get("/auth/mcp/connections/").json()["applications"]), 1
+        )
+
+    def test_read_consent_discloses_collaborator_identity_and_email_access(self):
+        response = self.consent(scope="notoli:read")
+        self.assertEqual(response.status_code, 200)
+        permission = response.json()["permissions"][0]
+        self.assertEqual(permission["scope"], "notoli:read")
+        for detail in ("owner", "collaborator IDs", "usernames", "email addresses"):
+            self.assertIn(detail, permission["description"])
+
     def test_pkce_resource_and_callback_checks(self):
         for changes in (
             {"resource": "https://wrong.example/mcp"},
@@ -770,6 +852,7 @@ class SharingToolTests(TestCase):
                 event_type=Notification.EVENT_COLLABORATOR_ADDED,
             ).exists()
         )
+
         self.assertTrue(
             Notification.objects.filter(
                 recipient=self.member,
@@ -777,6 +860,30 @@ class SharingToolTests(TestCase):
                 event_type=Notification.EVENT_COLLABORATOR_ADDED,
             ).exists()
         )
+
+    def test_ambiguous_sharing_identity_is_rejected_without_side_effects(self):
+        before = Notification.objects.count()
+        for username in (self.target.email.upper(), self.target.username.upper()):
+            with self.subTest(username=username):
+                collision = get_user_model().objects.create_user(
+                    username, email="collision@example.com"
+                )
+                with self.assertRaisesRegex(ValueError, "multiple accounts"):
+                    self.call(
+                        "add_board_collaborator", identifier=f" {username.lower()} "
+                    )
+                self.assertFalse(
+                    self.board.collaborators.filter(
+                        pk__in=[self.target.pk, collision.pk]
+                    ).exists()
+                )
+                self.assertEqual(Notification.objects.count(), before)
+                collision.delete()
+        # Matching both fields of one user is one identity, not ambiguous.
+        self.target.username = self.target.email
+        self.target.save(update_fields=["username"])
+        self.call("add_board_collaborator", identifier=self.target.email.upper())
+        self.assertTrue(self.board.collaborators.filter(pk=self.target.pk).exists())
 
     def test_owner_removes_collaborator_and_access_ends_immediately(self):
         self.call("add_board_collaborator", identifier=self.target.username)

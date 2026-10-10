@@ -254,7 +254,10 @@ use a wildcard or trust the whole bridge. Keep backend ports unpublished.
    and revoke the connection in React's `/connections` (**Connected Apps** in the
    profile menu). Verify already-signed-in consent, signed-out login → consent →
    callback, Cancel returning `access_denied` with the original state/issuer, and
-   revocation preventing access and refresh. Test reading board collaborators,
+   revocation preventing access and refresh. Also approve consent without exchanging
+   the code: the app must appear in Connected Apps, and revoking it must block exchange.
+   Verify read consent discloses collaborator IDs/usernames/emails, and ambiguous
+   username/email values cannot share with either matching account. Test reading board collaborators,
    owner-only add/remove with notifications, and rejection of sharing when
    `notoli:share` is missing. On disposable data, test board/list creation and edits,
    complete-set reordering, same-board membership changes, board-wide orphan items,
