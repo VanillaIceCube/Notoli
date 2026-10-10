@@ -16,6 +16,8 @@ GitHub security-alert aggregation: The daily/manual CodeQL and Dependabot aggreg
 
 GitHub AI PR reviews: The three persona workflows require `OPENAI_API_KEY`, `OPENAI_PROJECT_ID`, and separate GitHub App credentials for RoboCop, Lint Eastwood, and Obi-Wan Code-nobi. Keep the app IDs, private-key secrets, permissions, trigger policy, and failure behavior documented in `.github/README-WORKFLOWS.md` when changing these workflows.
 
+GitHub branch protection: Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs listed in `.github/README-WORKFLOWS.md`. Do not require the standalone `CodeQL` Code Scanning results context: documentation-only PRs skip all analyzers and never emit it. Preserve the scope and analyzer requirements when editing or recreating the main ruleset; skipped analyzer jobs satisfy required checks, while detector or analyzer failures block merging.
+
 ## Changelog format
 When updating `CHANGELOG.md`, add a new dated section at the top and group entries under:
 - `### Added`

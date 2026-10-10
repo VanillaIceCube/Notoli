@@ -15,9 +15,11 @@ All notable changes to this project are documented in this file.
 - Reuse the existing React JWT login for OAuth consent, preserving pending authorization through login and token refresh without a duplicate Django session sign-in.
 - Bind consent to the displayed application, permissions, callback, and authenticated account with a short-lived signed ticket; add frontend consent and Connected Apps revocation coverage.
 - Restrict forwarded headers to Nginx's exact private IP, ignore untrusted forwarding metadata in Django, and replace incoming forwarding headers at Nginx.
+- Removed the conditional standalone `CodeQL` requirement from the live main-branch ruleset so documentation-only PRs can merge after successful scope detection and skipped analysis. Retained all existing scope, analyzer, lint, test, vulnerability, and malware requirements.
 ### Changed
 - Serve backend containers through Uvicorn ASGI, route MCP/OAuth discovery through Nginx, and configure `DJANGO_MCP_BASE_URL` for local and production deployments.
 - Remove the production backend's published port and isolate it from the frontend on a private proxy network while preserving outbound email on a separate bridge.
+- Documented the exact main-branch required-check list and the scope-aware CodeQL policy for ruleset maintenance and recovery.
 ### Removed
 - Remove Django integration HTML templates and separate connection login/logout routes; consent and Connected Apps now use React with Django JSON endpoints.
 
