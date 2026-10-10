@@ -2,6 +2,22 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-10-10
+### Added
+- Exercise large evidence transport, bounded vulnerability reporting, and incomplete-review failure with automation regression tests.
+### Fixed
+- Keep large dependency-review evidence in a file and artifact, and bound RoboCop's report output so lockfile migrations do not exceed Linux process environment limits; preserve failure for every non-success dependency review.
+
+## 2026-10-10
+### Fixed
+- Complete the ESLint 10 flat-config migration with compatible React, hooks, accessibility, and Testing Library plugins, and cover the active configuration with real lint results.
+- Adapt browser-boundary, native email-validation, and computed-layout tests for standalone Jest's current browser environment.
+### Changed
+- Replace Create React App with Vite and standalone Jest/Babel, preserving the frontend API environment contract, port 3000, Nginx build output, and existing application tests.
+- Require the frontend CI test gate to run strict lint and a production build after its tests, with captured failure diagnostics.
+### Removed
+- Remove Create React App's incompatible ESLint 8 plugin graph and unused web-vitals dependency.
+
+## 2026-10-10
 ### Fixed
 - Upgrade Material UI and icons together to v9, migrate removed layout system props and checkbox input props, and preserve menu context in test helpers.
 - Cover the authentication layout and real menu keyboard behavior, and update the removed Alert CSS class assertion for v9.

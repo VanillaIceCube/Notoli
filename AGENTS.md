@@ -20,6 +20,8 @@ GitHub Dependabot reviews: All three personas run for same-repository Dependabot
 
 GitHub branch protection: Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs listed in `.github/README-WORKFLOWS.md`. Do not require the standalone `CodeQL` Code Scanning results context: documentation-only PRs skip all analyzers and never emit it. Preserve the scope and analyzer requirements when editing or recreating the main ruleset; skipped analyzer jobs satisfy required checks, while detector or analyzer failures block merging.
 
+GitHub dependency-review evidence: Keep full dependency-change JSON in the `dependency-review-evidence` artifact, pass it through a file instead of environment variables, and bound the report sent to RoboCop to 16 KiB plus summary metadata. Large lockfile migrations can exceed Linux's per-environment-variable limit. The independent gate must still fail for every non-success review outcome; report truncation must disclose omitted entries and never change the verdict.
+
 ## Changelog format
 When updating `CHANGELOG.md`, add a new dated section at the top and group entries under:
 - `### Added`
@@ -192,6 +194,7 @@ and Django static assets use `/static/`.
     - `POST /auth/reset-password/` accepts `uid`, `token`, and `password`.
 
 ## Maintenance
+- Frontend builds use Vite and tests use standalone Jest/Babel. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite explicitly maps the existing `REACT_APP_API_BASE_URL`/`PUBLIC_URL` settings, keeps port 3000 and `build/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
 - Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for the browser baseline.
 - ChatGPT listing metadata: `plugins/notoli/plugin.json` is the canonical branding source, but personal custom-MCP plugins use a separate generated compatibility manifest. Download the installed plugin ZIP and use `plugins/notoli/build_listing.py` to apply branding while preserving its exported name and `.app.json`; upload a new version to the same plugin. Keep account-specific exports/build ZIPs out of Git. Listing publication is separate from Docker deployment and MCP tool refresh. Privacy/terms pages and verified publisher identity remain prerequisites for public submission. See `plugins/notoli/README.md`.
 - MCP review regressions: Connected Apps must include the current user's unexpired grants before token exchange, exclude expired/foreign grants, and deduplicate apps across grants/tokens. Read consent must explicitly disclose owner/collaborator IDs, usernames, and emails. The shared REST/MCP collaborator resolver must reject multiple matching identities before membership or notification writes; never choose a recipient with `.first()`.
