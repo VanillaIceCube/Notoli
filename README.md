@@ -39,6 +39,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - CI/CD + automation: [`.github/README-WORKFLOWS.md`](.github/README-WORKFLOWS.md)
 - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
 - ChatGPT plugin setup and evaluation prompts: [`plugins/notoli/README.md`](plugins/notoli/README.md)
+- ChatGPT listing updates: the installed personal cloud plugin has its own exported manifest. Use the [listing update steps](plugins/notoli/README.md#listing-metadata-and-updates) to apply repository branding while retaining its existing connection. A Docker deploy alone does not update the listing.
 
 ## Docker hot-reload development
 

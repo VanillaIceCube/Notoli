@@ -170,6 +170,12 @@ Routing rules live in `deploy/nginx-proxy.conf` and are ordered so backend route
 
 ## ChatGPT MCP deployment
 
+ChatGPT listing metadata is published separately from the backend. A deploy
+does not import `plugins/notoli/plugin.json` into an existing personal cloud
+plugin. Follow the [listing update workflow](../plugins/notoli/README.md#listing-metadata-and-updates)
+to upload its branding update while retaining the exported app mapping.
+Tool refresh and public directory submission are separate steps described there.
+
 MCP runs inside the existing backend process at
 `https://notoli.judeandrewalaba.com/mcp`. No new service, DNS record, or port is
 required. `backend/Dockerfile` uses Uvicorn ASGI with one worker for SQLite.
