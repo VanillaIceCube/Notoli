@@ -184,7 +184,9 @@ function renderReviewBody({
     if (brief.dependency)
       sections.push(`- **Dependency:** ${brief.dependency}`);
     if (brief.upgradeStory) {
-      sections.push(`- **Why this upgrade matters:** ${brief.upgradeStory}`);
+      sections.push(
+        `- **Why this upgrade matters:** ${brief.upgradeStory}`,
+      );
     }
     if (brief.repositoryImpact) {
       sections.push(`- **Repository impact:** ${brief.repositoryImpact}`);
@@ -564,6 +566,10 @@ async function publishAiReview({
     body,
     comments: comments.length ? comments : undefined,
   });
+
+  if (event === "REQUEST_CHANGES") {
+    core.setFailed(`${personaName} requested changes.`);
+  }
 }
 
 module.exports = {

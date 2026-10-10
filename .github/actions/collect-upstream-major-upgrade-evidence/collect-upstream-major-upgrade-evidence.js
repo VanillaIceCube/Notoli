@@ -79,12 +79,9 @@ async function collectUpstreamMajorUpgradeEvidence({
     for (const tag of tags) {
       try {
         const data = await getReleaseByTag({ owner, repo, tag });
-        if (
-          !evidence.release_sources.some(
-            (source) =>
-              source.repository === repository && source.tag === data.tag_name,
-          )
-        ) {
+        if (!evidence.release_sources.some(
+          (source) => source.repository === repository && source.tag === data.tag_name,
+        )) {
           evidence.release_sources.push({
             kind: "GitHub Release",
             repository,
@@ -123,9 +120,7 @@ async function collectUpstreamMajorUpgradeEvidence({
         const metadata = await fetchJson(
           `https://registry.npmjs.org/${encodeURIComponent(dependency)}/${encodeURIComponent(targetVersion)}`,
         );
-        await collectGitHubRelease(
-          githubRepository(packageRepositoryUrl(metadata)),
-        );
+        await collectGitHubRelease(githubRepository(packageRepositoryUrl(metadata)));
         continue;
       }
 

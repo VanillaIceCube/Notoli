@@ -1,5 +1,5 @@
 name: Get PR Diff
-description: Generate a unified PR diff and truncate it if too large.
+description: Generate a reviewable PR diff and report when it exceeds the review budget.
 inputs:
   base_sha:
     description: Base commit SHA for the PR.
@@ -10,11 +10,7 @@ inputs:
   max_bytes:
     description: Maximum diff size in bytes before truncation.
     required: false
-    default: "45000"
-  exclude_lockfiles:
-    description: Omit generated dependency lockfile payloads from the AI diff.
-    required: false
-    default: "false"
+    default: "524288"
 outputs:
   diff_path:
     description: Path to the generated diff file.
@@ -46,16 +42,15 @@ runs:
         echo "Base: $BASE_SHA"
         echo "Head: $HEAD_SHA"
 
-        # Get unified diff between base and head
-        if [ "${{ inputs.exclude_lockfiles }}" = "true" ]; then
-          git diff --unified=3 "$BASE_SHA" "$HEAD_SHA" -- . \
-            ':(exclude)**/package-lock.json' \
-            ':(exclude)**/yarn.lock' \
-            ':(exclude)**/pnpm-lock.yaml' \
-            ':(exclude)**/poetry.lock' > pr.diff
-        else
-          git diff --unified=3 "$BASE_SHA" "$HEAD_SHA" > pr.diff
-        fi
+        # Generated dependency lockfiles are covered by the dedicated dependency
+        # and malware gates. Keep their raw payloads out of AI prompts so a
+        # mechanical lockfile rewrite cannot crowd out reviewable source changes.
+        git diff --unified=3 "$BASE_SHA" "$HEAD_SHA" -- . \
+          ':(exclude)**/package-lock.json' \
+          ':(exclude)**/yarn.lock' \
+          ':(exclude)**/pnpm-lock.yaml' \
+          ':(exclude)**/poetry.lock' \
+          > pr.diff
 
         # Truncate if it's huge so we don't blow up token limits
         ACTUAL_BYTES=$(wc -c < pr.diff || echo 0)

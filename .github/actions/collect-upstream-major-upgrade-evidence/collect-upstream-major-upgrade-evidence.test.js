@@ -11,19 +11,14 @@ const {
 
 test("normalizes npm object and string repository metadata", () => {
   assert.equal(
-    packageRepositoryUrl({
-      repository: { url: "git+https://github.com/example/object.git" },
-    }),
+    packageRepositoryUrl({ repository: { url: "git+https://github.com/example/object.git" } }),
     "git+https://github.com/example/object.git",
   );
   assert.equal(
     packageRepositoryUrl({ repository: "git@github.com:example/string.git" }),
     "git@github.com:example/string.git",
   );
-  assert.equal(
-    githubRepository("git@github.com:example/string.git"),
-    "example/string",
-  );
+  assert.equal(githubRepository("git@github.com:example/string.git"), "example/string");
 });
 
 test("derives the first release in a semver-major line", () => {
@@ -39,9 +34,7 @@ test("collects a scoped npm package release from string repository metadata", as
     packageEcosystem: "npm",
     previousVersion: "1.0.0",
     newVersion: "2.0.0",
-    fetchJson: async () => ({
-      repository: "https://github.com/example/package.git",
-    }),
+    fetchJson: async () => ({ repository: "https://github.com/example/package.git" }),
     getReleaseByTag: async (request) => {
       releaseCalls.push(request);
       if (request.tag === "v2.0.0") {
@@ -64,10 +57,7 @@ test("collects a scoped npm package release from string repository metadata", as
     { owner: "example", repo: "package", tag: "v2.0.0" },
   ]);
   assert.equal(evidence.release_sources.length, 1);
-  assert.equal(
-    evidence.release_sources[0].release_notes,
-    "Major public API change.",
-  );
+  assert.equal(evidence.release_sources[0].release_notes, "Major public API change.");
   assert.deepEqual(evidence.retrieval_notes, []);
 });
 
@@ -102,10 +92,7 @@ test("collects the target and first-major release when they differ", async () =>
     getReleaseByTag: async (request) => {
       releaseCalls.push(request.tag);
       if (["v7.3.0", "v7.0.0"].includes(request.tag)) {
-        return {
-          tag_name: request.tag,
-          html_url: `https://example.test/${request.tag}`,
-        };
+        return { tag_name: request.tag, html_url: `https://example.test/${request.tag}` };
       }
       const error = new Error("not found");
       error.status = 404;
@@ -114,10 +101,7 @@ test("collects the target and first-major release when they differ", async () =>
   });
 
   assert.deepEqual(releaseCalls, ["7.3.0", "v7.3.0", "7.0.0", "v7.0.0"]);
-  assert.deepEqual(
-    evidence.release_sources.map((source) => source.tag),
-    ["v7.3.0", "v7.0.0"],
-  );
+  assert.deepEqual(evidence.release_sources.map((source) => source.tag), ["v7.3.0", "v7.0.0"]);
 });
 
 test("bounds upstream release notes without losing the source record", async () => {
@@ -161,10 +145,7 @@ test("discovers a GitHub release from PyPI project metadata", async () => {
     }),
     getReleaseByTag: async (request) => {
       releaseCalls.push(request);
-      return {
-        tag_name: "23.0.0",
-        html_url: "https://github.com/benoitc/gunicorn/releases/tag/23.0.0",
-      };
+      return { tag_name: "23.0.0", html_url: "https://github.com/benoitc/gunicorn/releases/tag/23.0.0" };
     },
   });
 

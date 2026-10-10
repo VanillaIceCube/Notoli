@@ -187,7 +187,7 @@ test("renders a structured major-upgrade brief without treating it as a finding"
         upgrade_story:
           "Dependabot found a new major version during its version scan; no security trigger is evidenced. The upstream router changed compatibility requirements and public behavior, and the application gains the maintained router line and its documented fixes.",
         repository_impact:
-          "Routing is configured in `frontend/src/App.js`; the supplied evidence identifies no removed API usage.",
+          "Routing is configured in `frontend/src/App.jsx`; the supplied evidence identifies no removed API usage.",
         recommendation:
           "The path is clear: merge after the normal required checks pass.",
         sources: [
@@ -204,7 +204,7 @@ test("renders a structured major-upgrade brief without treating it as a finding"
       "",
       "- **Dependency:** react-router 6.30.4 → 7.18.1 (npm)",
       "- **Why this upgrade matters:** Dependabot found a new major version during its version scan; no security trigger is evidenced. The upstream router changed compatibility requirements and public behavior, and the application gains the maintained router line and its documented fixes.",
-      "- **Repository impact:** Routing is configured in `frontend/src/App.js`; the supplied evidence identifies no removed API usage.",
+      "- **Repository impact:** Routing is configured in `frontend/src/App.jsx`; the supplied evidence identifies no removed API usage.",
       "- **Recommendation:** The path is clear: merge after the normal required checks pass.",
       "- **Sources:** https://github.com/remix-run/react-router/releases/tag/react-router%407.18.1",
     ].join("\n"),
@@ -217,8 +217,7 @@ test("folds the legacy major-upgrade fields into the compact brief", () => {
     summary: "**Approved.** The upgrade is compatible.",
     majorUpgradeBrief: {
       dependency: "example 1.0.0 → 2.0.0 (npm)",
-      upgrade_trigger:
-        "Dependabot found the new major during its version scan.",
+      upgrade_trigger: "Dependabot found the new major during its version scan.",
       why_major: "Upstream removed a deprecated API.",
       repository_exposure: "The repository does not call that API.",
       benefits: "The maintained release includes parser hardening.",
@@ -228,10 +227,7 @@ test("folds the legacy major-upgrade fields into the compact brief", () => {
   });
 
   assert.match(body, /Why this upgrade matters/);
-  assert.match(
-    body,
-    /Dependabot found.*removed a deprecated API.*parser hardening/s,
-  );
+  assert.match(body, /Dependabot found.*removed a deprecated API.*parser hardening/s);
   assert.match(body, /Repository impact.*does not call that API/s);
   assert.match(body, /Recommendation.*Merge after/s);
   assert.doesNotMatch(body, /Why this update appeared/);
@@ -302,41 +298,6 @@ test("publishes every compact major-upgrade field after normalization", async ()
   assert.match(createdReviews[0].body, /gunicorn\/releases\/tag\/26\.0\.0/);
 });
 
-test("preserves a major-upgrade brief on an unchanged review", async () => {
-  const { createdReviews, github } = createGitHubMock({
-    priorReviews: [
-      {
-        id: 42,
-        state: "APPROVED",
-        submitted_at: "2026-07-12T00:00:00Z",
-        body: "Previous approval",
-        user: { login: "obi-wan-code-nobi-reviewer[bot]" },
-      },
-    ],
-  });
-  const { core } = createCore();
-
-  await publishAiReview({
-    github,
-    context: context(),
-    core,
-    personaName: "Obi-Wan Code-nobi",
-    raw: JSON.stringify(
-      review({
-        unchanged: true,
-        summary: "**Approved.** The earlier verdict remains sound.",
-        major_upgrade_brief: {
-          dependency: "react-router 6.30.4 → 7.18.1 (npm)",
-          recommendation: "Merge after the required checks pass.",
-        },
-      }),
-    ),
-  });
-
-  assert.match(createdReviews[0].body, /## Major upgrade brief/);
-  assert.match(createdReviews[0].body, /react-router 6\.30\.4 → 7\.18\.1/);
-});
-
 test("renders an infrastructure-only RoboCop comment without implying approval", () => {
   assert.equal(
     renderReviewBody({
@@ -393,7 +354,7 @@ test("renders varied model-authored unchanged summaries without preset copy", ()
   );
 });
 
-test("keeps exact-line findings inline without duplicating them in the body", async () => {
+test("publishes new request changes and fails the required check", async () => {
   const { createdReviews, github } = createGitHubMock();
   const { core, failures, warnings } = createCore();
   const inlineBody =
@@ -414,7 +375,7 @@ test("keeps exact-line findings inline without duplicating them in the body", as
     ),
   });
 
-  assert.deepEqual(failures, []);
+  assert.deepEqual(failures, ["Lint Eastwood requested changes."]);
   assert.deepEqual(warnings, []);
   assert.equal(createdReviews.length, 1);
   assert.doesNotMatch(createdReviews[0].body, /no-new-func/);
@@ -423,7 +384,7 @@ test("keeps exact-line findings inline without duplicating them in the body", as
   ]);
 });
 
-test("preserves every unplaceable finding when a duplicate is suppressed", async () => {
+test("keeps a repeated blocking verdict failed while preserving findings", async () => {
   const priorBody = renderReviewBody({
     personaName: "Obi-Wan Code-nobi",
     event: "REQUEST_CHANGES",
@@ -460,6 +421,7 @@ test("preserves every unplaceable finding when a duplicate is suppressed", async
     raw: JSON.stringify(
       review({
         event: "REQUEST_CHANGES",
+        unchanged: true,
         summary: "One publishing edge case remains.",
         comments: [
           { path: "src/example.js", line: 1, body: "Duplicate inline finding" },
@@ -470,7 +432,7 @@ test("preserves every unplaceable finding when a duplicate is suppressed", async
     ),
   });
 
-  assert.deepEqual(failures, []);
+  assert.deepEqual(failures, ["Obi-Wan Code-nobi requested changes."]);
   assert.deepEqual(warnings, []);
   assert.equal(createdReviews.length, 1);
   assert.equal(createdReviews[0].comments, undefined);
@@ -487,6 +449,25 @@ test("preserves every unplaceable finding when a duplicate is suppressed", async
     "1 duplicate Obi-Wan Code-nobi inline comment(s) were suppressed.",
     "2 Obi-Wan Code-nobi finding(s) were moved into the review body.",
   ]);
+});
+
+test("keeps approval and comment verdict checks successful", async () => {
+  for (const event of ["APPROVE", "COMMENT"]) {
+    const { createdReviews, github } = createGitHubMock();
+    const { core, failures } = createCore();
+
+    await publishAiReview({
+      github,
+      context: context(),
+      core,
+      personaName: "RoboCop",
+      raw: JSON.stringify(review({ event })),
+    });
+
+    assert.deepEqual(failures, []);
+    assert.equal(createdReviews.length, 1);
+    assert.equal(createdReviews[0].event, event);
+  }
 });
 
 test("keeps the model-authored summary when it declares no new material", async () => {
@@ -526,6 +507,41 @@ test("keeps the model-authored summary when it declares no new material", async 
     }),
   );
   assert.equal(createdReviews[0].event, "APPROVE");
+});
+
+test("preserves a major-upgrade brief on an unchanged review", async () => {
+  const { createdReviews, github } = createGitHubMock({
+    priorReviews: [
+      {
+        id: 42,
+        state: "APPROVED",
+        submitted_at: "2026-07-12T00:00:00Z",
+        body: "Previous approval",
+        user: { login: "obi-wan-code-nobi-reviewer[bot]" },
+      },
+    ],
+  });
+  const { core } = createCore();
+
+  await publishAiReview({
+    github,
+    context: context(),
+    core,
+    personaName: "Obi-Wan Code-nobi",
+    raw: JSON.stringify(
+      review({
+        unchanged: true,
+        summary: "**Approved.** The earlier verdict remains sound.",
+        major_upgrade_brief: {
+          dependency: "react-router 6.30.4 → 7.18.1 (npm)",
+          recommendation: "Merge after the required checks pass.",
+        },
+      }),
+    ),
+  });
+
+  assert.match(createdReviews[0].body, /## Major upgrade brief/);
+  assert.match(createdReviews[0].body, /react-router 6\.30\.4 → 7\.18\.1/);
 });
 
 test("logs malformed comments internally instead of adding automation notes", async () => {
@@ -616,6 +632,94 @@ test("does not repeat an unavailable review for the same persona and commit", as
   ]);
 });
 
+test("reviewer identities explain truncated reviews before their checks fail", () => {
+  const actionPath = path.resolve(__dirname, "../get-pr-diff/action.yml");
+  const action = fs.readFileSync(actionPath, "utf8");
+  assert.match(action, /default: "524288"/);
+  assert.match(action, /:\(exclude\)\*\*\/package-lock\.json/);
+  assert.match(action, /:\(exclude\)\*\*\/pnpm-lock\.yaml/);
+  assert.match(action, /echo "max_bytes=\$MAX_BYTES"/);
+  assert.match(action, /echo "truncated=\$TRUNCATED"/);
+  assert.doesNotMatch(action, /exit 1/);
+
+  const workflowRoot = path.resolve(__dirname, "../../workflows");
+  for (const workflowName of [
+    "review-code.yml",
+    "review-build.yml",
+    "review-security.yml",
+  ]) {
+    const workflow = fs.readFileSync(
+      path.join(workflowRoot, workflowName),
+      "utf8",
+    );
+    assert.doesNotMatch(workflow, /^\s+max_bytes:/m);
+    assert.match(workflow, /steps\.pr-diff\.outputs\.max_bytes/);
+    const publishIndex = workflow.indexOf("Publish incomplete");
+    const failIndex = workflow.indexOf("Fail incomplete");
+
+    assert.notEqual(publishIndex, -1);
+    assert.ok(failIndex > publishIndex);
+    assert.match(
+      workflow.slice(publishIndex, failIndex),
+      /uses: \.\/\.github\/actions\/publish-ai-review[\s\S]*?"event": "COMMENT"[\s\S]*?[Rr]eview incomplete|REVIEW INCOMPLETE/,
+    );
+    assert.match(
+      workflow.slice(failIndex),
+      /if: steps\.pr-diff\.outputs\.truncated == 'true'[\s\S]*?exit 1/,
+    );
+    assert.ok(
+      workflow.match(/if: steps\.pr-diff\.outputs\.truncated != 'true'/g)
+        ?.length >= 3,
+    );
+  }
+});
+
+test("OpenAI review requests reserve a bounded output budget", () => {
+  const actionPath = path.resolve(__dirname, "../openai-chat/action.yml");
+  const action = fs.readFileSync(actionPath, "utf8");
+
+  assert.match(action, /max_output_tokens:[\s\S]*?default: "16000"/);
+  assert.match(
+    action,
+    /MAX_OUTPUT_TOKENS: \$\{\{ inputs\.max_output_tokens \}\}/,
+  );
+  assert.match(action, /max_output_tokens: \$max_output_tokens/);
+  assert.match(action, /enable_web_search:[\s\S]*?default: "false"/);
+  assert.match(
+    action,
+    /ENABLE_WEB_SEARCH: \$\{\{ inputs\.enable_web_search \}\}/,
+  );
+  assert.match(action, /type: "web_search"/);
+  assert.match(action, /search_context_size: "medium"/);
+  assert.match(action, /tool_choice: "required"/);
+});
+
+test("Obi-Wan collects bounded external evidence for Dependabot major updates", () => {
+  const workflowPath = path.resolve(
+    __dirname,
+    "../../workflows/review-code.yml",
+  );
+  const workflow = fs.readFileSync(workflowPath, "utf8");
+
+  assert.match(workflow, /Collect upstream major-upgrade evidence/);
+  assert.match(workflow, /version-update:semver-major/);
+  assert.match(workflow, /collect-upstream-major-upgrade-evidence\.js/);
+  assert.match(workflow, /collectUpstreamMajorUpgradeEvidence/);
+  assert.match(workflow, /github\.rest\.repos\.getReleaseByTag/);
+  assert.match(workflow, /upstream-major-upgrade-evidence\.json/);
+  assert.match(workflow, /Repository dependency-usage evidence/);
+  assert.match(workflow, /git grep -n -i -F/);
+  assert.match(
+    workflow,
+    /enable_web_search: \$\{\{ steps\.dependabot-metadata\.outputs\.update-type == 'version-update:semver-major' \}\}/,
+  );
+  assert.match(workflow, /Do not merely summarize release-note headings/);
+  assert.match(workflow, /"upgrade_story"/);
+  assert.match(workflow, /"repository_impact"/);
+  assert.match(workflow, /"recommendation"/);
+  assert.match(workflow, /"sources"/);
+});
+
 test("keeps the visually inspectable Markdown examples synchronized", () => {
   const examples = [
     "# AI review format examples",
@@ -691,8 +795,7 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
   ].join("\n");
   const fixturePath = path.join(__dirname, "review-output-examples.md");
 
-  assert.equal(
-    fs.readFileSync(fixturePath, "utf8").replace(/\r\n/g, "\n"),
-    examples,
-  );
+  const fixture = fs.readFileSync(fixturePath, "utf8").replaceAll("\r\n", "\n");
+
+  assert.equal(fixture, examples);
 });
