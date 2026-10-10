@@ -103,7 +103,7 @@ CodeQL details:
 - CodeQL is not a scanner for Dockerfiles, Nginx config, or env example files. Those remain covered by Dependabot updates, review, and deployment validation unless a separate scanner is added.
 
 Merge blocking:
-- The active `main` ruleset requires the Vulnerability and Malware checks alongside the existing lint, test, and CodeQL checks.
+- The active `main` ruleset requires the exact checks listed below, including CodeQL scope detection, the three analyzers, Vulnerability, and Malware.
 - Dependency vulnerability review fails at `high` severity or above and posts its summary directly on the PR.
 - Dependency malware review is npm-focused because GitHub's malware advisory coverage is currently npm-focused; it checks only changed lockfile package versions.
 - The workflow reports CodeQL findings, and CodeQL must pass before `ci-auto-merge.yml` can run.
@@ -111,6 +111,23 @@ Merge blocking:
 - To make serious CodeQL findings block merges, configure GitHub branch protection or a repository ruleset to require the relevant CodeQL check after validating runtime and alert noise.
 - Recommended staged policy: block high/critical security findings first; allow medium, low, and note-level findings to report until the false-positive rate is understood.
 - When code fixes remove a finding, GitHub closes the matching code scanning alert after the protected branch is reanalyzed. False positives or accepted risks should be dismissed in GitHub Code Scanning with a clear reason.
+
+### Main branch required checks
+
+The active [Main Branch Protection ruleset](https://github.com/VanillaIceCube/Notoli/rules/12154610) requires these exact status contexts:
+
+| Gate | Required contexts |
+| --- | --- |
+| Lint | `Lints / Detect Changes`, `Lints / Lint Frontend (ESLint + Prettier)`, `Lints / Lint Backend (Ruff)`, `Lints / Lint Results` |
+| Tests | `Tests / Detect Changes`, `Tests / Frontend Tests (React)`, `Tests / Backend Tests (Django)`, `Tests / Test Results` |
+| CodeQL | `CodeQL / Detect CodeQL Scope`, `CodeQL / Analyze Python`, `CodeQL / Analyze JavaScript/TypeScript`, `CodeQL / Analyze GitHub Actions` |
+| Dependencies | `Vulnerability / Vulnerability`, `Malware / Malware` |
+
+The standalone `CodeQL` Code Scanning results context is intentionally excluded. Historically it was required alongside the four explicit workflow jobs, but GitHub only emits it when analysis uploads results. A documentation-only PR such as [#844](https://github.com/VanillaIceCube/Notoli/pull/844) passes scope detection and skips all analyzers, leaving that standalone requirement pending forever. This policy matches the scope-aware configuration used by MacroMapper and FullStackTemplate.
+
+GitHub accepts skipped analyzer jobs as satisfying required checks. Scope-detection failures and failed in-scope analyzers remain merge blockers. Findings remain visible in Code Scanning and PR results when analysis runs; severity-based blocking is a separate Code Scanning policy, as described above. Removing the standalone context does not introduce a new findings-severity gate.
+
+When editing or recreating the ruleset, retain all 14 contexts above and exclude the standalone `CodeQL` context. Preserve the remaining ruleset settings, conditions, and bypass actors. Validate the live context list with `gh api repos/VanillaIceCube/Notoli/rules/branches/main` and inspect `gh pr checks` for both a documentation-only PR and a code-changing PR. No workflow rerun is needed to remove the stale requirement from existing PRs.
 
 ## 🚀 Flow 2: Deploy (`.github/workflows/ci-deploy.yml`)
 Trigger:

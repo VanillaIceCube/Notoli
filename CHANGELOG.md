@@ -1,6 +1,12 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-10-09
+### Fixed
+- Removed the conditional standalone `CodeQL` requirement from the live main-branch ruleset so documentation-only PRs can merge after successful scope detection and skipped analysis. Retained all existing scope, analyzer, lint, test, vulnerability, and malware requirements.
+### Changed
+- Documented the exact main-branch required-check list and the scope-aware CodeQL policy for ruleset maintenance and recovery.
+
 ## 2026-08-22
 ### Fixed
 - Made security-alert Project v2 reconciliation tolerate eventual consistency
