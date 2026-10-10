@@ -61,7 +61,7 @@ jobs:
 
       - name: Create Lint Eastwood GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ vars.LINT_EASTWOOD_APP_ID }}
           private-key: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
@@ -81,9 +81,9 @@ jobs:
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
-          max_bytes: "45000"
 
       - name: Build review context
+        if: steps.pr-diff.outputs.truncated != 'true'
         shell: bash
         env:
           CONTEXT_PATH: ${{ runner.temp }}/build-review-context.txt
@@ -135,6 +135,7 @@ jobs:
           } > "$CONTEXT_PATH"
 
       - name: Call Lint Eastwood
+        if: steps.pr-diff.outputs.truncated != 'true'
         id: openai
         uses: ./.github/actions/openai-chat
         with:
@@ -184,8 +185,33 @@ jobs:
             Build evidence follows:
 
       - name: Publish Lint Eastwood native review
+        if: steps.pr-diff.outputs.truncated != 'true'
         uses: ./.github/actions/publish-ai-review
         with:
           github_token: ${{ steps.app-token.outputs.token }}
           review_json: ${{ steps.openai.outputs.content }}
           persona_name: "Lint Eastwood"
+
+      - name: Publish incomplete Lint Eastwood review
+        if: steps.pr-diff.outputs.truncated == 'true'
+        uses: ./.github/actions/publish-ai-review
+        with:
+          github_token: ${{ steps.app-token.outputs.token }}
+          persona_name: "Lint Eastwood"
+          review_json: |
+            {
+              "event": "COMMENT",
+              "summary": "**Review incomplete; check failed.** This change is bigger than the byte budget in this town. I will not stamp a clean build on evidence I could not inspect from end to end.",
+              "unchanged": false,
+              "findings": [],
+              "evidence": ["The complete diff is ${{ steps.pr-diff.outputs.diff_bytes }} bytes; my review budget is ${{ steps.pr-diff.outputs.max_bytes }} bytes."],
+              "actions": ["Break the change into smaller pull requests or intentionally raise my reviewed diff budget, then send it back through."],
+              "comments": []
+            }
+
+      - name: Fail incomplete Lint Eastwood review
+        if: steps.pr-diff.outputs.truncated == 'true'
+        shell: bash
+        run: |
+          echo "::error::Lint Eastwood could not review the complete pull-request diff."
+          exit 1

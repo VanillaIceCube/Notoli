@@ -53,6 +53,10 @@ jobs:
               - '.github/actions/read-versions/**'
             automation:
               - '.github/actions/collect-prior-ai-reviews/**'
+              - '.github/actions/collect-upstream-major-upgrade-evidence/**'
+              - '.github/actions/openai-chat/**'
+              - '.github/actions/get-pr-diff/**'
+              - '.github/workflows/ci-orchestrator.yml'
               - '.github/actions/publish-ai-review/**'
               - '.github/actions/security-alerts/**'
               - '.github/workflows/gate-test.yml'
@@ -235,6 +239,7 @@ jobs:
           set -o pipefail
           status=0
           node --test \
+            .github/actions/collect-upstream-major-upgrade-evidence/collect-upstream-major-upgrade-evidence.test.js \
             .github/actions/publish-ai-review/publish-ai-review.test.js \
             .github/actions/security-alerts/sync-security-alerts.test.js \
             2>&1 | tee automation_test_output.txt || status=$?

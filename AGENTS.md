@@ -16,6 +16,8 @@ GitHub security-alert aggregation: The daily/manual CodeQL and Dependabot aggreg
 
 GitHub AI PR reviews: The three persona workflows require `OPENAI_API_KEY`, `OPENAI_PROJECT_ID`, and separate GitHub App credentials for RoboCop, Lint Eastwood, and Obi-Wan Code-nobi. Keep the app IDs, private-key secrets, permissions, trigger policy, and failure behavior documented in `.github/README-WORKFLOWS.md` when changing these workflows.
 
+GitHub Dependabot reviews: All three personas run for same-repository Dependabot PRs; forks remain excluded and Dependabot lint auto-fixes remain disabled. Store `OPENAI_API_KEY` and the three reviewer private-key secrets in both Actions and Dependabot. Semver-major updates require Obi-Wan's complete, primary-source major-upgrade brief; web search is enabled only for that review type. Preserve visible failures for missing credentials, incomplete briefs, request-changes verdicts, and oversized diffs for every persona. The shared diff budget is 512 KiB, matching MacroMapper; keep dependency-usage loop fixes coordinated with #890. See `.github/README-WORKFLOWS.md` for evidence limits and the remaining branch-policy work in #656.
+
 GitHub branch protection: Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs listed in `.github/README-WORKFLOWS.md`. Do not require the standalone `CodeQL` Code Scanning results context: documentation-only PRs skip all analyzers and never emit it. Preserve the scope and analyzer requirements when editing or recreating the main ruleset; skipped analyzer jobs satisfy required checks, while detector or analyzer failures block merging.
 
 ## Changelog format
