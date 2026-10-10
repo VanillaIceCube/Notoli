@@ -175,6 +175,9 @@ MCP runs inside the existing backend process at
 required. `backend/Dockerfile` uses Uvicorn ASGI with one worker for SQLite.
 Production publishes no backend port. Nginx alone shares its internal
 `backend_private` network and has the fixed IP `172.30.88.2` in `172.30.88.0/29`.
+The backend has the distinct fixed IP `172.30.88.3` on that network. Both addresses
+must remain fixed: the backend starts first and automatic allocation could take
+the proxy's address, preventing Nginx from starting with `Address already in use`.
 Compose supplies that exact IP as `DJANGO_TRUSTED_PROXY_IPS`; the frontend uses
 the default network and cannot join the backend network. A separate backend-only
 `backend_egress` bridge preserves outbound SMTP/HTTPS email access. Restrict VM
@@ -186,12 +189,13 @@ forwarded host/proto headers. Nginx replaces client-supplied forwarding values
 with `$scheme` and `$remote_addr`, so Cloudflare Full (strict) TLS supplies HTTPS
 without trusting an incoming header. Local development trusts no proxy. If the
 private subnet conflicts with an existing network, change the IPAM subnet,
-Nginx's fixed address, and the backend's trusted IP together in Compose. Do not
-use a wildcard or trust the whole bridge. Keep backend ports unpublished.
+both services' fixed addresses, and the backend's trusted IP together in Compose.
+Do not use a wildcard or trust the whole bridge. Keep backend ports unpublished.
 
 1. Back up the production SQLite database, deploy both frontend and backend
    images, the updated Compose file, and `nginx-proxy.conf`. Recreate the services
-   with `docker compose up -d --force-recreate` to apply network isolation, then
+   with `docker compose up -d --force-recreate --remove-orphans` to apply network
+   isolation and release any old backend assignment at `172.30.88.2`, then
    apply migrations:
 
    ```bash
@@ -199,6 +203,18 @@ use a wildcard or trust the whole bridge. Keep backend ports unpublished.
    docker compose exec -T backend python manage.py check --deploy
    docker compose exec -T proxy nginx -t
    ```
+
+   Verify all three services are running with `docker compose ps`, and inspect
+   the private addresses with:
+
+   ```bash
+   docker inspect --format '{{json .NetworkSettings.Networks}}' notoli-backend notoli-proxy
+   ```
+
+   On `backend_private`, expect backend `172.30.88.3` and proxy `172.30.88.2`.
+   Repeat `docker compose up -d --remove-orphans` and confirm the services still
+   run. Check the public HTTPS frontend and an API request through Nginx after
+   redeployment; also verify outbound email still works via `backend_egress`.
 
 2. Use production settings:
 
