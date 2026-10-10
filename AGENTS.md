@@ -141,7 +141,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
 6) For local Docker runs that should use the current checkout rather than published GHCR images, rebuild first:
    - `docker build -t ghcr.io/vanillaicecube/notoli-backend:latest ./backend`
    - `docker build --build-arg REACT_APP_API_BASE_URL= -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend`
-   - The development backend image is pinned to the reviewed `condaforge/miniforge3` 24.04 digest. Update that digest only through an explicit image-version and security review.
+   - The development backend image candidate pins Miniforge digest `f752860f77bd417aa4db35be3d2e906fdb740fb80f40755ed651fff9e8873aad` (Conda 26.7.2 base) and installs base-tool security fixes `py-rattler=0.26.0` and `urllib3=2.8.0` before creating the Python 3.12 application environment. Update these only through an explicit version/security review, build, image scan, and backend tests. This candidate remains on hold: pip 26.2.1 still vendors urllib3 2.7.0 and msgpack 1.1.2. Top-level package updates do not remediate pip's bundled copies. Compare SBOM findings with installed and vendored modules before classifying them.
    - The frontend image uses `npm ci`, so keep `frontend/package-lock.json` in sync with `frontend/package.json`.
 7) The included reverse proxy serves the production frontend at `https://notoli.judeandrewalaba.com/` when local DNS/hosts point that name at your machine. HTTP redirects to HTTPS.
    Backend routes are available through the reverse proxy; production-shaped Compose publishes no direct backend port.

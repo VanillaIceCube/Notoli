@@ -191,9 +191,17 @@ HTTPS, or deployment-shaped behavior.
 The development Compose configuration supplies a local-only fallback when
 `DJANGO_SECRET_KEY` is blank, so a freshly copied `deploy/.env` can issue JWTs
 without manual configuration. Provide a unique `DJANGO_SECRET_KEY` before
-using the production-shaped stack. `backend/Dockerfile.dev` pins Miniforge
-24.04 to a reviewed digest; update that digest only through an explicit
-image-version and security review.
+using the production-shaped stack. `backend/Dockerfile.dev` pins the reviewed
+Miniforge digest `f752860f77bd417aa4db35be3d2e906fdb740fb80f40755ed651fff9e8873aad`
+(Conda 26.7.2 base). It installs `py-rattler=0.26.0` and `urllib3=2.8.0` into
+the base environment before creating the separate Python 3.12 app environment.
+The former embeds patched PyO3 0.29.2 and quinn-proto 0.11.17. Update the digest
+and remediation pins only after version/security review, a clean build, an
+image vulnerability scan, and the backend tests. The candidate remains on hold:
+pip 26.2.1 bundles urllib3 2.7.0 and msgpack 1.1.2 even though the top-level
+packages are patched. An upstream pip release with patched bundled dependencies
+and a repeat scan are required before merging the image update. Compare SBOM
+findings against installed and vendored modules, not just top-level metadata.
 
 Run tests:
 

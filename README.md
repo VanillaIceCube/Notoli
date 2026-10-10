@@ -59,6 +59,10 @@ Both ports bind to localhost only. Set `NOTOLI_DEV_FRONTEND_PORT` or
 [`deploy/README.md`](deploy/README.md) for the separate production-shaped
 Nginx and TLS workflow.
 
+The development backend uses a reviewed Miniforge digest with pinned base-tool
+security remediation, while the application retains Python 3.12. See
+[`backend/README.md`](backend/README.md) for the image update and scan policy.
+
 The development Compose file supplies a local-only fallback when
 `DJANGO_SECRET_KEY` is blank, so a newly copied `deploy/.env` can register and
 log in immediately. Set a unique secret before using the production-shaped

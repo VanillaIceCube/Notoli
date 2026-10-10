@@ -3,6 +3,12 @@ All notable changes to this project are documented in this file.
 
 ## 2026-10-10
 ### Fixed
+- Remediate the development Miniforge image candidate's embedded PyO3/quinn-proto and top-level urllib3 findings with reviewed base-tool pins before creating the Python 3.12 application environment; retain the merge hold for unpatched pip-vendored dependencies.
+### Changed
+- Review the development Miniforge digest and document build, scan, backend-test, and vendored-dependency verification requirements for the candidate update.
+
+## 2026-10-10
+### Fixed
 - Upgrade Material UI and icons together to v9, migrate removed layout system props and checkbox input props, and preserve menu context in test helpers.
 - Cover the authentication layout and real menu keyboard behavior, and update the removed Alert CSS class assertion for v9.
 

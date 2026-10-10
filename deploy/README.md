@@ -127,9 +127,15 @@ docker build --build-arg REACT_APP_API_BASE_URL= \
   -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend
 ```
 
-The development backend image builds from the reviewed,
-digest-pinned `condaforge/miniforge3` 24.04 base image. Update its digest only
-through an explicit image-version and security review.
+The development backend image pins Miniforge digest
+`f752860f77bd417aa4db35be3d2e906fdb740fb80f40755ed651fff9e8873aad` (Conda 26.7.2
+base) and installs the reviewed base-tool fixes `py-rattler=0.26.0` and
+`urllib3=2.8.0` before creating the Python 3.12 application environment. Update
+these only after version/security review, a clean build, an image scan, and
+backend tests. This image candidate remains on hold because pip 26.2.1 still
+bundles urllib3 2.7.0 and msgpack 1.1.2; updating top-level packages does not
+patch these copies. Require an upstream pip fix and repeat scan before merging.
+Compare SBOM findings with installed, embedded, and vendored code.
 The frontend image uses `npm ci`, so `frontend/package-lock.json` must stay in sync
 with `frontend/package.json`.
 
