@@ -4,6 +4,93 @@ This package points to the MCP server hosted in Notoli's Django backend. The
 endpoint and OAuth client must be deployed and registered before connecting.
 It does not create a custom GPT or publish to the public plugin directory.
 
+## Listing metadata and updates
+
+Notoli currently uses a **personal cloud plugin created from a custom MCP
+connection**, not a publicly submitted package. On October 10, 2026, its ChatGPT
+listing showed Developer `App developer`, Category `Other`, Version `1.0.0`,
+and Website `Unavailable`. Downloading that plugin revealed a generated
+`.codex-plugin/plugin.json` with those values and an `.app.json` mapping to the
+existing registered app. The repository's portable `plugin.json` was not the
+installed listing's source, even though it already contained website/category.
+
+The canonical branding source is now
+[`plugin.json`](plugin.json), under `extensions.com.openai.interface`:
+
+| Field | Value / source |
+| --- | --- |
+| Display name | Notoli |
+| Developer | Jude Andrew Alaba; also root `author.name` |
+| Category | Productivity |
+| Website | https://notoli.judeandrewalaba.com |
+| Support | https://github.com/VanillaIceCube/Notoli/issues |
+| Short description | Manage tasks and shared lists |
+| Full description | Supported tasks, chosen OAuth permissions, board-wide sharing, owner-only sharing management, confirmation for deletions, and account-administration limitations |
+| Icon / logo | [`assets/notoli-mark.svg`](assets/notoli-mark.svg), copied from the existing frontend mark |
+| Portable package version | Root `version`; `0.3.1` is this metadata release |
+
+Website and support links returned HTTP 200 on October 10, 2026. Privacy policy
+and terms-of-service URLs are intentionally omitted: no actual policy pages
+have been established. They are prerequisites for public MCP submission;
+do not use invented routes or the source-code license as service terms.
+Track those pages and public-submission prerequisites in
+[#901](https://github.com/VanillaIceCube/Notoli/issues/901).
+
+### Update the existing personal listing
+
+1. Open the installed Notoli plugin in [ChatGPT Plugins](https://chatgpt.com/plugins).
+   Under **More actions**, select **Download plugin ZIP**. Keep this export as
+   a backup. Its `name` and `.app.json` preserve the installed plugin identity
+   and registered OAuth connection; do not replace them with a new app ID.
+2. Edit the canonical metadata above and copy any changed frontend logo to
+   `assets/notoli-mark.svg`. No backend deployment or tool refresh is needed
+   for listing-only changes.
+3. Build a new ZIP from the fresh export using Python's standard library:
+
+   ```powershell
+   python plugins/notoli/build_listing.py `
+     --export "$env:USERPROFILE/Downloads/plugin.zip" `
+     --output "$env:USERPROFILE/Downloads/notoli-listing-1.0.1.zip" `
+     --version 1.0.1
+   ```
+
+   The builder copies repository branding into the exported compatibility
+   manifest and bundles the assets. It retains the exported plugin name,
+   app mapping, and other exported files. Choose a version greater than the
+   export's version. `1.0.1` is the installed listing release from `1.0.0`;
+   it is independent of the portable package's `0.3.1` and the MCP SDK version.
+   Do not commit the account-specific export or generated ZIP.
+
+   Before uploading, run the builder's standalone regression checks (no
+   Django, Node, or third-party dependencies needed):
+
+   ```powershell
+   python -m unittest discover -s plugins/notoli -p "test_*.py" -v
+   ```
+4. In the **same plugin's** More actions menu, choose **Upload new version**
+   and upload the generated ZIP. Verify developer, category, website, text,
+   logo, and version in the resulting listing. Inspect the app mapping and
+   existing connection after upload. This updates the personal plugin only.
+5. For tool/schema/auth changes, deploy the backend, use the connection's
+   **Refresh** control, and start a new chat. Refreshing tools alone does not
+   import repository listing metadata.
+
+### Public publication and limitations
+
+For a future public listing, package the portable `plugin.json`, `mcp.json`,
+and assets, then use the [OpenAI Plugins dashboard](https://platform.openai.com/plugins)
+upload/review/publication flow. Public directory developer names come from
+the selected **verified developer identity**, so `developerName` does not
+establish verification. Public MCP review additionally requires real HTTPS
+support, privacy, and terms links, a suitable primary icon, reviewer access,
+and the required evaluation evidence. A Git merge or production Docker deploy
+does not publish a ChatGPT listing. New submitted metadata requires a new
+package version and publication; hosted tool updates have a separate review flow.
+
+Official references: [connection and refresh](https://developers.openai.com/plugins/deploy/connect-chatgpt),
+[portable and compatibility packaging](https://developers.openai.com/plugins/build/plugins),
+[listing fields and public submission](https://developers.openai.com/plugins/deploy/submission).
+
 ## Connect your personal ChatGPT account
 
 1. Deploy the frontend and backend, apply migrations, and update Compose/Nginx using the

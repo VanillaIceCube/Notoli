@@ -244,7 +244,14 @@ export default function BoardShareDialog({
           fontWeight: 'bold',
         }}
       >
-        <Typography component="span" variant="h6" fontWeight="bold" noWrap>
+        <Typography
+          component="span"
+          variant="h6"
+          noWrap
+          sx={{
+            fontWeight: 'bold',
+          }}
+        >
           Share "{board?.name}"
         </Typography>
         <IconButton aria-label="Close sharing dialog" onClick={onClose} size="small">
@@ -256,7 +263,13 @@ export default function BoardShareDialog({
         <Stack spacing={2.25}>
           {isOwner ? (
             <Box>
-              <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 'bold',
+                  mb: 1,
+                }}
+              >
                 Invite a collaborator
               </Typography>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
@@ -300,7 +313,13 @@ export default function BoardShareDialog({
           )}
 
           <Box>
-            <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                fontWeight: 'bold',
+                mb: 1,
+              }}
+            >
               People with access
             </Typography>
             <Divider sx={{ borderColor: 'var(--secondary-color)', opacity: 0.45 }} />

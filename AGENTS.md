@@ -88,7 +88,6 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - `DJANGO_ALLOWED_HOSTS` (comma-separated)
    - `DJANGO_CORS_ALLOWED_ORIGINS` (comma-separated)
    - `DJANGO_CSRF_TRUSTED_ORIGINS` (comma-separated)
-   - `DJANGO_FORCE_SCRIPT_NAME` (default: unset; keep blank for subdomain-root routing)
    - `DJANGO_FRONTEND_BASE_URL` (default: `http://localhost:3000`; used in password-reset email links)
    - `DJANGO_MCP_BASE_URL` (origin only, no path; defaults to `http://localhost:8000` in debug or `https://notoli.judeandrewalaba.com` in production; OAuth issuer and MCP resource base)
    - `DJANGO_TRUSTED_PROXY_IPS` (individual proxy IPs only; default empty; production Compose sets Nginx's private address `172.30.88.2`; never use wildcards or CIDRs)
@@ -138,16 +137,20 @@ Use the same script as the Codex maintenance script so cached containers refresh
 5) Start:
    - `cd deploy`
    - `docker compose up -d`
+   - Production `backend_private` assigns the backend `172.30.88.3` and Nginx `172.30.88.2`. Keep both addresses fixed and distinct so the backend cannot automatically claim the trusted proxy's address. When deploying this fix to an existing stack, recreate the services with `docker compose up -d --force-recreate --remove-orphans`, then run migrations.
 6) For local Docker runs that should use the current checkout rather than published GHCR images, rebuild first:
    - `docker build -t ghcr.io/vanillaicecube/notoli-backend:latest ./backend`
    - `docker build --build-arg REACT_APP_API_BASE_URL= -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend`
-   - The development backend image is pinned to the reviewed `condaforge/miniforge3` 24.04 digest. Update that digest only through an explicit image-version and security review.
+   - The development backend image candidate pins Miniforge digest `f752860f77bd417aa4db35be3d2e906fdb740fb80f40755ed651fff9e8873aad` (Conda 26.7.2 base) and installs base-tool security fixes `py-rattler=0.26.0` and `urllib3=2.8.0` before creating the Python 3.12 application environment. Update these only through an explicit version/security review, build, image scan, and backend tests. This candidate remains on hold: pip 26.2.1 still vendors urllib3 2.7.0 and msgpack 1.1.2. Top-level package updates do not remediate pip's bundled copies. Compare SBOM findings with installed and vendored modules before classifying them.
    - The frontend image uses `npm ci`, so keep `frontend/package-lock.json` in sync with `frontend/package.json`.
 7) The included reverse proxy serves the production frontend at `https://notoli.judeandrewalaba.com/` when local DNS/hosts point that name at your machine. HTTP redirects to HTTPS.
    Backend routes are available through the reverse proxy; production-shaped Compose publishes no direct backend port.
    Frontend is still available at `http://localhost:3000`.
 
 ## Production Routing Notes
+Notoli runs at the subdomain root. Backend URLs use no configurable path prefix,
+and Django static assets use `/static/`.
+
 - Public URLs (subdomain-root):
   - Frontend: `https://notoli.judeandrewalaba.com`
   - Backend:
@@ -173,7 +176,6 @@ Use the same script as the Codex maintenance script so cached containers refresh
     - `/root/apps/notoli/certs/origin.key`
   - Set Cloudflare SSL/TLS mode to `Full (strict)`.
 - Required env vars for the subdomain backend:
-  - `DJANGO_FORCE_SCRIPT_NAME=` (blank/unset)
   - `DJANGO_ALLOWED_HOSTS=notoli.judeandrewalaba.com`
   - `DJANGO_CORS_ALLOWED_ORIGINS=https://notoli.judeandrewalaba.com`
   - `DJANGO_CSRF_TRUSTED_ORIGINS=https://notoli.judeandrewalaba.com`
@@ -190,8 +192,10 @@ Use the same script as the Codex maintenance script so cached containers refresh
     - `POST /auth/reset-password/` accepts `uid`, `token`, and `password`.
 
 ## Maintenance
+- Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for the browser baseline.
+- ChatGPT listing metadata: `plugins/notoli/plugin.json` is the canonical branding source, but personal custom-MCP plugins use a separate generated compatibility manifest. Download the installed plugin ZIP and use `plugins/notoli/build_listing.py` to apply branding while preserving its exported name and `.app.json`; upload a new version to the same plugin. Keep account-specific exports/build ZIPs out of Git. Listing publication is separate from Docker deployment and MCP tool refresh. Privacy/terms pages and verified publisher identity remain prerequisites for public submission. See `plugins/notoli/README.md`.
 - MCP review regressions: Connected Apps must include the current user's unexpired grants before token exchange, exclude expired/foreign grants, and deduplicate apps across grants/tokens. Read consent must explicitly disclose owner/collaborator IDs, usernames, and emails. The shared REST/MCP collaborator resolver must reject multiple matching identities before membership or notification writes; never choose a recipient with `.first()`.
-- MCP deployment: install requirements, apply Django OAuth Toolkit's supplied migrations with `migrate`, and run `python manage.py check --deploy` under production settings. Serve `app.asgi:application` using Uvicorn with `--no-proxy-headers` (one worker for SQLite); WSGI does not serve MCP. Production publishes no backend port. Only Nginx shares `backend_private` (`172.30.88.0/29`, Nginx `172.30.88.2`); `backend_egress` is backend-only for outbound email. ASGI accepts forwarded scheme/client only from the configured exact proxy IP, strips all other forwarded metadata, and Django ignores forwarded host/proto headers. If changing the subnet, update IPAM, proxy fixed IP, and trusted IP together, then recreate services.
+- MCP deployment: install requirements, apply Django OAuth Toolkit's supplied migrations with `migrate`, and run `python manage.py check --deploy` under production settings. Serve `app.asgi:application` using Uvicorn with `--no-proxy-headers` (one worker for SQLite); WSGI does not serve MCP. Production publishes no backend port. Only Nginx shares `backend_private` with the backend (`172.30.88.0/29`, Nginx `172.30.88.2`, backend `172.30.88.3`); `backend_egress` is backend-only for outbound email. ASGI accepts forwarded scheme/client only from the configured exact proxy IP, strips all other forwarded metadata, and Django ignores forwarded host/proto headers. If changing the subnet, update IPAM, both fixed IPs, and trusted IP together, then recreate services.
 - Register the predefined public ChatGPT OAuth client once: `python manage.py register_mcp_client --redirect-uri "<exact ChatGPT callback URI>"`. Copy the callback from ChatGPT's management page; use S256 PKCE and token auth method `none`. No client secret, password grant, dynamic registration, or unverified OIDC email claims are exposed. Existing registrations must be edited explicitly in Django admin.
 - MCP product coverage: 31 explicit tools cover boards, lists, items (including board-only items), ordering, membership, sharing, and notifications. `notoli:read` includes board-scoped owner/collaborator discovery; `notoli:write` permits item creation/edits; `notoli:share` permits owner-only collaborator add/remove; `notoli:organize` permits board/list creation/edits, order, and list membership; `notoli:notifications` permits recipient-only activity reads/read flags; `notoli:delete` permits permanent deletion (notification deletion also needs notifications). Sharing covers all lists/items in a board. Delete tools require `confirm: true` after explaining cascade impact; this is a caller assertion, not independent human verification. Arrays are capped at 1000 IDs, and reordering requires the complete current set. Preserve REST validation, owner checks, live membership checks, immutable boards, and notifications via shared services. Existing connections must reconnect for new scopes; refresh cannot escalate. Keep metadata/challenges aligned. No raw HTTP, global user directory, ownership transfer, or credential/admin tools are exposed. Full catalog/evaluations: `plugins/notoli/README.md`.
 - Browser `GET /auth/mcp/authorize/` redirects to React `/connections/authorize` using `DJANGO_FRONTEND_BASE_URL` and the original query. React reuses the existing JWT login (no second Django session). JSON GET consent and POST ticket/decision require a verified JWT header; signed tickets bind the displayed request to the account for 10 minutes. Allow/Cancel returns Django's validated callback URL. React `/connections` calls JWT-only `GET/POST /auth/mcp/connections/` to list/revoke the current user's tokens and pending grants. Cookies and posted user IDs cannot authorize these endpoints. Keep JWTs out of URLs and retain PKCE/resource/scope checks in Django. Run `python manage.py cleartokens` periodically; keep access/refresh tokens, consent tickets, and authorization codes out of logs.

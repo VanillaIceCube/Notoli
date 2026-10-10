@@ -28,8 +28,10 @@ services:
     environment:
       DJANGO_TRUSTED_PROXY_IPS: 172.30.88.2
     networks:
-      - backend_private
-      - backend_egress
+      backend_private:
+        # Reserve a distinct address before the dependent proxy starts.
+        ipv4_address: 172.30.88.3
+      backend_egress:
     restart: always
 
   frontend:

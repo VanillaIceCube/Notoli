@@ -46,6 +46,12 @@ describe('Login', () => {
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
+    // The Stack has no accessible role; inspect its computed layout to catch removed MUI props.
+    // eslint-disable-next-line testing-library/no-node-access
+    expect(screen.getByText('notoli').parentElement).toHaveStyle({
+      alignItems: 'center',
+      maxWidth: '600px',
+    });
   });
 
   test('when forgot password is clicked, it navigates to /forgot-password', async () => {

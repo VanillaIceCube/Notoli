@@ -1,11 +1,14 @@
-# Miniforge 24.04, pinned for reproducible development builds. Update this
+# Miniforge, pinned for reproducible development builds. Update this
 # digest only after an explicit image-version and security review.
 FROM condaforge/miniforge3@sha256:f752860f77bd417aa4db35be3d2e906fdb740fb80f40755ed651fff9e8873aad
 
 WORKDIR /backend
 
 COPY environment.yml requirements.txt ./
-RUN conda env create -f environment.yml && conda clean --all -y
+# Remediate the base tooling: py-rattler 0.26.0 embeds PyO3 0.29.2 and
+# quinn-proto 0.11.17; urllib3 2.8.0 fixes the reviewed HTTP-client advisories.
+RUN conda install -n base -y py-rattler=0.26.0 urllib3=2.8.0 && \
+    conda env create -f environment.yml && conda clean --all -y
 
 ENV PATH="/opt/conda/envs/notoli_env/bin:$PATH" \
     DJANGO_SETTINGS_MODULE=app.settings \
