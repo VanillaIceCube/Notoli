@@ -1,0 +1,48 @@
+name: Prepare Lint Eastwood Commit
+description: Resolve the Lint Eastwood bot identity and configure its short-lived push credential.
+inputs:
+  app_id:
+    description: Lint Eastwood GitHub App ID.
+    required: true
+  private_key:
+    description: Lint Eastwood GitHub App private key.
+    required: true
+outputs:
+  bot_email:
+    description: GitHub noreply email for the Lint Eastwood bot account.
+    value: ${{ steps.prepare.outputs.bot_email }}
+runs:
+  using: composite
+  steps:
+    - name: Create Lint Eastwood GitHub App token
+      id: app-token
+      uses: actions/create-github-app-token@v2
+      with:
+        app-id: ${{ inputs.app_id }}
+        private-key: ${{ inputs.private_key }}
+        permission-contents: write
+
+    - name: Resolve bot identity and configure push URL
+      id: prepare
+      shell: bash
+      env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+      run: |
+        set -euo pipefail
+
+        if [ -z "$APP_SLUG" ]; then
+          echo "The Lint Eastwood GitHub App slug is unavailable." >&2
+          exit 1
+        fi
+
+        bot_login="${APP_SLUG}[bot]"
+        bot_id="$(gh api "/users/${bot_login}" --jq '.id')"
+        if ! [[ "$bot_id" =~ ^[0-9]+$ ]]; then
+          echo "GitHub returned an invalid bot account ID for ${bot_login}." >&2
+          exit 1
+        fi
+
+        bot_email="${bot_id}+${bot_login}@users.noreply.github.com"
+        printf 'bot_email=%s\n' "$bot_email" >> "$GITHUB_OUTPUT"
+        git remote set-url --push origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "notoli": {
+      "type": "streamable-http",
+      "url": "https://notoli.judeandrewalaba.com/mcp",
+      "extensions": {
+        "com.openai": {
+          "auth": {
+            "type": "oauth",
+            "client": {
+              "mode": "provided",
+              "clientId": "notoli-chatgpt",
+              "tokenEndpointAuthMethod": "none"
+            },
+            "authorizationUrl": "https://notoli.judeandrewalaba.com/auth/mcp/authorize/",
+            "tokenUrl": "https://notoli.judeandrewalaba.com/auth/mcp/token/",
+            "baseScopes": [
+              "notoli:read",
+              "notoli:write",
+              "notoli:share",
+              "notoli:organize",
+              "notoli:notifications",
+              "notoli:delete"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

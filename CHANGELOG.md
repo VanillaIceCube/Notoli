@@ -1,6 +1,106 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-10-09
+### Removed
+- Removed the backend deployment path-prefix setting from Django, environment examples, and CI deployment inputs. Notoli uses subdomain-root routing and `/static/` assets; stale path-prefix environment values are ignored.
+
+## 2026-10-09
+### Added
+- Ported MacroMapper's Dependabot major-upgrade briefs to Obi-Wan, including bounded upstream/repository evidence, major-only web search, complete-brief validation, and behavioral tests.
+### Fixed
+- Updated the security-alert workflow test to expect the GitHub App token action v3 already used on main.
+- Ported MacroMapper's incomplete-review handling for all three personas, withholding normal verdicts on truncated diffs and failing checks after a native explanation.
+- Matched MacroMapper's publisher behavior so request-changes verdicts fail the reviewer check.
+### Changed
+- Enabled the three AI reviewers for same-repository Dependabot PRs using the separate Dependabot secret store, while retaining fork exclusions and strict-only Dependabot linting.
+- Matched MacroMapper's shared 512 KiB source-diff budget, generated-lockfile diff exclusions, 16,000-token OpenAI output cap, and major-upgrade automation tests. The shared missing-final-dependency bug remains tracked separately in #890.
+
+## 2026-10-09
+### Added
+- Added a hosted, authenticated MCP endpoint with tools to discover boards/lists, read items, add items, and update statuses using existing Notoli validation and notifications.
+- Added OAuth authorization-code/S256 PKCE, resource-bound tokens, consent and connection revocation pages, and a predefined ChatGPT client registration command.
+- Added a portable Notoli plugin package, connection/deployment instructions, and OAuth/MCP integration tests.
+- Added MCP tools to inspect board owners/collaborators and add/remove collaborators using existing board sharing, owner checks, and notifications.
+- Added explicit `notoli:share` consent for board-wide access changes; existing read/write tokens cannot upgrade sharing permissions through refresh.
+- Expanded MCP coverage to 31 tools for board/list creation, editing and deletion, board-wide items, item deletion, list membership, ordering, and recipient-only notification management using existing REST services.
+- Added separate organization, notification, and deletion OAuth permissions, explicit deletion confirmation, bounded membership/order inputs, and regression coverage for cascades, scope escalation, removed creators, and cross-board access.
+### Fixed
+- Reject ambiguous collaborator usernames/emails before sharing or sending notifications in REST and MCP; disclose owner/collaborator identity and email access in read consent.
+- Show apps with unexpired pending authorization codes in Connected Apps so users can revoke before exchange, excluding expired/foreign grants and duplicate app rows; correct the documented six-scope setup.
+- Explicitly pin the ASGI HTTP client used by MCP protocol tests instead of relying on the SDK's transitive dependency.
+- Reuse the existing React JWT login for OAuth consent, preserving pending authorization through login and token refresh without a duplicate Django session sign-in.
+- Bind consent to the displayed application, permissions, callback, and authenticated account with a short-lived signed ticket; add frontend consent and Connected Apps revocation coverage.
+- Restrict forwarded headers to Nginx's exact private IP, ignore untrusted forwarding metadata in Django, and replace incoming forwarding headers at Nginx.
+- Removed the conditional standalone `CodeQL` requirement from the live main-branch ruleset so documentation-only PRs can merge after successful scope detection and skipped analysis. Retained all existing scope, analyzer, lint, test, vulnerability, and malware requirements.
+### Changed
+- Serve backend containers through Uvicorn ASGI, route MCP/OAuth discovery through Nginx, and configure `DJANGO_MCP_BASE_URL` for local and production deployments.
+- Remove the production backend's published port and isolate it from the frontend on a private proxy network while preserving outbound email on a separate bridge.
+- Documented the exact main-branch required-check list and the scope-aware CodeQL policy for ruleset maintenance and recovery.
+### Removed
+- Remove Django integration HTML templates and separate connection login/logout routes; consent and Connected Apps now use React with Django JSON endpoints.
+
+## 2026-08-22
+### Fixed
+- Made security-alert Project v2 reconciliation tolerate eventual consistency
+  after GitHub reports that an issue already exists on the project board.
+- Removed the invalid root-level Docker Dependabot scan; Docker checks remain
+  configured for the backend and frontend directories.
+- Followed GitHub Advisory API cursor pagination in the npm malware gate so Dependabot npm checks no longer loop over the first page until the job timeout.
+- Pinned `dependabot/fetch-metadata` to an immutable `v3.1.0` commit in the auto-merge workflow so CodeQL no longer reports an unpinned third-party action.
+
+## 2026-07-27
+### Added
+- Added a localhost-only Docker Compose development workflow with mounted
+  Django and React source for hot reload, independent of the production Nginx
+  and TLS stack.
+### Fixed
+- Made the Docker development frontend refresh its persistent dependencies
+  when its package manifest or lockfile changes.
+- Made a freshly copied Docker development environment use a local-only Django
+  secret fallback so authentication and JWT issuance work without manual setup.
+### Changed
+- Pinned the Docker development backend's Miniforge 24.04 base image to a
+  reviewed immutable digest.
+
+## 2026-07-25
+### Added
+- Added regression coverage proving RoboCop performs every security-alert issue mutation while the personal credential is limited to Project v2 operations.
+- Added behavioral AI-review fixtures for persona approvals, actionable findings, infrastructure-only comments, unchanged reviews, duplicate suppression, unplaceable findings, malformed responses, and reviewer availability.
+### Fixed
+- Added the missing `Dependabot alerts: read` permission to the vulnerability and malware RoboCop tokens using the token action's supported `vulnerability-alerts` input.
+### Changed
+- CodeQL, vulnerability, and malware aggregation now uses a least-privilege RoboCop installation token for alert reads and all issue authoring, while `SECURITY_ALERTS_TOKEN` is isolated to personal Project v2 synchronization.
+- Security-alert workflows now fail closed when RoboCop credentials, installation permissions, Project configuration, or token separation are invalid.
+- AI review personas now return one structured semantic contract with varied, model-authored verdict prose: Obi-Wan and Lint Eastwood use natural, lightly characterful framing, while RoboCop keeps a bolder enforcement-terminal voice; the shared publisher renders emoji-led identity and every visible group as an underlined `##` heading, omits empty groups, and keeps automation diagnostics in workflow logs.
+
+## 2026-07-24
+### Added
+- Added repository-automation regression coverage for unchanged, reordered, split, merged, added, and resolved security-alert groupings, including the known stale-ticket set tracked by issue #633.
+- Added one-per-commit native AI-review availability notices for exhausted OpenAI quota or tokens, invalid credentials, service failures, and unusable model responses.
+### Fixed
+- Reconciled workflow-managed security tickets by their underlying CodeQL or Dependabot alert references so AI grouping changes no longer leave overlapping open issues.
+- Closed superseded or empty managed tickets with retained source links and lifecycle context, including when a feed has no current alerts.
+### Changed
+- Reused current security tickets now preserve existing labels, assignees, and GitHub Project fields; only new or newly added Project items receive default planning fields.
+- OpenAI request failures now emit warning annotations and workflow summaries with quota, token, credential, and service-recovery guidance.
+- Path-filter API failures now emit explicit error annotations and workflow summaries explaining that scope detection did not run and the workflow must be retried.
+- Repository automation CI now runs the security-alert reconciler tests alongside the AI review publisher tests when either action changes.
+
+## 2026-07-22
+### Added
+- Added a dedicated repository automation test job and colocated Node regression coverage for preserving unplaceable AI review findings when duplicate inline comments are suppressed.
+### Changed
+- Automated frontend and backend lint-fix commits now use a short-lived Lint Eastwood GitHub App token and the app bot's dynamically resolved noreply identity, while fork and Dependabot pull requests use the standard pull-request checkout with a no-secret, strict-check-only lint path.
+- Lint jobs now share one local action for Lint Eastwood identity and push-credential setup, and remove the credential from the Git remote immediately after each auto-commit attempt.
+- Extracted AI review publishing into a directly testable helper beside its GitHub Action instead of testing workflow YAML through the frontend Jest suite.
+- Limited secret-dependent AI persona workflows to trusted same-repository, non-Dependabot pull requests; fork and Dependabot pull requests now rely on the independent required gate output when checks fail.
+
+## 2026-07-21
+### Fixed
+- Aligned daily security-alert project fields with the current Notoli board options so CodeQL and vulnerability issue synchronization no longer fails after creating or updating tickets.
+- Corrected npm malware advisory pagination for `actions/github-script@v8` so the scheduled malware aggregation can fetch all advisory pages.
+
 ## 2026-07-12
 ### Added
 - Added shared AI review actions that collect each persona's prior native PR reviews and publish deduplicated native reviews.
@@ -10,7 +110,6 @@ All notable changes to this project are documented in this file.
 ### Changed
 - AI review personas now receive prior-review context, use concise Markdown body sections with clearer line breaks and restrained section-heading emojis, and apply more recognizable prompt-guided persona voice.
 - Dependabot pull requests now request AI reviews only on failed gates: Lint Eastwood for lint/test failures and RoboCop for CodeQL, vulnerability, or malware failures, while Obi-Wan Code-nobi remains skipped.
-- Automated frontend and backend lint-fix commits now use the `Lint Eastwood <41898282+github-actions[bot]@users.noreply.github.com>` author and committer identity.
 
 ## 2026-07-11
 ### Added

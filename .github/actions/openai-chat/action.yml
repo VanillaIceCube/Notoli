@@ -21,6 +21,14 @@ inputs:
     description: OpenAI model name.
     required: false
     default: "gpt-5.6-luna"
+  max_output_tokens:
+    description: Maximum combined reasoning and visible output token budget.
+    required: false
+    default: "16000"
+  enable_web_search:
+    description: Allow the model to search the public web for current primary-source evidence.
+    required: false
+    default: "false"
 outputs:
   content:
     description: Assistant response content.
@@ -36,9 +44,35 @@ runs:
         PROMPT_PREFIX: ${{ inputs.prompt_prefix }}
         SYSTEM_PROMPT: ${{ inputs.system_prompt }}
         MODEL: ${{ inputs.model }}
+        MAX_OUTPUT_TOKENS: ${{ inputs.max_output_tokens }}
+        ENABLE_WEB_SEARCH: ${{ inputs.enable_web_search }}
         DIFF_PATH: ${{ inputs.diff_path }}
       run: |
         set -euo pipefail
+
+        write_content() {
+          local content="$1"
+          local delimiter
+          delimiter="OPENAI_CONTENT_$(uuidgen)"
+          {
+            printf 'content<<%s\n' "$delimiter"
+            printf '%s\n' "$content"
+            printf '%s\n' "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+        }
+
+        report_unavailable() {
+          local detail="$1"
+          echo "::warning title=OpenAI response unavailable::No usable OpenAI response was produced. Check quota or tokens, project access, credentials, and service availability."
+          printf 'OpenAI failure detail: %s\n' "$detail" >&2
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "### OpenAI response unavailable"
+              echo
+              echo "No usable OpenAI response was produced. Check API quota or tokens, project access, credentials, and service availability before rerunning."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+        }
 
         missing_secrets=()
         if [ -z "${OPENAI_API_KEY}" ]; then
@@ -50,7 +84,9 @@ runs:
         fi
 
         if [ "${#missing_secrets[@]}" -gt 0 ]; then
-          echo "content=Missing secret(s): ${missing_secrets[*]}." >> "$GITHUB_OUTPUT"
+          CONTENT="Missing secret(s): ${missing_secrets[*]}."
+          write_content "$CONTENT"
+          report_unavailable "$CONTENT"
           exit 0
         fi
 
@@ -64,26 +100,47 @@ runs:
           --rawfile prompt prompt.txt \
           --arg model "$MODEL" \
           --arg system_prompt "$SYSTEM_PROMPT" \
+          --arg enable_web_search "$ENABLE_WEB_SEARCH" \
+          --argjson max_output_tokens "$MAX_OUTPUT_TOKENS" \
           '
           {
             model: $model,
             instructions: $system_prompt,
-            input: $prompt
+            input: $prompt,
+            max_output_tokens: $max_output_tokens
           }
+          + if $enable_web_search == "true" then
+              {
+                tools: [
+                  {
+                    type: "web_search",
+                    search_context_size: "medium"
+                  }
+                ],
+                tool_choice: "required"
+              }
+            else
+              {}
+            end
           ' > body.json
 
         # Make API request (project is passed via header)
-        RESPONSE=$(curl -s -X POST "https://api.openai.com/v1/responses" \
+        if ! RESPONSE=$(curl -sS \
+          --connect-timeout 15 \
+          --max-time 180 \
+          -X POST "https://api.openai.com/v1/responses" \
           -H "Content-Type: application/json" \
           -H "Authorization: Bearer $OPENAI_API_KEY" \
           -H "OpenAI-Project: $OPENAI_PROJECT_ID" \
-          --data @body.json)
-
-        echo "Raw response:"
-        echo "$RESPONSE"
+          --data @body.json); then
+          CONTENT="OpenAI request failed before a response was received."
+          write_content "$CONTENT"
+          report_unavailable "$CONTENT"
+          exit 0
+        fi
 
         # Extract content or error.
-        CONTENT=$(echo "$RESPONSE" | jq -r '
+        if ! CONTENT=$(echo "$RESPONSE" | jq -r '
           if .output then
             [
               .output[]
@@ -91,21 +148,25 @@ runs:
               | .content[]
               | select(.type == "output_text")
               | .text
-            ] | join("\n")
+            ] | join("\n") as $text
+            | if $text == "" then
+                "OpenAI did not return usable output."
+              else
+                $text
+              end
           elif .error and .error.message then
             "OpenAI API error: " + .error.message
           else
             "OpenAI did not return a response."
           end
-        ')
+        '); then
+          CONTENT="OpenAI API error: the response was not valid JSON."
+        fi
 
         echo "Response content:"
         echo "$CONTENT"
 
-        # Write multi-line output for GitHub Actions
-        delimiter="OPENAI_CONTENT_$(uuidgen)"
-        {
-          printf 'content<<%s\n' "$delimiter"
-          printf '%s\n' "$CONTENT"
-          printf '%s\n' "$delimiter"
-        } >> "$GITHUB_OUTPUT"
+        write_content "$CONTENT"
+        if [[ "$CONTENT" == OpenAI\ * ]]; then
+          report_unavailable "$CONTENT"
+        fi

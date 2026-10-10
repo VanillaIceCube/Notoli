@@ -397,6 +397,15 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
               sx={{ py: 0.5, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
               onClick={() => {
                 setProfileAnchorEl(null);
+                navigate('/connections');
+              }}
+            >
+              Connected Apps
+            </MenuItem>
+            <MenuItem
+              sx={{ py: 0.5, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+              onClick={() => {
+                setProfileAnchorEl(null);
                 logout();
               }}
             >

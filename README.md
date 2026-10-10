@@ -13,8 +13,9 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **Access scoping**: the API limits objects by `owner`/`created_by`/`collaborators`
 - **In-app notifications**: shared board activity appears under the app bar bell with persistent read state and links back to the relevant board or list
 - **Flexible organization**: notes can appear in multiple lists with per-list ordering
-- **Subdomain hosting**: designed to run at `https://notoli.judeandrewalaba.com`
+- **Subdomain hosting**: runs at the root of `https://notoli.judeandrewalaba.com`, with backend URLs and static assets served without a configurable path prefix
 - **Dockerized deployment**: frontend + backend + Nginx reverse proxy
+- **ChatGPT integration**: 31 authenticated MCP tools for boards, lists, items, ordering, sharing, and notifications, with separate permissions for organization, sharing, notifications, and confirmed deletion; React consent uses your existing login, and Connected Apps lets you revoke access
 
 ## 🚀 Tech Stack
 - **Backend:** Django
@@ -25,7 +26,9 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **DNS/Proxy:** Cloudflare
 - **TLS:** Cloudflare Full (strict) to origin (Cloudflare Origin Certificate)
 - **CI/CD & Workflows:** GitHub Actions
+- **Scope-aware security checks:** Required CodeQL scope and analyzer jobs let documentation-only PRs skip analysis without waiting for an absent standalone results check; see the [branch-protection policy](.github/README-WORKFLOWS.md#main-branch-required-checks).
 - **PR dependency gates:** high/critical vulnerability review and npm malware advisory review
+- **Major dependency upgrade briefs:** Obi-Wan explains upstream breaking changes, Notoli impact, and verification recommendations with primary sources on Dependabot major updates.
 - **Daily security planning:** LLM-grouped CodeQL and Dependabot alert issues, synchronized with the Notoli GitHub Project
 
 ## 📚 Documentation
@@ -35,6 +38,38 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - Deployment (Docker + Nginx): [`deploy/README.md`](deploy/README.md)
 - CI/CD + automation: [`.github/README-WORKFLOWS.md`](.github/README-WORKFLOWS.md)
 - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
+- ChatGPT plugin setup and evaluation prompts: [`plugins/notoli/README.md`](plugins/notoli/README.md)
+
+## Docker hot-reload development
+
+For fast source iteration without rebuilding the production images:
+
+```powershell
+Copy-Item deploy/backend.env deploy/.env
+New-Item -ItemType File -Path deploy/db.sqlite3 -Force
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml up --build -d
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate
+```
+
+Open `http://notoli.localhost:3000`. React and Django reload mounted source
+changes, and the frontend calls Django at `http://notoli.localhost:8000`.
+Both ports bind to localhost only. Set `NOTOLI_DEV_FRONTEND_PORT` or
+`NOTOLI_DEV_BACKEND_PORT` in `deploy/.env` to override them. See
+[`deploy/README.md`](deploy/README.md) for the separate production-shaped
+Nginx and TLS workflow.
+
+The development Compose file supplies a local-only fallback when
+`DJANGO_SECRET_KEY` is blank, so a newly copied `deploy/.env` can register and
+log in immediately. Set a unique secret before using the production-shaped
+stack.
+
+The frontend synchronizes its Docker `node_modules` volume with `package.json`
+and `package-lock.json` at container start. After changing either dependency
+file, restart the frontend service:
+
+```powershell
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart frontend
+```
 
 ## 📜 License
 This project is licensed under a **Modified MIT License (Non-Commercial Use Only)**.

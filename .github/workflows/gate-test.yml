@@ -15,6 +15,12 @@ on:
       test_backend_log:
         description: Backend test log tail.
         value: ${{ jobs.test-results.outputs.backend_log }}
+      test_automation_status:
+        description: Repository automation test status (success/failure/not-applicable).
+        value: ${{ jobs.test-results.outputs.automation_status }}
+      test_automation_log:
+        description: Repository automation test log tail.
+        value: ${{ jobs.test-results.outputs.automation_log }}
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -27,12 +33,16 @@ jobs:
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
+      automation: ${{ steps.filter.outputs.automation }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
+
+      - name: Detect relevant changes
         id: filter
+        continue-on-error: true
+        uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
         with:
           filters: |
             frontend:
@@ -41,6 +51,33 @@ jobs:
             backend:
               - 'backend/**'
               - '.github/actions/read-versions/**'
+            automation:
+              - '.github/actions/collect-prior-ai-reviews/**'
+              - '.github/actions/collect-upstream-major-upgrade-evidence/**'
+              - '.github/actions/openai-chat/**'
+              - '.github/actions/get-pr-diff/**'
+              - '.github/workflows/ci-orchestrator.yml'
+              - '.github/actions/publish-ai-review/**'
+              - '.github/actions/security-alerts/**'
+              - '.github/workflows/gate-test.yml'
+              - '.github/workflows/review-build.yml'
+              - '.github/workflows/review-code.yml'
+              - '.github/workflows/review-security.yml'
+
+      - name: Report path detection failure
+        if: steps.filter.outcome == 'failure'
+        shell: bash
+        run: |
+          message="GitHub API path detection failed, so test scope was not evaluated. Rerun the workflow after the API limit or service error clears."
+          echo "::error title=Test path detection unavailable::$message"
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "### Test path detection unavailable"
+              echo
+              echo "$message"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 1
 
   frontend-tests:
     name: Frontend Tests (React)
@@ -51,7 +88,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Read versions
         id: versions
@@ -59,7 +96,7 @@ jobs:
         with:
           read_python: "false"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ steps.versions.outputs.node_version }}
           cache: 'npm'
@@ -119,7 +156,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Read versions
         id: versions
@@ -127,7 +164,7 @@ jobs:
         with:
           read_node: "false"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ steps.versions.outputs.python_version }}
           cache: 'pip'
@@ -176,16 +213,82 @@ jobs:
       status: ${{ steps.test_summary.outputs.status }}
       log: ${{ steps.test_summary.outputs.log }}
 
+  automation-tests:
+    name: Automation Tests (Node)
+    needs: changes
+    if: needs.changes.outputs.automation == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read versions
+        id: versions
+        uses: ./.github/actions/read-versions
+        with:
+          read_python: "false"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ steps.versions.outputs.node_version }}
+
+      - name: Run repository automation tests
+        id: test_run
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          status=0
+          node --test \
+            .github/actions/collect-upstream-major-upgrade-evidence/collect-upstream-major-upgrade-evidence.test.js \
+            .github/actions/publish-ai-review/publish-ai-review.test.js \
+            .github/actions/security-alerts/sync-security-alerts.test.js \
+            2>&1 | tee automation_test_output.txt || status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+
+      - name: Test summary
+        id: test_summary
+        if: always()
+        shell: bash
+        run: |
+          exit_code="${{ steps.test_run.outputs.exit_code }}"
+          if [ -z "$exit_code" ]; then
+            exit_code=1
+          fi
+          if [ "$exit_code" = "0" ]; then
+            echo "status=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=failure" >> "$GITHUB_OUTPUT"
+          fi
+
+          {
+            echo 'log<<EOF'
+            if [ -f automation_test_output.txt ]; then
+              tail -n 200 automation_test_output.txt
+            else
+              echo "No automation test output captured."
+            fi
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Fail if tests failed
+        if: steps.test_run.outputs.exit_code != '0'
+        run: exit 1
+    outputs:
+      status: ${{ steps.test_summary.outputs.status }}
+      log: ${{ steps.test_summary.outputs.log }}
+
   test-results:
     name: Test Results
     if: always()
-    needs: [changes, frontend-tests, backend-tests]
+    needs: [changes, frontend-tests, backend-tests, automation-tests]
     runs-on: ubuntu-latest
     outputs:
       frontend_status: ${{ steps.results.outputs.frontend_status }}
       frontend_log: ${{ steps.results.outputs.frontend_log }}
       backend_status: ${{ steps.results.outputs.backend_status }}
       backend_log: ${{ steps.results.outputs.backend_log }}
+      automation_status: ${{ steps.results.outputs.automation_status }}
+      automation_log: ${{ steps.results.outputs.automation_log }}
     steps:
       - name: Normalize test results
         id: results
@@ -196,6 +299,9 @@ jobs:
           BACKEND_RELEVANT: ${{ needs.changes.outputs.backend }}
           BACKEND_STATUS: ${{ needs.backend-tests.outputs.status }}
           BACKEND_LOG: ${{ needs.backend-tests.outputs.log }}
+          AUTOMATION_RELEVANT: ${{ needs.changes.outputs.automation }}
+          AUTOMATION_STATUS: ${{ needs.automation-tests.outputs.status }}
+          AUTOMATION_LOG: ${{ needs.automation-tests.outputs.log }}
         shell: bash
         run: |
           if [ "$FRONTEND_RELEVANT" = "true" ]; then
@@ -222,9 +328,24 @@ jobs:
             echo "backend_log=No backend-relevant changes." >> "$GITHUB_OUTPUT"
           fi
 
+          if [ "$AUTOMATION_RELEVANT" = "true" ]; then
+            echo "automation_status=${AUTOMATION_STATUS:-failure}" >> "$GITHUB_OUTPUT"
+            {
+              echo 'automation_log<<EOF'
+              echo "$AUTOMATION_LOG"
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "automation_status=not-applicable" >> "$GITHUB_OUTPUT"
+            echo "automation_log=No repository-automation-relevant changes." >> "$GITHUB_OUTPUT"
+          fi
+
           if [ "$FRONTEND_RELEVANT" = "true" ] && [ "${FRONTEND_STATUS:-failure}" != "success" ]; then
             exit 1
           fi
           if [ "$BACKEND_RELEVANT" = "true" ] && [ "${BACKEND_STATUS:-failure}" != "success" ]; then
+            exit 1
+          fi
+          if [ "$AUTOMATION_RELEVANT" = "true" ] && [ "${AUTOMATION_STATUS:-failure}" != "success" ]; then
             exit 1
           fi

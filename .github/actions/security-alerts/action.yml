@@ -4,8 +4,11 @@ inputs:
   feed:
     description: Alert feed to aggregate.
     required: true
-  github-token:
-    description: Token with alert, issue, label, and Project v2 access.
+  robocop-token:
+    description: RoboCop installation token with security-events read and issues write access.
+    required: true
+  project-token:
+    description: Token used only for GitHub Project v2 reads and writes.
     required: true
   openai-api-key:
     description: OpenAI API key.
@@ -27,11 +30,36 @@ runs:
       run: |
         echo "FEED=$FEED" >> "$GITHUB_ENV"
         echo "PROJECT_ID=$PROJECT_ID" >> "$GITHUB_ENV"
+    - name: Validate aggregation configuration
+      shell: bash
+      env:
+        ROBOCOP_TOKEN: ${{ inputs.robocop-token }}
+        PROJECT_TOKEN: ${{ inputs.project-token }}
+      run: |
+        if [ -z "$ROBOCOP_TOKEN" ]; then
+          echo "RoboCop did not produce an installation token." >&2
+          echo "Verify ROBOCOP_APP_ID, ROBOCOP_PRIVATE_KEY, the app installation, and its Issues/Security events permissions." >&2
+          exit 1
+        fi
+        if [ -z "$PROJECT_TOKEN" ]; then
+          echo "Missing SECURITY_ALERTS_TOKEN for GitHub Project v2 synchronization." >&2
+          exit 1
+        fi
+        if [ "$ROBOCOP_TOKEN" = "$PROJECT_TOKEN" ]; then
+          echo "RoboCop issue operations and Project v2 synchronization must use separate credentials." >&2
+          exit 1
+        fi
+        if [ -z "$PROJECT_ID" ]; then
+          echo "Missing repository variable SECURITY_ALERTS_PROJECT_ID." >&2
+          echo "Set it to the node ID of the Notoli GitHub Project before running this workflow." >&2
+          exit 1
+        fi
+
     - name: Fetch open structured alerts
       id: alerts
       uses: actions/github-script@v8
       with:
-        github-token: ${{ inputs.github-token }}
+        github-token: ${{ inputs.robocop-token }}
         script: |
           const fs = require('fs');
           const path = `${process.env.RUNNER_TEMP}/security-alerts.json`;
@@ -72,7 +100,7 @@ runs:
               // High and critical findings are handled by immediate remediation/incident work.
               alerts = dependabotAlerts.filter((alert) => ['low', 'medium', 'unknown'].includes(alert.severity));
             } else if (feed === 'malware') {
-              const advisories = await github.paginate(github.request, 'GET /advisories', {
+              const advisories = await github.paginate('GET /advisories', {
                 ecosystem: 'npm', type: 'malware', per_page: 100,
                 headers: { 'X-GitHub-Api-Version': '2022-11-28' },
               });
@@ -89,16 +117,6 @@ runs:
           fs.writeFileSync(path, JSON.stringify({ feed, alerts }, null, 2));
           core.setOutput('has_alerts', String(alerts.length > 0));
           core.info(`Found ${alerts.length} open ${feed} alert(s) eligible for aggregation.`);
-
-    - name: Validate aggregation configuration
-      if: steps.alerts.outputs.has_alerts == 'true'
-      shell: bash
-      run: |
-        if [ -z "$PROJECT_ID" ]; then
-          echo "Missing repository variable SECURITY_ALERTS_PROJECT_ID." >&2
-          echo "Set it to the node ID of the Notoli GitHub Project before running this workflow." >&2
-          exit 1
-        fi
 
     - name: Draft grouped work items with OpenAI
       if: steps.alerts.outputs.has_alerts == 'true'
@@ -127,7 +145,7 @@ runs:
         GROUP_PATH: ${{ runner.temp }}/security-alert-groups.json
         LLM_OUTPUT: ${{ steps.openai.outputs.content }}
       with:
-        github-token: ${{ inputs.github-token }}
+        github-token: ${{ inputs.robocop-token }}
         script: |
           const fs = require('fs');
           const source = JSON.parse(fs.readFileSync(process.env.ALERT_PATH, 'utf8'));
@@ -170,93 +188,44 @@ runs:
           }
           fs.writeFileSync(process.env.GROUP_PATH, JSON.stringify({ feed: source.feed, groups }, null, 2));
 
-    - name: Create or update grouped issues
-      if: steps.alerts.outputs.has_alerts == 'true'
+    - name: Prepare empty alert groups
+      if: steps.alerts.outputs.has_alerts != 'true'
       uses: actions/github-script@v8
       env:
         ALERT_PATH: ${{ runner.temp }}/security-alerts.json
         GROUP_PATH: ${{ runner.temp }}/security-alert-groups.json
       with:
-        github-token: ${{ inputs.github-token }}
+        github-token: ${{ inputs.robocop-token }}
         script: |
-          const crypto = require('crypto');
           const fs = require('fs');
-          const { owner, repo } = context.repo;
+          const source = JSON.parse(fs.readFileSync(process.env.ALERT_PATH, 'utf8'));
+          fs.writeFileSync(
+            process.env.GROUP_PATH,
+            JSON.stringify({ feed: source.feed, groups: [] }, null, 2),
+          );
+
+    - name: Reconcile grouped issues
+      uses: actions/github-script@v9
+      env:
+        ALERT_PATH: ${{ runner.temp }}/security-alerts.json
+        GROUP_PATH: ${{ runner.temp }}/security-alert-groups.json
+        PROJECT_TOKEN: ${{ inputs.project-token }}
+      with:
+        github-token: ${{ inputs.robocop-token }}
+        script: |
+          const fs = require('fs');
           const source = JSON.parse(fs.readFileSync(process.env.ALERT_PATH, 'utf8'));
           const { groups } = JSON.parse(fs.readFileSync(process.env.GROUP_PATH, 'utf8'));
-          const config = {
-            codeql: { label: 'codeql', priority: 'High' },
-            vulnerability: { label: 'vulnerability', priority: 'Medium' },
-            malware: { label: 'malware', priority: 'High' },
-          }[source.feed];
-          const alertByRef = new Map(source.alerts.map((alert) => [alert.ref, alert]));
-
-          const openIssues = await github.paginate(github.rest.issues.listForRepo, {
-            owner, repo, state: 'open', labels: config.label, per_page: 100,
+          const projectGithub = getOctokit(process.env.PROJECT_TOKEN);
+          const { synchronizeSecurityAlerts } = require(
+            `${process.env.GITHUB_WORKSPACE}/.github/actions/security-alerts/sync-security-alerts.js`,
+          );
+          await synchronizeSecurityAlerts({
+            issueGithub: github,
+            projectGithub,
+            core,
+            context,
+            projectId: process.env.PROJECT_ID,
+            source,
+            groups,
           });
-
-          async function projectFieldMap() {
-            const query = `query($id: ID!) { node(id: $id) { ... on ProjectV2 { fields(first: 100) { nodes { __typename ... on ProjectV2Field { id name dataType } ... on ProjectV2SingleSelectField { id name dataType options { id name } } } } } } }`;
-            const data = await github.graphql(query, { id: process.env.PROJECT_ID });
-            const fields = data.node?.fields?.nodes;
-            if (!Array.isArray(fields)) throw new Error('SECURITY_ALERTS_PROJECT_ID is not a GitHub Project v2 node ID.');
-            return new Map(fields.map((field) => [field.name, field]));
-          }
-          const fields = await projectFieldMap();
-          async function setProjectFields(issue) {
-            let itemId;
-            try {
-              const add = await github.graphql(
-                `mutation($project: ID!, $content: ID!) { addProjectV2ItemById(input: { projectId: $project, contentId: $content }) { item { id } } }`,
-                { project: process.env.PROJECT_ID, content: issue.node_id },
-              );
-              itemId = add.addProjectV2ItemById.item.id;
-            } catch (error) {
-              const project = await github.graphql(
-                `query($project: ID!) { node(id: $project) { ... on ProjectV2 { items(first: 100) { nodes { id content { ... on Issue { id } } } } } } }`,
-                { project: process.env.PROJECT_ID },
-              );
-              itemId = project.node?.items?.nodes?.find((item) => item.content?.id === issue.node_id)?.id;
-              if (!itemId) throw error;
-            }
-            const values = { Status: 'Backlog', Domain: 'Security', Type: 'Maintenance / Automation', Priority: config.priority, Size: 'Medium', Estimate: 3 };
-            for (const [name, value] of Object.entries(values)) {
-              const field = fields.get(name);
-              if (!field) throw new Error(`Project field ${name} is required but was not found.`);
-              const fieldValue = typeof value === 'number'
-                ? { number: value }
-                : { singleSelectOptionId: field.options?.find((option) => option.name === value)?.id };
-              if (!Object.values(fieldValue)[0]) throw new Error(`Project field ${name} is missing option ${value}.`);
-              await github.graphql(
-                `mutation($project: ID!, $item: ID!, $field: ID!, $value: ProjectV2FieldValue!) { updateProjectV2ItemFieldValue(input: { projectId: $project, itemId: $item, fieldId: $field, value: $value }) { projectV2Item { id } } }`,
-                { project: process.env.PROJECT_ID, item: itemId, field: field.id, value: fieldValue },
-              );
-            }
-          }
-
-          for (const group of groups) {
-            const signature = crypto.createHash('sha256').update(`${source.feed}:${group.alert_refs.join('|')}`).digest('hex').slice(0, 20);
-            const marker = `<!-- notoli-security-alert:${source.feed}:${signature} -->`;
-            const sources = group.alert_refs.map((ref) => {
-              const alert = alertByRef.get(ref);
-              const detail = alert.package ? `${alert.package} (${alert.severity})` : `${alert.rule} (${alert.severity})`;
-              return `- [${ref}](${alert.url}) — ${detail}`;
-            }).join('\n');
-            const body = [
-              marker, '## Security alert group', '', group.summary, '', '## Recommended next step', '',
-              group.recommendation, '', '## Source alerts', '', sources,
-              '', '_This issue is managed by the daily security-alert aggregation workflow._',
-            ].join('\n');
-            const existing = openIssues.find((issue) => !issue.pull_request && issue.body?.includes(marker));
-            let issue;
-            if (existing) {
-              ({ data: issue } = await github.rest.issues.update({ owner, repo, issue_number: existing.number, title: group.title, body }));
-            } else {
-              ({ data: issue } = await github.rest.issues.create({
-                owner, repo, title: group.title, body, labels: [config.label], assignees: [owner],
-              }));
-            }
-            await github.rest.issues.addAssignees({ owner, repo, issue_number: issue.number, assignees: [owner] });
-            await setProjectFields(issue);
-            core.info(`${existing ? 'Updated' : 'Created'} issue #${issue.number} for ${group.alert_refs.length} alert(s).`);
-          }
