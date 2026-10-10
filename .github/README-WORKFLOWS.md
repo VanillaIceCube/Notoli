@@ -143,6 +143,7 @@ What it does:
   - Prunes Docker images (`docker system prune -af`)
   - Pulls images + recreates containers
   - Runs Django migrations inside the backend container
+  - Backend images serve `app.asgi:application` with Uvicorn `--no-proxy-headers` so the MCP endpoint and REST API share the deployment. Compose injects the exact Nginx private IP as `DJANGO_TRUSTED_PROXY_IPS`; no backend port is published. Deploy the Compose/network changes and frontend image together for React OAuth consent. OAuth client registration remains a one-time operator step after migration; see `deploy/README.md`.
 
 Deployment prerequisite:
 - For Cloudflare Full (strict), the origin must have a Cloudflare Origin Certificate.
@@ -154,7 +155,7 @@ Deploy inputs (GitHub repo vars / secrets):
 - Backend config:
   - Secret: `DJANGO_SECRET_KEY`
   - Secret: `DJANGO_EMAIL_HOST_KEY`
-  - Vars: `DJANGO_DEBUG`, `DJANGO_SQLITE_PATH`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, optional `DJANGO_FORCE_SCRIPT_NAME` (blank for subdomain-root deploys), `DJANGO_FRONTEND_BASE_URL`, `DJANGO_EMAIL_BACKEND`, `DJANGO_EMAIL_TIMEOUT`, `DJANGO_DEFAULT_FROM_EMAIL`
+  - Vars: `DJANGO_DEBUG`, `DJANGO_SQLITE_PATH`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, optional `DJANGO_FORCE_SCRIPT_NAME` (blank for subdomain-root deploys), `DJANGO_FRONTEND_BASE_URL`, optional `DJANGO_MCP_BASE_URL` (HTTPS origin, defaults to `https://notoli.judeandrewalaba.com` in production), `DJANGO_EMAIL_BACKEND`, `DJANGO_EMAIL_TIMEOUT`, `DJANGO_DEFAULT_FROM_EMAIL`
   - SMTP-only vars when `DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`: `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_HOST_USER`
 - Frontend build arg: optional `REACT_APP_API_BASE_URL` (leave blank/unset for same-origin subdomain calls on `https://notoli.judeandrewalaba.com`; use `https://notoli.judeandrewalaba.com` only if an absolute URL is required)
 

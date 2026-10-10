@@ -32,8 +32,14 @@ extra_hosts = os.getenv("DJANGO_ALLOWED_HOSTS")
 if extra_hosts:
     ALLOWED_HOSTS.extend(extra_hosts.split(","))
 
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-USE_X_FORWARDED_HOST = True
+# ASGI validates the actual proxy peer before accepting forwarded metadata.
+SECURE_PROXY_SSL_HEADER = None
+USE_X_FORWARDED_HOST = False
+TRUSTED_PROXY_IPS = [
+    value.strip()
+    for value in os.getenv("DJANGO_TRUSTED_PROXY_IPS", "").split(",")
+    if value.strip()
+]
 
 FORCE_SCRIPT_NAME = os.getenv("DJANGO_FORCE_SCRIPT_NAME")
 if FORCE_SCRIPT_NAME:
@@ -59,10 +65,12 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
+    "oauth2_provider",
     # My apps
     "authentication",
     "notes",
     "notifications",
+    "integrations",
 ]
 
 
@@ -126,6 +134,48 @@ TEMPLATES = [
 
 
 WSGI_APPLICATION = "app.wsgi.application"
+ASGI_APPLICATION = "app.asgi.application"
+
+# MCP uses its own OAuth tokens. These are never accepted by the REST API.
+MCP_BASE_URL = os.getenv("DJANGO_MCP_BASE_URL") or (
+    "http://localhost:8000" if DEBUG else "https://notoli.judeandrewalaba.com"
+)
+MCP_BASE_URL = MCP_BASE_URL.rstrip("/")
+MCP_RESOURCE_URL = f"{MCP_BASE_URL}/mcp"
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+OAUTH2_PROVIDER = {
+    "OAUTH2_VALIDATOR_CLASS": "integrations.oauth.NotoliOAuthValidator",
+    "SCOPES": {
+        "notoli:read": "Read your accessible Notoli boards, lists, and items, including board owner and collaborator IDs, usernames, and email addresses",
+        "notoli:write": "Add and update items in your accessible Notoli boards and lists",
+        "notoli:share": "Add and remove collaborators on boards you own, granting access to every list and item in those boards",
+        "notoli:organize": "Create and edit boards and lists, reorder lists and items, and change which lists contain items",
+        "notoli:notifications": "Read your activity notifications and mark them read or unread",
+        "notoli:delete": "Permanently delete accessible items and lists, boards you own with all their contents, and your notifications",
+    },
+    "DEFAULT_SCOPES": ["notoli:read"],
+    "PKCE_REQUIRED": True,
+    "COMPLIANT_BCP_RFC9700_PKCE_METHOD": True,
+    "COMPLIANT_BCP_RFC9700_IMPLICIT_GRANT": True,
+    "COMPLIANT_BCP_RFC9700_PASSWORD_GRANT": True,
+    "COMPLIANT_BCP_RFC9700_ACCESS_TOKEN_TRANSPORT": True,
+    "COMPLIANT_BCP_RFC9700_TOKEN_STORAGE": True,
+    "COMPLIANT_BCP_RFC9700_AUTHZ_RESPONSE_ISS": True,
+    "OIDC_ISS_ENDPOINT": MCP_BASE_URL,
+    "OAUTH2_RESPONSE_TYPES_SUPPORTED": ["code"],
+    "OAUTH2_GRANT_TYPES_SUPPORTED": ["authorization_code", "refresh_token"],
+    "OAUTH2_TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED": ["none"],
+    "ALLOWED_REDIRECT_URI_SCHEMES": ["https"],
+    "REQUEST_APPROVAL_PROMPT": "force",
+    "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,
+    "AUTHORIZATION_CODE_EXPIRE_SECONDS": 120,
+    "REFRESH_TOKEN_EXPIRE_SECONDS": 30 * 24 * 3600,
+    "ROTATE_REFRESH_TOKEN": True,
+    "REFRESH_TOKEN_REUSE_PROTECTION": True,
+    "REFRESH_TOKEN_GRACE_PERIOD_SECONDS": 0,
+    "REQUIRE_FORM_ENCODED_REQUEST_BODY": True,
+}
 
 
 # Database

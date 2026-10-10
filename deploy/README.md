@@ -5,7 +5,7 @@ This repo deploys Notoli at the subdomain root `https://notoli.judeandrewalaba.c
 ## What Runs
 Docker Compose (`deploy/docker-compose.yml`) starts:
 - `proxy`: Nginx reverse proxy (ports 80 and 443)
-- `backend`: Django/Gunicorn (port 8000)
+- `backend`: Django + MCP through Uvicorn ASGI (port 8000 on private container networks; no published host port)
 - `frontend`: Nginx serving the built SPA (port 3000)
 
 The compose file uses the current Compose Specification syntax without a top-level
@@ -37,8 +37,8 @@ Local dev (optional): you can generate a self-signed cert for `localhost` and pl
 ## Docker hot-reload development
 
 Use the development Compose file for fast source iteration. It mounts both
-source trees, runs React's hot-reload server and Django's autoreloading
-development server, and does not start the production Nginx proxy or require a
+source trees, runs React's hot-reload server and Uvicorn's autoreloading
+ASGI server, and does not start the production Nginx proxy or require a
 certificate:
 
 ```powershell
@@ -149,7 +149,7 @@ docker compose exec -T backend python manage.py migrate
 
 Local URLs:
 - Frontend (reverse-proxy subdomain): `https://notoli.judeandrewalaba.com`
-- Backend (direct): `http://localhost:8000`
+- Backend: through the reverse proxy's `/api/`, `/auth/`, and `/mcp` routes
 - Frontend (direct): `http://localhost:3000`
 
 The browser will warn about a local self-signed certificate. That is expected for local dev.
@@ -169,9 +169,125 @@ The forgot-password check should return `{"error":"Email is required."}`. If it 
 ## Nginx Host Routing
 Routing rules live in `deploy/nginx-proxy.conf` and are ordered so backend routes win before the SPA catch-all.
 
+## ChatGPT MCP deployment
+
+MCP runs inside the existing backend process at
+`https://notoli.judeandrewalaba.com/mcp`. No new service, DNS record, or port is
+required. `backend/Dockerfile` uses Uvicorn ASGI with one worker for SQLite.
+Production publishes no backend port. Nginx alone shares its internal
+`backend_private` network and has the fixed IP `172.30.88.2` in `172.30.88.0/29`.
+Compose supplies that exact IP as `DJANGO_TRUSTED_PROXY_IPS`; the frontend uses
+the default network and cannot join the backend network. A separate backend-only
+`backend_egress` bridge preserves outbound SMTP/HTTPS email access. Restrict VM
+access and Docker/network administration to trusted operators.
+
+Uvicorn starts with `--no-proxy-headers`; Notoli's ASGI middleware checks the
+original peer before accepting forwarded scheme/client. Django itself ignores
+forwarded host/proto headers. Nginx replaces client-supplied forwarding values
+with `$scheme` and `$remote_addr`, so Cloudflare Full (strict) TLS supplies HTTPS
+without trusting an incoming header. Local development trusts no proxy. If the
+private subnet conflicts with an existing network, change the IPAM subnet,
+Nginx's fixed address, and the backend's trusted IP together in Compose. Do not
+use a wildcard or trust the whole bridge. Keep backend ports unpublished.
+
+1. Back up the production SQLite database, deploy both frontend and backend
+   images, the updated Compose file, and `nginx-proxy.conf`. Recreate the services
+   with `docker compose up -d --force-recreate` to apply network isolation, then
+   apply migrations:
+
+   ```bash
+   docker compose exec -T backend python manage.py migrate
+   docker compose exec -T backend python manage.py check --deploy
+   docker compose exec -T proxy nginx -t
+   ```
+
+2. Use production settings:
+
+   ```env
+   DJANGO_DEBUG=0
+   DJANGO_MCP_BASE_URL=https://notoli.judeandrewalaba.com
+   DJANGO_FRONTEND_BASE_URL=https://notoli.judeandrewalaba.com
+   DJANGO_ALLOWED_HOSTS=notoli.judeandrewalaba.com
+   DJANGO_CSRF_TRUSTED_ORIGINS=https://notoli.judeandrewalaba.com
+   DJANGO_CORS_ALLOWED_ORIGINS=https://notoli.judeandrewalaba.com
+   DJANGO_FORCE_SCRIPT_NAME=
+   ```
+
+   Keep a unique `DJANGO_SECRET_KEY`. The deploy workflow carries optional repo
+   variable `DJANGO_MCP_BASE_URL` into `.env`; leaving it blank uses the production
+   domain above. Changing the issuer invalidates old resource-bound grants, so
+   reconnect clients and update `plugins/notoli/mcp.json` when changing domains.
+
+3. In Cloudflare, reuse the existing proxied DNS record and Full (strict) TLS.
+   Review Redirect, WAF, Bot, Access, and Caching rules: preserve `/mcp` and
+   discovery paths without slash redirects or interactive challenges, and bypass
+   cache for `/mcp` and `/auth/mcp/*`. Keep metadata publicly readable. Set
+   appropriate login/token rate limits. These are operator changes; repository
+   configuration does not change Cloudflare automatically.
+
+4. Register the exact OAuth callback shown in ChatGPT's connection page:
+
+   ```bash
+   docker compose exec -T backend python manage.py register_mcp_client \
+     --redirect-uri "<exact ChatGPT callback URI>"
+   ```
+
+   Use client ID `notoli-chatgpt`, token authentication method `none`, and scopes
+   `notoli:read notoli:write notoli:share notoli:organize notoli:notifications notoli:delete`
+   for complete coverage, or request a subset. No client secret is needed. Existing
+   connections must reconnect and approve new permissions. Sharing affects all
+   lists/items in the selected board and remains owner-only. Delete tools require
+   explicit confirmation of their impact: board deletion removes all lists/items,
+   item deletion removes every occurrence, and list deletion preserves items. See the
+   [personal connection walkthrough](../plugins/notoli/README.md).
+
+5. Verify discovery and an unauthenticated challenge before linking:
+
+   ```bash
+   curl -i https://notoli.judeandrewalaba.com/.well-known/oauth-authorization-server
+   curl -i https://notoli.judeandrewalaba.com/.well-known/oauth-protected-resource/mcp
+   curl -i https://notoli.judeandrewalaba.com/mcp
+   ```
+
+   Metadata returns JSON; `/mcp` returns `401` with a `WWW-Authenticate` resource
+   metadata URL. After linking, try discovery, add one item, mark it complete,
+   and revoke the connection in React's `/connections` (**Connected Apps** in the
+   profile menu). Verify already-signed-in consent, signed-out login → consent →
+   callback, Cancel returning `access_denied` with the original state/issuer, and
+   revocation preventing access and refresh. Also approve consent without exchanging
+   the code: the app must appear in Connected Apps, and revoking it must block exchange.
+   Verify read consent discloses collaborator IDs/usernames/emails, and ambiguous
+   username/email values cannot share with either matching account. Test reading board collaborators,
+   owner-only add/remove with notifications, and rejection of sharing when
+   `notoli:share` is missing. On disposable data, test board/list creation and edits,
+   complete-set reordering, same-board membership changes, board-wide orphan items,
+   deletion cascades/confirmation, and recipient-only notification management.
+   Verify missing organize/notifications/delete permissions prompt reauthorization
+   and refresh cannot escalate any scope. Check ordinary REST/JWT
+   login, list ordering, and collaborator notifications as well. MCP Inspector
+   can exercise the protocol before testing ChatGPT. Register its exact HTTPS
+   callback as a separate public client if needed.
+
+Nginx passes `/mcp` with buffering disabled, a 120-second read timeout, and
+`Cache-Control: no-store`; `/.well-known/*` goes to Django. OAuth JSON endpoints use
+the existing `/auth/` proxy location with caching disabled; React's `/connections`
+and `/connections/authorize` use the SPA catch-all. `DJANGO_FRONTEND_BASE_URL`
+must point to that frontend origin for the browser authorization redirect. Never
+cache authenticated consent or connection responses. `/mcp/` is not the
+canonical endpoint. The development Compose stack overrides the issuer to
+`http://notoli.localhost:8000` (or the selected backend port); ChatGPT testing
+requires a reachable HTTPS origin or an appropriate secure tunnel. Set the
+issuer, allowed host, and trusted CSRF origin consistently when using a tunnel.
+
+Run `docker compose exec -T backend python manage.py cleartokens` periodically
+to remove expired OAuth rows. Never put access/refresh tokens or codes into
+deployment logs. Rolling back the code does not require removing OAuth tables;
+restore a database backup only if a migration rollback is specifically needed.
+
 High level behavior on `notoli.judeandrewalaba.com`:
 - `/` and frontend SPA routes -> `frontend`
 - `/api/*` -> `backend`
+- `/mcp` and `/.well-known/*` -> `backend` (MCP and OAuth discovery)
 - `/auth/*` -> `backend`
 - `/admin/*` -> `backend`
 - `/static/admin/*` and `/static/rest_framework/*` -> `backend` (admin/DRF assets)

@@ -18,7 +18,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from integrations.views import authorization_metadata, resource_metadata
+
 urlpatterns = [
+    path(".well-known/oauth-authorization-server", authorization_metadata),
+    path(".well-known/oauth-protected-resource", resource_metadata),
+    path(".well-known/oauth-protected-resource/mcp", resource_metadata),
+    path("auth/mcp/", include("integrations.urls")),
     path("admin/", admin.site.urls),
     path("api/", include("notes.urls")),
     path("api/", include("notifications.urls")),

@@ -14,15 +14,22 @@ services:
     depends_on:
       - frontend
       - backend
+    networks:
+      default:
+      backend_private:
+        ipv4_address: 172.30.88.2
 
   backend:
     image: ghcr.io/vanillaicecube/notoli-backend:latest
     container_name: notoli-backend
     volumes:
       - ./db.sqlite3:/backend/db.sqlite3
-    ports:
-      - "8000:8000"
     env_file: .env
+    environment:
+      DJANGO_TRUSTED_PROXY_IPS: 172.30.88.2
+    networks:
+      - backend_private
+      - backend_egress
     restart: always
 
   frontend:
@@ -33,3 +40,12 @@ services:
     restart: always
     depends_on:
       - backend
+
+networks:
+  backend_private:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.88.0/29
+  # SMTP and other outbound backend traffic retain Internet access.
+  backend_egress:

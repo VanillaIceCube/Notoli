@@ -15,6 +15,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **Flexible organization**: notes can appear in multiple lists with per-list ordering
 - **Subdomain hosting**: designed to run at `https://notoli.judeandrewalaba.com`
 - **Dockerized deployment**: frontend + backend + Nginx reverse proxy
+- **ChatGPT integration**: 31 authenticated MCP tools for boards, lists, items, ordering, sharing, and notifications, with separate permissions for organization, sharing, notifications, and confirmed deletion; React consent uses your existing login, and Connected Apps lets you revoke access
 
 ## 🚀 Tech Stack
 - **Backend:** Django
@@ -36,6 +37,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - Deployment (Docker + Nginx): [`deploy/README.md`](deploy/README.md)
 - CI/CD + automation: [`.github/README-WORKFLOWS.md`](.github/README-WORKFLOWS.md)
 - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
+- ChatGPT plugin setup and evaluation prompts: [`plugins/notoli/README.md`](plugins/notoli/README.md)
 
 ## Docker hot-reload development
 
