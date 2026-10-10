@@ -2,6 +2,10 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-10-09
+### Removed
+- Removed the backend deployment path-prefix setting from Django, environment examples, and CI deployment inputs. Notoli uses subdomain-root routing and `/static/` assets; stale path-prefix environment values are ignored.
+
+## 2026-10-09
 ### Added
 - Ported MacroMapper's Dependabot major-upgrade briefs to Obi-Wan, including bounded upstream/repository evidence, major-only web search, complete-brief validation, and behavioral tests.
 ### Fixed

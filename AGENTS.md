@@ -88,7 +88,6 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - `DJANGO_ALLOWED_HOSTS` (comma-separated)
    - `DJANGO_CORS_ALLOWED_ORIGINS` (comma-separated)
    - `DJANGO_CSRF_TRUSTED_ORIGINS` (comma-separated)
-   - `DJANGO_FORCE_SCRIPT_NAME` (default: unset; keep blank for subdomain-root routing)
    - `DJANGO_FRONTEND_BASE_URL` (default: `http://localhost:3000`; used in password-reset email links)
    - `DJANGO_MCP_BASE_URL` (origin only, no path; defaults to `http://localhost:8000` in debug or `https://notoli.judeandrewalaba.com` in production; OAuth issuer and MCP resource base)
    - `DJANGO_TRUSTED_PROXY_IPS` (individual proxy IPs only; default empty; production Compose sets Nginx's private address `172.30.88.2`; never use wildcards or CIDRs)
@@ -148,6 +147,9 @@ Use the same script as the Codex maintenance script so cached containers refresh
    Frontend is still available at `http://localhost:3000`.
 
 ## Production Routing Notes
+Notoli runs at the subdomain root. Backend URLs use no configurable path prefix,
+and Django static assets use `/static/`.
+
 - Public URLs (subdomain-root):
   - Frontend: `https://notoli.judeandrewalaba.com`
   - Backend:
@@ -173,7 +175,6 @@ Use the same script as the Codex maintenance script so cached containers refresh
     - `/root/apps/notoli/certs/origin.key`
   - Set Cloudflare SSL/TLS mode to `Full (strict)`.
 - Required env vars for the subdomain backend:
-  - `DJANGO_FORCE_SCRIPT_NAME=` (blank/unset)
   - `DJANGO_ALLOWED_HOSTS=notoli.judeandrewalaba.com`
   - `DJANGO_CORS_ALLOWED_ORIGINS=https://notoli.judeandrewalaba.com`
   - `DJANGO_CSRF_TRUSTED_ORIGINS=https://notoli.judeandrewalaba.com`
