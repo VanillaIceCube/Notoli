@@ -20,6 +20,8 @@ GitHub Dependabot reviews: All three personas run for same-repository Dependabot
 
 GitHub branch protection: Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs listed in `.github/README-WORKFLOWS.md`. Do not require the standalone `CodeQL` Code Scanning results context: documentation-only PRs skip all analyzers and never emit it. Preserve the scope and analyzer requirements when editing or recreating the main ruleset; skipped analyzer jobs satisfy required checks, while detector or analyzer failures block merging.
 
+GitHub dependency-review evidence: Keep full dependency-change JSON in the `dependency-review-evidence` artifact, pass it through a file instead of environment variables, and bound the report sent to RoboCop to 16 KiB plus summary metadata. Large lockfile migrations can exceed Linux's per-environment-variable limit. The independent gate must still fail for every non-success review outcome; report truncation must disclose omitted entries and never change the verdict.
+
 ## Changelog format
 When updating `CHANGELOG.md`, add a new dated section at the top and group entries under:
 - `### Added`

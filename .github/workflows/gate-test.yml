@@ -59,6 +59,8 @@ jobs:
               - '.github/workflows/ci-orchestrator.yml'
               - '.github/actions/publish-ai-review/**'
               - '.github/actions/security-alerts/**'
+              - '.github/actions/prepare-vulnerability-report/**'
+              - '.github/workflows/gate-vulnerability.yml'
               - '.github/workflows/gate-test.yml'
               - '.github/workflows/review-build.yml'
               - '.github/workflows/review-code.yml'
@@ -245,6 +247,7 @@ jobs:
             .github/actions/collect-upstream-major-upgrade-evidence/collect-upstream-major-upgrade-evidence.test.js \
             .github/actions/publish-ai-review/publish-ai-review.test.js \
             .github/actions/security-alerts/sync-security-alerts.test.js \
+            .github/actions/prepare-vulnerability-report/prepare-vulnerability-report.test.js \
             2>&1 | tee automation_test_output.txt || status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 

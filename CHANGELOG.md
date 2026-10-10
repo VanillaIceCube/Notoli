@@ -2,6 +2,12 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-10-10
+### Added
+- Exercise large evidence transport, bounded vulnerability reporting, and incomplete-review failure with automation regression tests.
+### Fixed
+- Keep large dependency-review evidence in a file and artifact, and bound RoboCop's report output so lockfile migrations do not exceed Linux process environment limits; preserve failure for every non-success dependency review.
+
+## 2026-10-10
 ### Fixed
 - Complete the ESLint 10 flat-config migration with compatible React, hooks, accessibility, and Testing Library plugins, and cover the active configuration with real lint results.
 - Adapt browser-boundary, native email-validation, and computed-layout tests for standalone Jest's current browser environment.
