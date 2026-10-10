@@ -13,13 +13,13 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **Access scoping**: the API limits objects by `owner`/`created_by`/`collaborators`
 - **In-app notifications**: shared board activity appears under the app bar bell with persistent read state and links back to the relevant board or list
 - **Flexible organization**: notes can appear in multiple lists with per-list ordering
-- **Subdomain hosting**: designed to run at `https://notoli.judeandrewalaba.com`
-- **Dockerized deployment**: frontend + backend + Nginx reverse proxy
+- **Subdomain hosting**: runs at the root of `https://notoli.judeandrewalaba.com`, with backend URLs and static assets served without a configurable path prefix
+- **Dockerized deployment**: frontend + backend + Nginx reverse proxy, with distinct fixed backend/proxy addresses on the private network to prevent startup collisions
 - **ChatGPT integration**: 31 authenticated MCP tools for boards, lists, items, ordering, sharing, and notifications, with separate permissions for organization, sharing, notifications, and confirmed deletion; React consent uses your existing login, and Connected Apps lets you revoke access
 
 ## 🚀 Tech Stack
 - **Backend:** Django
-- **Frontend:** React + Material UI
+- **Frontend:** React + Material UI 9 (Material and icons upgraded together)
 - **Environment Management:** Conda
 - **Deployment:** Docker
 - **Hosting:** DigitalOcean
@@ -39,6 +39,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - CI/CD + automation: [`.github/README-WORKFLOWS.md`](.github/README-WORKFLOWS.md)
 - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
 - ChatGPT plugin setup and evaluation prompts: [`plugins/notoli/README.md`](plugins/notoli/README.md)
+- ChatGPT listing updates: the installed personal cloud plugin has its own exported manifest. Use the [listing update steps](plugins/notoli/README.md#listing-metadata-and-updates) to apply repository branding while retaining its existing connection. A Docker deploy alone does not update the listing.
 
 ## Docker hot-reload development
 

@@ -89,7 +89,6 @@ DJANGO_SQLITE_PATH=/backend/db.sqlite3
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,notoli.judeandrewalaba.com
 DJANGO_CORS_ALLOWED_ORIGINS=https://localhost,http://localhost:3000,https://notoli.judeandrewalaba.com
 DJANGO_CSRF_TRUSTED_ORIGINS=https://localhost,http://localhost:3000,https://notoli.judeandrewalaba.com
-DJANGO_FORCE_SCRIPT_NAME=
 DJANGO_FRONTEND_BASE_URL=https://notoli.judeandrewalaba.com
 ```
 
@@ -171,11 +170,20 @@ Routing rules live in `deploy/nginx-proxy.conf` and are ordered so backend route
 
 ## ChatGPT MCP deployment
 
+ChatGPT listing metadata is published separately from the backend. A deploy
+does not import `plugins/notoli/plugin.json` into an existing personal cloud
+plugin. Follow the [listing update workflow](../plugins/notoli/README.md#listing-metadata-and-updates)
+to upload its branding update while retaining the exported app mapping.
+Tool refresh and public directory submission are separate steps described there.
+
 MCP runs inside the existing backend process at
 `https://notoli.judeandrewalaba.com/mcp`. No new service, DNS record, or port is
 required. `backend/Dockerfile` uses Uvicorn ASGI with one worker for SQLite.
 Production publishes no backend port. Nginx alone shares its internal
 `backend_private` network and has the fixed IP `172.30.88.2` in `172.30.88.0/29`.
+The backend has the distinct fixed IP `172.30.88.3` on that network. Both addresses
+must remain fixed: the backend starts first and automatic allocation could take
+the proxy's address, preventing Nginx from starting with `Address already in use`.
 Compose supplies that exact IP as `DJANGO_TRUSTED_PROXY_IPS`; the frontend uses
 the default network and cannot join the backend network. A separate backend-only
 `backend_egress` bridge preserves outbound SMTP/HTTPS email access. Restrict VM
@@ -187,12 +195,13 @@ forwarded host/proto headers. Nginx replaces client-supplied forwarding values
 with `$scheme` and `$remote_addr`, so Cloudflare Full (strict) TLS supplies HTTPS
 without trusting an incoming header. Local development trusts no proxy. If the
 private subnet conflicts with an existing network, change the IPAM subnet,
-Nginx's fixed address, and the backend's trusted IP together in Compose. Do not
-use a wildcard or trust the whole bridge. Keep backend ports unpublished.
+both services' fixed addresses, and the backend's trusted IP together in Compose.
+Do not use a wildcard or trust the whole bridge. Keep backend ports unpublished.
 
 1. Back up the production SQLite database, deploy both frontend and backend
    images, the updated Compose file, and `nginx-proxy.conf`. Recreate the services
-   with `docker compose up -d --force-recreate` to apply network isolation, then
+   with `docker compose up -d --force-recreate --remove-orphans` to apply network
+   isolation and release any old backend assignment at `172.30.88.2`, then
    apply migrations:
 
    ```bash
@@ -200,6 +209,18 @@ use a wildcard or trust the whole bridge. Keep backend ports unpublished.
    docker compose exec -T backend python manage.py check --deploy
    docker compose exec -T proxy nginx -t
    ```
+
+   Verify all three services are running with `docker compose ps`, and inspect
+   the private addresses with:
+
+   ```bash
+   docker inspect --format '{{json .NetworkSettings.Networks}}' notoli-backend notoli-proxy
+   ```
+
+   On `backend_private`, expect backend `172.30.88.3` and proxy `172.30.88.2`.
+   Repeat `docker compose up -d --remove-orphans` and confirm the services still
+   run. Check the public HTTPS frontend and an API request through Nginx after
+   redeployment; also verify outbound email still works via `backend_egress`.
 
 2. Use production settings:
 
@@ -210,7 +231,6 @@ use a wildcard or trust the whole bridge. Keep backend ports unpublished.
    DJANGO_ALLOWED_HOSTS=notoli.judeandrewalaba.com
    DJANGO_CSRF_TRUSTED_ORIGINS=https://notoli.judeandrewalaba.com
    DJANGO_CORS_ALLOWED_ORIGINS=https://notoli.judeandrewalaba.com
-   DJANGO_FORCE_SCRIPT_NAME=
    ```
 
    Keep a unique `DJANGO_SECRET_KEY`. The deploy workflow carries optional repo
@@ -302,8 +322,8 @@ Cloudflare (TLS/DNS)
 ```
 
 ## Backend Subdomain Settings
-When running at the subdomain root, Django should not use a script-name prefix:
-- `DJANGO_FORCE_SCRIPT_NAME=`
+Notoli serves backend routes at the subdomain root and static assets at `/static/`.
+No deployment path-prefix variable is needed.
 
 Production allowlists should include the Notoli subdomain:
 - `DJANGO_ALLOWED_HOSTS=notoli.judeandrewalaba.com`

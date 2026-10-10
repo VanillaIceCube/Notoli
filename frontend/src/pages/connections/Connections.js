@@ -131,7 +131,14 @@ export default function ConnectedApps() {
       {!applications && !error && <Typography role="status">Loading connected apps…</Typography>}
       {applications?.length === 0 && <Typography>No connected apps.</Typography>}
       {applications?.map((app) => (
-        <Stack key={app.id} direction="row" alignItems="center" justifyContent="space-between">
+        <Stack
+          key={app.id}
+          direction="row"
+          sx={{
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <Box>
             <Typography sx={{ fontWeight: 'bold' }}>{app.name}</Typography>
             <Typography variant="body2">{app.client_id}</Typography>

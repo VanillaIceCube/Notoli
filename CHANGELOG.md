@@ -1,6 +1,28 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-10-10
+### Fixed
+- Upgrade Material UI and icons together to v9, migrate removed layout system props and checkbox input props, and preserve menu context in test helpers.
+- Cover the authentication layout and real menu keyboard behavior, and update the removed Alert CSS class assertion for v9.
+
+## 2026-10-10
+### Added
+- Add complete Notoli plugin listing descriptions, developer branding, support link, and the existing product logo; add a ZIP builder that retains the installed personal plugin identity and app mapping.
+- Cover listing ZIP identity/file preservation, bundled icons, release version ordering, and validation failures with standalone temporary-fixture regression tests.
+### Fixed
+- Document why the custom-MCP cloud listing used generic metadata despite the portable source manifest, and provide the correct upload-new-version workflow instead of relying on backend deployment or tool refresh.
+### Changed
+- Release portable plugin metadata version 0.3.1 and document the separate personal-listing version, verified public publisher requirements, and missing privacy/terms prerequisites.
+
+## 2026-10-09
+### Fixed
+- Assign the production backend a distinct fixed private-network IP (`172.30.88.3`) so it cannot claim Nginx's trusted address (`172.30.88.2`) before proxy startup; add regression coverage and document container recreation and deployment checks.
+
+## 2026-10-09
+### Removed
+- Removed the backend deployment path-prefix setting from Django, environment examples, and CI deployment inputs. Notoli uses subdomain-root routing and `/static/` assets; stale path-prefix environment values are ignored.
+
 ## 2026-10-09
 ### Added
 - Ported MacroMapper's Dependabot major-upgrade briefs to Obi-Wan, including bounded upstream/repository evidence, major-only web search, complete-brief validation, and behavioral tests.
