@@ -160,7 +160,9 @@ Full variables, stage/failure states and rollback commands are in the guide.
 Activate only after the approved host-ingress cutover. Shared decisions and
 the three-PR matrix live on [Infrastructure #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 Architecture approval is recorded; each PR merge and each production plan still
-need separate explicit owner approval. Moving `env-prod` can deploy immediately.
+need separate explicit owner approval. Do not move `env-prod` or dispatch Deploy
+until the owner authorizes the exact production plan and gateway acceptance is
+recorded. Architecture approval alone never authorizes workflow activation.
 
 ## 📦 Flow 3: Dependabot (`.github/dependabot.yml` + CI/Auto Merge)
 Dependabot configuration:

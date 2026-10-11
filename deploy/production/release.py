@@ -221,16 +221,17 @@ def preflight(root):
         actual = {c["Name"] for c in network["Containers"].values()}
         # A companion outage must not prevent this app from recovering. Unknown
         # members are forbidden; this app and the gateway must remain present.
-        required = {
-            member
-            for member in members
-            if member == "host-ingress-proxy" or member.startswith(APP + "-")
+        allowed_members = members
+        required_members = allowed_members & {
+            "host-ingress-proxy",
+            APP + "-backend",
+            APP + "-frontend",
         }
         if (
             network["Internal"] != internal
             or [p["Subnet"] for p in network["IPAM"]["Config"]] != [subnet]
-            or not actual <= members
-            or not required <= actual
+            or not actual <= allowed_members
+            or not required_members <= actual
         ):
             raise ReleaseError("Route network invariant failed")
     backend = inspect(APP + "-backend")
