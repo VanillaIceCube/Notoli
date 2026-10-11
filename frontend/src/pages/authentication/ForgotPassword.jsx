@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { forgotPassword } from '../../services/notoliApiClient';
@@ -32,9 +32,8 @@ export default function ForgotPassword({ showSnackbar }) {
   return (
     <Stack
       spacing={2}
-      alignItems="center"
-      maxWidth="sm"
       sx={{
+        maxWidth: 'sm',
         p: 5.5,
         mx: 'auto',
         display: 'flex',

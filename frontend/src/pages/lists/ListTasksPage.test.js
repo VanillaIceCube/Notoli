@@ -424,7 +424,7 @@ describe('ListTasksPage', () => {
     expect(await screen.findByText(/no notes found/i)).toBeInTheDocument();
     expect(screen.getByTestId('note-empty-state')).toHaveStyle({
       minHeight: '52px',
-      borderBottom: '2px solid var(--secondary-color)',
+      boxSizing: 'border-box',
     });
     expect(screen.getByRole('button', { name: /add new/i })).toBeInTheDocument();
   });

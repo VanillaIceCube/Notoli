@@ -62,7 +62,8 @@ describe('ForgotPassword', () => {
 
     try {
       renderWithProviders(<ForgotPassword showSnackbar={showSnackbar} />);
-      await userEvent.type(screen.getByLabelText(/email/i), 'not-email');
+      // Use valid syntax to reach the server error path after native form validation.
+      await userEvent.type(screen.getByLabelText(/email/i), 'test@example.com');
       await userEvent.click(screen.getByRole('button', { name: /send reset link/i }));
 
       await waitFor(() => {

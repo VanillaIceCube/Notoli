@@ -15,9 +15,9 @@ What it does:
   - The shared [`.github/actions/prepare-lint-commit`](actions/prepare-lint-commit/action.yml) action validates that identity, configures the token only as the Git remote's push URL, and the lint job restores the unauthenticated push URL immediately after the commit step.
   - Auto-fix is enabled only for non-Dependabot pull requests whose head branch belongs to this repository. Those jobs explicitly check out the writable head branch. Fork and Dependabot pull requests use GitHub's standard pull-request checkout, skip mutating lint steps, and still run strict formatting/lint checks against the submitted code. The lint workflow does not receive an App secret from forks; Dependabot review credentials are handled separately below.
 - Runs the reusable test gate: [`.github/workflows/gate-test.yml`](workflows/gate-test.yml)
-  - Frontend: `npm test` (CI mode)
+  - Frontend: standalone Jest via `npm test` (CI mode), then `npm run build` (strict ESLint 10 and Vite production build). Build failures fail the existing frontend test gate and remain in its captured diagnostics.
   - Backend: `python manage.py test`
-  - Repository automation: Node's built-in test runner executes colocated behavioral tests for upstream major-upgrade evidence, the AI review publisher, and the security-alert reconciler.
+  - Repository automation: Node's built-in test runner executes colocated behavioral tests for upstream major-upgrade evidence, the AI review publisher, the security-alert reconciler, and large dependency-review report transport. Changes to the report helper or vulnerability workflow also select this test job.
 - Lint and test jobs use the same change filters:
   - Frontend checks run for `frontend/**` changes.
   - Backend checks run for `backend/**` changes.
@@ -32,7 +32,7 @@ What it does:
   - GitHub Actions workflow analysis for `.github/workflows/**` and `.github/actions/**`
 - Runs the reusable vulnerability gate: [`.github/workflows/gate-vulnerability.yml`](workflows/gate-vulnerability.yml)
   - Uses GitHub Dependency Review and fails when a PR introduces a high or critical vulnerability.
-  - Emits a vulnerability report output for RoboCop instead of posting a standalone PR comment.
+  - Emits a bounded vulnerability report output for RoboCop instead of posting a standalone PR comment. Full dependency and vulnerability JSON travels through a file and is retained in the `dependency-review-evidence` artifact; it is not passed through a large environment variable. The report includes change counts, vulnerable entries up to 16 KiB, and an explicit omitted-entry count. Every non-success Dependency Review outcome fails the gate, independently of report size.
 - Runs the reusable malware gate: [`.github/workflows/gate-malware.yml`](workflows/gate-malware.yml)
   - Uses the local [npm malware review action](actions/review-npm-malware/action.yml) to compare changed `frontend/package-lock.json` packages against GitHub's npm malware advisories.
   - Follows GitHub's cursor-based advisory pagination and applies a per-request timeout so the gate terminates reliably as the advisory feed grows.
@@ -142,35 +142,16 @@ GitHub accepts skipped analyzer jobs as satisfying required checks. Scope-detect
 
 When editing or recreating the ruleset, retain all 14 contexts above and exclude the standalone `CodeQL` context. Preserve the remaining ruleset settings, conditions, and bypass actors. Validate the live context list with `gh api repos/VanillaIceCube/Notoli/rules/branches/main` and inspect `gh pr checks` for both a documentation-only PR and a code-changing PR. No workflow rerun is needed to remove the stale requirement from existing PRs.
 
-## 🚀 Flow 2: Deploy (`.github/workflows/ci-deploy.yml`)
-Trigger:
-- Push to the `env-prod` branch
-- Manual `workflow_dispatch`
+## 🚀 Deployment
+The automation test gate verifies pinned shared-source parity before the common
+deployment tests; deployment builds also verify the standard before publishing.
+The production workflow runs on `env-prod` pushes or a manual dispatch selecting
+that branch. It serializes runs with `cancel-in-progress: false` and pins every
+external action, including checkout, to an immutable commit SHA. Merging `main`
+does not activate it; production activation requires separate owner approval.
 
-What it does:
-- Builds and pushes Docker images to GHCR:
-  - `notoli-backend` (from `backend/Dockerfile`)
-  - `notoli-frontend` (from `frontend/Dockerfile`)
-- Uploads `deploy/docker-compose.yml` and `deploy/nginx-proxy.conf` to the server
-- SSHes into the server, writes a `.env` file next to the compose file for subdomain-root routing, then:
-  - Prunes Docker images (`docker system prune -af`)
-  - Pulls images + recreates containers
-  - Runs Django migrations inside the backend container
-  - Backend images serve `app.asgi:application` with Uvicorn `--no-proxy-headers` so the MCP endpoint and REST API share the deployment. Compose injects the exact Nginx private IP as `DJANGO_TRUSTED_PROXY_IPS`; no backend port is published. Deploy the Compose/network changes and frontend image together for React OAuth consent. OAuth client registration remains a one-time operator step after migration; see `deploy/README.md`.
-
-Deployment prerequisite:
-- For Cloudflare Full (strict), the origin must have a Cloudflare Origin Certificate.
-- Option A (manual): provision on the server at `certs/origin.pem` and `certs/origin.key` (see `deploy/README.md`).
-- Option B (automated): set GitHub Secrets `CLOUDFLARE_ORIGIN_CERT_PEM` and `CLOUDFLARE_ORIGIN_KEY_PEM` so the workflow uploads the files to `certs/` during deploy.
-
-Deploy inputs (GitHub repo vars / secrets):
-- Server connection: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`, optional `DEPLOY_PORT`, secret `DEPLOY_SSH_KEY`
-- Backend config:
-  - Secret: `DJANGO_SECRET_KEY`
-  - Secret: `DJANGO_EMAIL_HOST_KEY`
-  - Vars: `DJANGO_DEBUG`, `DJANGO_SQLITE_PATH`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `DJANGO_FRONTEND_BASE_URL`, optional `DJANGO_MCP_BASE_URL` (HTTPS origin, defaults to `https://notoli.judeandrewalaba.com` in production), `DJANGO_EMAIL_BACKEND`, `DJANGO_EMAIL_TIMEOUT`, `DJANGO_DEFAULT_FROM_EMAIL`
-  - SMTP-only vars when `DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`: `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_HOST_USER`
-- Frontend build arg: optional `REACT_APP_API_BASE_URL` (leave blank/unset for same-origin subdomain calls on `https://notoli.judeandrewalaba.com`; use `https://notoli.judeandrewalaba.com` only if an absolute URL is required)
+See the [canonical production guide](../deploy/production/README.md) for required
+variables/secrets, host preparation, activation order, release behavior and recovery.
 
 ## 📦 Flow 3: Dependabot (`.github/dependabot.yml` + CI/Auto Merge)
 Dependabot configuration:
@@ -186,3 +167,9 @@ Auto-merge behavior:
 - Auto-merge is restricted to patch/minor updates.
 - If a security alert is present, the workflow requires CVSS <= 6.9.
 - The workflow uses `dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98` (`v3.1.0`) and can optionally use `DEPENDABOT_PAT` for metadata/alert lookup.
+
+AI review context includes bounded recent owner/collaborator reviews and replies to prior findings as discussion evidence. Prior bot verdicts must be rechecked against current source/scanners; the diff legend distinguishes active added/context lines from deleted old code. This does not change reviewer verdict rules or authorize merges/deployments.
+
+External GitHub Actions use immutable commit SHAs with version comments.
+Keep that convention when updating workflows or composite actions; preserve
+review/scanner failure gates and do not treat action updates as deployment approval.

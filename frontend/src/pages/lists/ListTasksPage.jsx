@@ -323,7 +323,6 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
           checked={complete}
           onClick={(event) => event.stopPropagation()}
           onChange={isReordering ? undefined : (event) => onToggleStatus(event, task)}
-          inputProps={{ 'aria-label': `Mark ${task.note} complete` }}
           sx={{
             color: 'var(--secondary-color)',
             p: 0.5,
@@ -331,11 +330,14 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
             pointerEvents: isReordering ? 'none' : 'auto',
             '&.Mui-checked': { color: 'var(--secondary-color)' },
           }}
+          slotProps={{
+            input: { 'aria-label': `Mark ${task.note} complete` },
+          }}
         />
         <Typography
           variant="body1"
-          fontWeight="bold"
           sx={{
+            fontWeight: 'bold',
             flexGrow: 1,
             fontSize: '1.1rem',
             textAlign: 'left',
@@ -397,8 +399,10 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
             <Typography
               variant="body1"
               align="center"
-              fontWeight="bold"
-              sx={{ fontSize: '1.1rem' }}
+              sx={{
+                fontWeight: 'bold',
+                fontSize: '1.1rem',
+              }}
             >
               Done Reordering
             </Typography>
@@ -413,8 +417,10 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
             <Typography
               variant="body1"
               align="center"
-              fontWeight="bold"
-              sx={{ fontSize: '1.1rem' }}
+              sx={{
+                fontWeight: 'bold',
+                fontSize: '1.1rem',
+              }}
             >
               Add New
             </Typography>

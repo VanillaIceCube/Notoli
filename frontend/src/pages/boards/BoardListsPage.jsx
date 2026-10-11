@@ -247,7 +247,15 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
     if (isReordering) {
       return (
         <Box data-testid={`list-reorder-row-${list.id}`} sx={{ ...rowSx, px: 1, py: 0.5 }}>
-          <Typography variant="body1" fontWeight="bold" sx={rowTitleSx}>
+          <Typography
+            variant="body1"
+            sx={[
+              {
+                fontWeight: 'bold',
+              },
+              ...(Array.isArray(rowTitleSx) ? rowTitleSx : [rowTitleSx]),
+            ]}
+          >
             {list.name}
           </Typography>
           <IconButton
@@ -282,7 +290,15 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
             })
           }
         >
-          <Typography variant="body1" fontWeight="bold" sx={rowTitleSx}>
+          <Typography
+            variant="body1"
+            sx={[
+              {
+                fontWeight: 'bold',
+              },
+              ...(Array.isArray(rowTitleSx) ? rowTitleSx : [rowTitleSx]),
+            ]}
+          >
             {list.name}
           </Typography>
         </Button>
@@ -323,8 +339,10 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
             <Typography
               variant="body1"
               align="center"
-              fontWeight="bold"
-              sx={{ fontSize: '1.1rem' }}
+              sx={{
+                fontWeight: 'bold',
+                fontSize: '1.1rem',
+              }}
             >
               Done Reordering
             </Typography>
@@ -339,8 +357,10 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
             <Typography
               variant="body1"
               align="center"
-              fontWeight="bold"
-              sx={{ fontSize: '1.1rem' }}
+              sx={{
+                fontWeight: 'bold',
+                fontSize: '1.1rem',
+              }}
             >
               Add New
             </Typography>

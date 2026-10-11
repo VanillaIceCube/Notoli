@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchBoards as fetchBoardsApi, login } from '../../services/notoliApiClient';
@@ -94,9 +94,8 @@ export default function Login({ showSnackbar }) {
   return (
     <Stack
       spacing={2}
-      alignItems="center"
-      maxWidth="sm"
       sx={{
+        maxWidth: 'sm',
         p: 5.5,
         mx: 'auto',
         display: 'flex',

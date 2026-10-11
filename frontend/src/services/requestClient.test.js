@@ -260,20 +260,15 @@ describe('requestClient', () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
 
-    const originalLocation = window.location;
-    const replaceSpy = jest.fn();
-    delete window.location;
-    window.location = { ...originalLocation, replace: replaceSpy };
-
-    const { clearNavigate } = await import('./navigationService');
+    const { browserLocation, clearNavigate } = await import('./navigationService');
+    const replaceSpy = jest.spyOn(browserLocation, 'replace').mockImplementation(() => {});
     clearNavigate();
     const { logout } = await import('./requestClient');
 
     expect(() => logout()).not.toThrow();
     expect(sessionStorage.getItem('accessToken')).toBeNull();
     expect(sessionStorage.getItem('refreshToken')).toBeNull();
-    expect(replaceSpy).toHaveBeenCalled();
-
-    window.location = originalLocation;
+    expect(replaceSpy).toHaveBeenCalledWith(`${window.location.origin}/login`);
+    replaceSpy.mockRestore();
   });
 });

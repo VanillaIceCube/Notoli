@@ -1,5 +1,8 @@
 # 🛠️ Backend (Django)
 
+Production release ownership: use the [app-only release/recovery guide](../deploy/production/README.md).
+
+
 The Notoli backend is a Django + Django REST Framework API and authenticated MCP server, served by Uvicorn ASGI in production.
 
 ## 🧭 What Lives Here
@@ -257,7 +260,7 @@ Proxy / HTTPS:
   `SECURE_PROXY_SSL_HEADER=None` and `USE_X_FORWARDED_HOST=False`.
 - Production Compose publishes no backend port. Only Nginx shares the internal
   backend network; a separate backend-only bridge permits outbound email.
-  Local development trusts no proxy. See `deploy/README.md` for network details.
+  Local development trusts no proxy. See `deploy/production/README.md` for production network details.
 
 Static files:
 - Collected during the Docker build (`python manage.py collectstatic --noinput`)

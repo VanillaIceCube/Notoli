@@ -1,0 +1,166 @@
+{
+  "contract_version": 1,
+  "app": "notoli",
+  "domain": "notoli.judeandrewalaba.com",
+  "root_hint": "/root/apps/notoli",
+  "services": {
+    "backend": "backend",
+    "frontend": "frontend"
+  },
+  "containers": {
+    "backend": "notoli-backend",
+    "frontend": "notoli-frontend"
+  },
+  "database": {
+    "filename": "db.sqlite3",
+    "target": "/backend/db.sqlite3"
+  },
+  "egress": "notoli_backend_egress",
+  "backend_networks": [
+    "notoli_backend_private",
+    "notoli_backend_egress"
+  ],
+  "frontend_networks": [
+    "notoli_default"
+  ],
+  "backend_addresses": {
+    "notoli_backend_private": "172.30.88.3"
+  },
+  "backend_required_env": [
+    "DJANGO_TRUSTED_PROXY_IPS=172.30.88.2"
+  ],
+  "frontend_port_bindings": [
+    [
+      [
+        "80/tcp",
+        "",
+        "3000"
+      ]
+    ],
+    [
+      [
+        "80/tcp",
+        "0.0.0.0",
+        "3000"
+      ],
+      [
+        "80/tcp",
+        "::",
+        "3000"
+      ]
+    ]
+  ],
+  "gateway": {
+    "container": "host-ingress-proxy",
+    "project": "host-ingress",
+    "addresses": {
+      "notoli_backend_private": "172.30.88.2"
+    },
+    "networks": {
+      "notoli_backend_private": {
+        "internal": true,
+        "subnet": "172.30.88.0/29",
+        "allowed": [
+          "host-ingress-proxy",
+          "notoli-backend"
+        ],
+        "required": [
+          "host-ingress-proxy",
+          "notoli-backend"
+        ]
+      },
+      "notoli_default": {
+        "internal": false,
+        "subnet": "172.18.0.0/16",
+        "allowed": [
+          "host-ingress-proxy",
+          "notoli-frontend"
+        ],
+        "required": [
+          "host-ingress-proxy",
+          "notoli-frontend"
+        ]
+      },
+      "macromapper-ingress": {
+        "internal": false,
+        "subnet": "172.20.0.0/16",
+        "allowed": [
+          "host-ingress-proxy",
+          "macromapper-backend",
+          "macromapper-frontend"
+        ],
+        "required": [
+          "host-ingress-proxy"
+        ]
+      }
+    }
+  },
+  "environment": {
+    "required": [
+      "DJANGO_SECRET_KEY",
+      "DJANGO_EMAIL_BACKEND",
+      "DJANGO_EMAIL_HOST_KEY",
+      "DJANGO_DEFAULT_FROM_EMAIL"
+    ],
+    "defaults": {
+      "DJANGO_EMAIL_HOST": "smtp.resend.com",
+      "DJANGO_EMAIL_PORT": "587",
+      "DJANGO_EMAIL_USE_TLS": "1",
+      "DJANGO_EMAIL_HOST_USER": "resend",
+      "DJANGO_EMAIL_TIMEOUT": "10"
+    },
+    "fixed": {
+      "DJANGO_DEBUG": "0",
+      "DJANGO_SQLITE_PATH": "/backend/db.sqlite3",
+      "DJANGO_ALLOWED_HOSTS": "notoli.judeandrewalaba.com",
+      "DJANGO_CORS_ALLOWED_ORIGINS": "https://notoli.judeandrewalaba.com",
+      "DJANGO_CSRF_TRUSTED_ORIGINS": "https://notoli.judeandrewalaba.com",
+      "DJANGO_FRONTEND_BASE_URL": "https://notoli.judeandrewalaba.com",
+      "DJANGO_MCP_BASE_URL": "https://notoli.judeandrewalaba.com",
+      "DJANGO_TRUSTED_PROXY_IPS": "172.30.88.2"
+    }
+  },
+  "readiness": {
+    "direct_url": "http://127.0.0.1:8000/api/notifications/",
+    "direct_status": 401,
+    "public": [
+      {
+        "path": "/",
+        "status": 200,
+        "body_contains": "<html",
+        "ignore_case": true
+      },
+      {
+        "path": "/api/notifications/",
+        "status": 401,
+        "content_type": "application/json",
+        "body_contains": "detail"
+      },
+      {
+        "path": "/.well-known/oauth-authorization-server",
+        "status": 200,
+        "json_equals": {
+          "issuer": "https://notoli.judeandrewalaba.com"
+        }
+      },
+      {
+        "path": "/.well-known/oauth-protected-resource/mcp",
+        "status": 200,
+        "json_equals": {
+          "resource": "https://notoli.judeandrewalaba.com/mcp"
+        }
+      },
+      {
+        "path": "/mcp",
+        "status": 401,
+        "header_contains": {
+          "WWW-Authenticate": "resource_metadata"
+        }
+      }
+    ]
+  },
+  "workflow": {
+    "frontend_build_arg": "REACT_APP_API_BASE_URL",
+    "extra_env": {}
+  }
+}
