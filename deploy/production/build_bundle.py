@@ -8,37 +8,14 @@ import re
 import shutil
 import sys
 
-APP = "notoli"
-ORIGIN = "https://" + APP + ".judeandrewalaba.com"
-REQUIRED = (
-    "DJANGO_SECRET_KEY",
-    "DJANGO_EMAIL_BACKEND",
-    "DJANGO_EMAIL_HOST_KEY",
-    "DJANGO_DEFAULT_FROM_EMAIL",
-)
-DEFAULTS = {
-    "DJANGO_EMAIL_HOST": "smtp.resend.com",
-    "DJANGO_EMAIL_PORT": "587",
-    "DJANGO_EMAIL_USE_TLS": "1",
-    "DJANGO_EMAIL_HOST_USER": "resend",
-    "DJANGO_EMAIL_TIMEOUT": "10",
-}
-FIXED = {
-    "DJANGO_DEBUG": "0",
-    "DJANGO_SQLITE_PATH": "/backend/db.sqlite3",
-    "DJANGO_ALLOWED_HOSTS": APP + ".judeandrewalaba.com",
-    "DJANGO_CORS_ALLOWED_ORIGINS": ORIGIN,
-    "DJANGO_CSRF_TRUSTED_ORIGINS": ORIGIN,
-    "DJANGO_FRONTEND_BASE_URL": ORIGIN,
-}
-if APP == "notoli":
-    FIXED.update(DJANGO_MCP_BASE_URL=ORIGIN, DJANGO_TRUSTED_PROXY_IPS="172.30.88.2")
-else:
-    REQUIRED += ("MACROMAPPER_OPENAI_API_KEY",)
-    FIXED["DJANGO_FORCE_SCRIPT_NAME"] = ""
-    DEFAULTS.update(
-        OPENAI_MEAL_ESTIMATION_MODEL="gpt-5.6-luna", OPENAI_MEAL_ESTIMATION_TIMEOUT="45"
-    )
+CONFIG = json.loads((Path(__file__).parent / "app.json").read_text(encoding="utf-8"))
+if CONFIG["contract_version"] != 1:
+    raise ValueError("Unsupported release contract version")
+APP = CONFIG["app"]
+ORIGIN = "https://" + CONFIG["domain"]
+REQUIRED = CONFIG["environment"]["required"]
+DEFAULTS = CONFIG["environment"]["defaults"]
+FIXED = CONFIG["environment"]["fixed"]
 
 
 def build(target, env):
@@ -80,7 +57,7 @@ def build(target, env):
     target.mkdir(mode=0o700)  # no overwrite or reuse of an attempt
     bundle = target / identity
     bundle.mkdir(mode=0o700)
-    for name in ("compose.yml", "release.py"):
+    for name in ("compose.yml", "release.py", "app.json"):
         shutil.copyfile(Path(__file__).parent / name, bundle / name)
     (bundle / ".backend.env").write_text(
         "".join(f"{k}={v}\n" for k, v in values.items()), encoding="utf-8", newline="\n"

@@ -19,6 +19,15 @@ class RecoveryDockerTests(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory() as directory,
             patch.object(release, "APP", project),
+            patch.dict(
+                release.CONFIG,
+                {
+                    "containers": {
+                        "backend": project + "-backend",
+                        "frontend": project + "-frontend",
+                    }
+                },
+            ),
         ):
             root = Path(directory)
             source = root / "db.sqlite3"
@@ -90,6 +99,15 @@ class RecoveryDockerTests(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory() as directory,
             patch.object(release, "APP", project),
+            patch.dict(
+                release.CONFIG,
+                {
+                    "containers": {
+                        "backend": project + "-backend",
+                        "frontend": project + "-frontend",
+                    }
+                },
+            ),
         ):
             root = Path(directory)
             candidate = root / "candidate"

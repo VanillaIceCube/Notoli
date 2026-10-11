@@ -1,11 +1,10 @@
 # AGENTS.md
 
 Production release ownership: use the [app-only release/recovery guide](deploy/production/README.md).
-The new pipeline uses immutable image digests, protected staging/locks, full
-recovery and bounded readiness. Shared Nginx/certificates belong to the
-infrastructure repository. This supersedes legacy proxy-owning production
-instructions; local standalone development remains supported. Activation follows
-approved gateway cutover and separate merge/deployment authorization.
+Common release code/tests and workflow stages are pinned to the Infrastructure
+release standard. Update the shared source, then synchronize both applications;
+CI's parity check rejects independent vendor edits. App policy lives in
+`deploy/production/app.json`; preserve its intentional network/readiness differences.
 
 
 This repo uses manual setup steps so Codex does not assume Django or Node are installed.
@@ -211,7 +210,7 @@ and Django static assets use `/static/`.
 - Register the predefined public ChatGPT OAuth client once: `python manage.py register_mcp_client --redirect-uri "<exact ChatGPT callback URI>"`. Copy the callback from ChatGPT's management page; use S256 PKCE and token auth method `none`. No client secret, password grant, dynamic registration, or unverified OIDC email claims are exposed. Existing registrations must be edited explicitly in Django admin.
 - MCP product coverage: 31 explicit tools cover boards, lists, items (including board-only items), ordering, membership, sharing, and notifications. `notoli:read` includes board-scoped owner/collaborator discovery; `notoli:write` permits item creation/edits; `notoli:share` permits owner-only collaborator add/remove; `notoli:organize` permits board/list creation/edits, order, and list membership; `notoli:notifications` permits recipient-only activity reads/read flags; `notoli:delete` permits permanent deletion (notification deletion also needs notifications). Sharing covers all lists/items in a board. Delete tools require `confirm: true` after explaining cascade impact; this is a caller assertion, not independent human verification. Arrays are capped at 1000 IDs, and reordering requires the complete current set. Preserve REST validation, owner checks, live membership checks, immutable boards, and notifications via shared services. Existing connections must reconnect for new scopes; refresh cannot escalate. Keep metadata/challenges aligned. No raw HTTP, global user directory, ownership transfer, or credential/admin tools are exposed. Full catalog/evaluations: `plugins/notoli/README.md`.
 - Browser `GET /auth/mcp/authorize/` redirects to React `/connections/authorize` using `DJANGO_FRONTEND_BASE_URL` and the original query. React reuses the existing JWT login (no second Django session). JSON GET consent and POST ticket/decision require a verified JWT header; signed tickets bind the displayed request to the account for 10 minutes. Allow/Cancel returns Django's validated callback URL. React `/connections` calls JWT-only `GET/POST /auth/mcp/connections/` to list/revoke the current user's tokens and pending grants. Cookies and posted user IDs cannot authorize these endpoints. Keep JWTs out of URLs and retain PKCE/resource/scope checks in Django. Run `python manage.py cleartokens` periodically; keep access/refresh tokens, consent tickets, and authorization codes out of logs.
-- When changing MCP routes or the issuer, review Cloudflare Redirect/WAF/Caching rules for `/mcp`, `/.well-known/*`, and `/auth/mcp/*`: no interactive challenges or path rewriting for MCP/discovery, no caching of authenticated responses, and rate limits for login/token endpoints. Existing DNS and Full (strict) TLS are reused. Details and connection steps: `deploy/README.md` and `plugins/notoli/README.md`.
+- When changing MCP routes or the issuer, review Cloudflare Redirect/WAF/Caching rules for `/mcp`, `/.well-known/*`, and `/auth/mcp/*`: no interactive challenges or path rewriting for MCP/discovery, no caching of authenticated responses, and rate limits for login/token endpoints. Existing DNS and Full (strict) TLS are reused. Details and connection steps: `deploy/production/README.md` and `plugins/notoli/README.md`.
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
 - Update Conda env: `conda env update --file backend/environment.yml --prune`
 - Regenerate Conda env + requirements:

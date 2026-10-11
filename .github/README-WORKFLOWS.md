@@ -143,26 +143,15 @@ GitHub accepts skipped analyzer jobs as satisfying required checks. Scope-detect
 When editing or recreating the ruleset, retain all 14 contexts above and exclude the standalone `CodeQL` context. Preserve the remaining ruleset settings, conditions, and bypass actors. Validate the live context list with `gh api repos/VanillaIceCube/Notoli/rules/branches/main` and inspect `gh pr checks` for both a documentation-only PR and a code-changing PR. No workflow rerun is needed to remove the stale requirement from existing PRs.
 
 ## 🚀 Deployment
-The production workflow now builds SHA-tagged images and deploys their immutable
-digests through the app-only staged transaction in
-[deploy/production](../deploy/production/README.md). It runs only for reviewed
-`env-prod` pushes or an explicitly authorized manual dispatch of that branch.
-Concurrency is serialized per repository with `cancel-in-progress: false`.
+The automation test gate verifies pinned shared-source parity before the common
+deployment tests; deployment builds also verify the standard before publishing.
+The production workflow runs on `env-prod` pushes or a manual dispatch selecting
+that branch. It serializes runs with `cancel-in-progress: false` and pins every
+external action, including checkout, to an immutable commit SHA. Merging `main`
+does not activate it; production activation requires separate owner approval.
 
-It uploads into a unique private incoming directory; host/app locks protect
-recovery capture, SQLite backup/restore validation, migration and readiness.
-No app release ships TLS/vhosts, provisions networks, operates shared Nginx,
-runs cross-project cleanup, or selects `latest`. Old proxy-owning workflow
-behavior is superseded. Required access now includes a verified
-`DEPLOY_HOST_FINGERPRINT` and operator-provisioned private directories/locks.
-Full variables, stage/failure states and rollback commands are in the guide.
-
-Activate only after the approved host-ingress cutover. Shared decisions and
-the three-PR matrix live on [Infrastructure #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
-Architecture approval is recorded; each PR merge and each production plan still
-need separate explicit owner approval. Do not move `env-prod` or dispatch Deploy
-until the owner authorizes the exact production plan and gateway acceptance is
-recorded. Architecture approval alone never authorizes workflow activation.
+See the [canonical production guide](../deploy/production/README.md) for required
+variables/secrets, host preparation, activation order, release behavior and recovery.
 
 ## 📦 Flow 3: Dependabot (`.github/dependabot.yml` + CI/Auto Merge)
 Dependabot configuration:
@@ -178,5 +167,3 @@ Auto-merge behavior:
 - Auto-merge is restricted to patch/minor updates.
 - If a security alert is present, the workflow requires CVSS <= 6.9.
 - The workflow uses `dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98` (`v3.1.0`) and can optionally use `DEPENDABOT_PAT` for metadata/alert lookup.
-
-Production deployment pins every external action, including checkout v7, to an immutable commit SHA.

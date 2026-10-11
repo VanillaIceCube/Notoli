@@ -2,8 +2,24 @@
 
 This is the implementation of approved architecture v2. Every PR merge and
 every production release still requires separate explicit owner authorization.
-Agent 3 is the sole production operator. Shared decisions:
+The authorized host operator performs production actions. Shared decisions:
 [Infrastructure #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
+
+## Shared implementation and app configuration
+
+Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/82909b6881d01b36b68edb2dc7f2ccd2503db7b4/docs/app-release-standard.md).
+`app.json` contains this app's service/container/domain/environment/network/DB
+and readiness policy; `compose.yml` defines its services. Common release and
+bundle code has no application-name branches. `deploy/shared-source.json` pins
+the versioned source; CI verifies exact common code/test copies and the generated
+workflow, failing on drift or unavailable source. The parity matrix and update
+procedure live in the standard. Run `python deploy/check_parity.py` locally;
+use `--sync` only after reviewing a coordinated pin update in both applications.
+
+The staged bundle includes `app.json` in its private checksum manifest. Release
+and rollback never download code or depend on an Infrastructure checkout.
+One transaction file keeps failure ordering and crash barriers reviewable;
+application policy and declarative readiness are separated from that state machine.
 
 ## Boundary and activation order
 
@@ -192,3 +208,85 @@ app release. Full sign-in, password-reset delivery, actual OAuth consent/MCP act
 reboot, off-host restores, monitoring and resource evidence are operator
 acceptance work, not inferred from these tests. Keep the implementation issues
 open until that evidence exists.
+
+## ChatGPT MCP deployment
+
+MCP runs at the canonical `/mcp` endpoint inside the existing ASGI backend.
+Keep the backend private, its address `.3`, trusted gateway `.2`, separate
+backend egress and Uvicorn `--no-proxy-headers`. App middleware authenticates the
+original proxy peer before accepting forwarded scheme/client metadata. The host
+infrastructure owns Nginx routes and certificates; never upload or recreate a
+proxy through an application release.
+
+The bundle fixes the issuer and frontend origin to `https://notoli.judeandrewalaba.com`.
+Changing an issuer invalidates resource-bound grants; coordinate client
+reconnection and `plugins/notoli/mcp.json` updates explicitly. Listing metadata
+is published separately: follow the [listing workflow](../../plugins/notoli/README.md#listing-metadata-and-updates).
+The following registration, write, mail and maintenance actions require the
+separately approved operator plan; they are not automatic release probes.
+
+1. In Cloudflare, reuse the existing proxied DNS record and Full (strict) TLS.
+   Review Redirect, WAF, Bot, Access, and Caching rules: preserve `/mcp` and
+   discovery paths without slash redirects or interactive challenges, and bypass
+   cache for `/mcp` and `/auth/mcp/*`. Keep metadata publicly readable. Set
+   appropriate login/token rate limits. These are operator changes; repository
+   configuration does not change Cloudflare automatically.
+
+2. Register the exact OAuth callback shown in ChatGPT's connection page:
+
+   ```bash
+   docker exec -i notoli-backend python manage.py register_mcp_client \
+     --redirect-uri "<exact ChatGPT callback URI>"
+   ```
+
+   Use client ID `notoli-chatgpt`, token authentication method `none`, and scopes
+   `notoli:read notoli:write notoli:share notoli:organize notoli:notifications notoli:delete`
+   for complete coverage, or request a subset. No client secret is needed. Existing
+   connections must reconnect and approve new permissions. Sharing affects all
+   lists/items in the selected board and remains owner-only. Delete tools require
+   explicit confirmation of their impact: board deletion removes all lists/items,
+   item deletion removes every occurrence, and list deletion preserves items. See the
+   [personal connection walkthrough](../../plugins/notoli/README.md).
+
+3. Verify discovery and an unauthenticated challenge before linking:
+
+   ```bash
+   curl -i https://notoli.judeandrewalaba.com/.well-known/oauth-authorization-server
+   curl -i https://notoli.judeandrewalaba.com/.well-known/oauth-protected-resource/mcp
+   curl -i https://notoli.judeandrewalaba.com/mcp
+   ```
+
+   Metadata returns JSON; `/mcp` returns `401` with a `WWW-Authenticate` resource
+   metadata URL. After linking, try discovery, add one item, mark it complete,
+   and revoke the connection in React's `/connections` (**Connected Apps** in the
+   profile menu). Verify already-signed-in consent, signed-out login → consent →
+   callback, Cancel returning `access_denied` with the original state/issuer, and
+   revocation preventing access and refresh. Also approve consent without exchanging
+   the code: the app must appear in Connected Apps, and revoking it must block exchange.
+   Verify read consent discloses collaborator IDs/usernames/emails, and ambiguous
+   username/email values cannot share with either matching account. Test reading board collaborators,
+   owner-only add/remove with notifications, and rejection of sharing when
+   `notoli:share` is missing. On disposable data, test board/list creation and edits,
+   complete-set reordering, same-board membership changes, board-wide orphan items,
+   deletion cascades/confirmation, and recipient-only notification management.
+   Verify missing organize/notifications/delete permissions prompt reauthorization
+   and refresh cannot escalate any scope. Check ordinary REST/JWT
+   login, list ordering, and collaborator notifications as well. MCP Inspector
+   can exercise the protocol before testing ChatGPT. Register its exact HTTPS
+   callback as a separate public client if needed.
+
+Nginx passes `/mcp` with buffering disabled, a 120-second read timeout, and
+`Cache-Control: no-store`; `/.well-known/*` goes to Django. OAuth JSON endpoints use
+the existing `/auth/` proxy location with caching disabled; React's `/connections`
+and `/connections/authorize` use the SPA catch-all. `DJANGO_FRONTEND_BASE_URL`
+must point to that frontend origin for the browser authorization redirect. Never
+cache authenticated consent or connection responses. `/mcp/` is not the
+canonical endpoint. The development Compose stack overrides the issuer to
+`http://notoli.localhost:8000` (or the selected backend port); ChatGPT testing
+requires a reachable HTTPS origin or an appropriate secure tunnel. Set the
+issuer, allowed host, and trusted CSRF origin consistently when using a tunnel.
+
+Include `docker exec -i notoli-backend python manage.py cleartokens` in an approved maintenance plan
+to remove expired OAuth rows. Never put access/refresh tokens or codes into
+deployment logs. Rolling back the code does not require removing OAuth tables;
+restore a database backup only if a migration rollback is specifically needed.

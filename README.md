@@ -1,11 +1,6 @@
 # 📝 Notoli
 
 Production release ownership: use the [app-only release/recovery guide](deploy/production/README.md).
-The new pipeline uses immutable image digests, protected staging/locks, full
-recovery and bounded readiness. Shared Nginx/certificates belong to the
-infrastructure repository. This supersedes legacy proxy-owning production
-instructions; local standalone development remains supported. Activation follows
-approved gateway cutover and separate merge/deployment authorization.
 
 **A Notion-Inspired To-Do List App**
 Notoli is my personalized take on a list application, inspired by the flexibility of Notion databases.
@@ -83,7 +78,7 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart f
 
 ## 📜 License
 This project is licensed under a **Modified MIT License (Non-Commercial Use Only)**.
-See the [LICENSE](./LICENSE) file for full details.
+See the [LICENSE](./LICENSE.md) file for full details.
 
 ## 🙏 Acknowledgments
 This project includes code from [`conda_export.py`](https://github.com/andresberejnoi/Conda-Tools) by **Andres Berejnoi**,

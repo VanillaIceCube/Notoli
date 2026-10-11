@@ -138,7 +138,11 @@ class PreflightTests(unittest.TestCase):
                     }
                 release.preflight(root)
                 original = copy.deepcopy(networks)
-                for missing in (release.APP + "-backend", release.APP + "-frontend"):
+                for missing in (
+                    release.APP + "-backend",
+                    release.APP + "-frontend",
+                    "host-ingress-proxy",
+                ):
                     for network in networks.values():
                         network["Containers"].pop(missing, None)
                     with self.assertRaises(release.ReleaseError):
@@ -158,6 +162,27 @@ class PreflightTests(unittest.TestCase):
                 containers[release.APP + "-frontend"]["HostConfig"]["PortBindings"] = (
                     {"80/tcp": [{"HostIp": "", "HostPort": "3000"}]} if notoli else {}
                 )
+                own_backend = containers[release.APP + "-backend"]
+                original_backend = copy.deepcopy(own_backend)
+                own_backend["NetworkSettings"]["Networks"]["unexpected-network"] = {}
+                with self.assertRaises(release.ReleaseError):
+                    release.preflight(root)
+                containers[release.APP + "-backend"] = copy.deepcopy(original_backend)
+                if notoli:
+                    containers[release.APP + "-backend"]["Config"]["Env"] = []
+                    with self.assertRaises(release.ReleaseError):
+                        release.preflight(root)
+                    containers[release.APP + "-backend"] = copy.deepcopy(
+                        original_backend
+                    )
+                    containers[release.APP + "-backend"]["NetworkSettings"]["Networks"][
+                        "notoli_backend_private"
+                    ]["IPAddress"] = "172.30.88.4"
+                    with self.assertRaises(release.ReleaseError):
+                        release.preflight(root)
+                    containers[release.APP + "-backend"] = copy.deepcopy(
+                        original_backend
+                    )
                 gateway["NetworkSettings"]["Networks"]["notoli_backend_private"][
                     "IPAddress"
                 ] = "172.30.88.4"

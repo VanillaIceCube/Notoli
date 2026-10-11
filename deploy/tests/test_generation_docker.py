@@ -21,6 +21,15 @@ class GenerationRecoveryTests(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory() as directory,
             patch.object(release, "APP", project),
+            patch.dict(
+                release.CONFIG,
+                {
+                    "containers": {
+                        "backend": project + "-backend",
+                        "frontend": project + "-frontend",
+                    }
+                },
+            ),
             ExitStack() as stack,
         ):
             root = Path(directory)
@@ -62,6 +71,18 @@ class GenerationRecoveryTests(unittest.TestCase):
             (root / "recovery").mkdir(mode=0o700)
             recovery = root / "recovery" / identity
             other = project + "-other"
+            gateway = project + "-gateway"
+            companion_db = root / "companion.sqlite3"
+            companion_config = root / "companion.env"
+            with closing(sqlite3.connect(companion_db)) as db:
+                db.execute("CREATE TABLE untouched(value TEXT)")
+                db.execute("INSERT INTO untouched VALUES ('companion')")
+                db.commit()
+            companion_config.write_text("COMPANION=unchanged\n")
+            companion_before = (
+                companion_db.read_bytes(),
+                companion_config.read_bytes(),
+            )
             managed = project + "-migration"
             temporary = project + "-temporary-backend"
             original_inspect = release.inspect
@@ -83,11 +104,31 @@ class GenerationRecoveryTests(unittest.TestCase):
                     other,
                     "--network",
                     "none",
+                    "--mount",
+                    "type=bind,source="
+                    + str(companion_db)
+                    + ",target=/companion.sqlite3",
+                    "--mount",
+                    "type=bind,source="
+                    + str(companion_config)
+                    + ",target=/companion.env,readonly",
+                    "python:3.12-alpine",
+                    "sleep",
+                    "600",
+                )
+                release.docker(
+                    "run",
+                    "-d",
+                    "--name",
+                    gateway,
+                    "--network",
+                    "none",
                     "python:3.12-alpine",
                     "sleep",
                     "600",
                 )
                 other_before = original_inspect(other)
+                gateway_before = original_inspect(gateway)
                 release.compose(candidate, "up", "-d", "--no-deps", *release.SERVICES)
                 release.capture_recovery(root, candidate, recovery)
                 release.begin_data_state(root)
@@ -184,6 +225,23 @@ class GenerationRecoveryTests(unittest.TestCase):
                 self.assertTrue(
                     json.loads((root / "current.json").read_text())["healthy"]
                 )
+                self.assertEqual(
+                    (companion_db.read_bytes(), companion_config.read_bytes()),
+                    companion_before,
+                )
+                for name, before in ((other, other_before), (gateway, gateway_before)):
+                    after = original_inspect(name)
+                    for field in (
+                        "Id",
+                        "Image",
+                        "Config",
+                        "HostConfig",
+                        "NetworkSettings",
+                    ):
+                        self.assertEqual(after[field], before[field])
+                    self.assertEqual(
+                        after["State"]["StartedAt"], before["State"]["StartedAt"]
+                    )
                 self.assertEqual(original_inspect(other)["Id"], other_before["Id"])
                 self.assertEqual(
                     original_inspect(other)["State"]["StartedAt"],
@@ -192,7 +250,7 @@ class GenerationRecoveryTests(unittest.TestCase):
             finally:
                 for writer in release.app_writers():
                     release.docker("rm", "-f", writer["Id"])
-                for name in (project + "-frontend", other):
+                for name in (project + "-frontend", other, gateway):
                     try:
                         release.docker("rm", "-f", name)
                     except release.ReleaseError:

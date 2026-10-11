@@ -23,15 +23,20 @@ import urllib.error
 import urllib.request
 import uuid
 
-APP = "notoli"
-BACKEND = "backend" if APP == "notoli" else "macromapper-backend"
-FRONTEND = "frontend" if APP == "notoli" else "macromapper-frontend"
+CONFIG = json.loads((Path(__file__).parent / "app.json").read_text(encoding="utf-8"))
+if CONFIG["contract_version"] != 1:
+    raise ValueError("Unsupported release contract version")
+APP = CONFIG["app"]
+BACKEND = CONFIG["services"]["backend"]
+FRONTEND = CONFIG["services"]["frontend"]
 SERVICES = (BACKEND, FRONTEND)
-DOMAIN = APP + ".judeandrewalaba.com"
+DOMAIN = CONFIG["domain"]
 ORIGIN = "https://" + DOMAIN
-EGRESS = "notoli_backend_egress" if APP == "notoli" else "macromapper_default"
+EGRESS = CONFIG["egress"]
+DB_FILE = CONFIG["database"]["filename"]
+DB_TARGET = CONFIG["database"]["target"]
 LOCK_DIR = Path("/var/lib/jude-deploy-locks")
-PAYLOAD = {"compose.yml", ".backend.env", "release.py", "release.json"}
+PAYLOAD = {"compose.yml", ".backend.env", "release.py", "release.json", "app.json"}
 RUN_ID = re.compile(r"[0-9a-f]{40}-[0-9]+-[0-9]+")
 DIGEST = re.compile(
     r"ghcr\.io/[a-z0-9-]+/" + APP + r"-(backend|frontend)@sha256:[0-9a-f]{64}"
@@ -176,8 +181,8 @@ def inspect(name):
 
 def preflight(root):
     private_dir(root)
-    regular(root / "db.sqlite3")
-    if not (root / "db.sqlite3").stat().st_size:
+    regular(root / DB_FILE)
+    if not (root / DB_FILE).stat().st_size:
         raise ReleaseError(
             "Existing nonempty SQLite database is required; bootstrap is separate"
         )
@@ -185,74 +190,45 @@ def preflight(root):
         raise ReleaseError(
             "Resolve the failed release before trying another deployment"
         )
-    expected = {
-        "notoli_backend_private": (
-            True,
-            "172.30.88.0/29",
-            {"host-ingress-proxy", "notoli-backend"},
-        ),
-        "notoli_default": (
-            False,
-            "172.18.0.0/16",
-            {"host-ingress-proxy", "notoli-frontend"},
-        ),
-        "macromapper-ingress": (
-            False,
-            "172.20.0.0/16",
-            {"host-ingress-proxy", "macromapper-backend", "macromapper-frontend"},
-        ),
-    }
-    gateway = inspect("host-ingress-proxy")
+    gateway_config = CONFIG["gateway"]
+    expected = gateway_config["networks"]
+    gateway = inspect(gateway_config["container"])
     if (
         not gateway["State"]["Running"]
         or gateway["Config"]["Labels"].get("com.docker.compose.project")
-        != "host-ingress"
+        != gateway_config["project"]
     ):
         raise ReleaseError("Approved host ingress must already be active")
     if set(gateway["NetworkSettings"]["Networks"]) != set(expected):
         raise ReleaseError("Ingress network boundary changed")
-    if (
-        gateway["NetworkSettings"]["Networks"]["notoli_backend_private"]["IPAddress"]
-        != "172.30.88.2"
-    ):
-        raise ReleaseError("Ingress trusted peer changed")
-    for name, (internal, subnet, members) in expected.items():
+    for network, address in gateway_config["addresses"].items():
+        if gateway["NetworkSettings"]["Networks"][network]["IPAddress"] != address:
+            raise ReleaseError("Ingress trusted peer changed")
+    for name, policy in expected.items():
         network = json.loads(docker("network", "inspect", name))[0]
         actual = {c["Name"] for c in network["Containers"].values()}
-        # A companion outage must not prevent this app from recovering. Unknown
-        # members are forbidden; this app and the gateway must remain present.
-        allowed_members = members
-        required_members = allowed_members & {
-            "host-ingress-proxy",
-            APP + "-backend",
-            APP + "-frontend",
-        }
+        # Allowed and required membership are distinct contract fields. A companion
+        # outage must not block independent recovery; own app/gateway stay mandatory.
         if (
-            network["Internal"] != internal
-            or [p["Subnet"] for p in network["IPAM"]["Config"]] != [subnet]
-            or not actual <= allowed_members
-            or not required_members <= actual
+            network["Internal"] != policy["internal"]
+            or [p["Subnet"] for p in network["IPAM"]["Config"]] != [policy["subnet"]]
+            or not actual <= set(policy["allowed"])
+            or not set(policy["required"]) <= actual
         ):
             raise ReleaseError("Route network invariant failed")
-    backend = inspect(APP + "-backend")
-    frontend = inspect(APP + "-frontend")
-    backend_networks = (
-        {"notoli_backend_private", "notoli_backend_egress"}
-        if APP == "notoli"
-        else {"macromapper-ingress", "macromapper_default"}
-    )
-    frontend_networks = {"notoli_default"} if APP == "notoli" else backend_networks
-    if (
-        set(backend["NetworkSettings"]["Networks"]) != backend_networks
-        or set(frontend["NetworkSettings"]["Networks"]) != frontend_networks
+    backend = inspect(CONFIG["containers"]["backend"])
+    frontend = inspect(CONFIG["containers"]["frontend"])
+    if set(backend["NetworkSettings"]["Networks"]) != set(
+        CONFIG["backend_networks"]
+    ) or set(frontend["NetworkSettings"]["Networks"]) != set(
+        CONFIG["frontend_networks"]
     ):
         raise ReleaseError("App network isolation changed")
-    if APP == "notoli" and (
-        backend["NetworkSettings"]["Networks"]["notoli_backend_private"]["IPAddress"]
-        != "172.30.88.3"
-        or "DJANGO_TRUSTED_PROXY_IPS=172.30.88.2" not in backend["Config"]["Env"]
-    ):
-        raise ReleaseError("Notoli trust invariant changed")
+    for network, address in CONFIG["backend_addresses"].items():
+        if backend["NetworkSettings"]["Networks"][network]["IPAddress"] != address:
+            raise ReleaseError("Backend address invariant changed")
+    if not set(CONFIG["backend_required_env"]) <= set(backend["Config"]["Env"]):
+        raise ReleaseError("Backend trust invariant changed")
     if backend["HostConfig"]["PortBindings"]:
         raise ReleaseError("Backend unexpectedly publishes a port")
     ports = {
@@ -260,22 +236,18 @@ def preflight(root):
         for port, bindings in (frontend["HostConfig"]["PortBindings"] or {}).items()
         for binding in (bindings or [])
     }
-    allowed = (
-        (
-            {("80/tcp", "", "3000")},
-            {("80/tcp", "0.0.0.0", "3000"), ("80/tcp", "::", "3000")},
-        )
-        if APP == "notoli"
-        else (set(),)
-    )
+    allowed = [
+        {tuple(binding) for binding in form}
+        for form in CONFIG["frontend_port_bindings"]
+    ]
     if ports not in allowed:
         raise ReleaseError("Frontend published-port boundary changed")
-    mounts = [m for m in backend["Mounts"] if m["Destination"] == "/backend/db.sqlite3"]
-    if len(mounts) != 1 or Path(mounts[0]["Source"]) != root / "db.sqlite3":
+    mounts = [m for m in backend["Mounts"] if m["Destination"] == DB_TARGET]
+    if len(mounts) != 1 or Path(mounts[0]["Source"]) != root / DB_FILE:
         raise ReleaseError("Existing database bind source differs")
     # Policy floors are configurable only by separately reviewed code/operator policy.
     disk = shutil.disk_usage(root)
-    reserve = 8 * (root / "db.sqlite3").stat().st_size + 64 * 1024 * 1024
+    reserve = 8 * (root / DB_FILE).stat().st_size + 64 * 1024 * 1024
     if (disk.free - reserve) / disk.total < 0.20:
         raise ReleaseError("Insufficient disk for recovery plus 20 percent headroom")
     mem = dict(
@@ -347,7 +319,7 @@ def stop_writers():
 
 
 def begin_data_state(root):
-    backend = inspect(APP + "-backend")
+    backend = inspect(CONFIG["containers"]["backend"])
     atomic_json(
         root / "data-state.json",
         {
@@ -430,8 +402,8 @@ def snapshot_writer(root, destination):
         snapshot(checkpoint, destination)
         return
     writer = selected[0]
-    mounts = [m for m in writer["Mounts"] if m["Destination"] == "/backend/db.sqlite3"]
-    if len(mounts) != 1 or Path(mounts[0]["Source"]) != root / "db.sqlite3":
+    mounts = [m for m in writer["Mounts"] if m["Destination"] == DB_TARGET]
+    if len(mounts) != 1 or Path(mounts[0]["Source"]) != root / DB_FILE:
         raise ReleaseError("Recovery writer has an unexpected database bind")
     with tempfile.TemporaryDirectory(
         prefix="sqlite-capture-", dir=destination.parent
@@ -439,7 +411,7 @@ def snapshot_writer(root, destination):
         source = Path(directory) / "db.sqlite3"
         for suffix in ("", "-wal", "-journal"):
             target = Path(str(source) + suffix)
-            remote = writer["Id"] + ":/backend/db.sqlite3" + suffix
+            remote = writer["Id"] + ":" + DB_TARGET + suffix
             result = subprocess.run(
                 ["docker", "cp", remote, str(target)],
                 capture_output=True,
@@ -466,7 +438,7 @@ def capture_recovery(root, candidate, recovery):
         compose(candidate, "config", "--format", "json", "--no-env-resolution")
     )
     for key, suffix in ((BACKEND, "backend"), (FRONTEND, "frontend")):
-        container = inspect(APP + "-" + suffix)
+        container = inspect(CONFIG["containers"][suffix])
         if container["Config"]["Labels"].get("com.docker.compose.project") != APP:
             raise ReleaseError("App container project mismatch")
         state[suffix] = container
@@ -541,6 +513,7 @@ def capture_recovery(root, candidate, recovery):
             ".backend.env",
             ".frontend.env",
             "release.py",
+            "app.json",
             "release.json",
             "manifest.json",
         ):
@@ -564,43 +537,56 @@ def check_response(path, status, predicate):
             raise ReleaseError("Readiness response did not match " + path)
 
 
+def response_matches(rule, headers, body):
+    """Evaluate declarative app probes without app-specific branches."""
+    if "content_type" in rule and rule["content_type"] not in headers.get(
+        "Content-Type", ""
+    ):
+        return False
+    if "body_contains" in rule:
+        value = body.lower() if rule.get("ignore_case") else body
+        if rule["body_contains"].encode() not in value:
+            return False
+    if "json_equals" in rule:
+        value = json.loads(body)
+        if not isinstance(value, dict):
+            return False
+        if any(
+            value.get(key) != expected for key, expected in rule["json_equals"].items()
+        ):
+            return False
+    return all(
+        value in headers.get(key, "")
+        for key, value in rule.get("header_contains", {}).items()
+    )
+
+
 def readiness(directory):
-    # Direct backend test prevents a cached frontend/edge response from masking a dead app.
+    # Direct backend test prevents a cached frontend/edge response masking a dead app.
+    policy = CONFIG["readiness"]
     check = (
         "import urllib.request,urllib.error; "
-        "q=urllib.request.Request('http://127.0.0.1:8000/api/notifications/',headers={'Host':'"
-        + DOMAIN
-        + "'}); "
+        "q=urllib.request.Request("
+        + repr(policy["direct_url"])
+        + ",headers={'Host':"
+        + repr(DOMAIN)
+        + "}); "
         "\ntry: urllib.request.urlopen(q,timeout=5); raise SystemExit(1)"
-        "\nexcept urllib.error.HTTPError as e: raise SystemExit(0 if e.code == 401 else 1)"
+        "\nexcept urllib.error.HTTPError as e: raise SystemExit(0 if e.code == "
+        + str(policy["direct_status"])
+        + " else 1)"
     )
     deadline = time.monotonic() + 90
     while True:
         try:
             compose(directory, "exec", "-T", BACKEND, "python", "-c", check, timeout=10)
-            check_response("/", 200, lambda h, b: b"<html" in b.lower())
-            check_response(
-                "/api/notifications/",
-                401,
-                lambda h, b: (
-                    "application/json" in h.get("Content-Type", "") and b"detail" in b
-                ),
-            )
-            if APP == "notoli":
+            for rule in policy["public"]:
                 check_response(
-                    "/.well-known/oauth-authorization-server",
-                    200,
-                    lambda h, b: json.loads(b)["issuer"] == ORIGIN,
-                )
-                check_response(
-                    "/.well-known/oauth-protected-resource/mcp",
-                    200,
-                    lambda h, b: json.loads(b)["resource"] == ORIGIN + "/mcp",
-                )
-                check_response(
-                    "/mcp",
-                    401,
-                    lambda h, b: "resource_metadata" in h.get("WWW-Authenticate", ""),
+                    rule["path"],
+                    rule["status"],
+                    lambda headers, body, rule=rule: response_matches(
+                        rule, headers, body
+                    ),
                 )
             return
         except (ReleaseError, OSError, ValueError, KeyError, urllib.error.URLError):
@@ -641,7 +627,7 @@ def manage(directory, image, *args):
             "--env-file",
             directory / ".backend.env",
             "--mount",
-            "type=bind,source=" + metadata["database"] + ",target=/backend/db.sqlite3",
+            "type=bind,source=" + metadata["database"] + ",target=" + DB_TARGET,
             image,
             "python",
             "manage.py",
@@ -663,7 +649,7 @@ def deploy(root, bundle):
     if candidate.exists():
         raise ReleaseError("Release attempt already exists; use a new attempt ID")
     shutil.copytree(bundle, candidate)
-    release["database"] = str(root / "db.sqlite3")
+    release["database"] = str(root / DB_FILE)
     (candidate / "release.json").write_text(json.dumps(release))
     write_private(
         candidate / ".release.env",
@@ -672,7 +658,7 @@ def deploy(root, bundle):
         + "\nFRONTEND_IMAGE="
         + release["frontend"]
         + "\nAPP_DB_PATH="
-        + str(root / "db.sqlite3")
+        + str(root / DB_FILE)
         + "\n",
     )
     compose(candidate, "config", "--quiet")
@@ -745,7 +731,7 @@ def deploy(root, bundle):
 
 
 def replace_database(root, source):
-    info = regular(root / "db.sqlite3").stat()
+    info = regular(root / DB_FILE).stat()
     restored = root / ("restore-" + str(time.time_ns()) + ".sqlite3")
     snapshot(source, restored)
     os.chmod(restored, stat.S_IMODE(info.st_mode))
@@ -753,11 +739,11 @@ def replace_database(root, source):
     checkpoint_data(root, source)
     # All actual writers are stopped. Preserve any host-side evidence too.
     for suffix in ("-wal", "-shm", "-journal"):
-        sidecar = root / ("db.sqlite3" + suffix)
+        sidecar = root / (DB_FILE + suffix)
         if sidecar.exists():
             regular(sidecar)
             os.replace(sidecar, source.parent / (restored.name + suffix))
-    os.replace(restored, root / "db.sqlite3")
+    os.replace(restored, root / DB_FILE)
 
 
 def rollback(root, recovery_id, restore_database, keep_database=False):

@@ -1,11 +1,6 @@
 # 🎨 Frontend (React)
 
 Production release ownership: use the [app-only release/recovery guide](../deploy/production/README.md).
-The new pipeline uses immutable image digests, protected staging/locks, full
-recovery and bounded readiness. Shared Nginx/certificates belong to the
-infrastructure repository. This supersedes legacy proxy-owning production
-instructions; local standalone development remains supported. Activation follows
-approved gateway cutover and separate merge/deployment authorization.
 
 The Notoli frontend is a Vite single-page app with React Router and Material UI.
 Standalone Jest and Babel run the existing tests; ESLint 10 uses
