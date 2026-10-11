@@ -409,6 +409,12 @@ class TransactionTests(unittest.TestCase):
             with self.assertRaises(release.ReleaseError):
                 with release.locks(directory):
                     self.fail("release entered maintenance hold")
+        descriptor_count = len(list(Path("/proc/self/fd").iterdir()))
+        for _ in range(5):
+            with self.assertRaises(release.ReleaseError):
+                with release.locks(directory):
+                    raise release.ReleaseError("operation failed while locked")
+        self.assertEqual(len(list(Path("/proc/self/fd").iterdir())), descriptor_count)
         (directory / (release.APP + ".lock")).unlink()
         (directory / (release.APP + ".lock")).symlink_to(directory / "maintenance.lock")
         with self.assertRaises(release.ReleaseError):

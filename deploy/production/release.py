@@ -6,7 +6,7 @@ can decide whether restoring a database and losing later writes is acceptable.
 """
 
 import argparse
-from contextlib import ExitStack, closing, contextmanager
+from contextlib import closing, contextmanager
 import hashlib
 import json
 import os
@@ -90,38 +90,34 @@ def atomic_json(path, value):
 
 
 @contextmanager
+def held_lock(path, kind):
+    import fcntl
+
+    regular(path)
+    fd = os.open(path, os.O_RDWR | os.O_NOFOLLOW)
+    try:
+        info = os.fstat(fd)
+        if info.st_uid != os.geteuid() or info.st_mode & 0o077 or info.st_nlink != 1:
+            raise ReleaseError("Unsafe lock ownership/mode")
+        try:
+            fcntl.flock(fd, kind | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise ReleaseError(
+                "Maintenance or app release already in progress"
+            ) from error
+        yield
+    finally:
+        os.close(fd)
+
+
+@contextmanager
 def locks(directory=LOCK_DIR):
     import fcntl
 
     private_dir(directory)
-    with ExitStack() as stack:
-        for name, kind in (
-            ("maintenance.lock", fcntl.LOCK_SH),
-            (APP + ".lock", fcntl.LOCK_EX),
-        ):
-            path = directory / name
-            regular(path)
-            stream = stack.enter_context(
-                open(
-                    path,
-                    "r+",
-                    opener=lambda name, flags: os.open(name, flags | os.O_NOFOLLOW),
-                )
-            )
-            info = os.fstat(stream.fileno())
-            if (
-                info.st_uid != os.geteuid()
-                or info.st_mode & 0o077
-                or info.st_nlink != 1
-            ):
-                raise ReleaseError("Unsafe lock ownership/mode")
-            try:
-                fcntl.flock(stream.fileno(), kind | fcntl.LOCK_NB)
-            except BlockingIOError as error:
-                raise ReleaseError(
-                    "Maintenance or app release already in progress"
-                ) from error
-        yield
+    with held_lock(directory / "maintenance.lock", fcntl.LOCK_SH):
+        with held_lock(directory / (APP + ".lock"), fcntl.LOCK_EX):
+            yield
 
 
 def validate_bundle(bundle):

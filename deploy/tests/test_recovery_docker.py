@@ -74,7 +74,7 @@ class RecoveryDockerTests(unittest.TestCase):
                     self.assertEqual(
                         db.execute("PRAGMA journal_mode").fetchone()[0], "delete"
                     )
-                self.assertTrue(original_inspect(name)["State"]["Status"] == "exited")
+                self.assertEqual(original_inspect(name)["State"]["Status"], "exited")
             finally:
                 release.docker("rm", "-f", name)
 
