@@ -255,6 +255,21 @@ def preflight(root):
         raise ReleaseError("Notoli trust invariant changed")
     if backend["HostConfig"]["PortBindings"]:
         raise ReleaseError("Backend unexpectedly publishes a port")
+    ports = {
+        (port, binding["HostIp"], binding["HostPort"])
+        for port, bindings in (frontend["HostConfig"]["PortBindings"] or {}).items()
+        for binding in (bindings or [])
+    }
+    allowed = (
+        (
+            {("80/tcp", "", "3000")},
+            {("80/tcp", "0.0.0.0", "3000"), ("80/tcp", "::", "3000")},
+        )
+        if APP == "notoli"
+        else (set(),)
+    )
+    if ports not in allowed:
+        raise ReleaseError("Frontend published-port boundary changed")
     mounts = [m for m in backend["Mounts"] if m["Destination"] == "/backend/db.sqlite3"]
     if len(mounts) != 1 or Path(mounts[0]["Source"]) != root / "db.sqlite3":
         raise ReleaseError("Existing database bind source differs")

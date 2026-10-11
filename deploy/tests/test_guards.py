@@ -84,7 +84,12 @@ class PreflightTests(unittest.TestCase):
                     ],
                 },
                 release.APP + "-frontend": {
-                    "NetworkSettings": {"Networks": frontend_networks}
+                    "NetworkSettings": {"Networks": frontend_networks},
+                    "HostConfig": {
+                        "PortBindings": {"80/tcp": [{"HostIp": "", "HostPort": "3000"}]}
+                        if notoli
+                        else {}
+                    },
                 },
             }
             networks = {}
@@ -145,6 +150,14 @@ class PreflightTests(unittest.TestCase):
                 with self.assertRaises(release.ReleaseError):
                     release.preflight(root)
                 networks = copy.deepcopy(original)
+                containers[release.APP + "-frontend"]["HostConfig"]["PortBindings"] = {
+                    "80/tcp": [{"HostIp": "0.0.0.0", "HostPort": "8080"}]
+                }
+                with self.assertRaises(release.ReleaseError):
+                    release.preflight(root)
+                containers[release.APP + "-frontend"]["HostConfig"]["PortBindings"] = (
+                    {"80/tcp": [{"HostIp": "", "HostPort": "3000"}]} if notoli else {}
+                )
                 gateway["NetworkSettings"]["Networks"]["notoli_backend_private"][
                     "IPAddress"
                 ] = "172.30.88.4"
