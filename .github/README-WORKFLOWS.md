@@ -153,10 +153,17 @@ What it does:
   - `notoli-frontend` (from `frontend/Dockerfile`)
 - Uploads `deploy/docker-compose.yml` and `deploy/nginx-proxy.conf` to the server
 - SSHes into the server, writes a `.env` file next to the compose file for subdomain-root routing, then:
-  - Prunes Docker images (`docker system prune -af`)
   - Pulls images + recreates containers
   - Runs Django migrations inside the backend container
   - Backend images serve `app.asgi:application` with Uvicorn `--no-proxy-headers` so the MCP endpoint and REST API share the deployment. Compose injects the exact Nginx private IP as `DJANGO_TRUSTED_PROXY_IPS`; no backend port is published. Deploy the Compose/network changes and frontend image together for React OAuth consent. OAuth client registration remains a one-time operator step after migration; see `deploy/README.md`.
+
+Deployment performs no automatic Docker pruning. Keep prior release images for
+rollback and have the host operator review disk usage and explicitly selected,
+unused app images before cleanup; see [Docker artifact retention](../deploy/README.md#docker-artifact-retention).
+Shared-ingress ownership and the remaining release safeguards are tracked in
+[#904](https://github.com/VanillaIceCube/Notoli/issues/904). The current workflow
+still manages Notoli's proxy and deploys `latest`; removing pruning alone does
+not make it suitable for independent multi-app releases.
 
 Deployment prerequisite:
 - For Cloudflare Full (strict), the origin must have a Cloudflare Origin Certificate.

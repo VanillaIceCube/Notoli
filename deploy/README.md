@@ -356,6 +356,27 @@ The frontend is static, so its backend URL is baked at build time:
 - Avoid caching `/api/*` and `/auth/*` at the edge for the Notoli subdomain.
 
 ## Common Operations
+
+### Docker artifact retention
+
+The deployment workflow does not prune Docker artifacts. Host-wide cleanup can
+remove another app's stopped containers, networks, build cache, or unused
+rollback images, so it must not run as part of an app release.
+
+The host operator should review disk headroom before releases with `df -h`,
+`docker system df`, and `docker image ls`. Keep image references/digests for the
+current and previous verified releases, and check stopped-container references
+before selecting any unused Notoli images for explicit removal. Do not use
+host-wide system/image pruning as a substitute for reviewing those references.
+If capacity is insufficient, resolve it before releasing.
+
+Image retention alone does not provide database rollback: preserve a consistent
+SQLite backup and verify restoration before risky migrations. The current
+workflow still deploys mutable `latest` tags, manages the proxy, and lacks an
+automated migration backup or health gate. Shared-ingress separation,
+SHA-selected releases, and verified recovery are pending the coordinated plan in
+[#904](https://github.com/VanillaIceCube/Notoli/issues/904).
+
 Run backend migrations:
 
 ```bash

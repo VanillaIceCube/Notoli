@@ -26,6 +26,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **DNS/Proxy:** Cloudflare
 - **TLS:** Cloudflare Full (strict) to origin (Cloudflare Origin Certificate)
 - **CI/CD & Workflows:** GitHub Actions
+- **Deployment artifact retention:** Releases perform no automatic Docker pruning; host operators review disk usage and retain rollback images before targeted cleanup. Shared-ingress separation remains tracked in [#904](https://github.com/VanillaIceCube/Notoli/issues/904).
 - **Scope-aware security checks:** Required CodeQL scope and analyzer jobs let documentation-only PRs skip analysis without waiting for an absent standalone results check; see the [branch-protection policy](.github/README-WORKFLOWS.md#main-branch-required-checks).
 - **PR dependency gates:** high/critical vulnerability review and npm malware advisory review, with full dependency evidence retained as an artifact and bounded AI report output for large migrations
 - **Major dependency upgrade briefs:** Obi-Wan explains upstream breaking changes, Notoli impact, and verification recommendations with primary sources on Dependabot major updates.

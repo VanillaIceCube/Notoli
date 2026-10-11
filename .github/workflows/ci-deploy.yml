@@ -237,7 +237,6 @@ jobs:
             DJANGO_DEFAULT_FROM_EMAIL=$DJANGO_DEFAULT_FROM_EMAIL
             NOTOLI_CERTS_DIR=./certs
             EOF
-            docker system prune -af
             docker compose pull
             docker compose up -d --remove-orphans
             docker compose up -d --force-recreate proxy

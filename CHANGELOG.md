@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-10-11
+### Removed
+- Remove automatic host-wide Docker pruning from Notoli deployment to preserve other apps' artifacts and retained rollback images; document operator-reviewed cleanup and remaining shared-host release work.
+
 ## 2026-10-10
 ### Added
 - Exercise large evidence transport, bounded vulnerability reporting, and incomplete-review failure with automation regression tests.
