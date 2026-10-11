@@ -10,7 +10,7 @@ not authorize any agent to operate the host. Shared decisions:
 
 ## Shared implementation and app configuration
 
-Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/82909b6881d01b36b68edb2dc7f2ccd2503db7b4/docs/app-release-standard.md).
+Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/b56d8a9f88088122555e275549afa8b86fc10be5/docs/app-release-standard.md).
 `app.json` contains this app's service/container/domain/environment/network/DB
 and readiness policy; `compose.yml` defines its services. Common release and
 bundle code has no application-name branches. `deploy/shared-source.json` pins
@@ -18,6 +18,10 @@ the versioned source; CI verifies exact common code/test copies and the generate
 workflow, failing on drift or unavailable source. The parity matrix and update
 procedure live in the standard. Run `python deploy/check_parity.py` locally;
 use `--sync` only after reviewing a coordinated pin update in both applications.
+
+Public readiness requests use the honest `JudeAppRelease/1.0` User-Agent and
+request uncached responses. Cloudflare protections and all expected status,
+content and authentication-challenge checks remain enabled.
 
 The staged bundle includes `app.json` in its private checksum manifest. Release
 and rollback never download code or depend on an Infrastructure checkout.

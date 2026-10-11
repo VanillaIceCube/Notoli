@@ -1,6 +1,7 @@
 """Boundary and transient-failure regressions for app-independent releases."""
 
 import copy
+import io
 import json
 import os
 from pathlib import Path
@@ -14,6 +15,28 @@ from test_production import release
 
 
 class ReadinessTests(unittest.TestCase):
+    def test_public_client_identity_preserves_response_validation(self):
+        def edge(request, timeout):
+            self.assertEqual(request.get_header("User-agent"), "JudeAppRelease/1.0")
+            self.assertEqual(request.get_header("Cache-control"), "no-cache")
+            self.assertEqual(timeout, 5)
+            raise urllib.error.HTTPError(
+                request.full_url,
+                status,
+                "fixture",
+                {"Content-Type": "application/json"},
+                io.BytesIO(b'{"detail":"Authentication required"}'),
+            )
+
+        with patch.object(release.urllib.request, "urlopen", side_effect=edge):
+            status = 401
+            release.check_response("/fixture/", 401, lambda headers, body: True)
+            with self.assertRaises(release.ReleaseError):
+                release.check_response("/fixture/", 401, lambda headers, body: False)
+            status = 403
+            with self.assertRaises(release.ReleaseError):
+                release.check_response("/fixture/", 401, lambda headers, body: True)
+
     def test_direct_500_retries_then_401_succeeds(self):
         probes = []
 
