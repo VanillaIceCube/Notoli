@@ -1,6 +1,35 @@
 # Changelog
 All notable changes to this project are documented in this file.
 
+## 2026-10-11
+### Fixed
+- Pin remaining external CI/composite actions to their existing version commits without upgrading action versions or changing gates.
+- Remove stale production proxy instructions from agent guidance, align operator authorization and verify tracked documentation links and anchors.
+
+## 2026-10-11
+### Added
+- Enforce pinned shared-source parity for release tools, workflow stages and five equivalent deployment test modules.
+- Verify app-specific readiness/configuration, offline recovery packaging and rejection of shared code/test/workflow drift.
+### Fixed
+- Include owner/reviewer replies and explicit deleted-line context when reconciling prior AI findings; preserve independent scanner and review gates.
+### Changed
+- Isolate deployment policy in `app.json`; remove unreachable cross-application branches while preserving transaction and recovery safeguards.
+- Use one canonical production guide and retain local Docker instructions separately.
+
+## 2026-10-11
+### Added
+- Add app-only production Compose, immutable digest bundles, protected maintenance/app locks, complete configuration/image/environment/SQLite recovery, explicit rollback and bounded readiness checks.
+- Validate raw credentials and Compose boundaries with disposable containers, and exercise SQLite/failure recovery and lock contention on Linux.
+### Changed
+- Pin every external production deployment action, including checkout, to an immutable commit SHA.
+- Serialize production releases and stage each CI attempt privately; activate only after the approved host-owned ingress cutover.
+### Removed
+- Remove shared Nginx/certificate lifecycle and mutable production image selection from the app deployment workflow.
+
+## 2026-10-11
+### Removed
+- Remove automatic host-wide Docker pruning from Notoli deployment to preserve other apps' artifacts and retained rollback images; document operator-reviewed cleanup and remaining shared-host release work.
+
 ## 2026-10-10
 ### Added
 - Exercise large evidence transport, bounded vulnerability reporting, and incomplete-review failure with automation regression tests.

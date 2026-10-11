@@ -1,5 +1,12 @@
 # AGENTS.md
 
+Production release ownership: use the [app-only release/recovery guide](deploy/production/README.md).
+Common release code/tests and workflow stages are pinned to the Infrastructure
+release standard. Update the shared source, then synchronize both applications;
+CI's parity check rejects independent vendor edits. App policy lives in
+`deploy/production/app.json`; preserve its intentional network/readiness differences.
+
+
 This repo uses manual setup steps so Codex does not assume Django or Node are installed.
 Follow one of the setup paths below before running the app.
 
@@ -47,7 +54,7 @@ Template:
 
 Infra: Production runs behind Cloudflare (DNS/proxy) on a DigitalOcean VM. If you change domains, paths, or add new backend routes, also review:
 - Cloudflare DNS/proxy settings and any Redirect/WAF/Caching rules
-- Origin reverse-proxy config: `deploy/nginx-proxy.conf`
+- Production gateway/vhosts: the Infrastructure repository; `deploy/nginx-proxy.conf` is local/legacy-only.
 - Deploy-time env/vars: `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `REACT_APP_API_BASE_URL`
   - Password reset mail vars: `DJANGO_FRONTEND_BASE_URL`, `DJANGO_EMAIL_BACKEND`, `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_KEY`, `DJANGO_EMAIL_TIMEOUT`, `DJANGO_DEFAULT_FROM_EMAIL`
 
@@ -111,43 +118,17 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - `npm start`
 
 ## Setup (Docker)
-1) For source iteration without the production proxy, use the hot-reload development stack:
-   - Create a `.env` in `deploy/` from `deploy/backend.env`.
-   - Create the SQLite bind-mount file with `New-Item -ItemType File -Path deploy/db.sqlite3 -Force`.
-   - Start with `docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml up --build -d`.
-   - Run migrations with `docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate`.
-   - Open `http://notoli.localhost:3000`; Django is available at `http://notoli.localhost:8000`.
-   - Both ports bind to localhost only. Override them with `NOTOLI_DEV_FRONTEND_PORT` and `NOTOLI_DEV_BACKEND_PORT` in `deploy/.env`.
-   - The backend runs Uvicorn with reload so `/mcp` is available; Compose sets `DJANGO_MCP_BASE_URL` to the development backend origin.
-   - A blank `DJANGO_SECRET_KEY` receives a Compose-only development fallback so the fresh stack can authenticate locally. Set a unique secret before using the production-shaped stack.
-   - The frontend checks `package.json` and `package-lock.json` at each container start and runs `npm ci` when they change. After changing either file, restart the frontend service.
-   - Stop with `docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml down`.
-2) The production-shaped Docker stack needs a `.env` in `deploy/` (see `deploy/backend.env` for keys).
-   - On servers, ensure the `.env` lives next to `docker-compose.yml` (it is hidden).
-3) Ensure the TLS cert files exist for the reverse proxy:
-   - Production (Cloudflare Origin Certificate):
-     - `/root/apps/notoli/certs/origin.pem`
-     - `/root/apps/notoli/certs/origin.key`
-   - Optional (automated deploy): store raw PEM values in GitHub Secrets:
-     - `CLOUDFLARE_ORIGIN_CERT_PEM` (raw PEM of `origin.pem`)
-     - `CLOUDFLARE_ORIGIN_KEY_PEM` (raw PEM of `origin.key`)
-   - These are mounted into the proxy container as `/etc/nginx/certs` (see `deploy/docker-compose.yml`).
-4) Ensure the SQLite file exists when using the bind mount:
-   - `cd deploy`
-   - `touch db.sqlite3` (prevents Docker from creating a directory named `db.sqlite3`).
-   - If Docker already created `deploy/db.sqlite3` as a directory, stop the stack, remove the empty directory, and recreate it as a file.
-5) Start:
-   - `cd deploy`
-   - `docker compose up -d`
-   - Production `backend_private` assigns the backend `172.30.88.3` and Nginx `172.30.88.2`. Keep both addresses fixed and distinct so the backend cannot automatically claim the trusted proxy's address. When deploying this fix to an existing stack, recreate the services with `docker compose up -d --force-recreate --remove-orphans`, then run migrations.
-6) For local Docker runs that should use the current checkout rather than published GHCR images, rebuild first:
-   - `docker build -t ghcr.io/vanillaicecube/notoli-backend:latest ./backend`
-   - `docker build --build-arg REACT_APP_API_BASE_URL= -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend`
-   - The development backend image is pinned to the reviewed `condaforge/miniforge3` 24.04 digest. Update that digest only through an explicit image-version and security review.
-   - The frontend image uses `npm ci`, so keep `frontend/package-lock.json` in sync with `frontend/package.json`.
-7) The included reverse proxy serves the production frontend at `https://notoli.judeandrewalaba.com/` when local DNS/hosts point that name at your machine. HTTP redirects to HTTPS.
-   Backend routes are available through the reverse proxy; production-shaped Compose publishes no direct backend port.
-   Frontend is still available at `http://localhost:3000`.
+Use the [local Docker guide](deploy/README.md) for hot reload at
+`notoli.localhost` and optional standalone HTTPS. Initialize only missing local
+env/database files; never truncate an existing SQLite file. Development Compose
+mounts backend/frontend source, binds ports to loopback and runs Uvicorn/Vite
+reload. Restart the frontend after dependency changes so its startup check runs
+`npm ci`. Keep the reviewed development base-image digest and lockfile in sync.
+
+`deploy/docker-compose.yml` and `deploy/nginx-proxy.conf` are local/legacy-only.
+Do not use them on the shared production host. The
+[production guide](deploy/production/README.md) is the sole app release/recovery
+procedure; Infrastructure owns gateway, certificates and host routing.
 
 ## Production Routing Notes
 Notoli runs at the subdomain root. Backend URLs use no configurable path prefix,
@@ -170,13 +151,8 @@ and Django static assets use `/static/`.
     - `https://notoli.judeandrewalaba.com/forgot-password`
     - `https://notoli.judeandrewalaba.com/reset-password`
   - Authenticated React integration routes: `/connections/authorize` (OAuth consent) and `/connections` (Connected Apps; also in the profile menu).
-- Cloudflare -> origin TLS (Full strict):
-  - Add/verify DNS for `notoli.judeandrewalaba.com` pointing to the same origin as the base site.
-  - Generate a Cloudflare Origin Certificate for `judeandrewalaba.com` and `*.judeandrewalaba.com`.
-  - Save it on the droplet at:
-    - `/root/apps/notoli/certs/origin.pem`
-    - `/root/apps/notoli/certs/origin.key`
-  - Set Cloudflare SSL/TLS mode to `Full (strict)`.
+- Cloudflare, certificate and gateway changes belong to the separately approved
+  Infrastructure operator plan; see the [production guide](deploy/production/README.md#chatgpt-mcp-deployment).
 - Required env vars for the subdomain backend:
   - `DJANGO_ALLOWED_HOSTS=notoli.judeandrewalaba.com`
   - `DJANGO_CORS_ALLOWED_ORIGINS=https://notoli.judeandrewalaba.com`
@@ -194,6 +170,7 @@ and Django static assets use `/static/`.
     - `POST /auth/reset-password/` accepts `uid`, `token`, and `password`.
 
 ## Maintenance
+- Deployments must not run host-wide Docker pruning. Retain prior release images for rollback; cleanup requires a host operator to review disk usage and explicitly select unused app images. Production releases use immutable digests and manage only Notoli's backend/frontend through `deploy/production/release.py`. Shared ingress/certificates belong to the infrastructure repository under approved architecture v2. See `deploy/production/README.md` and `.github/README-WORKFLOWS.md`.
 - Frontend builds use Vite and tests use standalone Jest/Babel. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite explicitly maps the existing `REACT_APP_API_BASE_URL`/`PUBLIC_URL` settings, keeps port 3000 and `build/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
 - Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for the browser baseline.
 - ChatGPT listing metadata: `plugins/notoli/plugin.json` is the canonical branding source, but personal custom-MCP plugins use a separate generated compatibility manifest. Download the installed plugin ZIP and use `plugins/notoli/build_listing.py` to apply branding while preserving its exported name and `.app.json`; upload a new version to the same plugin. Keep account-specific exports/build ZIPs out of Git. Listing publication is separate from Docker deployment and MCP tool refresh. Privacy/terms pages and verified publisher identity remain prerequisites for public submission. See `plugins/notoli/README.md`.
@@ -201,8 +178,8 @@ and Django static assets use `/static/`.
 - MCP deployment: install requirements, apply Django OAuth Toolkit's supplied migrations with `migrate`, and run `python manage.py check --deploy` under production settings. Serve `app.asgi:application` using Uvicorn with `--no-proxy-headers` (one worker for SQLite); WSGI does not serve MCP. Production publishes no backend port. Only Nginx shares `backend_private` with the backend (`172.30.88.0/29`, Nginx `172.30.88.2`, backend `172.30.88.3`); `backend_egress` is backend-only for outbound email. ASGI accepts forwarded scheme/client only from the configured exact proxy IP, strips all other forwarded metadata, and Django ignores forwarded host/proto headers. If changing the subnet, update IPAM, both fixed IPs, and trusted IP together, then recreate services.
 - Register the predefined public ChatGPT OAuth client once: `python manage.py register_mcp_client --redirect-uri "<exact ChatGPT callback URI>"`. Copy the callback from ChatGPT's management page; use S256 PKCE and token auth method `none`. No client secret, password grant, dynamic registration, or unverified OIDC email claims are exposed. Existing registrations must be edited explicitly in Django admin.
 - MCP product coverage: 31 explicit tools cover boards, lists, items (including board-only items), ordering, membership, sharing, and notifications. `notoli:read` includes board-scoped owner/collaborator discovery; `notoli:write` permits item creation/edits; `notoli:share` permits owner-only collaborator add/remove; `notoli:organize` permits board/list creation/edits, order, and list membership; `notoli:notifications` permits recipient-only activity reads/read flags; `notoli:delete` permits permanent deletion (notification deletion also needs notifications). Sharing covers all lists/items in a board. Delete tools require `confirm: true` after explaining cascade impact; this is a caller assertion, not independent human verification. Arrays are capped at 1000 IDs, and reordering requires the complete current set. Preserve REST validation, owner checks, live membership checks, immutable boards, and notifications via shared services. Existing connections must reconnect for new scopes; refresh cannot escalate. Keep metadata/challenges aligned. No raw HTTP, global user directory, ownership transfer, or credential/admin tools are exposed. Full catalog/evaluations: `plugins/notoli/README.md`.
-- Browser `GET /auth/mcp/authorize/` redirects to React `/connections/authorize` using `DJANGO_FRONTEND_BASE_URL` and the original query. React reuses the existing JWT login (no second Django session). JSON GET consent and POST ticket/decision require a verified JWT header; signed tickets bind the displayed request to the account for 10 minutes. Allow/Cancel returns Django's validated callback URL. React `/connections` calls JWT-only `GET/POST /auth/mcp/connections/` to list/revoke the current user's tokens and pending grants. Cookies and posted user IDs cannot authorize these endpoints. Keep JWTs out of URLs and retain PKCE/resource/scope checks in Django. Run `python manage.py cleartokens` periodically; keep access/refresh tokens, consent tickets, and authorization codes out of logs.
-- When changing MCP routes or the issuer, review Cloudflare Redirect/WAF/Caching rules for `/mcp`, `/.well-known/*`, and `/auth/mcp/*`: no interactive challenges or path rewriting for MCP/discovery, no caching of authenticated responses, and rate limits for login/token endpoints. Existing DNS and Full (strict) TLS are reused. Details and connection steps: `deploy/README.md` and `plugins/notoli/README.md`.
+- Browser `GET /auth/mcp/authorize/` redirects to React `/connections/authorize` using `DJANGO_FRONTEND_BASE_URL` and the original query. React reuses the existing JWT login (no second Django session). JSON GET consent and POST ticket/decision require a verified JWT header; signed tickets bind the displayed request to the account for 10 minutes. Allow/Cancel returns Django's validated callback URL. React `/connections` calls JWT-only `GET/POST /auth/mcp/connections/` to list/revoke the current user's tokens and pending grants. Cookies and posted user IDs cannot authorize these endpoints. Keep JWTs out of URLs and retain PKCE/resource/scope checks in Django. Schedule token cleanup only through the approved production maintenance plan; keep access/refresh tokens, consent tickets, and authorization codes out of logs.
+- When changing MCP routes or the issuer, review Cloudflare Redirect/WAF/Caching rules for `/mcp`, `/.well-known/*`, and `/auth/mcp/*`: no interactive challenges or path rewriting for MCP/discovery, no caching of authenticated responses, and rate limits for login/token endpoints. Existing DNS and Full (strict) TLS are reused. Details and connection steps: `deploy/production/README.md` and `plugins/notoli/README.md`.
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
 - Update Conda env: `conda env update --file backend/environment.yml --prune`
 - Regenerate Conda env + requirements:
@@ -211,3 +188,7 @@ and Django static assets use `/static/`.
 - Note: pip dependencies are installed via the `pip:` section in `environment.yml`
   and resolved from `requirements.txt` (never via conda).
 - MCP HTTP protocol tests use the directly pinned `httpx2` client in `backend/requirements.txt`; keep its pin compatible with the MCP SDK and update the Conda environment through the existing pip requirements path.
+
+External GitHub Actions use immutable commit SHAs with version comments.
+Keep that convention when updating workflows or composite actions; preserve
+review/scanner failure gates and do not treat action updates as deployment approval.

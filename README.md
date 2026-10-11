@@ -1,4 +1,7 @@
 # 📝 Notoli
+
+Production release ownership: use the [app-only release/recovery guide](deploy/production/README.md).
+
 **A Notion-Inspired To-Do List App**
 Notoli is my personalized take on a list application, inspired by the flexibility of Notion databases.
 It's designed to support **multiple views** of the same list, so my wife, Diana, and I can each use the app in the way that works best for us, whether that's a clean, simple Notes-style interface or a more detailed, database-like workflow.
@@ -26,6 +29,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **DNS/Proxy:** Cloudflare
 - **TLS:** Cloudflare Full (strict) to origin (Cloudflare Origin Certificate)
 - **CI/CD & Workflows:** GitHub Actions
+- **Deployment artifact retention:** Releases perform no automatic Docker pruning; host operators review disk usage and retain rollback images before targeted cleanup. Shared-ingress separation remains tracked in [#904](https://github.com/VanillaIceCube/Notoli/issues/904).
 - **Scope-aware security checks:** Required CodeQL scope and analyzer jobs let documentation-only PRs skip analysis without waiting for an absent standalone results check; see the [branch-protection policy](.github/README-WORKFLOWS.md#main-branch-required-checks).
 - **PR dependency gates:** high/critical vulnerability review and npm malware advisory review, with full dependency evidence retained as an artifact and bounded AI report output for large migrations
 - **Major dependency upgrade briefs:** Obi-Wan explains upstream breaking changes, Notoli impact, and verification recommendations with primary sources on Dependabot major updates.
@@ -74,7 +78,7 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart f
 
 ## 📜 License
 This project is licensed under a **Modified MIT License (Non-Commercial Use Only)**.
-See the [LICENSE](./LICENSE) file for full details.
+See the [LICENSE](./LICENSE.md) file for full details.
 
 ## 🙏 Acknowledgments
 This project includes code from [`conda_export.py`](https://github.com/andresberejnoi/Conda-Tools) by **Andres Berejnoi**,

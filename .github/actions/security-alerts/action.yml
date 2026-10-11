@@ -57,7 +57,7 @@ runs:
 
     - name: Fetch open structured alerts
       id: alerts
-      uses: actions/github-script@v8
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
       with:
         github-token: ${{ inputs.robocop-token }}
         script: |
@@ -139,7 +139,7 @@ runs:
 
     - name: Validate LLM output
       if: steps.alerts.outputs.has_alerts == 'true'
-      uses: actions/github-script@v8
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
       env:
         ALERT_PATH: ${{ runner.temp }}/security-alerts.json
         GROUP_PATH: ${{ runner.temp }}/security-alert-groups.json
@@ -190,7 +190,7 @@ runs:
 
     - name: Prepare empty alert groups
       if: steps.alerts.outputs.has_alerts != 'true'
-      uses: actions/github-script@v8
+      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
       env:
         ALERT_PATH: ${{ runner.temp }}/security-alerts.json
         GROUP_PATH: ${{ runner.temp }}/security-alert-groups.json
@@ -205,7 +205,7 @@ runs:
           );
 
     - name: Reconcile grouped issues
-      uses: actions/github-script@v9
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
       env:
         ALERT_PATH: ${{ runner.temp }}/security-alerts.json
         GROUP_PATH: ${{ runner.temp }}/security-alert-groups.json

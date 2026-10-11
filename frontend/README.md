@@ -1,5 +1,7 @@
 # 🎨 Frontend (React)
 
+Production release ownership: use the [app-only release/recovery guide](../deploy/production/README.md).
+
 The Notoli frontend is a Vite single-page app with React Router and Material UI.
 Standalone Jest and Babel run the existing tests; ESLint 10 uses
 `eslint.config.mjs` and compatible React, hooks, accessibility, and Testing Library

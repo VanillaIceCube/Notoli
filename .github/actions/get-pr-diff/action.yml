@@ -78,6 +78,7 @@ runs:
         with open(diff_path, "r", encoding="utf-8", errors="replace") as f, open(
             out_path, "w", encoding="utf-8"
         ) as out:
+            out.write("DIFF LEGEND: A<number> is ADDED current RIGHT-side source; R<number> is unchanged current context; D is DELETED old source, not active code.\n\n")
             for raw in f:
                 line = raw.rstrip("\n")
                 if line.startswith("@@ "):

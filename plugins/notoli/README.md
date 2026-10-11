@@ -94,7 +94,7 @@ Official references: [connection and refresh](https://developers.openai.com/plug
 ## Connect your personal ChatGPT account
 
 1. Deploy the frontend and backend, apply migrations, and update Compose/Nginx using the
-   [deployment instructions](../../deploy/README.md#chatgpt-mcp-deployment).
+   [deployment instructions](../../deploy/production/README.md#chatgpt-mcp-deployment).
 2. Open [ChatGPT Plugins](https://chatgpt.com/plugins), select **Add custom MCP
    server**, and enter `https://notoli.judeandrewalaba.com/mcp`.
 3. Select OAuth with a predefined/provided client. Set client ID to
