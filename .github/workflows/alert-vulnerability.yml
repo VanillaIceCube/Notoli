@@ -13,13 +13,13 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out workflow actions
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
 
       - name: Create RoboCop GitHub App token
         id: robocop-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         with:
           app-id: ${{ vars.ROBOCOP_APP_ID }}
           private-key: ${{ secrets.ROBOCOP_PRIVATE_KEY }}

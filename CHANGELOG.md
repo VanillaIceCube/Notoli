@@ -2,6 +2,11 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-10-11
+### Fixed
+- Pin remaining external CI/composite actions to their existing version commits without upgrading action versions or changing gates.
+- Remove stale production proxy instructions from agent guidance, align operator authorization and verify tracked documentation links and anchors.
+
+## 2026-10-11
 ### Added
 - Enforce pinned shared-source parity for release tools, workflow stages and five equivalent deployment test modules.
 - Verify app-specific readiness/configuration, offline recovery packaging and rejection of shared code/test/workflow drift.

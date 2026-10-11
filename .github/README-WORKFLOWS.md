@@ -169,3 +169,7 @@ Auto-merge behavior:
 - The workflow uses `dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98` (`v3.1.0`) and can optionally use `DEPENDABOT_PAT` for metadata/alert lookup.
 
 AI review context includes bounded recent owner/collaborator reviews and replies to prior findings as discussion evidence. Prior bot verdicts must be rechecked against current source/scanners; the diff legend distinguishes active added/context lines from deleted old code. This does not change reviewer verdict rules or authorize merges/deployments.
+
+External GitHub Actions use immutable commit SHAs with version comments.
+Keep that convention when updating workflows or composite actions; preserve
+review/scanner failure gates and do not treat action updates as deployment approval.

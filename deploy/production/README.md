@@ -2,7 +2,10 @@
 
 This is the implementation of approved architecture v2. Every PR merge and
 every production release still requires separate explicit owner authorization.
-The authorized host operator performs production actions. Shared decisions:
+Only the operator designated in coordination #4 may perform production actions
+under its separately approved plan. For the coordinated ingress migration, the
+owner designated Agent 3 as the sole production operator; source approval does
+not authorize any agent to operate the host. Shared decisions:
 [Infrastructure #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 
 ## Shared implementation and app configuration
