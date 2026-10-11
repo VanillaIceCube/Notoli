@@ -142,42 +142,25 @@ GitHub accepts skipped analyzer jobs as satisfying required checks. Scope-detect
 
 When editing or recreating the ruleset, retain all 14 contexts above and exclude the standalone `CodeQL` context. Preserve the remaining ruleset settings, conditions, and bypass actors. Validate the live context list with `gh api repos/VanillaIceCube/Notoli/rules/branches/main` and inspect `gh pr checks` for both a documentation-only PR and a code-changing PR. No workflow rerun is needed to remove the stale requirement from existing PRs.
 
-## 🚀 Flow 2: Deploy (`.github/workflows/ci-deploy.yml`)
-Trigger:
-- Push to the `env-prod` branch
-- Manual `workflow_dispatch`
+## 🚀 Deployment
+The production workflow now builds SHA-tagged images and deploys their immutable
+digests through the app-only staged transaction in
+[deploy/production](../deploy/production/README.md). It runs only for reviewed
+`env-prod` pushes or an explicitly authorized manual dispatch of that branch.
+Concurrency is serialized per repository with `cancel-in-progress: false`.
 
-What it does:
-- Builds and pushes Docker images to GHCR:
-  - `notoli-backend` (from `backend/Dockerfile`)
-  - `notoli-frontend` (from `frontend/Dockerfile`)
-- Uploads `deploy/docker-compose.yml` and `deploy/nginx-proxy.conf` to the server
-- SSHes into the server, writes a `.env` file next to the compose file for subdomain-root routing, then:
-  - Pulls images + recreates containers
-  - Runs Django migrations inside the backend container
-  - Backend images serve `app.asgi:application` with Uvicorn `--no-proxy-headers` so the MCP endpoint and REST API share the deployment. Compose injects the exact Nginx private IP as `DJANGO_TRUSTED_PROXY_IPS`; no backend port is published. Deploy the Compose/network changes and frontend image together for React OAuth consent. OAuth client registration remains a one-time operator step after migration; see `deploy/README.md`.
+It uploads into a unique private incoming directory; host/app locks protect
+recovery capture, SQLite backup/restore validation, migration and readiness.
+No app release ships TLS/vhosts, provisions networks, operates shared Nginx,
+runs cross-project cleanup, or selects `latest`. Old proxy-owning workflow
+behavior is superseded. Required access now includes a verified
+`DEPLOY_HOST_FINGERPRINT` and operator-provisioned private directories/locks.
+Full variables, stage/failure states and rollback commands are in the guide.
 
-Deployment performs no automatic Docker pruning. Keep prior release images for
-rollback and have the host operator review disk usage and explicitly selected,
-unused app images before cleanup; see [Docker artifact retention](../deploy/README.md#docker-artifact-retention).
-Shared-ingress ownership and the remaining release safeguards are tracked in
-[#904](https://github.com/VanillaIceCube/Notoli/issues/904). The current workflow
-still manages Notoli's proxy and deploys `latest`; removing pruning alone does
-not make it suitable for independent multi-app releases.
-
-Deployment prerequisite:
-- For Cloudflare Full (strict), the origin must have a Cloudflare Origin Certificate.
-- Option A (manual): provision on the server at `certs/origin.pem` and `certs/origin.key` (see `deploy/README.md`).
-- Option B (automated): set GitHub Secrets `CLOUDFLARE_ORIGIN_CERT_PEM` and `CLOUDFLARE_ORIGIN_KEY_PEM` so the workflow uploads the files to `certs/` during deploy.
-
-Deploy inputs (GitHub repo vars / secrets):
-- Server connection: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`, optional `DEPLOY_PORT`, secret `DEPLOY_SSH_KEY`
-- Backend config:
-  - Secret: `DJANGO_SECRET_KEY`
-  - Secret: `DJANGO_EMAIL_HOST_KEY`
-  - Vars: `DJANGO_DEBUG`, `DJANGO_SQLITE_PATH`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `DJANGO_FRONTEND_BASE_URL`, optional `DJANGO_MCP_BASE_URL` (HTTPS origin, defaults to `https://notoli.judeandrewalaba.com` in production), `DJANGO_EMAIL_BACKEND`, `DJANGO_EMAIL_TIMEOUT`, `DJANGO_DEFAULT_FROM_EMAIL`
-  - SMTP-only vars when `DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`: `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_HOST_USER`
-- Frontend build arg: optional `REACT_APP_API_BASE_URL` (leave blank/unset for same-origin subdomain calls on `https://notoli.judeandrewalaba.com`; use `https://notoli.judeandrewalaba.com` only if an absolute URL is required)
+Activate only after the approved host-ingress cutover. Shared decisions and
+the three-PR matrix live on [Infrastructure #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
+Architecture approval is recorded; each PR merge and each production plan still
+need separate explicit owner approval. Moving `env-prod` can deploy immediately.
 
 ## 📦 Flow 3: Dependabot (`.github/dependabot.yml` + CI/Auto Merge)
 Dependabot configuration:

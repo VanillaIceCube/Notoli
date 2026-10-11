@@ -2,6 +2,15 @@
 All notable changes to this project are documented in this file.
 
 ## 2026-10-11
+### Added
+- Add app-only production Compose, immutable digest bundles, protected maintenance/app locks, complete configuration/image/environment/SQLite recovery, explicit rollback and bounded readiness checks.
+- Validate raw credentials and Compose boundaries with disposable containers, and exercise SQLite/failure recovery and lock contention on Linux.
+### Changed
+- Serialize production releases and stage each CI attempt privately; activate only after the approved host-owned ingress cutover.
+### Removed
+- Remove shared Nginx/certificate lifecycle and mutable production image selection from the app deployment workflow.
+
+## 2026-10-11
 ### Removed
 - Remove automatic host-wide Docker pruning from Notoli deployment to preserve other apps' artifacts and retained rollback images; document operator-reviewed cleanup and remaining shared-host release work.
 

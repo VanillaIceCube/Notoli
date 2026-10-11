@@ -1,5 +1,13 @@
 # AGENTS.md
 
+Production release ownership: use the [app-only release/recovery guide](deploy/production/README.md).
+The new pipeline uses immutable image digests, protected staging/locks, full
+recovery and bounded readiness. Shared Nginx/certificates belong to the
+infrastructure repository. This supersedes legacy proxy-owning production
+instructions; local standalone development remains supported. Activation follows
+approved gateway cutover and separate merge/deployment authorization.
+
+
 This repo uses manual setup steps so Codex does not assume Django or Node are installed.
 Follow one of the setup paths below before running the app.
 
@@ -194,7 +202,7 @@ and Django static assets use `/static/`.
     - `POST /auth/reset-password/` accepts `uid`, `token`, and `password`.
 
 ## Maintenance
-- Deployments must not run host-wide Docker pruning. Retain prior release images for rollback; cleanup requires a host operator to review disk usage and explicitly select unused app images. The current workflow still manages Notoli's proxy and deploys `latest`; shared-ingress ownership and remaining release safeguards await the coordinated contract in #904. See `deploy/README.md` and `.github/README-WORKFLOWS.md`.
+- Deployments must not run host-wide Docker pruning. Retain prior release images for rollback; cleanup requires a host operator to review disk usage and explicitly select unused app images. Production releases use immutable digests and manage only Notoli's backend/frontend through `deploy/production/release.py`. Shared ingress/certificates belong to the infrastructure repository under approved architecture v2. See `deploy/production/README.md` and `.github/README-WORKFLOWS.md`.
 - Frontend builds use Vite and tests use standalone Jest/Babel. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite explicitly maps the existing `REACT_APP_API_BASE_URL`/`PUBLIC_URL` settings, keeps port 3000 and `build/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
 - Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for the browser baseline.
 - ChatGPT listing metadata: `plugins/notoli/plugin.json` is the canonical branding source, but personal custom-MCP plugins use a separate generated compatibility manifest. Download the installed plugin ZIP and use `plugins/notoli/build_listing.py` to apply branding while preserving its exported name and `.app.json`; upload a new version to the same plugin. Keep account-specific exports/build ZIPs out of Git. Listing publication is separate from Docker deployment and MCP tool refresh. Privacy/terms pages and verified publisher identity remain prerequisites for public submission. See `plugins/notoli/README.md`.

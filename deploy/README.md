@@ -1,5 +1,14 @@
 # Deploy (Docker + Nginx)
 
+## Current production deployment
+
+Use the [app-only production release and recovery guide](production/README.md)
+for the approved shared-ingress architecture. It supersedes production bridge,
+proxy/TLS-upload, and legacy release commands below. Those sections describe
+standalone local setup or historical operation; do not use them for a shared-host
+release. Installed live bridge files remain until separately approved cutover.
+
+
 This repo deploys Notoli at the subdomain root `https://notoli.judeandrewalaba.com`.
 
 ## What Runs

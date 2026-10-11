@@ -1,4 +1,12 @@
 # 📝 Notoli
+
+Production release ownership: use the [app-only release/recovery guide](deploy/production/README.md).
+The new pipeline uses immutable image digests, protected staging/locks, full
+recovery and bounded readiness. Shared Nginx/certificates belong to the
+infrastructure repository. This supersedes legacy proxy-owning production
+instructions; local standalone development remains supported. Activation follows
+approved gateway cutover and separate merge/deployment authorization.
+
 **A Notion-Inspired To-Do List App**
 Notoli is my personalized take on a list application, inspired by the flexibility of Notion databases.
 It's designed to support **multiple views** of the same list, so my wife, Diana, and I can each use the app in the way that works best for us, whether that's a clean, simple Notes-style interface or a more detailed, database-like workflow.
