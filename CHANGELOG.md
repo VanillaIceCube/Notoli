@@ -3,6 +3,10 @@ All notable changes to this project are documented in this file.
 
 ## 2026-10-11
 ### Fixed
+- Adopt the shared release client identity so Cloudflare accepts public readiness probes without changing edge protections or response checks.
+
+## 2026-10-11
+### Fixed
 - Pin remaining external CI/composite actions to their existing version commits without upgrading action versions or changing gates.
 - Remove stale production proxy instructions from agent guidance, align operator authorization and verify tracked documentation links and anchors.
 

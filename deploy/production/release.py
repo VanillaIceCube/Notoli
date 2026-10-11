@@ -525,7 +525,8 @@ def capture_recovery(root, candidate, recovery):
 
 def check_response(path, status, predicate):
     request = urllib.request.Request(
-        ORIGIN + path, headers={"Cache-Control": "no-cache"}
+        ORIGIN + path,
+        headers={"Cache-Control": "no-cache", "User-Agent": "JudeAppRelease/1.0"},
     )
     try:
         response = urllib.request.urlopen(request, timeout=5)
