@@ -380,11 +380,13 @@ host-wide system/image pruning as a substitute for reviewing those references.
 If capacity is insufficient, resolve it before releasing.
 
 Image retention alone does not provide database rollback: preserve a consistent
-SQLite backup and verify restoration before risky migrations. The current
-workflow still deploys mutable `latest` tags, manages the proxy, and lacks an
-automated migration backup or health gate. Shared-ingress separation,
-SHA-selected releases, and verified recovery are pending the coordinated plan in
-[#904](https://github.com/VanillaIceCube/Notoli/issues/904).
+SQLite backup and verify restoration before risky migrations. The historical
+proxy-owning workflow used mutable `latest` tags and lacked automated migration
+backup and readiness gates. The current [app-only release](production/README.md)
+implements approved architecture v2 with immutable digests, verified database
+recovery and bounded readiness. Its production activation follows gateway
+acceptance and separate owner approval on
+[Infrastructure #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 
 Run backend migrations:
 
