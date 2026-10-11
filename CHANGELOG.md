@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 - Add app-only production Compose, immutable digest bundles, protected maintenance/app locks, complete configuration/image/environment/SQLite recovery, explicit rollback and bounded readiness checks.
 - Validate raw credentials and Compose boundaries with disposable containers, and exercise SQLite/failure recovery and lock contention on Linux.
 ### Changed
+- Pin every external production deployment action, including checkout, to an immutable commit SHA.
 - Serialize production releases and stage each CI attempt privately; activate only after the approved host-owned ingress cutover.
 ### Removed
 - Remove shared Nginx/certificate lifecycle and mutable production image selection from the app deployment workflow.
