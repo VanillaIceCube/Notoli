@@ -85,7 +85,10 @@ to cached previous image IDs. Original legacy files are retained as private
 evidence; they are never executed as rollback scripts.
 
 The backend and any surviving app-labelled management containers stop before
-SQLite backup. The tool selects the most recently started writer, copies its
+SQLite backup. Private `data-state.json` records the exact writer ID or a unique generation
+label plus a checksummed complete checkpoint. Capture never guesses by container
+start time. It discovers all backend/management writers by labels, including
+temporary Compose names, stops them, and copies the selected generation's
 DB plus WAL/rollback journal from the stopped container into a private isolated
 directory, and recovers that copy. This matters because only the main DB file is
 bind-mounted; sidecars can be in the container filesystem. A backup and isolated restore copy
@@ -97,7 +100,11 @@ containers too. Stopped containers are retained because their journals can be
 recovery evidence. Cleanup needs explicit operator review, like image retention.
 These containers join only backend egress; they never contend with Notoli's reserved
 backend address. Before migration and again before app startup, verified data is consolidated
-into the main host DB with its original owner/mode. Copies use DELETE journal
+into the main host DB with its original owner/mode. Before an inode swap, the
+complete checkpoint and consumed writer IDs are persisted; their old journals
+are retired from future selection. A missing/unstarted replacement uses that
+checkpoint, while a started temporary-name container is captured by its generation.
+Unknown or multiple current writers fail closed. Copies use DELETE journal
 mode; this does not enable WAL or relocate storage. Migration/startup use the
 selected digest, no pull at startup.
 Readiness includes direct Django /api/notifications/ returning 401, HTTPS HTML
@@ -172,6 +179,9 @@ Real Docker recovery rehearsals recreate captured image IDs, commands, raw
 environment and DB binds without changing another container; stop a real writer
 after a short CLI timeout and a simulated interrupted invocation; and recover a
 committed WAL-only row after an unclean exit with the actual single-file bind.
+A real recovery retry then replaces the host inode, fails before new startup,
+removes the canonical backend, fails during a temporary-name replacement, and
+retries successfully without replaying a retired journal or touching a companion.
 POSIX transaction tests run in Linux CI (Windows skips them); local Linux Docker
 runs can exercise them independently. Shared vhost routing and proxy endpoint
 reversal are tested in the infrastructure repository.

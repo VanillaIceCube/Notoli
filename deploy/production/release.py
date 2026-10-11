@@ -21,6 +21,7 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+import uuid
 
 APP = "notoli"
 BACKEND = "backend" if APP == "notoli" else "macromapper-backend"
@@ -161,7 +162,9 @@ def compose(directory, *args, timeout=300):
         "--env-file",
         directory / ".release.env",
         "-f",
-        directory / "compose.yml",
+        (directory / "activation.json")
+        if (directory / "activation.json").exists()
+        else (directory / "compose.yml"),
         *args,
         timeout=timeout,
     )
@@ -311,22 +314,121 @@ def snapshot(source, destination):
         restored.unlink(missing_ok=True)
 
 
-def management_containers():
-    output = docker("ps", "-aq", "--filter", "label=org.jude.release.app=" + APP)
-    identities = output.splitlines()
+def container_ids(*filters):
+    args = ["ps", "-aq"]
+    for value in filters:
+        args.extend(["--filter", "label=" + value])
+    identities = docker(*args).splitlines()
     if any(not re.fullmatch(r"[0-9a-f]{12,64}", identity) for identity in identities):
-        raise ReleaseError("Unexpected management container identity")
+        raise ReleaseError("Unexpected writer container identity")
     return identities
 
 
+def management_containers():
+    return container_ids("org.jude.release.app=" + APP)
+
+
+def app_writers():
+    identities = set(management_containers()) | set(
+        container_ids(
+            "com.docker.compose.project=" + APP, "com.docker.compose.service=" + BACKEND
+        )
+    )
+    return [inspect(identity) for identity in sorted(identities)]
+
+
+def stop_writers():
+    # Compose replacement names are temporary; discover by project/service labels.
+    for writer in app_writers():
+        docker("stop", "--time", "10", writer["Id"], timeout=30)
+        if inspect(writer["Id"])["State"]["Running"]:
+            raise ReleaseError("App writer did not stop")
+
+
+def begin_data_state(root):
+    backend = inspect(APP + "-backend")
+    atomic_json(
+        root / "data-state.json",
+        {
+            "writer": {"id": backend["Id"]},
+            "checkpoint": None,
+            "retired": [w["Id"] for w in app_writers() if w["Id"] != backend["Id"]],
+        },
+    )
+
+
+def data_state(root):
+    return json.loads(regular(root / "data-state.json").read_text())
+
+
+def checkpoint_data(root, source):
+    # Retire every consumed journal BEFORE changing the main database inode.
+    # A crash after this marker uses the complete, immutable checkpoint below.
+    regular(source)
+    atomic_json(
+        root / "data-state.json",
+        {
+            "writer": None,
+            "checkpoint": str(source),
+            "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+            "retired": [w["Id"] for w in app_writers()],
+        },
+    )
+
+
+def arm_writer(root):
+    state = data_state(root)
+    generation = uuid.uuid4().hex
+    state["writer"] = {"generation": generation}
+    atomic_json(root / "data-state.json", state)
+    return generation
+
+
+def prepare_backend(root, directory):
+    model = json.loads(
+        compose(directory, "config", "--format", "json", "--no-env-resolution")
+    )
+    generation = arm_writer(root)
+    model["services"][BACKEND].setdefault("labels", {})["org.jude.db.generation"] = (
+        generation
+    )
+    atomic_json(directory / "activation.json", model)
+
+
 def snapshot_writer(root, destination):
-    # The DB alone is a bind mount. WAL/rollback journals can live in a writer's
-    # container layer, so host-only backup is insufficient after a failed stop.
-    writers = [inspect(APP + "-backend")]
-    writers.extend(inspect(identity) for identity in management_containers())
+    state = data_state(root)
+    writers = app_writers()
     if any(writer["State"]["Running"] for writer in writers):
         raise ReleaseError("All app and management writers must stop before snapshot")
-    writer = max(writers, key=lambda item: item["State"]["StartedAt"])
+    selected = []
+    provenance = state["writer"]
+    for writer in writers:
+        if writer["Id"] in state["retired"]:
+            continue  # old sidecars must NEVER be paired with a replacement DB inode
+        labels = writer["Config"]["Labels"]
+        matches = provenance and (
+            writer["Id"] == provenance.get("id")
+            or labels.get("org.jude.db.generation") == provenance.get("generation")
+            and provenance.get("generation") is not None
+        )
+        if not matches:
+            raise ReleaseError("Untracked database writer requires operator review")
+        if writer["State"]["StartedAt"] != "0001-01-01T00:00:00Z":
+            selected.append(writer)
+    if len(selected) > 1:
+        raise ReleaseError("Multiple writers for one database generation")
+    if not selected:
+        # Covers a failure before replacement creation/rename/start. The captured
+        # data remains authoritative even when no canonical backend name exists.
+        checkpoint = Path(state["checkpoint"] or "")
+        if not checkpoint.is_relative_to(root) or not checkpoint.is_file():
+            raise ReleaseError("No complete database generation is available")
+        regular(checkpoint)
+        if hashlib.sha256(checkpoint.read_bytes()).hexdigest() != state["sha256"]:
+            raise ReleaseError("Database checkpoint checksum mismatch")
+        snapshot(checkpoint, destination)
+        return
+    writer = selected[0]
     mounts = [m for m in writer["Mounts"] if m["Destination"] == "/backend/db.sqlite3"]
     if len(mounts) != 1 or Path(mounts[0]["Source"]) != root / "db.sqlite3":
         raise ReleaseError("Recovery writer has an unexpected database bind")
@@ -520,6 +622,8 @@ def stop_management():
 def manage(directory, image, *args):
     # Management uses egress only, never the backend's reserved .3 address.
     metadata = json.loads((directory / "release.json").read_text())
+    root = Path(metadata["database"]).parent
+    generation = arm_writer(root)
     try:
         return docker(
             "run",
@@ -529,6 +633,8 @@ def manage(directory, image, *args):
             "org.jude.release.app=" + APP,
             "--label",
             "org.jude.release.id=" + metadata["id"],
+            "--label",
+            "org.jude.db.generation=" + generation,
             "--network",
             EGRESS,
             "--env-file",
@@ -573,6 +679,7 @@ def deploy(root, bundle):
     preflight(root)  # disk policy must still pass after image staging
     recovery = root / "recovery" / release["id"]
     capture_recovery(root, candidate, recovery)
+    begin_data_state(root)
     record = {
         "release": release["id"],
         "recovery": str(recovery),
@@ -582,12 +689,15 @@ def deploy(root, bundle):
         root / "FAILED.json", record
     )  # also prevents a new deploy after process death
     try:
-        compose(candidate, "stop", BACKEND)
+        stop_writers()
         snapshot_writer(root, recovery / "db.sqlite3")
         record["stage"] = "backup-verified"
         atomic_json(root / "FAILED.json", record)
         replace_database(root, recovery / "db.sqlite3")
         manage(candidate, release["backend"], "check", "--deploy")
+        checked = candidate / "checked.sqlite3"
+        snapshot_writer(root, checked)
+        replace_database(root, checked)
         record["stage"] = "migration-started"
         atomic_json(root / "FAILED.json", record)
         manage(candidate, release["backend"], "migrate", "--noinput")
@@ -596,6 +706,7 @@ def deploy(root, bundle):
         migrated = candidate / "migrated.sqlite3"
         snapshot_writer(root, migrated)
         replace_database(root, migrated)
+        prepare_backend(root, candidate)
         compose(
             candidate,
             "up",
@@ -623,7 +734,7 @@ def deploy(root, bundle):
     except Exception:
         # Do not let newly migrated writers run while the operator assesses recovery.
         try:
-            compose(candidate, "stop", BACKEND)
+            stop_writers()
         except ReleaseError:
             print(
                 "Backend stop failed; operator must stop writers before recovery.",
@@ -638,6 +749,7 @@ def replace_database(root, source):
     snapshot(source, restored)
     os.chmod(restored, stat.S_IMODE(info.st_mode))
     os.chown(restored, info.st_uid, info.st_gid)
+    checkpoint_data(root, source)
     # All actual writers are stopped. Preserve any host-side evidence too.
     for suffix in ("-wal", "-shm", "-journal"):
         sidecar = root / ("db.sqlite3" + suffix)
@@ -683,12 +795,13 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
     )
     try:
         stop_management()
-        compose(recovery, "stop", BACKEND)
+        stop_writers()
         # Preserve all current committed data, including container-local journals.
         rescue = recovery / ("before-rollback-" + str(time.time_ns()) + ".sqlite3")
         snapshot_writer(root, rescue)
         # Keep mode consolidates the SAME data before recreation, never an older DB.
         replace_database(root, recovery / "db.sqlite3" if restore_database else rescue)
+        prepare_backend(root, recovery)
         compose(
             recovery,
             "up",
@@ -712,7 +825,7 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
         (root / "FAILED.json").unlink()
     except Exception:
         try:
-            compose(recovery, "stop", BACKEND)
+            stop_writers()
         except ReleaseError:
             print(
                 "Backend stop failed; operator must stop writers before recovery.",

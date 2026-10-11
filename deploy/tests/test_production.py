@@ -224,6 +224,12 @@ class TransactionTests(unittest.TestCase):
             "networks": {},
         }
         self.patches = [
+            patch.object(release, "app_writers", return_value=[]),
+            patch.object(
+                release,
+                "stop_writers",
+                side_effect=lambda: self.events.append(("stop-writers",)),
+            ),
             patch.object(
                 release,
                 "snapshot_writer",
@@ -268,6 +274,7 @@ class TransactionTests(unittest.TestCase):
     def inspect(self, name):
         suffix = name.rsplit("-", 1)[1]
         return {
+            "Id": "old-" + suffix,
             "Image": "sha256:" + ("1" if suffix == "backend" else "2") * 64,
             "Config": {
                 "Labels": {"com.docker.compose.project": release.APP},
@@ -325,7 +332,7 @@ class TransactionTests(unittest.TestCase):
         self.assertIn("original-$literal", (recovery / ".backend.env").read_text())
         self.assertEqual((recovery / "runtime.json").stat().st_mode & 0o777, 0o600)
         self.assertLess(
-            self.events.index(("compose", "stop", release.BACKEND)),
+            self.events.index(("stop-writers",)),
             self.events.index(("manage", "migrate", "--noinput")),
         )
 
@@ -335,7 +342,7 @@ class TransactionTests(unittest.TestCase):
             release.deploy(self.root, self.bundle)
         self.assertFalse((self.root / "current.json").exists())
         self.assertTrue((self.root / "FAILED.json").exists())
-        self.assertEqual(self.events[-1], ("compose", "stop", release.BACKEND))
+        self.assertEqual(self.events[-1], ("stop-writers",))
         with self.assertRaises(release.ReleaseError):
             release.rollback(self.root, self.identity, False, True)
         release.rollback(self.root, self.identity, True)
@@ -381,7 +388,7 @@ class TransactionTests(unittest.TestCase):
             release.rollback(self.root, self.identity, True)
         self.assertFalse((self.root / "current.json").exists())
         self.assertTrue((self.root / "FAILED.json").exists())
-        self.assertEqual(self.events[-1], ("compose", "stop", release.BACKEND))
+        self.assertEqual(self.events[-1], ("stop-writers",))
 
     def test_checksum_tamper_and_symlink_rejected_before_commands(self):
         (self.bundle / ".backend.env").write_text("tampered")

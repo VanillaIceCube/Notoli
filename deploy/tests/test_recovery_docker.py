@@ -38,6 +38,10 @@ class RecoveryDockerTests(unittest.TestCase):
                     "-d",
                     "--name",
                     name,
+                    "--label",
+                    "com.docker.compose.project=" + project,
+                    "--label",
+                    "com.docker.compose.service=" + release.BACKEND,
                     "--network",
                     "none",
                     "--mount",
@@ -65,6 +69,7 @@ class RecoveryDockerTests(unittest.TestCase):
                     return result
 
                 with patch.object(release, "inspect", side_effect=inspect):
+                    release.begin_data_state(root)
                     release.snapshot_writer(root, target)
                 with closing(sqlite3.connect(target)) as db:
                     self.assertEqual(
@@ -148,6 +153,8 @@ class RecoveryDockerTests(unittest.TestCase):
                     "--force-recreate",
                     *release.SERVICES,
                 )
+                release.begin_data_state(root)
+                release.prepare_backend(root, recovery)
                 release.compose(
                     recovery,
                     "up",
@@ -190,6 +197,7 @@ class RecoveryDockerTests(unittest.TestCase):
                 )
                 (candidate / ".backend.env").write_text("SECRET=fixture\n")
                 real_docker = release.docker
+                release.begin_data_state(root)
 
                 def timed_out(*args, **kwargs):
                     if args[0] == "run":
