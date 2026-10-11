@@ -7,7 +7,6 @@ infrastructure repository. This supersedes legacy proxy-owning production
 instructions; local standalone development remains supported. Activation follows
 approved gateway cutover and separate merge/deployment authorization.
 
-
 The Notoli frontend is a Vite single-page app with React Router and Material UI.
 Standalone Jest and Babel run the existing tests; ESLint 10 uses
 `eslint.config.mjs` and compatible React, hooks, accessibility, and Testing Library
