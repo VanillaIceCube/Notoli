@@ -6,7 +6,7 @@ can decide whether restoring a database and losing later writes is acceptable.
 """
 
 import argparse
-from contextlib import closing, contextmanager
+from contextlib import ExitStack, closing, contextmanager
 import hashlib
 import json
 import os
@@ -17,6 +17,7 @@ import sqlite3
 import stat
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -93,17 +94,21 @@ def locks(directory=LOCK_DIR):
     import fcntl
 
     private_dir(directory)
-    handles = []
-    try:
+    with ExitStack() as stack:
         for name, kind in (
             ("maintenance.lock", fcntl.LOCK_SH),
             (APP + ".lock", fcntl.LOCK_EX),
         ):
             path = directory / name
             regular(path)
-            fd = os.open(path, os.O_RDWR | os.O_NOFOLLOW)
-            handles.append(fd)
-            info = os.fstat(fd)
+            stream = stack.enter_context(
+                open(
+                    path,
+                    "r+",
+                    opener=lambda name, flags: os.open(name, flags | os.O_NOFOLLOW),
+                )
+            )
+            info = os.fstat(stream.fileno())
             if (
                 info.st_uid != os.geteuid()
                 or info.st_mode & 0o077
@@ -111,15 +116,12 @@ def locks(directory=LOCK_DIR):
             ):
                 raise ReleaseError("Unsafe lock ownership/mode")
             try:
-                fcntl.flock(fd, kind | fcntl.LOCK_NB)
+                fcntl.flock(stream.fileno(), kind | fcntl.LOCK_NB)
             except BlockingIOError as error:
                 raise ReleaseError(
                     "Maintenance or app release already in progress"
                 ) from error
         yield
-    finally:
-        for fd in reversed(handles):
-            os.close(fd)
 
 
 def validate_bundle(bundle):
@@ -218,6 +220,8 @@ def preflight(root):
     for name, (internal, subnet, members) in expected.items():
         network = json.loads(docker("network", "inspect", name))[0]
         actual = {c["Name"] for c in network["Containers"].values()}
+        # A companion outage must not prevent this app from recovering. Unknown
+        # members are forbidden; this app and the gateway must remain present.
         required = {
             member
             for member in members
@@ -256,7 +260,7 @@ def preflight(root):
         raise ReleaseError("Existing database bind source differs")
     # Policy floors are configurable only by separately reviewed code/operator policy.
     disk = shutil.disk_usage(root)
-    reserve = 5 * (root / "db.sqlite3").stat().st_size + 64 * 1024 * 1024
+    reserve = 8 * (root / "db.sqlite3").stat().st_size + 64 * 1024 * 1024
     if (disk.free - reserve) / disk.total < 0.20:
         raise ReleaseError("Insufficient disk for recovery plus 20 percent headroom")
     mem = dict(
@@ -278,6 +282,7 @@ def snapshot(source, destination):
     with closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)) as db:
         with closing(sqlite3.connect(destination)) as backup:
             db.backup(backup, pages=256, progress=progress, sleep=0.1)
+            backup.execute("PRAGMA journal_mode=DELETE")
             if backup.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
                 raise ReleaseError("SQLite backup integrity failed")
     destination.chmod(0o600)
@@ -293,6 +298,51 @@ def snapshot(source, destination):
                 raise ReleaseError("SQLite restore verification failed")
     finally:
         restored.unlink(missing_ok=True)
+
+
+def management_containers():
+    output = docker("ps", "-aq", "--filter", "label=org.jude.release.app=" + APP)
+    identities = output.splitlines()
+    if any(not re.fullmatch(r"[0-9a-f]{12,64}", identity) for identity in identities):
+        raise ReleaseError("Unexpected management container identity")
+    return identities
+
+
+def snapshot_writer(root, destination):
+    # The DB alone is a bind mount. WAL/rollback journals can live in a writer's
+    # container layer, so host-only backup is insufficient after a failed stop.
+    writers = [inspect(APP + "-backend")]
+    writers.extend(inspect(identity) for identity in management_containers())
+    if any(writer["State"]["Running"] for writer in writers):
+        raise ReleaseError("All app and management writers must stop before snapshot")
+    writer = max(writers, key=lambda item: item["State"]["StartedAt"])
+    mounts = [m for m in writer["Mounts"] if m["Destination"] == "/backend/db.sqlite3"]
+    if len(mounts) != 1 or Path(mounts[0]["Source"]) != root / "db.sqlite3":
+        raise ReleaseError("Recovery writer has an unexpected database bind")
+    with tempfile.TemporaryDirectory(
+        prefix="sqlite-capture-", dir=destination.parent
+    ) as directory:
+        source = Path(directory) / "db.sqlite3"
+        for suffix in ("", "-wal", "-journal"):
+            target = Path(str(source) + suffix)
+            remote = writer["Id"] + ":/backend/db.sqlite3" + suffix
+            result = subprocess.run(
+                ["docker", "cp", remote, str(target)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode:
+                if suffix and "Could not find the file" in result.stderr:
+                    continue
+                raise ReleaseError("Could not capture stopped writer database/journal")
+            target.chmod(0o600)
+        # Opening this isolated copy can replay a hot journal, without modifying
+        # the original mount or retained container. Never copy SHM bookkeeping.
+        with closing(sqlite3.connect(source)) as database:
+            if database.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                raise ReleaseError("Stopped writer database integrity failed")
+        snapshot(source, destination)
 
 
 def capture_recovery(root, candidate, recovery):
@@ -408,7 +458,7 @@ def readiness(directory):
         + DOMAIN
         + "'}); "
         "\ntry: urllib.request.urlopen(q,timeout=5); raise SystemExit(1)"
-        "\nexcept urllib.error.HTTPError as e: assert e.code == 401"
+        "\nexcept urllib.error.HTTPError as e: raise SystemExit(0 if e.code == 401 else 1)"
     )
     deadline = time.monotonic() + 90
     while True:
@@ -447,29 +497,48 @@ def readiness(directory):
             time.sleep(2)
 
 
+def stop_management():
+    # A killed Docker CLI does not stop its container. Retain stopped one-offs:
+    # they can contain WAL/journal evidence needed by snapshot_writer.
+    for identity in management_containers():
+        docker("stop", "--time", "10", identity, timeout=30)
+        if inspect(identity)["State"]["Running"]:
+            raise ReleaseError("Management writer did not stop")
+
+
 def manage(directory, image, *args):
-    # Management commands use egress only; never compete with backend's reserved .3.
-    return docker(
-        "run",
-        "--rm",
-        "--network",
-        EGRESS,
-        "--env-file",
-        directory / ".backend.env",
-        "--mount",
-        "type=bind,source="
-        + str(json.loads((directory / "release.json").read_text())["database"])
-        + ",target=/backend/db.sqlite3",
-        image,
-        "python",
-        "manage.py",
-        *args,
-    )
+    # Management uses egress only, never the backend's reserved .3 address.
+    metadata = json.loads((directory / "release.json").read_text())
+    try:
+        return docker(
+            "run",
+            "--name",
+            APP + "-release-" + metadata["id"] + "-" + args[0],
+            "--label",
+            "org.jude.release.app=" + APP,
+            "--label",
+            "org.jude.release.id=" + metadata["id"],
+            "--network",
+            EGRESS,
+            "--env-file",
+            directory / ".backend.env",
+            "--mount",
+            "type=bind,source=" + metadata["database"] + ",target=/backend/db.sqlite3",
+            image,
+            "python",
+            "manage.py",
+            *args,
+        )
+    finally:
+        # This also runs after timeout; labels/name persist through process death.
+        # Failure leaves FAILED.json and retained writer evidence for the operator.
+        stop_management()
 
 
 def deploy(root, bundle):
     release = validate_bundle(bundle)
     preflight(root)
+    stop_management()
     for name in ("releases", "recovery"):
         private_dir(root / name)
     candidate = root / "releases" / release["id"]
@@ -503,13 +572,19 @@ def deploy(root, bundle):
     )  # also prevents a new deploy after process death
     try:
         compose(candidate, "stop", BACKEND)
-        snapshot(root / "db.sqlite3", recovery / "db.sqlite3")
+        snapshot_writer(root, recovery / "db.sqlite3")
         record["stage"] = "backup-verified"
         atomic_json(root / "FAILED.json", record)
+        replace_database(root, recovery / "db.sqlite3")
         manage(candidate, release["backend"], "check", "--deploy")
         record["stage"] = "migration-started"
         atomic_json(root / "FAILED.json", record)
         manage(candidate, release["backend"], "migrate", "--noinput")
+        # Consolidate committed container-local journals before a new app container
+        # mounts the database. Keep its original ownership and mode.
+        migrated = candidate / "migrated.sqlite3"
+        snapshot_writer(root, migrated)
+        replace_database(root, migrated)
         compose(
             candidate,
             "up",
@@ -539,8 +614,26 @@ def deploy(root, bundle):
         try:
             compose(candidate, "stop", BACKEND)
         except ReleaseError:
-            pass
+            print(
+                "Backend stop failed; operator must stop writers before recovery.",
+                file=sys.stderr,
+            )
         raise
+
+
+def replace_database(root, source):
+    info = regular(root / "db.sqlite3").stat()
+    restored = root / ("restore-" + str(time.time_ns()) + ".sqlite3")
+    snapshot(source, restored)
+    os.chmod(restored, stat.S_IMODE(info.st_mode))
+    os.chown(restored, info.st_uid, info.st_gid)
+    # All actual writers are stopped. Preserve any host-side evidence too.
+    for suffix in ("-wal", "-shm", "-journal"):
+        sidecar = root / ("db.sqlite3" + suffix)
+        if sidecar.exists():
+            regular(sidecar)
+            os.replace(sidecar, source.parent / (restored.name + suffix))
+    os.replace(restored, root / "db.sqlite3")
 
 
 def rollback(root, recovery_id, restore_database, keep_database=False):
@@ -555,10 +648,11 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
         raise ReleaseError("Choose exactly one database recovery mode")
     if keep_database:
         failed = json.loads(regular(root / "FAILED.json").read_text())
-        if failed["recovery"] != str(recovery) or failed["stage"] not in (
-            "before-stop",
-            "backup-verified",
-        ):
+        eligible = failed["stage"] in ("before-stop", "backup-verified") or (
+            failed["stage"] == "rollback-started"
+            and failed.get("keep_database_safe") is True
+        )
+        if failed["recovery"] != str(recovery) or not eligible:
             raise ReleaseError(
                 "Database preservation is allowed only before migration started"
             )
@@ -569,30 +663,21 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
     for container in json.loads((recovery / "runtime.json").read_text()).values():
         docker("image", "inspect", container["Image"])
     atomic_json(
-        root / "FAILED.json", {"recovery": str(recovery), "stage": "rollback-started"}
+        root / "FAILED.json",
+        {
+            "recovery": str(recovery),
+            "stage": "rollback-started",
+            "keep_database_safe": keep_database,
+        },
     )
     try:
+        stop_management()
         compose(recovery, "stop", BACKEND)
-        if restore_database:
-            # Preserve current DB before selecting an older snapshot.
-            rescue = recovery / ("before-rollback-" + str(time.time_ns()) + ".sqlite3")
-            snapshot(root / "db.sqlite3", rescue)
-            info = regular(root / "db.sqlite3").stat()
-            # Writers are stopped. Checkpoint before replacing a WAL-mode DB;
-            # stale sidecars must never be replayed into the restored snapshot.
-            with closing(sqlite3.connect(root / "db.sqlite3")) as database:
-                if database.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()[0]:
-                    raise ReleaseError("Database still has a writer during rollback")
-            for suffix in ("-wal", "-shm"):
-                sidecar = root / ("db.sqlite3" + suffix)
-                if sidecar.exists():
-                    regular(sidecar)
-                    os.replace(sidecar, recovery / (rescue.name + suffix))
-            restored = root / ("restore-" + str(time.time_ns()) + ".sqlite3")
-            snapshot(recovery / "db.sqlite3", restored)
-            os.chmod(restored, stat.S_IMODE(info.st_mode))
-            os.chown(restored, info.st_uid, info.st_gid)
-            os.replace(restored, root / "db.sqlite3")
+        # Preserve all current committed data, including container-local journals.
+        rescue = recovery / ("before-rollback-" + str(time.time_ns()) + ".sqlite3")
+        snapshot_writer(root, rescue)
+        # Keep mode consolidates the SAME data before recreation, never an older DB.
+        replace_database(root, recovery / "db.sqlite3" if restore_database else rescue)
         compose(
             recovery,
             "up",
@@ -618,7 +703,10 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
         try:
             compose(recovery, "stop", BACKEND)
         except ReleaseError:
-            pass
+            print(
+                "Backend stop failed; operator must stop writers before recovery.",
+                file=sys.stderr,
+            )
         raise
 
 

@@ -226,6 +226,18 @@ class TransactionTests(unittest.TestCase):
         self.patches = [
             patch.object(
                 release,
+                "snapshot_writer",
+                side_effect=lambda root, destination: release.snapshot(
+                    root / "db.sqlite3", destination
+                ),
+            ),
+            patch.object(
+                release,
+                "stop_management",
+                side_effect=lambda: self.events.append(("stop-management",)),
+            ),
+            patch.object(
+                release,
                 "preflight",
                 side_effect=lambda root: self.events.append(("preflight",)),
             ),
@@ -343,6 +355,21 @@ class TransactionTests(unittest.TestCase):
         self.assertEqual(self.values(), ["original"])
         release.rollback(self.root, self.identity, False, True)
         self.assertEqual(self.values(), ["original"])
+
+    def test_keep_database_recovery_can_retry_after_readiness_failure(self):
+        with patch.object(
+            release, "snapshot", side_effect=release.ReleaseError("backup failed")
+        ):
+            with self.assertRaises(release.ReleaseError):
+                release.deploy(self.root, self.bundle)
+        self.fail_readiness = True
+        with self.assertRaises(release.ReleaseError):
+            release.rollback(self.root, self.identity, False, True)
+        self.assertEqual(self.values(), ["original"])
+        self.fail_readiness = False
+        release.rollback(self.root, self.identity, False, True)
+        self.assertEqual(self.values(), ["original"])
+        self.assertFalse((self.root / "FAILED.json").exists())
 
     def test_readiness_failure_is_not_a_success_and_rollback_failure_stops_writers(
         self,

@@ -10,7 +10,10 @@ Agent 3 is the sole production operator. Shared decisions:
 The infrastructure gateway must already own ingress and pass its cutover
 acceptance before this pipeline is activated. Production Compose contains only
 this app's frontend/backend. All existing networks are referenced externally;
-the script fails on route-network, exact proxy trust or DB-mount drift. It never
+the script rejects unexpected route-network members, current-app/gateway absence,
+exact proxy-trust drift and DB-mount drift. A missing companion app is allowed
+so its outage does not prevent this app from being released or recovered. Both
+apps must still pass the gateway cutover acceptance before activation. It never
 creates/deletes networks, publishes a backend port, uploads TLS/vhosts, reloads
 Nginx, runs a whole-project down/remove-orphans, or prunes host images.
 
@@ -81,11 +84,22 @@ private runtime state and produces an **app-only recovery Compose model** pinned
 to cached previous image IDs. Original legacy files are retained as private
 evidence; they are never executed as rollback scripts.
 
-The backend stops before SQLite backup. A backup and isolated restore copy
+The backend and any surviving app-labelled management containers stop before
+SQLite backup. The tool selects the most recently started writer, copies its
+DB plus WAL/rollback journal from the stopped container into a private isolated
+directory, and recovers that copy. This matters because only the main DB file is
+bind-mounted; sidecars can be in the container filesystem. A backup and isolated restore copy
 must both pass integrity checks before production checks/migrations. SQLite
 copy/restore operations have a 60-second progress deadline. Management
-containers join only backend egress; they never contend with Notoli's reserved
-backend address. Migration/startup use the selected digest, no pull at startup.
+containers carry app/release identity labels and unique names. They are stopped
+and verified after Docker CLI timeout; rollback quiesces surviving labelled
+containers too. Stopped containers are retained because their journals can be
+recovery evidence. Cleanup needs explicit operator review, like image retention.
+These containers join only backend egress; they never contend with Notoli's reserved
+backend address. Before migration and again before app startup, verified data is consolidated
+into the main host DB with its original owner/mode. Copies use DELETE journal
+mode; this does not enable WAL or relocate storage. Migration/startup use the
+selected digest, no pull at startup.
 Readiness includes direct Django /api/notifications/ returning 401, HTTPS HTML
 root and JSON 401 API response, plus correct Notoli discovery issuer/resource and a 401 MCP challenge with resource metadata. Attempts are bounded by a 90-second
 retry window plus at most one in-flight round of bounded requests; Docker exec
@@ -104,7 +118,8 @@ The private recovery set contains captured effective runtime (including Env),
 app-only Compose, raw old environment, immutable old local image IDs, original
 config/script/env evidence, previous release files/record, and verified DB backup.
 Retain these plus cached images. The tool never prunes them. Keep recovery files
-private and out of logs/tickets. Command errors intentionally withhold captured
+private and out of logs/tickets. Retained management containers also contain raw
+environment and possible DB journals; treat them as private recovery evidence. Command errors intentionally withhold captured
 output; diagnose privately using the saved configuration.
 
 ## Operator commands after separate authorization
@@ -126,20 +141,23 @@ python3 "$app_root/releases/$release_id/release.py" rollback \
 ```
 
 Recovery verifies cached images before stopping the backend, saves the current
-DB too, checkpoints/quarantines WAL sidecars, restores the selected DB with its
+DB/journals from the stopped writer too, restores the selected DB with its
 original ownership/mode, and recreates **only app services**, no pull. It runs
 the same readiness gates and records success only afterward. Failed rollback
 stops backend writers and leaves the failure marker/recovery data intact.
 
 If backup/check failed **before migration started**, the operator may instead
-restart the captured previous app configuration without changing the DB:
+restart the captured previous app configuration with all current data (no older
+snapshot selection). Current journals are consolidated before container recreation:
 
 ```bash
 python3 "$app_root/releases/$release_id/release.py" rollback \
   --root "$app_root" --recovery "$release_id" --keep-database
 ```
 
-That mode is rejected after the recorded migration-started stage. If a crash
+That mode is rejected after the recorded migration-started stage. Its safe-data
+flag persists through rollback failure, allowing a retry after transient readiness
+failure without editing markers or choosing an unnecessary old snapshot. If a crash
 occurred before the marker/recovery set was complete, inspect privately and use
 a specifically approved recovery plan; do not fabricate a success record.
 Rollback is not a substitute for off-host backups and a full functional restore
@@ -150,8 +168,10 @@ drill. Both remain deployment acceptance gates.
 Run `python -m unittest discover -s deploy/tests -v` with Docker.
 Tests use synthetic credentials, real Compose/container env parsing, real SQLite
 backup/restore, and Linux locks with injected migration/backup/readiness failures.
-A real Docker recovery rehearsal recreates captured image IDs, commands, raw
-environment and DB bind without changing an unrelated running container.
+Real Docker recovery rehearsals recreate captured image IDs, commands, raw
+environment and DB binds without changing another container; stop a real writer
+after a short CLI timeout and a simulated interrupted invocation; and recover a
+committed WAL-only row after an unclean exit with the actual single-file bind.
 POSIX transaction tests run in Linux CI (Windows skips them); local Linux Docker
 runs can exercise them independently. Shared vhost routing and proxy endpoint
 reversal are tested in the infrastructure repository.

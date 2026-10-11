@@ -1,8 +1,11 @@
 """Recreate captured app runtime using real Compose and retained image IDs."""
 
 import json
+from contextlib import closing
 from pathlib import Path
+import sqlite3
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 import uuid
@@ -11,6 +14,70 @@ from test_production import release
 
 
 class RecoveryDockerTests(unittest.TestCase):
+    def test_stopped_container_wal_is_included_in_verified_snapshot(self):
+        project = "wal-test-" + uuid.uuid4().hex[:10]
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            patch.object(release, "APP", project),
+        ):
+            root = Path(directory)
+            source = root / "db.sqlite3"
+            with closing(sqlite3.connect(source)) as db:
+                db.execute("CREATE TABLE items(value TEXT)")
+                db.commit()
+            script = (
+                "import sqlite3,time; db=sqlite3.connect('/backend/db.sqlite3'); "
+                "db.execute('PRAGMA journal_mode=WAL'); "
+                "db.execute(\"INSERT INTO items VALUES ('committed-in-container-wal')\"); "
+                "db.commit(); print('ready',flush=True); time.sleep(600)"
+            )
+            name = project + "-backend"
+            try:
+                release.docker(
+                    "run",
+                    "-d",
+                    "--name",
+                    name,
+                    "--network",
+                    "none",
+                    "--mount",
+                    "type=bind,source=" + str(source) + ",target=/backend/db.sqlite3",
+                    "python:3.12-alpine",
+                    "python",
+                    "-c",
+                    script,
+                )
+                deadline = time.monotonic() + 15
+                while "ready" not in release.docker("logs", name):
+                    if time.monotonic() >= deadline:
+                        self.fail("WAL fixture did not start")
+                    time.sleep(0.1)
+                self.assertFalse((root / "db.sqlite3-wal").exists())
+                release.docker("kill", name)
+                target = root / "captured.sqlite3"
+                # Windows Docker bind sources have Linux daemon path spelling;
+                # normalize only that comparison for the disposable fixture.
+                original_inspect = release.inspect
+
+                def inspect(identity):
+                    result = original_inspect(identity)
+                    result["Mounts"][0]["Source"] = str(source)
+                    return result
+
+                with patch.object(release, "inspect", side_effect=inspect):
+                    release.snapshot_writer(root, target)
+                with closing(sqlite3.connect(target)) as db:
+                    self.assertEqual(
+                        db.execute("SELECT * FROM items").fetchall(),
+                        [("committed-in-container-wal",)],
+                    )
+                    self.assertEqual(
+                        db.execute("PRAGMA journal_mode").fetchone()[0], "delete"
+                    )
+                self.assertTrue(original_inspect(name)["State"]["Status"] == "exited")
+            finally:
+                release.docker("rm", "-f", name)
+
     def test_recovery_restores_runtime_without_touching_other_container(self):
         project = "recovery-test-" + uuid.uuid4().hex[:10]
         names = [project + "-" + suffix for suffix in ("backend", "frontend", "other")]
@@ -111,9 +178,61 @@ class RecoveryDockerTests(unittest.TestCase):
                     other_after["State"]["StartedAt"],
                 )
                 self.assertEqual(database.read_bytes(), b"original-database")
+                # Docker CLI timeout can leave the management container alive.
+                # Exercise real cleanup while keeping unrelated containers intact.
+                (candidate / "release.json").write_text(
+                    json.dumps(
+                        {
+                            "id": "a" * 40 + "-1-1",
+                            "database": str(database),
+                        }
+                    )
+                )
+                (candidate / ".backend.env").write_text("SECRET=fixture\n")
+                real_docker = release.docker
+
+                def timed_out(*args, **kwargs):
+                    if args[0] == "run":
+                        image_index = args.index("python:3.12-alpine")
+                        writer = "import time\nwith open('/backend/db.sqlite3', 'ab', buffering=0) as f:\n while True:\n  f.write(b'x'); time.sleep(0.05)"
+                        return real_docker(
+                            *args[: image_index + 1],
+                            "python",
+                            "-c",
+                            writer,
+                            timeout=0.8,
+                        )
+                    return real_docker(*args, **kwargs)
+
+                with (
+                    patch.object(release, "docker", side_effect=timed_out),
+                    patch.object(release, "EGRESS", "none"),
+                ):
+                    with self.assertRaises(release.ReleaseError):
+                        release.manage(candidate, "python:3.12-alpine", "migrate")
+                self.assertEqual(
+                    real_docker(
+                        "ps", "-q", "--filter", "label=org.jude.release.app=" + project
+                    ),
+                    "",
+                )
+                stopped_bytes = database.read_bytes()
+                time.sleep(0.3)
+                self.assertEqual(database.read_bytes(), stopped_bytes)
+                retained = release.management_containers()
+                self.assertEqual(len(retained), 1)
+                self.assertFalse(release.inspect(retained[0])["State"]["Running"])
+                # Simulate a surviving management container after process death.
+                real_docker("start", retained[0])
+                release.stop_management()
+                self.assertFalse(release.inspect(retained[0])["State"]["Running"])
+                self.assertEqual(release.inspect(names[2])["Id"], other_before["Id"])
             finally:
+                for identity in release.management_containers():
+                    release.docker("rm", "-f", identity)
                 for name in names:
                     try:
                         release.docker("rm", "-f", name)
                     except release.ReleaseError:
+                        # Preserve the original assertion when cleanup finds no container.
                         pass
