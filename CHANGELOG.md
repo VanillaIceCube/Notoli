@@ -5,6 +5,8 @@ All notable changes to this project are documented in this file.
 ### Added
 - Enforce pinned shared-source parity for release tools, workflow stages and five equivalent deployment test modules.
 - Verify app-specific readiness/configuration, offline recovery packaging and rejection of shared code/test/workflow drift.
+### Fixed
+- Include owner/reviewer replies and explicit deleted-line context when reconciling prior AI findings; preserve independent scanner and review gates.
 ### Changed
 - Isolate deployment policy in `app.json`; remove unreachable cross-application branches while preserving transaction and recovery safeguards.
 - Use one canonical production guide and retain local Docker instructions separately.

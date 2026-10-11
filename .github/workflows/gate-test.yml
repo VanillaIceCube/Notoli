@@ -246,6 +246,7 @@ jobs:
           set -o pipefail
           status=0
           node --test \
+            .github/actions/collect-prior-ai-reviews/collect-prior-ai-reviews.test.js \
             .github/actions/collect-upstream-major-upgrade-evidence/collect-upstream-major-upgrade-evidence.test.js \
             .github/actions/publish-ai-review/publish-ai-review.test.js \
             .github/actions/security-alerts/sync-security-alerts.test.js \
