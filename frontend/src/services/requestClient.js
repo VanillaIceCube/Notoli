@@ -1,4 +1,4 @@
-import { navigate } from './navigationService';
+import { browserLocation, navigate } from './navigationService';
 import { connectionReturnTo, loginPath } from './authRedirect';
 
 const API_BASE_URL =
@@ -37,7 +37,7 @@ export function redirectToLogin(returnTo) {
   const path = normalizedBase ? `${normalizedBase}${destination}` : destination;
   const loginUrl = `${window.location?.origin ?? ''}${path.startsWith('/') ? '' : '/'}${path}`;
   if (window.location?.replace) {
-    window.location.replace(loginUrl);
+    browserLocation.replace(loginUrl);
   } else {
     window.location.href = loginUrl;
   }

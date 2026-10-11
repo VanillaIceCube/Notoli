@@ -1,6 +1,9 @@
 # 🎨 Frontend (React)
 
-The Notoli frontend is a Create React App (CRA) single-page app with React Router and Material UI.
+The Notoli frontend is a Vite single-page app with React Router and Material UI.
+Standalone Jest and Babel run the existing tests; ESLint 10 uses
+`eslint.config.mjs` and compatible React, hooks, accessibility, and Testing Library
+plugins. Create React App and its incompatible ESLint 8 peer graph are removed.
 
 Material UI and its icons use the compatible v9 package family. Upgrade them
 together and regenerate the lockfile; isolated major bumps fail peer resolution.
@@ -67,8 +70,9 @@ Backend routes also use the subdomain root (`/api/`, `/auth/`, `/admin/`, and
 
 Important pieces:
 
-- `frontend/package.json` does not set a CRA `homepage`, so production assets resolve from `/`.
-- `src/App.js` still uses `process.env.PUBLIC_URL` as the React Router basename, which is empty for the subdomain build and remains useful for specialized local builds.
+- `index.html` is Vite's entry point; production assets resolve from `/`.
+- `src/App.jsx` uses `process.env.PUBLIC_URL` as the React Router basename, which is empty for the subdomain build. `vite.config.mjs` explicitly exposes only `PUBLIC_URL` and `REACT_APP_API_BASE_URL`; it does not expose the shell environment.
+- Vite keeps the existing `build/` output directory and `REACT_APP_API_BASE_URL` build argument. An unset API base defaults to same-origin requests in production and localhost port 8000 in development; an explicit blank also uses same-origin requests.
 - The container's Nginx config (`frontend/nginx.conf`) serves `index.html` for deep links (`try_files ... /index.html`).
 
 ## 🤝 Board Sharing
@@ -142,6 +146,13 @@ npm run build
 npm run lint
 npm run format
 ```
+
+`npm start` runs Vite on port 3000. `npm run build` first runs strict lint,
+then generates `build/` for the existing Nginx image. CI runs both the full
+Jest suite and this production build. JSX-bearing source files use `.jsx`;
+extensionless imports continue to resolve normally. Local `.env` API settings
+are loaded by Vite, and Docker's `HOST`/`CHOKIDAR_USEPOLLING` settings retain
+the existing development bind and polling behavior.
 
 ## 🧱 Node Version
 
