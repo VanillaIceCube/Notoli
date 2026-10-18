@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file.
 - Aligned the security-alert workflow test with the reviewed GitHub App token
   action v3.3.0 pin so intentional dependency updates pass automation checks.
 
+### Changed
+
+- Updated Nora and Marty to v3: one open PR per agent, with repeat runs maintaining the existing PR and integrating current main.
+
 ## 2026-10-17
 ### Removed
 - Retire the recurring Jules Kira downstream-reconciliation role, delete its external schedule, and preserve the evidence and remaining findings through explicit tickets.
