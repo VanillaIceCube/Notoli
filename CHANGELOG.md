@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file.
 - Aligned the security-alert workflow test with the reviewed GitHub App token
   action v3.3.0 pin so intentional dependency updates pass automation checks.
 
+## 2026-10-17
+### Removed
+- Retire the recurring Jules Kira downstream-reconciliation role, delete its external schedule, and preserve the evidence and remaining findings through explicit tickets.
+
 ## 2026-10-11
 ### Fixed
 - Adopt the shared release client identity so Cloudflare accepts public readiness probes without changing edge protections or response checks.
