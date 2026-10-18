@@ -1,3 +1,5 @@
+> **Historical journal — retired 2026-10-17:** The earlier entries below are preserved as historical lessons. Their instructions for future daily runs are no longer active; the retirement record supersedes them.
+
 # Otto's Backlog Management Journal
 
 ## 2026-09-19 - Scheduled-Agent PR Reconciliation Before Active-Work Protection
