@@ -14,7 +14,6 @@ import os
 import sys
 from pathlib import Path
 
-from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,22 +24,11 @@ load_dotenv(BASE_DIR / ".env")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-IS_TESTING = (
-    "test" in sys.argv
-    or "pytest" in sys.modules
-    or os.environ.get("DJANGO_TESTING") == "1"
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-dev-fallback-secret-key-32-chars-min",
 )
-
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
-
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
-if not SECRET_KEY:
-    if IS_TESTING:
-        SECRET_KEY = "django-insecure-dev-fallback-secret-key-32-chars-min"
-    else:
-        raise ImproperlyConfigured(
-            "DJANGO_SECRET_KEY environment variable is required in non-test mode."
-        )
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
@@ -187,6 +175,12 @@ OAUTH2_PROVIDER = {
     "REQUIRE_FORM_ENCODED_REQUEST_BODY": True,
 }
 
+
+IS_TESTING = (
+    "test" in sys.argv
+    or "pytest" in sys.modules
+    or os.environ.get("DJANGO_TESTING") == "1"
+)
 
 if IS_TESTING:
     PASSWORD_HASHERS = [
