@@ -173,3 +173,17 @@ AI review context includes bounded recent owner/collaborator reviews and replies
 External GitHub Actions use immutable commit SHAs with version comments.
 Keep that convention when updating workflows or composite actions; preserve
 review/scanner failure gates and do not treat action updates as deployment approval.
+
+When updating the pinned `actions/create-github-app-token` revision, update the
+security-alert workflow assertion in
+`.github/actions/security-alerts/sync-security-alerts.test.js` and rerun the
+repository automation tests. The current reviewed action revision is
+`64ab729a6294000f5aa4a4bc0b73d1f32bc45510` (v3.3.0).
+
+The shared release pin includes template-policy regression coverage coordinated
+with [FullStackTemplate #217](https://github.com/VanillaIceCube/FullStackTemplate/issues/217)
+and [Infrastructure #26](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/pull/26).
+It derives common preflight fixtures from app policy while retaining this app's
+existing trust, networks, environment requirements, workflow and runtime bytes.
+The same immutable source commit is proposed for all three consumers. These
+source-pin PRs do not authorize merging, promotion, or deployment.

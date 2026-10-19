@@ -192,3 +192,9 @@ and Django static assets use `/static/`.
 External GitHub Actions use immutable commit SHAs with version comments.
 Keep that convention when updating workflows or composite actions; preserve
 review/scanner failure gates and do not treat action updates as deployment approval.
+
+## Jules recurring agents
+
+Nora and Marty use the [v3 operating rules](.jules/README.md): at most one open
+PR per agent per repository. Repeat runs maintain the existing PR, integrate
+current main, and verify its latest head instead of opening another PR.
