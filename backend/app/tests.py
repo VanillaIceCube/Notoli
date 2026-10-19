@@ -1,4 +1,10 @@
+import os
+import sys
+from importlib import reload
+from unittest.mock import patch
+
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 
 
@@ -18,3 +24,27 @@ class SettingsRegressionTestCase(SimpleTestCase):
     def test_static_root_exists_during_testing(self):
         """Ensure STATIC_ROOT directory exists during testing to avoid WhiteNoise startup warnings."""
         self.assertTrue(settings.STATIC_ROOT.exists())
+
+    def test_production_missing_secret_key_raises_improperly_configured(self):
+        """Ensure backend/app/settings.py raises ImproperlyConfigured in production when DJANGO_SECRET_KEY is missing."""
+        env_without_secret = {
+            k: v for k, v in os.environ.items() if k != "DJANGO_SECRET_KEY"
+        }
+        env_without_secret["DJANGO_DEBUG"] = "0"
+        env_without_secret["DJANGO_TESTING"] = "0"
+
+        # Mock sys.argv to simulate non-test production entry point
+        with (
+            patch.dict(os.environ, env_without_secret, clear=True),
+            patch.object(sys, "argv", ["gunicorn"]),
+        ):
+            with self.assertRaises(ImproperlyConfigured) as ctx:
+                import app.settings
+
+                reload(app.settings)
+            self.assertIn("DJANGO_SECRET_KEY", str(ctx.exception))
+
+        # Reload settings back to test state
+        import app.settings
+
+        reload(app.settings)
