@@ -3,6 +3,14 @@ All notable changes to this project are documented in this file.
 
 ## 2026-10-18
 
+### Changed
+
+- Synchronized the shared Infrastructure release-test source pin with the
+  template adoption work while preserving this application's release runtime,
+  deployment workflow, and network/trust policy.
+
+## 2026-10-18
+
 ### Fixed
 
 - Aligned the security-alert workflow test with the reviewed GitHub App token

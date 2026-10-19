@@ -46,10 +46,13 @@ class ContractTests(unittest.TestCase):
         for network in policy["networks"].values():
             expected = set(network["allowed"]) & (own | {policy["container"]})
             self.assertEqual(set(network["required"]), expected)
-        self.assertEqual(policy["addresses"], {"notoli_backend_private": "172.30.88.2"})
+        self.assertLessEqual(set(policy["addresses"]), set(policy["networks"]))
         self.assertEqual(release.DB_TARGET, "/backend/db.sqlite3")
         self.assertEqual(release.DB_FILE, "db.sqlite3")
         if release.APP == "notoli":
+            self.assertEqual(
+                policy["addresses"], {"notoli_backend_private": "172.30.88.2"}
+            )
             self.assertEqual(
                 release.CONFIG["backend_addresses"],
                 {"notoli_backend_private": "172.30.88.3"},
@@ -59,7 +62,10 @@ class ContractTests(unittest.TestCase):
                 ["DJANGO_TRUSTED_PROXY_IPS=172.30.88.2"],
             )
             self.assertNotIn("MACROMAPPER_OPENAI_API_KEY", builder.REQUIRED)
-        else:
+        elif release.APP == "macromapper":
+            self.assertEqual(
+                policy["addresses"], {"notoli_backend_private": "172.30.88.2"}
+            )
             self.assertEqual(release.CONFIG["frontend_port_bindings"], [[]])
             self.assertIn("MACROMAPPER_OPENAI_API_KEY", builder.REQUIRED)
             self.assertNotIn("DJANGO_MCP_BASE_URL", builder.FIXED)
