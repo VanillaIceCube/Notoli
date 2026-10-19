@@ -25,15 +25,14 @@ class SettingsRegressionTestCase(SimpleTestCase):
         """Ensure STATIC_ROOT directory exists during testing to avoid WhiteNoise startup warnings."""
         self.assertTrue(settings.STATIC_ROOT.exists())
 
-    def test_production_missing_secret_key_raises_improperly_configured(self):
-        """Ensure backend/app/settings.py raises ImproperlyConfigured in production when DJANGO_SECRET_KEY is missing."""
+    def test_missing_secret_key_in_non_test_mode_raises_improperly_configured(self):
+        """Ensure backend/app/settings.py raises ImproperlyConfigured in non-test mode when DJANGO_SECRET_KEY is missing, even if DJANGO_DEBUG is unset or true."""
         env_without_secret = {
             k: v for k, v in os.environ.items() if k != "DJANGO_SECRET_KEY"
         }
-        env_without_secret["DJANGO_DEBUG"] = "0"
         env_without_secret["DJANGO_TESTING"] = "0"
 
-        # Mock sys.argv to simulate non-test production entry point
+        # Mock sys.argv to simulate non-test entry point
         with (
             patch.dict(os.environ, env_without_secret, clear=True),
             patch.object(sys, "argv", ["gunicorn"]),

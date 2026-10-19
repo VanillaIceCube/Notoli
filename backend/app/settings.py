@@ -35,11 +35,11 @@ DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
-    if DEBUG or IS_TESTING:
+    if IS_TESTING:
         SECRET_KEY = "django-insecure-dev-fallback-secret-key-32-chars-min"
     else:
         raise ImproperlyConfigured(
-            "DJANGO_SECRET_KEY environment variable is required when DEBUG is False."
+            "DJANGO_SECRET_KEY environment variable is required in non-test mode."
         )
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
