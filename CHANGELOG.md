@@ -1,4 +1,21 @@
 # Changelog
+
+## 2026-10-20
+
+### Added
+
+- Add the reusable, hash-pinned MCP/OAuth framework and isolated consent, token lifecycle and transport tests.
+
+### Changed
+
+- Use the shared transport, consent and token lifecycle while preserving all 31 tools, existing credentials/scopes, exact proxy trust and production readiness.
+
+
+## 2026-10-19
+
+### Changed
+
+- Separate Obi-Wan, Lint Eastwood, and RoboCop OpenAI secrets, including RoboCop alert aggregation; pass only each reviewer's own credentials, stage `OPENAI_REVIEWERS_PROJECT_ID` independently, and document the deferred per-repository key migration.
 All notable changes to this project are documented in this file.
 
 ## 2026-10-18

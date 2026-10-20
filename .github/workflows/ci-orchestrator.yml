@@ -61,7 +61,9 @@ jobs:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/review-code.yml
-    secrets: inherit
+    secrets:
+      OBI_WAN_OPENAI_API_KEY: ${{ secrets.OBI_WAN_OPENAI_API_KEY }}
+      OBI_WAN_CODE_NOBI_PRIVATE_KEY: ${{ secrets.OBI_WAN_CODE_NOBI_PRIVATE_KEY }}
 
   build-review:
     name: AI Build Sheriff Review
@@ -71,7 +73,9 @@ jobs:
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/review-build.yml
-    secrets: inherit
+    secrets:
+      LINT_EASTWOOD_OPENAI_API_KEY: ${{ secrets.LINT_EASTWOOD_OPENAI_API_KEY }}
+      LINT_EASTWOOD_PRIVATE_KEY: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
     permissions:
       contents: read
       pull-requests: write
@@ -97,7 +101,9 @@ jobs:
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository
     uses: ./.github/workflows/review-security.yml
-    secrets: inherit
+    secrets:
+      ROBOCOP_OPENAI_API_KEY: ${{ secrets.ROBOCOP_OPENAI_API_KEY }}
+      ROBOCOP_PRIVATE_KEY: ${{ secrets.ROBOCOP_PRIVATE_KEY }}
     permissions:
       actions: read
       checks: read

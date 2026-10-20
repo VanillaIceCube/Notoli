@@ -40,7 +40,7 @@ on:
         required: false
         type: string
     secrets:
-      OPENAI_API_KEY:
+      LINT_EASTWOOD_OPENAI_API_KEY:
         required: true
       LINT_EASTWOOD_PRIVATE_KEY:
         required: true
@@ -139,8 +139,8 @@ jobs:
         id: openai
         uses: ./.github/actions/openai-chat
         with:
-          api_key: ${{ secrets.OPENAI_API_KEY }}
-          project_id: ${{ vars.OPENAI_PROJECT_ID }}
+          api_key: ${{ secrets.LINT_EASTWOOD_OPENAI_API_KEY }}
+          project_id: ${{ vars.OPENAI_REVIEWERS_PROJECT_ID }}
           diff_path: ${{ runner.temp }}/build-review-context.txt
           model: "gpt-5.6-luna"
           system_prompt: "You are Lint Eastwood, Notoli's AI Build Sheriff. Own lint failures, test failures, build/workflow failures, formatting/type-check style failures, and CI failure interpretation. Sound like a natural, dry build sheriff: plainspoken, confident, concise, and quietly wry. Let a light western touch color the summary without staging an entire scene. Avoid forced jokes and theatrical CI prose. Keep technical findings exact and trustworthy."

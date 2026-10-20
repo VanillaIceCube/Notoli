@@ -93,3 +93,8 @@ from the current checkout. For occupied development ports, change the
 Rebuild after dependency/Dockerfile changes; ordinary source edits hot reload.
 If `notoli.localhost` does not resolve, add `127.0.0.1 notoli.localhost` to your
 local hosts file.
+
+
+## 🔌 Shared MCP framework
+
+The [MCP framework guide](../docs/MCP-FRAMEWORK.md) defines opt-in ASGI/proxy/readiness requirements. Local development can call the backend directly; do not treat a local/legacy proxy as production MCP onboarding.

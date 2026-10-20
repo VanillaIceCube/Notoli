@@ -50,6 +50,9 @@ jobs:
               - '.github/actions/read-versions/**'
             backend:
               - 'backend/**'
+              - 'scripts/check_mcp_framework.py'
+              - 'mcp-framework-source.json'
+              - '.github/workflows/gate-test.yml'
               - '.github/actions/read-versions/**'
             automation:
               - 'deploy/**'
@@ -186,7 +189,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          python manage.py test --verbosity=2 2>&1 | tee test_output.txt || status=$?
+          { python ../scripts/check_mcp_framework.py && python manage.py test --verbosity=2; } 2>&1 | tee test_output.txt || status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
       - name: Test summary
