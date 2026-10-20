@@ -3,7 +3,7 @@ name: AI Code Review
 on:
   workflow_call:
     secrets:
-      OPENAI_API_KEY:
+      OBI_WAN_OPENAI_API_KEY:
         required: true
       OBI_WAN_CODE_NOBI_PRIVATE_KEY:
         required: true
@@ -252,8 +252,8 @@ jobs:
         id: openai
         uses: ./.github/actions/openai-chat
         with:
-          api_key: ${{ secrets.OPENAI_API_KEY }}
-          project_id: ${{ vars.OPENAI_PROJECT_ID }}
+          api_key: ${{ secrets.OBI_WAN_OPENAI_API_KEY }}
+          project_id: ${{ vars.OPENAI_REVIEWERS_PROJECT_ID }}
           diff_path: ${{ runner.temp }}/code-review-context.txt
           model: "gpt-5.6-luna"
           enable_web_search: ${{ steps.dependabot-metadata.outputs.update-type == 'version-update:semver-major' }}
