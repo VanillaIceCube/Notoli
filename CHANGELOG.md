@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-20
+
+### Added
+
+- Add the reusable, hash-pinned MCP/OAuth framework and isolated consent, token lifecycle and transport tests.
+
+### Changed
+
+- Use the shared transport, consent and token lifecycle while preserving all 31 tools, existing credentials/scopes, exact proxy trust and production readiness.
+
+
 ## 2026-10-19
 
 ### Changed

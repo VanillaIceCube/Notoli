@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "notes",
     "notifications",
     "integrations",
+    "mcp_framework",
 ]
 
 
@@ -136,6 +137,12 @@ MCP_BASE_URL = os.getenv("DJANGO_MCP_BASE_URL") or (
 )
 MCP_BASE_URL = MCP_BASE_URL.rstrip("/")
 MCP_RESOURCE_URL = f"{MCP_BASE_URL}/mcp"
+MCP_ENABLED = True
+MCP_NAME = "Notoli"
+MCP_REQUIRED_SCOPES = ["notoli:read"]
+MCP_CONSENT_SALT = "notoli.mcp.consent"
+MCP_CLIENT_ID = "notoli-chatgpt"
+MCP_SERVER_FACTORY = "integrations.server.get_server"
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 OAUTH2_PROVIDER = {
