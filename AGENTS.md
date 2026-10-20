@@ -207,3 +207,8 @@ all security-alert model calls. `OPENAI_REVIEWERS_PROJECT_ID` identifies this re
 reviewer project. Keep credentials separate across repositories and application
 environments, preserve visible missing-key failures, and follow the deferred
 cutover steps in `.github/README-WORKFLOWS.md`.
+
+
+## 🔌 Shared MCP framework
+
+MCP framework changes follow [docs/MCP-FRAMEWORK.md](docs/MCP-FRAMEWORK.md). FullStackTemplate owns the canonical Python package; keep all consumer hashes/pins aligned. MacroMapper stays disabled without business tools. Preserve Notoli credentials, scopes, tool permissions and exact proxy trust.

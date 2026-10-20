@@ -305,3 +305,8 @@ It derives common preflight fixtures from app policy while retaining this app's
 existing trust, networks, environment requirements, workflow and runtime bytes.
 The same immutable source commit is proposed for all three consumers. These
 source-pin PRs do not authorize merging, promotion, or deployment.
+
+
+## 🔌 Shared MCP framework
+
+Follow the [MCP framework contract](../../docs/MCP-FRAMEWORK.md) before activating an optional app. Notoli keeps its current MCP profile; MacroMapper ships the framework with MCP disabled. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.
