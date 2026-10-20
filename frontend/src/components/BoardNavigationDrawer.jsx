@@ -116,8 +116,25 @@ export default function BoardNavigationDrawer({
   const [isAdding, setIsAdding] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
 
+  useEffect(() => {
+    if (!token) {
+      setIsAdding(false);
+      setIsEditing(false);
+      setEditingBoardId(null);
+    }
+  }, [token]);
+
   const onAdd = async () => {
     if (!newBoardName.trim()) return;
+    const currentToken = sessionStorage.getItem('accessToken');
+    if (!currentToken) {
+      const message = 'Authentication required.';
+      setError(message);
+      if (typeof showSnackbar === 'function') {
+        showSnackbar('error', message);
+      }
+      return;
+    }
     setError(null);
 
     try {
@@ -126,7 +143,7 @@ export default function BoardNavigationDrawer({
           name: newBoardName,
           description: '',
         },
-        token,
+        currentToken,
       );
 
       if (!response.ok) {
@@ -188,10 +205,19 @@ export default function BoardNavigationDrawer({
 
   const onEdit = async () => {
     if (!editBoardName.trim()) return;
+    const currentToken = sessionStorage.getItem('accessToken');
+    if (!currentToken) {
+      const message = 'Authentication required.';
+      setError(message);
+      if (typeof showSnackbar === 'function') {
+        showSnackbar('error', message);
+      }
+      return;
+    }
     setError(null);
 
     try {
-      const response = await updateBoard(editingBoardId, { name: editBoardName }, token);
+      const response = await updateBoard(editingBoardId, { name: editBoardName }, currentToken);
 
       if (!response.ok) {
         const errorMsg = await getResponseErrorMessage(
@@ -243,10 +269,20 @@ export default function BoardNavigationDrawer({
 
   // Remove board
   const onDelete = async (id) => {
+    const currentToken = sessionStorage.getItem('accessToken');
+    if (!currentToken) {
+      const message = 'Authentication required.';
+      setError(message);
+      if (typeof showSnackbar === 'function') {
+        showSnackbar('error', message);
+      }
+      handleTripleDotClose();
+      return;
+    }
     setError(null);
 
     try {
-      const response = await deleteBoard(id, token);
+      const response = await deleteBoard(id, currentToken);
 
       if (!response.ok) {
         const errorMsg = await getResponseErrorMessage(

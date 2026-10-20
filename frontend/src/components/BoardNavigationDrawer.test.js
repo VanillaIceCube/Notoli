@@ -585,4 +585,23 @@ describe('BoardNavigationDrawer', () => {
       expect(fetchBoardApi).not.toHaveBeenCalled();
     });
   });
+
+  test('when token is removed before submission, onAdd does not call createBoard', async () => {
+    const showSnackbar = jest.fn();
+    await renderDrawer({ showSnackbar });
+
+    await openBoardList();
+
+    await userEvent.click(screen.getByRole('button', { name: /add new/i }));
+    const input = screen.getByPlaceholderText('New Board Name...');
+    await userEvent.type(input, 'New Unauth Board');
+
+    sessionStorage.removeItem('accessToken');
+
+    // Trigger onAdd via enter or button
+    await userEvent.keyboard('{enter}');
+
+    expect(createBoard).not.toHaveBeenCalled();
+    expect(showSnackbar).toHaveBeenCalledWith('error', 'Authentication required.');
+  });
 });
