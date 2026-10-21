@@ -7,6 +7,37 @@ const test = require("node:test");
 const vm = require("node:vm");
 const { publishAiReview, renderReviewBody } = require("./publish-ai-review");
 
+test("audit accepts the actual GitHub check-runs API representation", () => {
+  const {
+    requiredReviewerContexts,
+    reviewerGateProblems,
+  } = require("./verify-gates");
+  const captured = require("./fixtures/github-check-runs.json");
+  const ruleset = {
+    enforcement: "active",
+    rules: [
+      {
+        type: "required_status_checks",
+        parameters: {
+          required_status_checks: requiredReviewerContexts.map((context) => ({
+            context,
+          })),
+        },
+      },
+    ],
+  };
+  assert.deepEqual(
+    captured.check_runs.map((check) => check.name),
+    requiredReviewerContexts,
+  );
+  assert.deepEqual(reviewerGateProblems(ruleset, captured.check_runs), []);
+  const blocked = require("./fixtures/github-check-runs-blocked.json");
+  assert.deepEqual(reviewerGateProblems(ruleset, blocked.check_runs), [
+    "Reviewer not successful: AI Build Sheriff Review / Lint Eastwood build sheriff review (completed/failure)",
+    "Reviewer not successful: AI Security Review / RoboCop security review (completed/failure)",
+  ]);
+});
+
 test("gate audit rejects missing, skipped, cancelled and failed reviewer results", () => {
   const {
     requiredReviewerContexts,

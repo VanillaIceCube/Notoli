@@ -1,0 +1,28 @@
+{
+  "_source_url": "https://api.github.com/repos/VanillaIceCube/FullStackTemplate/commits/c6140fdeb1191f2a678356e018062a4fb16d23f8/check-runs?per_page=100",
+  "_captured_on": "2026-10-20",
+  "_selection": "Reviewer check runs only; original API field names and values preserved. Obi-Wan succeeded; Lint Eastwood and RoboCop requested changes and failed.",
+  "check_runs": [
+    {
+      "id": 118960470514,
+      "name": "AI Code Review / Obi-Wan Code-nobi code review",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/VanillaIceCube/FullStackTemplate/actions/runs/39519771086/job/118960470514"
+    },
+    {
+      "id": 118961010050,
+      "name": "AI Build Sheriff Review / Lint Eastwood build sheriff review",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/VanillaIceCube/FullStackTemplate/actions/runs/39519771086/job/118961010050"
+    },
+    {
+      "id": 118960885537,
+      "name": "AI Security Review / RoboCop security review",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/VanillaIceCube/FullStackTemplate/actions/runs/39519771086/job/118960885537"
+    }
+  ]
+}
