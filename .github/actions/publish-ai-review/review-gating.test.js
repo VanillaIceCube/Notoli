@@ -278,7 +278,8 @@ test("required reviewer contexts and trusted PR eligibility stay stable", () => 
         `uses: \\.\\/\\.github\\/workflows\\/${file.replaceAll(".", "\\.")}`,
       ),
     );
-    assert.doesNotMatch(child, /^    if:|continue-on-error:/m);
+    assert.doesNotMatch(child, /^    if:/m);
+    assert.doesNotMatch(child, /continue-on-error:/);
     const condition = parent.match(/    if: >-\n((?:      .*\n)+)/)[1].trim();
     for (const author of ["human", "dependabot[bot]"]) {
       for (const upstream of ["success", "failure", "skipped", "cancelled"]) {
