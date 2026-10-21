@@ -1,0 +1,235 @@
+{
+  "verified_on": "2026-10-20",
+  "repository": "VanillaIceCube/Notoli",
+  "ruleset_before": {
+    "id": 12154610,
+    "name": "Main Branch Protection",
+    "target": "branch",
+    "source_type": "Repository",
+    "source": "VanillaIceCube/Notoli",
+    "enforcement": "active",
+    "conditions": {
+      "ref_name": {
+        "exclude": [],
+        "include": [
+          "~DEFAULT_BRANCH"
+        ]
+      }
+    },
+    "rules": [
+      {
+        "type": "deletion"
+      },
+      {
+        "type": "non_fast_forward"
+      },
+      {
+        "type": "pull_request",
+        "parameters": {
+          "required_approving_review_count": 0,
+          "dismiss_stale_reviews_on_push": false,
+          "required_reviewers": [],
+          "require_code_owner_review": false,
+          "require_last_push_approval": false,
+          "required_review_thread_resolution": true,
+          "require_extra_approval_for_unattributed_changes": true,
+          "allowed_merge_methods": [
+            "merge",
+            "squash",
+            "rebase"
+          ]
+        }
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": false,
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "Lints / Detect Changes"
+            },
+            {
+              "context": "Lints / Lint Frontend (ESLint + Prettier)"
+            },
+            {
+              "context": "Lints / Lint Backend (Ruff)"
+            },
+            {
+              "context": "Lints / Lint Results"
+            },
+            {
+              "context": "Tests / Detect Changes"
+            },
+            {
+              "context": "Tests / Frontend Tests (React)"
+            },
+            {
+              "context": "Tests / Backend Tests (Django)"
+            },
+            {
+              "context": "Tests / Test Results"
+            },
+            {
+              "context": "CodeQL / Detect CodeQL Scope"
+            },
+            {
+              "context": "CodeQL / Analyze Python"
+            },
+            {
+              "context": "CodeQL / Analyze JavaScript/TypeScript"
+            },
+            {
+              "context": "CodeQL / Analyze GitHub Actions"
+            },
+            {
+              "context": "Vulnerability / Vulnerability"
+            },
+            {
+              "context": "Malware / Malware"
+            }
+          ]
+        }
+      }
+    ],
+    "node_id": "RRS_lACqUmVwb3NpdG9yec45zOjnzgC5dvI",
+    "created_at": "2026-01-26T10:09:37.009-08:00",
+    "updated_at": "2026-10-09T21:41:38.018-07:00",
+    "bypass_actors": [],
+    "current_user_can_bypass": "never",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/VanillaIceCube/Notoli/rulesets/12154610"
+      },
+      "html": {
+        "href": "https://github.com/VanillaIceCube/Notoli/rules/12154610"
+      }
+    }
+  },
+  "ruleset_after": {
+    "id": 12154610,
+    "name": "Main Branch Protection",
+    "target": "branch",
+    "source_type": "Repository",
+    "source": "VanillaIceCube/Notoli",
+    "enforcement": "active",
+    "conditions": {
+      "ref_name": {
+        "exclude": [],
+        "include": [
+          "~DEFAULT_BRANCH"
+        ]
+      }
+    },
+    "rules": [
+      {
+        "type": "deletion"
+      },
+      {
+        "type": "non_fast_forward"
+      },
+      {
+        "type": "pull_request",
+        "parameters": {
+          "required_approving_review_count": 0,
+          "dismiss_stale_reviews_on_push": false,
+          "required_reviewers": [],
+          "require_code_owner_review": false,
+          "require_last_push_approval": false,
+          "required_review_thread_resolution": true,
+          "require_extra_approval_for_unattributed_changes": true,
+          "allowed_merge_methods": [
+            "merge",
+            "squash",
+            "rebase"
+          ]
+        }
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": false,
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "Lints / Detect Changes"
+            },
+            {
+              "context": "Lints / Lint Frontend (ESLint + Prettier)"
+            },
+            {
+              "context": "Lints / Lint Backend (Ruff)"
+            },
+            {
+              "context": "Lints / Lint Results"
+            },
+            {
+              "context": "Tests / Detect Changes"
+            },
+            {
+              "context": "Tests / Frontend Tests (React)"
+            },
+            {
+              "context": "Tests / Backend Tests (Django)"
+            },
+            {
+              "context": "Tests / Test Results"
+            },
+            {
+              "context": "CodeQL / Detect CodeQL Scope"
+            },
+            {
+              "context": "CodeQL / Analyze Python"
+            },
+            {
+              "context": "CodeQL / Analyze JavaScript/TypeScript"
+            },
+            {
+              "context": "CodeQL / Analyze GitHub Actions"
+            },
+            {
+              "context": "Vulnerability / Vulnerability"
+            },
+            {
+              "context": "Malware / Malware"
+            },
+            {
+              "context": "AI Code Review / Obi-Wan Code-nobi code review"
+            },
+            {
+              "context": "AI Build Sheriff Review / Lint Eastwood build sheriff review"
+            },
+            {
+              "context": "AI Security Review / RoboCop security review"
+            }
+          ]
+        }
+      }
+    ],
+    "node_id": "RRS_lACqUmVwb3NpdG9yec45zOjnzgC5dvI",
+    "created_at": "2026-01-26T10:09:37.009-08:00",
+    "updated_at": "2026-10-20T17:07:22.034-07:00",
+    "bypass_actors": [],
+    "current_user_can_bypass": "never",
+    "_links": {
+      "self": {
+        "href": "https://api.github.com/repos/VanillaIceCube/Notoli/rulesets/12154610"
+      },
+      "html": {
+        "href": "https://github.com/VanillaIceCube/Notoli/rules/12154610"
+      }
+    }
+  },
+  "preservation_check": "Only the three reviewer contexts were appended; all other rules, parameters, conditions and bypass actors are unchanged.",
+  "live_evidence": {
+    "human_pr": "https://github.com/VanillaIceCube/Notoli/pull/944",
+    "human_pr_passing_run": "https://github.com/VanillaIceCube/Notoli/actions/runs/39503219871",
+    "dependabot_pr": "https://github.com/VanillaIceCube/Notoli/pull/941",
+    "dependabot_passing_run": "https://github.com/VanillaIceCube/Notoli/actions/runs/39345569393",
+    "blocking_review": "https://github.com/VanillaIceCube/Notoli/pull/942#pullrequestreview-5583479039",
+    "blocking_check": "https://github.com/VanillaIceCube/Notoli/actions/runs/39403822972/job/118564788557",
+    "later_approval": "https://github.com/VanillaIceCube/Notoli/pull/942#pullrequestreview-5583539374",
+    "later_passing_check": "https://github.com/VanillaIceCube/Notoli/actions/runs/39404568951/job/118567260315"
+  },
+  "credential_check": "Required reviewer secret names exist in both Actions and Dependabot; app ID/project variable names exist. Values were not retrieved."
+}
