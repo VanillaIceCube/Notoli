@@ -2,6 +2,15 @@
 
 ## 2026-10-20
 
+### Fixed
+
+- Fail closed on incomplete dependency reviews and retain sanitized structured evidence with a bounded RoboCop report.
+- Preserve alert history and Project metadata before auto-close; verify concurrent closure without suppressing unrelated API errors and use the current Work type field.
+- Forward language-specific CodeQL scope and baseline evidence to RoboCop while retaining full main/scheduled/manual analysis.
+
+
+## 2026-10-20
+
 ### Added
 
 - Add a read-only reviewer-gate audit that rejects missing, skipped, cancelled and non-success results.

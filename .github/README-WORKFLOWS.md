@@ -261,3 +261,45 @@ See [OpenAI key security, expiration and usage guidance](https://developers.open
 ## 🔌 Shared MCP framework
 
 The backend test gate checks the pinned MCP framework manifest. Template/MacroMapper run both ordinary tests and an isolated MCP-enabled sample profile; production remains disabled there. Notoli runs its existing enabled protocol/domain suite. See [the framework guide](../docs/MCP-FRAMEWORK.md).
+
+## 🛡️ Dependency evidence and alert lifecycle parity
+
+The reusable baseline is FullStackTemplate's `.github/actions/prepare-vulnerability-report`.
+MacroMapper, Notoli and Infrastructure carry the same report implementation and
+regression contract. Dependency Review still blocks high/critical additions;
+every non-success scanner outcome, missing/malformed output or failed evidence
+preparation fails the independent Vulnerability check. No empty-array fallback
+may turn unavailable evidence into a clean scan. RoboCop receives at most 16 KiB
+of package/severity/manifest context, with omitted-entry counts. The
+`dependency-review-evidence` artifact retains every structured entry for seven
+days, excluding untrusted free text and arbitrary URLs; unavailable evidence is
+retained as structured diagnostics. Artifacts have the repository's Actions
+access controls, not an additional private storage boundary.
+
+Alert synchronization saves source history/replacement links first, ensures
+Project membership, then writes End date before Status Done. Done can trigger
+Project auto-close. The issue client re-reads state before a separate state-only
+close. Only GitHub's observed HTTP 422 `Validation Failed` with an empty errors
+array is eligible for recovery, and only if another read proves closed/completed
+with the exact saved lifecycle body. Other failures propagate. Partial Project
+failures leave the issue open for rerun; issue mutations remain attributed to
+RoboCop and Project writes use the separate Project credential. New items use
+the live `Work type` field. No credentials, branch protections or deployments
+change.
+
+Historical evidence: FullStackTemplate #192 closed at 2026-10-11 16:40:51 UTC,
+before run 38156425534's state-close PATCH returned 422 at 16:40:52 UTC with
+`errors: []`. Notoli #825 has the same earlier pattern. All four Projects have
+Auto-close issue enabled (read-only verification 2026-10-20). This establishes
+the competing-close ordering; GitHub's internal validation cause is not exposed.
+Mocks reproduce that interleaving and reject unrelated errors. Empty scheduled
+feeds do not establish that a live close race occurred.
+
+CodeQL now forwards `scope_status`, `scope_python`, `scope_javascript` and
+`scope_actions` to RoboCop's shared evidence collector. A PR language skip is
+expected only with successful, known scope and a completed matching default-
+branch baseline. Missing, failed or unavailable evidence stays an explicit gap.
+Main pushes and scheduled/manual scans still analyze every language. Existing
+check names, categories, queries and ruleset requirements remain unchanged;
+this does not independently resolve the historical default-branch/attribution
+acceptance in #612 or #587.
