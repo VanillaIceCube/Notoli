@@ -63,11 +63,14 @@ test("gate audit rejects missing, skipped, cancelled and failed reviewer results
     ]).length,
     1,
   );
+  const failed = { ...clean[0], id: 10, conclusion: "failure" };
+  const rerun = { ...failed, id: 11, conclusion: "success" };
+  assert.equal(
+    reviewerGateProblems(ruleset, [failed, ...clean.slice(1)]).length,
+    1,
+  );
   assert.deepEqual(
-    reviewerGateProblems(ruleset, [
-      ...clean,
-      { ...clean[0], id: 0, conclusion: "failure" },
-    ]),
+    reviewerGateProblems(ruleset, [failed, rerun, ...clean.slice(1)]),
     [],
     "A successful rerun supersedes the earlier failure",
   );

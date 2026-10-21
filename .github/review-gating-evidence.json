@@ -231,5 +231,13 @@
     "later_approval": "https://github.com/VanillaIceCube/Notoli/pull/942#pullrequestreview-5583539374",
     "later_passing_check": "https://github.com/VanillaIceCube/Notoli/actions/runs/39404568951/job/118567260315"
   },
-  "credential_check": "Required reviewer secret names exist in both Actions and Dependabot; app ID/project variable names exist. Values were not retrieved."
+  "credential_check": "Required reviewer secret names exist in both Actions and Dependabot; app ID/project variable names exist. Values were not retrieved.",
+  "live_new_ruleset_verification": {
+    "pr": "https://github.com/VanillaIceCube/Notoli/pull/947",
+    "head_sha": "a60c335d829ed5d42b9d522c7bbaf8fe8262ab2e",
+    "merge_state": "BLOCKED",
+    "blocking_review": "https://github.com/VanillaIceCube/Notoli/pull/947#pullrequestreview-5593372962",
+    "failed_required_check": "https://github.com/VanillaIceCube/Notoli/actions/runs/39519768899/job/118960463204",
+    "review_observation": "The reviewer misread the earlier failed-run ID. The follow-up makes both the failure and subsequent success IDs explicit to remove fixture ambiguity."
+  }
 }
