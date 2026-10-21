@@ -214,3 +214,8 @@ cutover steps in `.github/README-WORKFLOWS.md`.
 ## 🔌 Shared MCP framework
 
 MCP framework changes follow [docs/MCP-FRAMEWORK.md](docs/MCP-FRAMEWORK.md). FullStackTemplate owns the canonical Python package; keep all consumer hashes/pins aligned. MacroMapper stays disabled without business tools. Preserve Notoli credentials, scopes, tool permissions and exact proxy trust.
+
+Dependency-review and alert-lifecycle behavior follows the shared parity contract in
+`.github/README-WORKFLOWS.md`: missing evidence fails, reports stay bounded, and
+concurrent closure requires verified final state. Keep CodeQL scope outputs and
+RoboCop baseline evidence connected without changing full default-branch coverage.
