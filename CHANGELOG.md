@@ -4,6 +4,17 @@
 
 ### Added
 
+- Add a read-only reviewer-gate audit that rejects missing, skipped, cancelled and non-success results.
+
+### Fixed
+
+- Require all three AI reviewer checks on main while preserving the existing 14 gates and all other protection settings; record live human/Dependabot eligibility and blocking-verdict recovery evidence.
+- Reject missing or invalid AI verdict events as unavailable, with matching publisher and workflow regressions in FullStackTemplate.
+
+## 2026-10-20
+
+### Added
+
 - Add the reusable, hash-pinned MCP/OAuth framework and isolated consent, token lifecycle and transport tests.
 
 ### Changed

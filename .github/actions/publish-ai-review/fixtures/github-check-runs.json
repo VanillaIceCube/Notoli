@@ -1,0 +1,28 @@
+{
+  "_source_url": "https://api.github.com/repos/VanillaIceCube/Notoli/commits/1c995a574394a8cce435837280ce59748f8d237e/check-runs?per_page=100",
+  "_captured_on": "2026-10-20",
+  "_selection": "Reviewer check runs only; original API field names and values preserved. No workflow-name reconstruction or check-name normalization.",
+  "check_runs": [
+    {
+      "id": 118567260315,
+      "name": "AI Code Review / Obi-Wan Code-nobi code review",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/VanillaIceCube/Notoli/actions/runs/39404568951/job/118567260315"
+    },
+    {
+      "id": 118567701511,
+      "name": "AI Build Sheriff Review / Lint Eastwood build sheriff review",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/VanillaIceCube/Notoli/actions/runs/39404568951/job/118567701511"
+    },
+    {
+      "id": 118567621828,
+      "name": "AI Security Review / RoboCop security review",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/VanillaIceCube/Notoli/actions/runs/39404568951/job/118567621828"
+    }
+  ]
+}
