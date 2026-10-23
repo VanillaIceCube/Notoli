@@ -25,6 +25,7 @@ import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import BoardShareDialog from './BoardShareDialog';
+import { getResponseErrorMessage } from '../services/authSession';
 
 import {
   createBoard,
@@ -54,14 +55,17 @@ export default function BoardNavigationDrawer({
   const currentEmail = sessionStorage.getItem('email');
 
   const fetchBoardName = useCallback(async () => {
-    if (!boardId) return '';
+    if (!boardId || !token) return '';
     try {
       const response = await fetchBoardApi(boardId, token);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorMsg = await getResponseErrorMessage(response, `HTTP ${response.status}`);
+        throw new Error(errorMsg);
+      }
       const boardData = await response.json();
       return boardData?.name ?? '';
     } catch (error) {
-      return error.toString() ?? '';
+      return error?.message || error?.toString() || '';
     }
   }, [boardId, token]);
 
@@ -82,15 +86,23 @@ export default function BoardNavigationDrawer({
   const [error, setError] = useState(null);
 
   const fetchBoards = useCallback(async () => {
+    if (!token) {
+      setBoards([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const response = await fetchBoardsApi(token);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorMsg = await getResponseErrorMessage(response, `HTTP ${response.status}`);
+        throw new Error(errorMsg);
+      }
       const data = await response.json();
       setBoards(data);
       setError(null);
     } catch (err) {
-      setError(err.toString());
+      setError(err?.toString() || 'Error loading boards.');
     } finally {
       setLoading(false);
     }
@@ -104,8 +116,25 @@ export default function BoardNavigationDrawer({
   const [isAdding, setIsAdding] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
 
+  useEffect(() => {
+    if (!token) {
+      setIsAdding(false);
+      setIsEditing(false);
+      setEditingBoardId(null);
+    }
+  }, [token]);
+
   const onAdd = async () => {
     if (!newBoardName.trim()) return;
+    const currentToken = sessionStorage.getItem('accessToken');
+    if (!currentToken) {
+      const message = 'Authentication required.';
+      setError(message);
+      if (typeof showSnackbar === 'function') {
+        showSnackbar('error', message);
+      }
+      return;
+    }
     setError(null);
 
     try {
@@ -114,18 +143,30 @@ export default function BoardNavigationDrawer({
           name: newBoardName,
           description: '',
         },
-        token,
+        currentToken,
       );
 
-      // Pessimistic Local Merge
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorMsg = await getResponseErrorMessage(
+          response,
+          `Unable to create board (HTTP ${response.status})`,
+        );
+        throw new Error(errorMsg);
+      }
       const created = await response.json();
       setBoards((prev) => [...prev, created]);
 
       setIsAdding(false);
       setNewBoardName('');
+      if (typeof showSnackbar === 'function') {
+        showSnackbar('success', `Board "${created.name}" created!`);
+      }
     } catch (err) {
-      setError(err.toString());
+      const message = err?.message || err?.toString() || 'Unable to create board.';
+      setError(err?.toString() || message);
+      if (typeof showSnackbar === 'function') {
+        showSnackbar('error', message);
+      }
     }
   };
 
@@ -164,19 +205,40 @@ export default function BoardNavigationDrawer({
 
   const onEdit = async () => {
     if (!editBoardName.trim()) return;
+    const currentToken = sessionStorage.getItem('accessToken');
+    if (!currentToken) {
+      const message = 'Authentication required.';
+      setError(message);
+      if (typeof showSnackbar === 'function') {
+        showSnackbar('error', message);
+      }
+      return;
+    }
     setError(null);
 
     try {
-      const response = await updateBoard(editingBoardId, { name: editBoardName }, token);
+      const response = await updateBoard(editingBoardId, { name: editBoardName }, currentToken);
 
-      // Pessimistic Local Merge
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorMsg = await getResponseErrorMessage(
+          response,
+          `Unable to update board (HTTP ${response.status})`,
+        );
+        throw new Error(errorMsg);
+      }
       const updated = await response.json();
       setBoards((prev) => prev.map((board) => (board.id === updated.id ? updated : board)));
 
       closeEdit();
+      if (typeof showSnackbar === 'function') {
+        showSnackbar('success', `Board renamed to "${updated.name}".`);
+      }
     } catch (err) {
-      setError(err.toString());
+      const message = err?.message || err?.toString() || 'Unable to update board.';
+      setError(err?.toString() || message);
+      if (typeof showSnackbar === 'function') {
+        showSnackbar('error', message);
+      }
     }
   };
 
@@ -207,16 +269,41 @@ export default function BoardNavigationDrawer({
 
   // Remove board
   const onDelete = async (id) => {
+    const currentToken = sessionStorage.getItem('accessToken');
+    if (!currentToken) {
+      const message = 'Authentication required.';
+      setError(message);
+      if (typeof showSnackbar === 'function') {
+        showSnackbar('error', message);
+      }
+      handleTripleDotClose();
+      return;
+    }
     setError(null);
 
     try {
-      const response = await deleteBoard(id, token);
+      const response = await deleteBoard(id, currentToken);
 
-      // Pessimistic Local Merge
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorMsg = await getResponseErrorMessage(
+          response,
+          `Unable to delete board (HTTP ${response.status})`,
+        );
+        throw new Error(errorMsg);
+      }
       setBoards((prev) => prev.filter((board) => board.id !== id));
+      if (typeof showSnackbar === 'function') {
+        showSnackbar('success', 'Board deleted.');
+      }
+      if (String(id) === String(boardId)) {
+        navigate('/');
+      }
     } catch (err) {
-      setError(err.toString());
+      const message = err?.message || err?.toString() || 'Unable to delete board.';
+      setError(err?.toString() || message);
+      if (typeof showSnackbar === 'function') {
+        showSnackbar('error', message);
+      }
     } finally {
       handleTripleDotClose();
     }
