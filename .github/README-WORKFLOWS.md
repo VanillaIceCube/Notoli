@@ -303,3 +303,9 @@ Main pushes and scheduled/manual scans still analyze every language. Existing
 check names, categories, queries and ruleset requirements remain unchanged;
 this does not independently resolve the historical default-branch/attribution
 acceptance in #612 or #587.
+
+## 🔄 Shared deployment action update
+
+Docker login v4.7.0 is rendered from Infrastructure commit
+`f3f049830fcd5e5869d1ae120c57d9ccb6c99200`. Keep `deploy/shared-source.json` and
+the generated workflow synchronized; deployment parity remains mandatory.

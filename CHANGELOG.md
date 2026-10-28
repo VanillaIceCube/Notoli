@@ -8,7 +8,8 @@
 
 ### Changed
 
-- Update the resolved Zod frontend dependency to 4.6.7.
+- Update React and React DOM together to 19.3.1, Zod to 4.6.7, ESLint to 10.13.0, the React ESLint plugin to 5.28.0, and Testing Library user-event to 14.6.8.
+- Adopt Docker login v4.7.0 from the pinned Infrastructure release template while preserving deployment parity and app-specific configuration.
 
 ## 2026-10-20
 
