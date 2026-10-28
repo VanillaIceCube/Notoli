@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-27
+
+### Changed
+
+- Adopt Docker login v4.7.0 from the pinned Infrastructure release template while preserving deployment parity and app-specific configuration.
+
 ## 2026-10-20
 
 ### Fixed
