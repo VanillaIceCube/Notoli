@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-27
+
+### Fixed
+
+- Limit dependency malware advisory queries to changed package names with complete pagination and fail-closed API errors, avoiding full-corpus timeouts on dependency PRs.
+
+### Changed
+
+- Update the resolved Zod frontend dependency to 4.6.7.
+
 ## 2026-10-20
 
 ### Fixed
