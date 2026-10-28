@@ -265,3 +265,8 @@ Proxy / HTTPS:
 Static files:
 - Collected during the Docker build (`python manage.py collectstatic --noinput`)
 - `STATIC_URL` is `/static/`. Notoli serves backend routes at the subdomain root and does not configure a deployment path prefix.
+
+
+## 🔌 Shared MCP framework
+
+See [the MCP framework guide](../docs/MCP-FRAMEWORK.md) for opt-in settings, ASGI startup, OAuth migrations/client registration, consent, scope/ownership requirements and disabled-profile tests.

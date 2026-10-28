@@ -72,67 +72,60 @@ class PreflightTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "db.sqlite3").write_bytes(b"existing")
-            notoli = release.APP == "notoli"
-            backend_networks = (
-                {
-                    "notoli_backend_private": {"IPAddress": "172.30.88.3"},
-                    "notoli_backend_egress": {},
-                }
-                if notoli
-                else {"macromapper-ingress": {}, "macromapper_default": {}}
-            )
-            frontend_networks = {"notoli_default": {}} if notoli else backend_networks
+            config = release.CONFIG
+            policy = config["gateway"]
+            gateway_name = policy["container"]
+            backend_name = config["containers"]["backend"]
+            frontend_name = config["containers"]["frontend"]
+            own = {backend_name, frontend_name}
+            backend_networks = {
+                name: {"IPAddress": config["backend_addresses"].get(name, "")}
+                for name in config["backend_networks"]
+            }
+            frontend_networks = {name: {} for name in config["frontend_networks"]}
             gateway = {
                 "State": {"Running": True},
-                "Config": {"Labels": {"com.docker.compose.project": "host-ingress"}},
+                "Config": {"Labels": {"com.docker.compose.project": policy["project"]}},
                 "NetworkSettings": {
                     "Networks": {
-                        "notoli_backend_private": {"IPAddress": "172.30.88.2"},
-                        "notoli_default": {},
-                        "macromapper-ingress": {},
+                        name: {"IPAddress": policy["addresses"].get(name, "")}
+                        for name in policy["networks"]
                     }
                 },
             }
+            original_ports = {}
+            for port, host, number in config["frontend_port_bindings"][0]:
+                original_ports.setdefault(port, []).append(
+                    {"HostIp": host, "HostPort": number}
+                )
             containers = {
-                "host-ingress-proxy": gateway,
-                release.APP + "-backend": {
+                gateway_name: gateway,
+                backend_name: {
                     "NetworkSettings": {"Networks": backend_networks},
-                    "Config": {"Env": ["DJANGO_TRUSTED_PROXY_IPS=172.30.88.2"]},
+                    "Config": {"Env": list(config["backend_required_env"])},
                     "HostConfig": {"PortBindings": {}},
                     "Mounts": [
                         {
-                            "Destination": "/backend/db.sqlite3",
-                            "Source": str(root / "db.sqlite3"),
+                            "Destination": release.DB_TARGET,
+                            "Source": str(root / release.DB_FILE),
                         }
                     ],
                 },
-                release.APP + "-frontend": {
+                frontend_name: {
                     "NetworkSettings": {"Networks": frontend_networks},
-                    "HostConfig": {
-                        "PortBindings": {"80/tcp": [{"HostIp": "", "HostPort": "3000"}]}
-                        if notoli
-                        else {}
-                    },
+                    "HostConfig": {"PortBindings": copy.deepcopy(original_ports)},
                 },
             }
-            networks = {}
-            for name, internal, subnet, members in (
-                ("notoli_backend_private", True, "172.30.88.0/29", ["notoli-backend"]),
-                ("notoli_default", False, "172.18.0.0/16", ["notoli-frontend"]),
-                (
-                    "macromapper-ingress",
-                    False,
-                    "172.20.0.0/16",
-                    ["macromapper-backend", "macromapper-frontend"],
-                ),
-            ):
-                networks[name] = {
-                    "Internal": internal,
-                    "IPAM": {"Config": [{"Subnet": subnet}]},
+            networks = {
+                name: {
+                    "Internal": network["internal"],
+                    "IPAM": {"Config": [{"Subnet": network["subnet"]}]},
                     "Containers": {
-                        n: {"Name": n} for n in members + ["host-ingress-proxy"]
+                        member: {"Name": member} for member in network["allowed"]
                     },
                 }
+                for name, network in policy["networks"].items()
+            }
             with (
                 patch.object(
                     release, "inspect", side_effect=lambda name: containers[name]
@@ -157,57 +150,64 @@ class PreflightTests(unittest.TestCase):
                     network["Containers"] = {
                         n: v
                         for n, v in network["Containers"].items()
-                        if n == "host-ingress-proxy" or n.startswith(release.APP + "-")
+                        if n == gateway_name or n in own
                     }
                 release.preflight(root)
                 original = copy.deepcopy(networks)
                 for missing in (
-                    release.APP + "-backend",
-                    release.APP + "-frontend",
-                    "host-ingress-proxy",
+                    backend_name,
+                    frontend_name,
+                    gateway_name,
                 ):
                     for network in networks.values():
                         network["Containers"].pop(missing, None)
                     with self.assertRaises(release.ReleaseError):
                         release.preflight(root)
                     networks = copy.deepcopy(original)
-                networks["notoli_backend_private"]["Containers"]["unknown"] = {
+                networks[next(iter(networks))]["Containers"]["unknown"] = {
                     "Name": "unknown"
                 }
                 with self.assertRaises(release.ReleaseError):
                     release.preflight(root)
                 networks = copy.deepcopy(original)
-                containers[release.APP + "-frontend"]["HostConfig"]["PortBindings"] = {
+                containers[frontend_name]["HostConfig"]["PortBindings"] = {
                     "80/tcp": [{"HostIp": "0.0.0.0", "HostPort": "8080"}]
                 }
                 with self.assertRaises(release.ReleaseError):
                     release.preflight(root)
-                containers[release.APP + "-frontend"]["HostConfig"]["PortBindings"] = (
-                    {"80/tcp": [{"HostIp": "", "HostPort": "3000"}]} if notoli else {}
+                containers[frontend_name]["HostConfig"]["PortBindings"] = copy.deepcopy(
+                    original_ports
                 )
-                own_backend = containers[release.APP + "-backend"]
+                own_backend = containers[backend_name]
                 original_backend = copy.deepcopy(own_backend)
                 own_backend["NetworkSettings"]["Networks"]["unexpected-network"] = {}
                 with self.assertRaises(release.ReleaseError):
                     release.preflight(root)
-                containers[release.APP + "-backend"] = copy.deepcopy(original_backend)
-                if notoli:
-                    containers[release.APP + "-backend"]["Config"]["Env"] = []
+                containers[backend_name] = copy.deepcopy(original_backend)
+                if config["backend_required_env"]:
+                    containers[backend_name]["Config"]["Env"] = []
                     with self.assertRaises(release.ReleaseError):
                         release.preflight(root)
-                    containers[release.APP + "-backend"] = copy.deepcopy(
-                        original_backend
-                    )
-                    containers[release.APP + "-backend"]["NetworkSettings"]["Networks"][
-                        "notoli_backend_private"
-                    ]["IPAddress"] = "172.30.88.4"
+                    containers[backend_name] = copy.deepcopy(original_backend)
+                for network in config["backend_addresses"]:
+                    containers[backend_name]["NetworkSettings"]["Networks"][network][
+                        "IPAddress"
+                    ] = "192.0.2.99"
                     with self.assertRaises(release.ReleaseError):
                         release.preflight(root)
-                    containers[release.APP + "-backend"] = copy.deepcopy(
-                        original_backend
+                    containers[backend_name] = copy.deepcopy(original_backend)
+                for network in policy["addresses"]:
+                    previous = gateway["NetworkSettings"]["Networks"][network][
+                        "IPAddress"
+                    ]
+                    gateway["NetworkSettings"]["Networks"][network]["IPAddress"] = (
+                        "192.0.2.99"
                     )
-                gateway["NetworkSettings"]["Networks"]["notoli_backend_private"][
-                    "IPAddress"
-                ] = "172.30.88.4"
+                    with self.assertRaises(release.ReleaseError):
+                        release.preflight(root)
+                    gateway["NetworkSettings"]["Networks"][network]["IPAddress"] = (
+                        previous
+                    )
+                gateway["NetworkSettings"]["Networks"]["unexpected-network"] = {}
                 with self.assertRaises(release.ReleaseError):
                     release.preflight(root)

@@ -1,5 +1,50 @@
 # Changelog
+
+## 2026-10-20
+
+### Fixed
+
+- Fail closed on incomplete dependency reviews and retain sanitized structured evidence with a bounded RoboCop report.
+- Preserve alert history and Project metadata before auto-close; verify concurrent closure without suppressing unrelated API errors and use the current Work type field.
+- Forward language-specific CodeQL scope and baseline evidence to RoboCop while retaining full main/scheduled/manual analysis.
+
+
+## 2026-10-20
+
+### Added
+
+- Add a read-only reviewer-gate audit that rejects missing, skipped, cancelled and non-success results.
+
+### Fixed
+
+- Require all three AI reviewer checks on main while preserving the existing 14 gates and all other protection settings; record live human/Dependabot eligibility and blocking-verdict recovery evidence.
+- Reject missing or invalid AI verdict events as unavailable, with matching publisher and workflow regressions in FullStackTemplate.
+
+## 2026-10-20
+
+### Added
+
+- Add the reusable, hash-pinned MCP/OAuth framework and isolated consent, token lifecycle and transport tests.
+
+### Changed
+
+- Use the shared transport, consent and token lifecycle while preserving all 31 tools, existing credentials/scopes, exact proxy trust and production readiness.
+
+
+## 2026-10-19
+
+### Changed
+
+- Separate Obi-Wan, Lint Eastwood, and RoboCop OpenAI secrets, including RoboCop alert aggregation; pass only each reviewer's own credentials, stage `OPENAI_REVIEWERS_PROJECT_ID` independently, and document the deferred per-repository key migration.
 All notable changes to this project are documented in this file.
+
+## 2026-10-18
+
+### Changed
+
+- Synchronized the shared Infrastructure release-test source pin with the
+  template adoption work while preserving this application's release runtime,
+  deployment workflow, and network/trust policy.
 
 ## 2026-10-18
 

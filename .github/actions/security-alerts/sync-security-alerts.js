@@ -330,6 +330,32 @@ async function setProjectValues(
   }
 }
 
+// Only a state-only PATCH with GitHub's observed empty-error 422 is eligible
+// for race recovery. Readback must prove both the intended state and saved note.
+async function closeManagedIssue(issueGithub, parameters, expectedBody) {
+  const { data: current } = await issueGithub.rest.issues.get(parameters);
+  const completed = (issue) =>
+    issue.state === "closed" && issue.state_reason === "completed" &&
+    issue.body === expectedBody;
+  if (completed(current)) return;
+  try {
+    await issueGithub.rest.issues.update({
+      ...parameters, state: "closed", state_reason: "completed",
+    });
+  } catch (error) {
+    const data = error?.response?.data;
+    if (error?.status !== 422 || data?.message !== "Validation Failed" ||
+        !Array.isArray(data.errors) || data.errors.length !== 0) throw error;
+    let final;
+    try {
+      ({ data: final } = await issueGithub.rest.issues.get(parameters));
+    } catch {
+      throw error;
+    }
+    if (!completed(final)) throw error;
+  }
+}
+
 async function synchronizeSecurityAlerts({
   issueGithub,
   projectGithub,
@@ -430,7 +456,7 @@ async function synchronizeSecurityAlerts({
         {
           Status: "Backlog",
           Domain: "CI/CD",
-          Type: "Security",
+          "Work type": "Security",
           Priority: config.priority,
           Size: "M",
           Estimate: 3,
@@ -461,28 +487,20 @@ async function synchronizeSecurityAlerts({
             )}. The source-alert links above are retained for history._`
         : "_Closed automatically because none of its source alerts remain open and eligible for this feed. The source-alert links above are retained for history._";
 
-    const projectItemId = projectState.itemsByContentId.get(staleIssue.node_id);
-    if (projectItemId) {
-      const completedValues = { Status: "Done" };
-      if (projectState.fields.has("End date")) {
-        completedValues["End date"] = currentDate;
-      }
-      await setProjectValues(
-        projectGithub,
-        projectId,
-        projectState,
-        projectItemId,
-        completedValues,
-      );
-    }
-    await issueGithub.rest.issues.update({
-      owner,
-      repo,
-      issue_number: staleIssue.number,
-      body: withLifecycleNote(staleIssue.body, lifecycleNote),
-      state: "closed",
-      state_reason: "completed",
+    const parameters = { owner, repo, issue_number: staleIssue.number };
+    const body = withLifecycleNote(staleIssue.body, lifecycleNote);
+    // Persist history before any operation which can trigger Project auto-close.
+    await issueGithub.rest.issues.update({ ...parameters, body });
+    const { itemId } = await ensureProjectItem(
+      projectGithub, projectId, projectState, staleIssue,
+    );
+    // End date first: a partial failure leaves an open issue discoverable on rerun.
+    // Done is last because the Project workflow may immediately close the issue.
+    await setProjectValues(projectGithub, projectId, projectState, itemId, {
+      "End date": currentDate,
+      Status: "Done",
     });
+    await closeManagedIssue(issueGithub, parameters, body);
     closed += 1;
     core.info(
       `Closed superseded or empty managed issue #${staleIssue.number}.`,
@@ -493,6 +511,7 @@ async function synchronizeSecurityAlerts({
 }
 
 module.exports = {
+  closeManagedIssue,
   alertRefKey,
   alertRefsFromBody,
   managedFeedFromBody,
