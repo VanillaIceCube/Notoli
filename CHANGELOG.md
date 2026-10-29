@@ -6,6 +6,7 @@
 
 - Show board drawer errors and operation feedback, guard requests without a session token, and navigate away after deleting the active board.
 - Handle singular/plural board paths, URL suffixes, and invalid inputs safely in navigation utilities.
+- Restore Marty's historical journal entries for the board drawer and navigation utility changes in #942 and #779.
 
 ## 2026-10-27
 
