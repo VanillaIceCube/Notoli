@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -23,8 +25,12 @@ load_dotenv(BASE_DIR / ".env")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "default-key")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+if not SECRET_KEY.strip():
+    if not DEBUG:
+        raise ImproperlyConfigured("DJANGO_SECRET_KEY is required when DJANGO_DEBUG=0.")
+    SECRET_KEY = get_random_secret_key()
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
@@ -177,6 +183,9 @@ OAUTH2_PROVIDER = {
     "REFRESH_TOKEN_GRACE_PERIOD_SECONDS": 0,
     "REQUIRE_FORM_ENCODED_REQUEST_BODY": True,
 }
+
+
+TEST_RUNNER = "app.test_runner.FastPasswordTestRunner"
 
 
 # Database

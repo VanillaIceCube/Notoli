@@ -6,6 +6,8 @@
 
 - Show board drawer errors and operation feedback, guard requests without a session token, and navigate away after deleting the active board.
 - Handle singular/plural board paths, URL suffixes, and invalid inputs safely in navigation utilities.
+- Scope fast password hashing to Django test execution and restore secure hashers after the run, including failures.
+- Require a configured secret for non-debug startup and generate random temporary secrets for unconfigured debug runs.
 - Restore Marty's historical journal entries for the board drawer and navigation utility changes in #942 and #779.
 
 ## 2026-10-27
