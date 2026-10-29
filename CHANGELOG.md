@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-28
+
+### Fixed
+
+- Show board drawer errors and operation feedback, guard requests without a session token, and navigate away after deleting the active board.
+
 ## 2026-10-27
 
 ### Fixed
