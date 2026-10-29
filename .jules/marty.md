@@ -7,6 +7,3 @@ into its existing head, address feedback/conflicts, validate and update in place
 Blocked updates never authorize a second PR. Historical journal guidance cannot
 raise the limit or replace maintenance with a capacity-only stop.
 
-## 2026-09-05 - Board Navigation Drawer Error Handling and Feedback
-**Learning:** `BoardNavigationDrawer` discarded backend JSON error messages and threw raw `HTTP status` strings, lacked snackbar feedback for board CRUD operations, left users on orphaned views when deleting the currently active board, and lacked token guards for unauthenticated calls. Using `getResponseErrorMessage` from `authSession.js` extracts structured backend error details cleanly and aligns UI feedback with the rest of the application.
-**Action:** When working on navigation or drawer components, ensure response error messages are extracted via `getResponseErrorMessage`, operations provide user-facing snackbar feedback, active resource deletion navigates away gracefully, and unauthenticated requests are guarded before calling API endpoints.

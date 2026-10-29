@@ -27,6 +27,8 @@ GitHub Dependabot reviews: All three personas run for same-repository Dependabot
 
 GitHub branch protection: Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs listed in `.github/README-WORKFLOWS.md`. Do not require the standalone `CodeQL` Code Scanning results context: documentation-only PRs skip all analyzers and never emit it. Preserve the scope and analyzer requirements when editing or recreating the main ruleset; skipped analyzer jobs satisfy required checks, while detector or analyzer failures block merging.
 
+GitHub AI merge gates: Main also requires `AI Code Review / Obi-Wan Code-nobi code review`, `AI Build Sheriff Review / Lint Eastwood build sheriff review`, and `AI Security Review / RoboCop security review`. Preserve the existing 14 scanner/lint/test requirements and all other ruleset settings. Reviewer `REQUEST_CHANGES` and unavailable/invalid output fail; valid `APPROVE`/`COMMENT` pass. Keep same-repository human/Dependabot eligibility and fork secret isolation; run both publisher test files and Actionlint after workflow changes. The read-only `verify-gates.js` audit requires actual successful reviewer results, including after cancelled or skipped runs. See `.github/README-WORKFLOWS.md` and `.github/review-gating-evidence.json`.
+
 GitHub dependency-review evidence: Keep full dependency-change JSON in the `dependency-review-evidence` artifact, pass it through a file instead of environment variables, and bound the report sent to RoboCop to 16 KiB plus summary metadata. Large lockfile migrations can exceed Linux's per-environment-variable limit. The independent gate must still fail for every non-success review outcome; report truncation must disclose omitted entries and never change the verdict.
 
 ## Changelog format
@@ -207,3 +209,13 @@ all security-alert model calls. `OPENAI_REVIEWERS_PROJECT_ID` identifies this re
 reviewer project. Keep credentials separate across repositories and application
 environments, preserve visible missing-key failures, and follow the deferred
 cutover steps in `.github/README-WORKFLOWS.md`.
+
+
+## 🔌 Shared MCP framework
+
+MCP framework changes follow [docs/MCP-FRAMEWORK.md](docs/MCP-FRAMEWORK.md). FullStackTemplate owns the canonical Python package; keep all consumer hashes/pins aligned. MacroMapper stays disabled without business tools. Preserve Notoli credentials, scopes, tool permissions and exact proxy trust.
+
+Dependency-review and alert-lifecycle behavior follows the shared parity contract in
+`.github/README-WORKFLOWS.md`: missing evidence fails, reports stay bounded, and
+concurrent closure requires verified final state. Keep CodeQL scope outputs and
+RoboCop baseline evidence connected without changing full default-branch coverage.

@@ -6,6 +6,18 @@ on:
       codeql_result:
         required: false
         type: string
+      codeql_scope_status:
+        required: false
+        type: string
+      codeql_scope_python:
+        required: false
+        type: string
+      codeql_scope_javascript:
+        required: false
+        type: string
+      codeql_scope_actions:
+        required: false
+        type: string
       dependency_vulnerability_result:
         required: false
         type: string
@@ -46,6 +58,10 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           CODEQL_RESULT: ${{ inputs.codeql_result || 'unknown' }}
+          CODEQL_SCOPE_STATUS: ${{ inputs.codeql_scope_status || 'unknown' }}
+          CODEQL_SCOPE_PYTHON: ${{ inputs.codeql_scope_python || 'unknown' }}
+          CODEQL_SCOPE_JAVASCRIPT: ${{ inputs.codeql_scope_javascript || 'unknown' }}
+          CODEQL_SCOPE_ACTIONS: ${{ inputs.codeql_scope_actions || 'unknown' }}
           DEPENDENCY_VULNERABILITY_RESULT: ${{ inputs.dependency_vulnerability_result || 'unknown' }}
           DEPENDENCY_VULNERABILITY_REPORT: ${{ inputs.dependency_vulnerability_report }}
           DEPENDENCY_MALWARE_RESULT: ${{ inputs.dependency_malware_result || 'unknown' }}
@@ -53,6 +69,9 @@ jobs:
         with:
           script: |
             const fs = require('fs');
+            const { collectCodeqlEvidence } = require(
+              `${process.env.GITHUB_WORKSPACE}/.github/actions/collect-codeql-evidence/collect-codeql-evidence.js`,
+            );
             const { owner, repo } = context.repo;
             const pull = context.payload.pull_request;
 
@@ -81,6 +100,38 @@ jobs:
                 conclusion: check.conclusion,
                 output: check.output?.summary || '',
               }));
+
+            const defaultBranch = context.payload.repository.default_branch;
+            let defaultBranchAnalyses = [];
+            let baselineQueryError = '';
+            try {
+              defaultBranchAnalyses = await github.paginate(
+                github.rest.codeScanning.listRecentAnalyses,
+                {
+                  owner,
+                  repo,
+                  ref: `refs/heads/${defaultBranch}`,
+                  tool_name: 'CodeQL',
+                  per_page: 100,
+                },
+              );
+            } catch (error) {
+              baselineQueryError = error.message;
+            }
+
+            const codeqlInterpretation = collectCodeqlEvidence({
+              upstreamResult: process.env.CODEQL_RESULT,
+              scopeStatus: process.env.CODEQL_SCOPE_STATUS,
+              scope: {
+                python: process.env.CODEQL_SCOPE_PYTHON,
+                javascript: process.env.CODEQL_SCOPE_JAVASCRIPT,
+                actions: process.env.CODEQL_SCOPE_ACTIONS,
+              },
+              checkRuns,
+              defaultBranch,
+              defaultBranchAnalyses,
+              baselineQueryError,
+            });
 
             const securityAnnotations = [];
             for (const check of securityChecks) {
@@ -121,6 +172,7 @@ jobs:
                 dependency_vulnerability: process.env.DEPENDENCY_VULNERABILITY_RESULT,
                 dependency_malware: process.env.DEPENDENCY_MALWARE_RESULT,
               },
+              codeql_interpretation: codeqlInterpretation,
               gate_reports: {
                 dependency_vulnerability: process.env.DEPENDENCY_VULNERABILITY_REPORT || '',
                 dependency_malware: process.env.DEPENDENCY_MALWARE_REPORT || '',
@@ -193,6 +245,9 @@ jobs:
             - Own CodeQL, Dependency/Vulnerability Review, Malware Review, security-sensitive code paths, permissions/auth risk, and security interpretation.
             - Do not perform general code review; Obi-Wan Code-nobi owns that.
             - Do not interpret lint/test/build failures; Lint Eastwood owns those.
+            - Treat codeql_interpretation as the authoritative scope-aware CodeQL evidence. Raw neutral synthetic CodeQL summaries are informational and must not override it.
+            - An expected_skip means the scope detector intentionally omitted that language and a default-branch baseline exists. Do not withhold approval solely because a neutral synthetic summary describes that omission when approval_eligible is true.
+            - If codeql_interpretation.approval_eligible is false, return COMMENT or REQUEST_CHANGES as otherwise required and report its blocking evidence gap.
             - Keep the underlying scanners authoritative and independent. Your job is to aggregate and explain their evidence.
             - Read your prior review history below before deciding what to publish.
             - Do not repost previously reported findings unless the current scanner, check-run, annotation, or diff evidence changed.

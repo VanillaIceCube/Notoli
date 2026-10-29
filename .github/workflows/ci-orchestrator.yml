@@ -112,6 +112,10 @@ jobs:
       security-events: read
     with:
       codeql_result: ${{ needs.codeql.result }}
+      codeql_scope_status: ${{ needs.codeql.outputs.scope_status }}
+      codeql_scope_python: ${{ needs.codeql.outputs.scope_python }}
+      codeql_scope_javascript: ${{ needs.codeql.outputs.scope_javascript }}
+      codeql_scope_actions: ${{ needs.codeql.outputs.scope_actions }}
       dependency_vulnerability_result: ${{ needs.dependency-vulnerability.result }}
       dependency_vulnerability_report: ${{ needs.dependency-vulnerability.outputs.vulnerability_report }}
       dependency_malware_result: ${{ needs.dependency-malware.result }}

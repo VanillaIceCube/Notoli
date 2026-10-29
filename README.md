@@ -89,3 +89,8 @@ used under the terms of the original [MIT License](https://opensource.org/licens
 Obi-Wan, Lint Eastwood, and RoboCop use separate OpenAI keys scoped to this
 repository. See the [workflow setup and deferred migration](.github/README-WORKFLOWS.md#-separate-openai-reviewer-credentials)
 for exact secret names, project configuration, verification, and rollback.
+
+
+## 🔌 Shared MCP framework
+
+Optional MCP transport/OAuth and application adoption are described in [the framework guide](docs/MCP-FRAMEWORK.md).

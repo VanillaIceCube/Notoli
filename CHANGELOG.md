@@ -1,5 +1,53 @@
 # Changelog
 
+## 2026-10-28
+
+### Fixed
+
+- Show board drawer errors and operation feedback, guard requests without a session token, and navigate away after deleting the active board.
+
+## 2026-10-27
+
+### Fixed
+
+- Limit dependency malware advisory queries to changed package names with complete pagination and fail-closed API errors, avoiding full-corpus timeouts on dependency PRs.
+
+### Changed
+
+- Update React and React DOM together to 19.3.1, Zod to 4.6.7, ESLint to 10.13.0, the React ESLint plugin to 5.28.0, and Testing Library user-event to 14.6.8.
+- Adopt Docker login v4.7.0 from the pinned Infrastructure release template while preserving deployment parity and app-specific configuration.
+
+## 2026-10-20
+
+### Fixed
+
+- Fail closed on incomplete dependency reviews and retain sanitized structured evidence with a bounded RoboCop report.
+- Preserve alert history and Project metadata before auto-close; verify concurrent closure without suppressing unrelated API errors and use the current Work type field.
+- Forward language-specific CodeQL scope and baseline evidence to RoboCop while retaining full main/scheduled/manual analysis.
+
+
+## 2026-10-20
+
+### Added
+
+- Add a read-only reviewer-gate audit that rejects missing, skipped, cancelled and non-success results.
+
+### Fixed
+
+- Require all three AI reviewer checks on main while preserving the existing 14 gates and all other protection settings; record live human/Dependabot eligibility and blocking-verdict recovery evidence.
+- Reject missing or invalid AI verdict events as unavailable, with matching publisher and workflow regressions in FullStackTemplate.
+
+## 2026-10-20
+
+### Added
+
+- Add the reusable, hash-pinned MCP/OAuth framework and isolated consent, token lifecycle and transport tests.
+
+### Changed
+
+- Use the shared transport, consent and token lifecycle while preserving all 31 tools, existing credentials/scopes, exact proxy trust and production readiness.
+
+
 ## 2026-10-19
 
 ### Changed
