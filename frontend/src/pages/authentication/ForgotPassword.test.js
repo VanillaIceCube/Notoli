@@ -73,4 +73,12 @@ describe('ForgotPassword', () => {
       consoleError.mockRestore();
     }
   });
+
+  test('when back to login link button is clicked, it navigates to /login', async () => {
+    renderWithProviders(<ForgotPassword showSnackbar={jest.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /back to login/i }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/login');
+  });
 });

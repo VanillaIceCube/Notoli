@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
+import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchBoards as fetchBoardsApi, login } from '../../services/notoliApiClient';
 import { persistAuthSession, readOkJson } from '../../services/authSession';
@@ -165,21 +165,27 @@ export default function Login({ showSnackbar }) {
                 width: '100%',
               }}
             >
-              <Box
-                component="span"
-                sx={{ textDecoration: 'underline', cursor: 'pointer' }}
+              <Link
+                component="button"
+                type="button"
+                variant="caption"
+                underline="always"
                 onClick={() => navigate('/forgot-password')}
+                sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
               >
                 Forgot Password?
-              </Box>
+              </Link>
               {' | '}
-              <Box
-                component="span"
-                sx={{ textDecoration: 'underline', cursor: 'pointer' }}
+              <Link
+                component="button"
+                type="button"
+                variant="caption"
+                underline="always"
                 onClick={() => navigate('/register')}
+                sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
               >
                 Create Account!
-              </Box>
+              </Link>
             </Typography>
           </Box>
         </Box>

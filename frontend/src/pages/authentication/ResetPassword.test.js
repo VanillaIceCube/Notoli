@@ -77,4 +77,12 @@ describe('ResetPassword', () => {
     expect(showSnackbar).toHaveBeenCalledWith('success', 'Password reset successful.');
     expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
+
+  test('when back to login link button is clicked, it navigates to /login', async () => {
+    renderWithProviders(<ResetPassword showSnackbar={jest.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/login');
+  });
 });

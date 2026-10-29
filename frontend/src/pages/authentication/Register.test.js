@@ -139,4 +139,12 @@ describe('Register', () => {
     expect(register).not.toHaveBeenCalled();
     expect(showSnackbar).toHaveBeenCalledWith('error', 'Passwords do not match.');
   });
+
+  test('when sign in now link button is clicked, it navigates to /login', async () => {
+    renderWithProviders(<Register showSnackbar={jest.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /sign in now!/i }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/login');
+  });
 });
