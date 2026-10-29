@@ -202,6 +202,32 @@ class BoardApiTests(APITestCase):
         self.assertEqual(response.status_code, 403, response.data)
         self.assertFalse(self.board.collaborators.filter(pk=self.outsider.pk).exists())
 
+    def test_ambiguous_username_email_cannot_share_with_either_account(self):
+        collision = User.objects.create_user(
+            username=self.collaborator.email.upper(), email="collision@example.com"
+        )
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(
+            f"/api/boards/{self.board.id}/collaborators/",
+            {"identifier": f" {self.collaborator.email} "},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400, response.data)
+        self.assertIn("multiple accounts", str(response.data))
+        self.assertFalse(self.board.collaborators.exists())
+        self.assertFalse(self.owner.sent_notifications.exists())
+        # A unique alternative still resolves the intended existing user.
+        response = self.client.post(
+            f"/api/boards/{self.board.id}/collaborators/",
+            {"identifier": self.collaborator.username},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertTrue(
+            self.board.collaborators.filter(pk=self.collaborator.pk).exists()
+        )
+        self.assertFalse(self.board.collaborators.filter(pk=collision.pk).exists())
+
     def test_owner_cannot_add_duplicate_board_collaborator(self):
         self.board.collaborators.add(self.collaborator)
         self.client.force_authenticate(user=self.owner)

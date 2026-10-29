@@ -4,9 +4,19 @@ import userEvent from '@testing-library/user-event';
 import NotepadRowActionMenu from './NotepadRowActionMenu';
 import { renderWithProviders } from '../../test-support/utils';
 
+jest.unmock('@mui/material');
+
 function renderMenu(props = {}) {
   const anchor = document.createElement('button');
   document.body.appendChild(anchor);
+  jest.spyOn(anchor, 'getBoundingClientRect').mockReturnValue({
+    top: 0,
+    left: 0,
+    right: 20,
+    bottom: 20,
+    width: 20,
+    height: 20,
+  });
   const menuProps = {
     anchorEl: anchor,
     open: true,
@@ -55,5 +65,15 @@ describe('NotepadRowActionMenu', () => {
       'aria-disabled',
       'true',
     );
+  });
+
+  test('keyboard navigation skips disabled actions and activates Remove', async () => {
+    const { menuProps } = renderMenu({ reorderDisabled: true });
+
+    expect(screen.getByRole('menuitem', { name: /rename/i })).toHaveFocus();
+    await userEvent.keyboard('{ArrowDown}{Enter}');
+
+    expect(menuProps.onRemove).toHaveBeenCalledTimes(1);
+    expect(menuProps.onReorder).not.toHaveBeenCalled();
   });
 });

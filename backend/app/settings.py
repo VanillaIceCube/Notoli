@@ -11,9 +11,10 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
-import sys
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -24,11 +25,12 @@ load_dotenv(BASE_DIR / ".env")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-dev-fallback-secret-key-32-chars-min",
-)
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+if not SECRET_KEY.strip():
+    if not DEBUG:
+        raise ImproperlyConfigured("DJANGO_SECRET_KEY is required when DJANGO_DEBUG=0.")
+    SECRET_KEY = get_random_secret_key()
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
@@ -36,14 +38,14 @@ extra_hosts = os.getenv("DJANGO_ALLOWED_HOSTS")
 if extra_hosts:
     ALLOWED_HOSTS.extend(extra_hosts.split(","))
 
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-USE_X_FORWARDED_HOST = True
-
-FORCE_SCRIPT_NAME = os.getenv("DJANGO_FORCE_SCRIPT_NAME")
-if FORCE_SCRIPT_NAME:
-    if not FORCE_SCRIPT_NAME.startswith("/"):
-        FORCE_SCRIPT_NAME = f"/{FORCE_SCRIPT_NAME}"
-    FORCE_SCRIPT_NAME = FORCE_SCRIPT_NAME.rstrip("/")
+# ASGI validates the actual proxy peer before accepting forwarded metadata.
+SECURE_PROXY_SSL_HEADER = None
+USE_X_FORWARDED_HOST = False
+TRUSTED_PROXY_IPS = [
+    value.strip()
+    for value in os.getenv("DJANGO_TRUSTED_PROXY_IPS", "").split(",")
+    if value.strip()
+]
 
 FRONTEND_BASE_URL = os.getenv(
     "DJANGO_FRONTEND_BASE_URL", "http://localhost:3000"
@@ -63,10 +65,13 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
+    "oauth2_provider",
     # My apps
     "authentication",
     "notes",
     "notifications",
+    "integrations",
+    "mcp_framework",
 ]
 
 
@@ -130,21 +135,57 @@ TEMPLATES = [
 
 
 WSGI_APPLICATION = "app.wsgi.application"
+ASGI_APPLICATION = "app.asgi.application"
 
-
-IS_TESTING = (
-    "test" in sys.argv
-    or "pytest" in sys.modules
-    or os.environ.get("DJANGO_TESTING") == "1"
+# MCP uses its own OAuth tokens. These are never accepted by the REST API.
+MCP_BASE_URL = os.getenv("DJANGO_MCP_BASE_URL") or (
+    "http://localhost:8000" if DEBUG else "https://notoli.judeandrewalaba.com"
 )
+MCP_BASE_URL = MCP_BASE_URL.rstrip("/")
+MCP_RESOURCE_URL = f"{MCP_BASE_URL}/mcp"
+MCP_ENABLED = True
+MCP_NAME = "Notoli"
+MCP_REQUIRED_SCOPES = ["notoli:read"]
+MCP_CONSENT_SALT = "notoli.mcp.consent"
+MCP_CLIENT_ID = "notoli-chatgpt"
+MCP_SERVER_FACTORY = "integrations.server.get_server"
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+OAUTH2_PROVIDER = {
+    "OAUTH2_VALIDATOR_CLASS": "integrations.oauth.NotoliOAuthValidator",
+    "SCOPES": {
+        "notoli:read": "Read your accessible Notoli boards, lists, and items, including board owner and collaborator IDs, usernames, and email addresses",
+        "notoli:write": "Add and update items in your accessible Notoli boards and lists",
+        "notoli:share": "Add and remove collaborators on boards you own, granting access to every list and item in those boards",
+        "notoli:organize": "Create and edit boards and lists, reorder lists and items, and change which lists contain items",
+        "notoli:notifications": "Read your activity notifications and mark them read or unread",
+        "notoli:delete": "Permanently delete accessible items and lists, boards you own with all their contents, and your notifications",
+    },
+    "DEFAULT_SCOPES": ["notoli:read"],
+    "PKCE_REQUIRED": True,
+    "COMPLIANT_BCP_RFC9700_PKCE_METHOD": True,
+    "COMPLIANT_BCP_RFC9700_IMPLICIT_GRANT": True,
+    "COMPLIANT_BCP_RFC9700_PASSWORD_GRANT": True,
+    "COMPLIANT_BCP_RFC9700_ACCESS_TOKEN_TRANSPORT": True,
+    "COMPLIANT_BCP_RFC9700_TOKEN_STORAGE": True,
+    "COMPLIANT_BCP_RFC9700_AUTHZ_RESPONSE_ISS": True,
+    "OIDC_ISS_ENDPOINT": MCP_BASE_URL,
+    "OAUTH2_RESPONSE_TYPES_SUPPORTED": ["code"],
+    "OAUTH2_GRANT_TYPES_SUPPORTED": ["authorization_code", "refresh_token"],
+    "OAUTH2_TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED": ["none"],
+    "ALLOWED_REDIRECT_URI_SCHEMES": ["https"],
+    "REQUEST_APPROVAL_PROMPT": "force",
+    "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,
+    "AUTHORIZATION_CODE_EXPIRE_SECONDS": 120,
+    "REFRESH_TOKEN_EXPIRE_SECONDS": 30 * 24 * 3600,
+    "ROTATE_REFRESH_TOKEN": True,
+    "REFRESH_TOKEN_REUSE_PROTECTION": True,
+    "REFRESH_TOKEN_GRACE_PERIOD_SECONDS": 0,
+    "REQUIRE_FORM_ENCODED_REQUEST_BODY": True,
+}
 
-if IS_TESTING:
-    PASSWORD_HASHERS = [
-        "django.contrib.auth.hashers.MD5PasswordHasher",
-    ]
-    # Ensure staticfiles directory exists during tests to suppress WhiteNoise warnings
-    STATIC_ROOT = BASE_DIR / "staticfiles"
-    STATIC_ROOT.mkdir(parents=True, exist_ok=True)
+
+TEST_RUNNER = "app.test_runner.FastPasswordTestRunner"
 
 
 # Database
@@ -188,10 +229,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
-if FORCE_SCRIPT_NAME:
-    STATIC_URL = f"{FORCE_SCRIPT_NAME}/static/"
-else:
-    STATIC_URL = "static/"
+STATIC_URL = "/static/"
 
 # Where collectstatic will put all static files in prod
 STATIC_ROOT = BASE_DIR / "staticfiles"

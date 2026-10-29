@@ -269,11 +269,13 @@ test("synchronization preserves canonical project fields and completes supersede
     rest: {
       issues: {
         listForRepo() {},
+        get: async (input) => ({ data: openIssues.find((candidate) => candidate.number === input.issue_number) }),
         update: async (input) => {
           issueUpdates.push(input);
           const original = openIssues.find(
             (candidate) => candidate.number === input.issue_number,
           );
+          Object.assign(original, input);
           return {
             data: {
               ...original,
@@ -369,8 +371,9 @@ test("synchronization preserves canonical project fields and completes supersede
   assert.equal(issueUpdates[0].issue_number, 10);
   assert.equal(issueUpdates[0].state, undefined);
   assert.equal(issueUpdates[1].issue_number, 11);
-  assert.equal(issueUpdates[1].state, "closed");
-  assert.equal(issueUpdates[1].state_reason, "completed");
+  assert.equal(issueUpdates[1].state, undefined);
+  assert.equal(issueUpdates[2].state, "closed");
+  assert.equal(issueUpdates[2].state_reason, "completed");
   assert.match(issueUpdates[1].body, /coverage moved to #10/);
   assert.deepEqual(
     projectUpdates.map((update) => ({
@@ -381,13 +384,13 @@ test("synchronization preserves canonical project fields and completes supersede
     [
       {
         item: "ITEM_11",
-        field: "STATUS",
-        value: { singleSelectOptionId: "DONE" },
+        field: "END_DATE",
+        value: { date: "2026-07-24" },
       },
       {
         item: "ITEM_11",
-        field: "END_DATE",
-        value: { date: "2026-07-24" },
+        field: "STATUS",
+        value: { singleSelectOptionId: "DONE" },
       },
     ],
   );
@@ -451,7 +454,7 @@ test("synchronization sends issue creation, labels, and assignment only through 
                 },
                 {
                   id: "TYPE",
-                  name: "Type",
+                  name: "Work type",
                   dataType: "SINGLE_SELECT",
                   options: [{ id: "SECURITY", name: "Security" }],
                 },
@@ -569,7 +572,10 @@ test("alert workflows scope RoboCop to alert and issue APIs while reserving the 
       path.join(repositoryRoot, ".github", "workflows", workflowName),
       "utf8",
     );
-    assert.match(workflow, /uses: actions\/create-github-app-token@v2/);
+    assert.match(
+      workflow,
+      /uses: actions\/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3/,
+    );
     assert.match(workflow, /permission-issues: write/);
     assert.match(workflow, /permission-security-events: read/);
     assert.match(
@@ -691,4 +697,106 @@ test("reconcile GitHub Script constructs the separate Project client at runtime"
   assert.equal(calls[0].issueGithub, issueGithub);
   assert.equal(calls[0].projectGithub, projectGithub);
   assert.equal(calls[0].projectId, "project-id");
+});
+
+const { closeManagedIssue } = require('./sync-security-alerts');
+
+test('already completed closure requires a matching saved lifecycle body', async () => {
+  let patches = 0;
+  const client = { rest: { issues: {
+    get: async () => ({ data: { state: 'closed', state_reason: 'completed', body: 'saved' } }),
+    update: async () => { patches++; },
+  } } };
+  await closeManagedIssue(client, { issue_number: 1 }, 'saved');
+  assert.equal(patches, 0);
+});
+
+test('only the observed empty-error 422 with verified completion is tolerated', async () => {
+  const race = { status: 422, response: { data: { message: 'Validation Failed', errors: [] } } };
+  for (const scenario of ['completed', 'open', 'wrong-reason', 'lost-note', 'read-failed', 'unrelated', 'forbidden', 'malformed']) {
+    let reads = 0;
+    const error = scenario === 'unrelated'
+      ? { status: 422, response: { data: { message: 'Validation Failed', errors: [{ field: 'state', code: 'invalid' }] } } }
+      : scenario === 'forbidden' ? { status: 403 }
+      : scenario === 'malformed' ? { status: 422 } : race;
+    const client = { rest: { issues: {
+      get: async () => {
+        reads++;
+        if (reads === 1) return { data: { state: 'open', body: 'saved' } };
+        if (scenario === 'read-failed') throw new Error('Unavailable');
+        return { data: {
+          state: scenario === 'open' ? 'open' : 'closed',
+          state_reason: scenario === 'wrong-reason' ? 'not_planned' : 'completed',
+          body: scenario === 'lost-note' ? 'original' : 'saved',
+        } };
+      },
+      update: async (input) => {
+        assert.equal(input.body, undefined, 'the race-sensitive PATCH changes only state');
+        throw error;
+      },
+    } } };
+    if (scenario === 'completed') await closeManagedIssue(client, { issue_number: 1 }, 'saved');
+    else await assert.rejects(closeManagedIssue(client, { issue_number: 1 }, 'saved'), (actual) => actual === error, scenario);
+    assert.equal(reads, ['unrelated', 'forbidden', 'malformed'].includes(scenario) ? 1 : 2);
+  }
+});
+
+function lifecycleFixture({ autoClose = false, missingItem = false, failDate = false, failDone = false } = {}) {
+  const saved = { ...issue(11, ['dependabot:2']), state: 'open' };
+  const calls = [];
+  let itemPresent = !missingItem;
+  const issueGithub = {
+    paginate: async () => saved.state === 'open' ? [saved] : [],
+    rest: { issues: {
+      listForRepo() {},
+      get: async () => ({ data: { ...saved } }),
+      update: async (input) => { calls.push(input.state ? 'close' : 'body'); Object.assign(saved, input); return { data: saved }; },
+      create: async () => { throw new Error('duplicate creation'); },
+    } },
+  };
+  const projectGithub = { graphql: async (query, variables) => {
+    if (query.includes('fields(first: 100)')) return { node: { fields: { nodes: [
+      { id: 'STATUS', name: 'Status', dataType: 'SINGLE_SELECT', options: [{ id: 'DONE', name: 'Done' }] },
+      { id: 'END_DATE', name: 'End date', dataType: 'DATE' },
+    ] } } };
+    if (query.includes('items(first: 100')) return { node: { items: { nodes: itemPresent ? [{ id: 'ITEM_11', content: { id: 'ISSUE_11' } }] : [], pageInfo: {} } } };
+    if (query.includes('addProjectV2ItemById')) { calls.push('add'); itemPresent = true; return { addProjectV2ItemById: { item: { id: 'ITEM_11' } } }; }
+    if (query.includes('updateProjectV2ItemFieldValue')) {
+      calls.push(variables.field);
+      if (variables.field === 'END_DATE' && failDate) { failDate = false; throw new Error('date unavailable'); }
+      if (variables.field === 'STATUS') {
+        if (failDone) { failDone = false; throw new Error('Done unavailable'); }
+        if (autoClose) { saved.state = 'closed'; saved.state_reason = 'completed'; }
+      }
+      return {};
+    }
+    throw new Error('unexpected GraphQL');
+  } };
+  const run = () => synchronizeSecurityAlerts({
+    issueGithub, projectGithub, core: { info() {} },
+    context: { repo: { owner: 'example', repo: 'repo' } },
+    projectId: 'PROJECT', currentDate: '2026-10-20', source: { feed, alerts: [] }, groups: [],
+  });
+  return { run, saved, calls };
+}
+
+test('Project auto-close sees persisted history and End date; repeated runs create no duplicates', async () => {
+  const fixture = lifecycleFixture({ autoClose: true, missingItem: true });
+  assert.deepEqual(await fixture.run(), { created: 0, updated: 0, closed: 1 });
+  assert.deepEqual(fixture.calls, ['body', 'add', 'END_DATE', 'STATUS']);
+  assert.match(fixture.saved.body, /none of its source alerts remain open/);
+  assert.deepEqual(alertRefsFromBody(fixture.saved.body), ['dependabot:2']);
+  assert.deepEqual(await fixture.run(), { created: 0, updated: 0, closed: 0 });
+});
+
+test('partial Project failures leave discoverable work and reruns preserve a single lifecycle note', async () => {
+  for (const fault of ['failDate', 'failDone']) {
+    const fixture = lifecycleFixture({ [fault]: true });
+    await assert.rejects(fixture.run(), /unavailable/);
+    assert.equal(fixture.saved.state, 'open');
+    assert.deepEqual(await fixture.run(), { created: 0, updated: 0, closed: 1 });
+    assert.equal(fixture.saved.state, 'closed');
+    assert.equal(fixture.saved.body.split('security-alert-lifecycle').length, 2);
+    assert.deepEqual(await fixture.run(), { created: 0, updated: 0, closed: 0 });
+  }
 });

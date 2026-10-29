@@ -1,0 +1,139 @@
+import { useState } from 'react';
+import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { register } from '../../services/notoliApiClient';
+import { persistAuthSession, readOkJson } from '../../services/authSession';
+
+export default function Register({ showSnackbar }) {
+  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  const navigate = useNavigate();
+
+  const handleRegister = async () => {
+    if (!password || password !== confirmPassword) {
+      showSnackbar('error', 'Passwords do not match.');
+      return;
+    }
+
+    try {
+      const response = await register({ email, username, password });
+      const data = await readOkJson(response, 'Registration failed :(');
+      persistAuthSession(data);
+
+      showSnackbar('success', 'Account created! Welcome to Notoli!');
+      if (data?.board_id) {
+        navigate(`/board/${data.board_id}`);
+      } else {
+        navigate('/');
+      }
+    } catch (err) {
+      const isNetworkError =
+        err instanceof TypeError ||
+        (typeof err?.message === 'string' && err.message.toLowerCase().includes('network'));
+      showSnackbar(
+        'error',
+        isNetworkError ? 'Network error :(' : err?.message || 'Registration failed :(',
+      );
+      console.error(err);
+    }
+  };
+
+  return (
+    <Stack
+      spacing={2}
+      sx={{
+        maxWidth: 'sm',
+        p: 5.5,
+        mx: 'auto',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '85vh',
+      }}
+    >
+      <Typography variant="h3" sx={{ mt: 2, fontWeight: 'bold', color: 'white' }}>
+        notoli
+      </Typography>
+      <Paper
+        elevation={3}
+        sx={{ p: 4, pb: 2, width: '100%', background: 'var(--secondary-background-color)' }}
+      >
+        <Box
+          component="form"
+          sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleRegister();
+          }}
+        >
+          <TextField
+            fullWidth
+            sx={{ background: 'white' }}
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <TextField
+            fullWidth
+            sx={{ background: 'white' }}
+            label="Username (optional)"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
+          <TextField
+            fullWidth
+            sx={{ background: 'white' }}
+            label="Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <TextField
+            fullWidth
+            sx={{ background: 'white' }}
+            label="Confirm Password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
+          <Button
+            fullWidth
+            sx={{ backgroundColor: 'var(--secondary-color)' }}
+            type="submit"
+            variant="contained"
+          >
+            <Typography variant="h5" align="center">
+              Register
+            </Typography>
+          </Button>
+          <Box
+            sx={{
+              mt: 0.25,
+              pt: 0.75,
+              borderTop: '1px solid rgba(0,0,0,0.2)',
+              textAlign: 'center',
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
+            >
+              Already have an account?{' '}
+              <Box
+                component="span"
+                sx={{ textDecoration: 'underline', cursor: 'pointer' }}
+                onClick={() => navigate('/login')}
+              >
+                Sign in now!
+              </Box>
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
+    </Stack>
+  );
+}

@@ -1,228 +1,100 @@
-# Deploy (Docker + Nginx)
+# Local Docker development
 
-This repo deploys Notoli at the subdomain root `https://notoli.judeandrewalaba.com`.
+For shared-host configuration, deployment and recovery, use the
+[canonical production guide](production/README.md). The commands below are for
+local development only. Host-owned gateway and certificate operations belong to
+the infrastructure repository.
 
-## What Runs
-Docker Compose (`deploy/docker-compose.yml`) starts:
-- `proxy`: Nginx reverse proxy (ports 80 and 443)
-- `backend`: Django/Gunicorn (port 8000)
-- `frontend`: Nginx serving the built SPA (port 3000)
+## Local Docker with `notoli.localhost`
 
-The compose file uses the current Compose Specification syntax without a top-level
-`version` field.
-
-## TLS Certificates (Required For The Proxy)
-The reverse proxy expects these files to exist on the host:
-- `certs/origin.pem`
-- `certs/origin.key`
-
-In `deploy/docker-compose.yml`, this host directory is mounted into the proxy container as `/etc/nginx/certs` via:
-- `${NOTOLI_CERTS_DIR:-../certs}:/etc/nginx/certs:ro`
-
-Notes:
-- Local dev default: run from `deploy/` and keep certs in `<repo>/certs` (so `../certs` works).
-- Production deploy: the deploy workflow sets `NOTOLI_CERTS_DIR=./certs` and writes certs to `<DEPLOY_PATH>/certs`.
-
-Production (recommended): generate a Cloudflare Origin Certificate for `judeandrewalaba.com` and `*.judeandrewalaba.com`, then save the cert and key as:
-- `/root/apps/notoli/certs/origin.pem`
-- `/root/apps/notoli/certs/origin.key`
-
-Optional: provision via GitHub Actions Secrets (recommended for repeatable deploys)
-- Create GitHub Secrets:
-  - `CLOUDFLARE_ORIGIN_CERT_PEM` (raw PEM of `origin.pem`)
-  - `CLOUDFLARE_ORIGIN_KEY_PEM` (raw PEM of `origin.key`)
-
-Local dev (optional): you can generate a self-signed cert for `localhost` and place it in `certs/`.
-
-## Docker hot-reload development
-
-Use the development Compose file for fast source iteration. It mounts both
-source trees, runs React's hot-reload server and Django's autoreloading
-development server, and does not start the production Nginx proxy or require a
-certificate:
+From the repository root, initialize only missing local files:
 
 ```powershell
-Copy-Item deploy/backend.env deploy/.env
-New-Item -ItemType File -Path deploy/db.sqlite3 -Force
+if (-not (Test-Path deploy/.env)) { Copy-Item deploy/backend.env deploy/.env }
+if (-not (Test-Path deploy/db.sqlite3)) { New-Item -ItemType File -Path deploy/db.sqlite3 }
 docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml up --build -d
 docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate
 ```
 
-Open `http://notoli.localhost:3000`; the frontend calls Django at
-`http://notoli.localhost:8000`. Both host ports bind to localhost only. Set
-`NOTOLI_DEV_FRONTEND_PORT` or `NOTOLI_DEV_BACKEND_PORT` in `deploy/.env` to
-override the default ports. Stop the development stack with:
+Open `http://notoli.localhost:3000`; the backend is
+`http://notoli.localhost:8000`. Both ports bind to loopback. Override them with
+`NOTOLI_DEV_FRONTEND_PORT` and `NOTOLI_DEV_BACKEND_PORT` in `deploy/.env`.
+The stack mounts both source trees, runs Vite and Uvicorn autoreload, and needs
+no certificate or Nginx. Its blank-secret fallback is development-only.
 
-```powershell
-docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml down
-```
-
-`deploy/backend.env` leaves `DJANGO_SECRET_KEY` blank because the
-production-shaped stack requires a unique deployment secret. The development
-Compose file supplies a local-only fallback for a blank value, allowing the
-fresh setup above to register and log in. Do not use that fallback outside
-local development.
-
-The frontend's persistent `node_modules` volume is checked against
-`package.json` and `package-lock.json` whenever the container starts. After
-changing either dependency file, restart the frontend so it runs `npm ci` and
-refreshes that volume:
+The frontend keeps a `node_modules` volume and refreshes it with `npm ci` after
+dependency-file changes when restarted:
 
 ```powershell
 docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart frontend
 ```
 
-Use the production-shaped workflow below when testing Nginx, HTTPS, or the
-deployment images.
+Local MCP discovery uses the backend origin and no trusted proxy. ChatGPT
+connection testing requires a reachable HTTPS origin or secure tunnel with
+consistent issuer, allowed host and CSRF origin. See the
+[connection walkthrough](../plugins/notoli/README.md).
 
-## Local Docker Setup
-These steps run the production-style Docker stack locally: frontend, backend, and the Nginx reverse proxy. For local subdomain testing, add `127.0.0.1 notoli.judeandrewalaba.com` to your hosts file or use `curl --resolve`.
+## Standalone HTTPS and image checks
 
-1. Create `deploy/.env` from `deploy/backend.env`.
-
-For local Docker, use values like:
+Use `deploy/docker-compose.yml` only on your workstation. It starts its own
+Nginx on 80/443, private backend and frontend on port 3000. Do not run this local
+stack on the shared production host. Prepare a nonempty local secret and local
+origins in `deploy/.env`, for example:
 
 ```env
 DJANGO_DEBUG=1
-DJANGO_SECRET_KEY=local-dev-key
+DJANGO_SECRET_KEY=local-development-only-change-me
 DJANGO_SQLITE_PATH=/backend/db.sqlite3
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,notoli.judeandrewalaba.com
 DJANGO_CORS_ALLOWED_ORIGINS=https://localhost,http://localhost:3000,https://notoli.judeandrewalaba.com
 DJANGO_CSRF_TRUSTED_ORIGINS=https://localhost,http://localhost:3000,https://notoli.judeandrewalaba.com
-DJANGO_FORCE_SCRIPT_NAME=
 DJANGO_FRONTEND_BASE_URL=https://notoli.judeandrewalaba.com
+DJANGO_MCP_BASE_URL=https://notoli.judeandrewalaba.com
 ```
 
-If testing real SMTP locally, use `DJANGO_EMAIL_HOST_KEY` for the API key. Older local files may still have `DJANGO_EMAIL_HOST_PASSWORD`; Django does not read that key.
+Create local self-signed certificates in ignored `certs/` using OpenSSL (Git Bash
+on Windows). Map `notoli.judeandrewalaba.com` to `127.0.0.1` locally or use curl's
+`--resolve` option to avoid contacting the public service:
 
-2. Ensure the SQLite bind mount is a file, not a directory:
-
-```bash
-cd deploy
-# Linux/macOS:
-#   touch db.sqlite3
-# Windows PowerShell:
-#   New-Item -ItemType File db.sqlite3
-```
-
-If Docker already created `deploy/db.sqlite3` as a directory, stop the stack and replace it with a file.
-
-3. Ensure local TLS cert files exist in `<repo>/certs`.
-
-```bash
-# from repo root
+```sh
 mkdir -p certs
 openssl req -x509 -newkey rsa:2048 -nodes \
-  -keyout certs/origin.key -out certs/origin.pem \
-  -days 365 \
+  -keyout certs/origin.key -out certs/origin.pem -days 365 \
   -subj "/CN=notoli.judeandrewalaba.com" \
   -addext "subjectAltName=DNS:notoli.judeandrewalaba.com,DNS:localhost,IP:127.0.0.1"
-```
-
-4. If you need the containers to use your current local code instead of the latest published GHCR images, rebuild first:
-
-```bash
-# from repo root
 docker build -t ghcr.io/vanillaicecube/notoli-backend:latest ./backend
-docker build --build-arg REACT_APP_API_BASE_URL= \
-  -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend
-```
-
-The development backend image builds from the reviewed,
-digest-pinned `condaforge/miniforge3` 24.04 base image. Update its digest only
-through an explicit image-version and security review.
-The frontend image uses `npm ci`, so `frontend/package-lock.json` must stay in sync
-with `frontend/package.json`.
-
-5. Start the stack:
-
-```bash
-cd deploy
-docker compose up -d
-```
-
-6. Run migrations:
-
-```bash
-docker compose exec -T backend python manage.py migrate
-```
-
-Local URLs:
-- Frontend (reverse-proxy subdomain): `https://notoli.judeandrewalaba.com`
-- Backend (direct): `http://localhost:8000`
-- Frontend (direct): `http://localhost:3000`
-
-The browser will warn about a local self-signed certificate. That is expected for local dev.
-
-Quick checks:
-
-```bash
-docker ps
+docker build --build-arg REACT_APP_API_BASE_URL= -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend
+docker compose -f deploy/docker-compose.yml up -d
+docker compose -f deploy/docker-compose.yml exec -T backend python manage.py migrate
 curl -k -I --resolve notoli.judeandrewalaba.com:443:127.0.0.1 https://notoli.judeandrewalaba.com/
-curl -k -i -X POST --resolve notoli.judeandrewalaba.com:443:127.0.0.1 https://notoli.judeandrewalaba.com/auth/forgot-password/ \
-  -H "Content-Type: application/json" \
-  -d "{}"
 ```
 
-The forgot-password check should return `{"error":"Email is required."}`. If it returns a Django 404, the running backend image is stale; rebuild the backend image from the local checkout.
+These mutable tags are local build names; production selects immutable digests.
+The browser warning for a self-signed local certificate is expected. Leave the
+frontend build argument empty for same-origin API calls through local Nginx.
+Local password-reset testing uses `DJANGO_EMAIL_HOST_KEY`, not the obsolete
+`DJANGO_EMAIL_HOST_PASSWORD`; choose explicit test credentials if enabling mail.
 
-## Nginx Host Routing
-Routing rules live in `deploy/nginx-proxy.conf` and are ordered so backend routes win before the SPA catch-all.
+## Local persistence and troubleshooting
 
-High level behavior on `notoli.judeandrewalaba.com`:
-- `/` and frontend SPA routes -> `frontend`
-- `/api/*` -> `backend`
-- `/auth/*` -> `backend`
-- `/admin/*` -> `backend`
-- `/static/admin/*` and `/static/rest_framework/*` -> `backend` (admin/DRF assets)
+Keep `deploy/db.sqlite3` when restarting either local stack. Never overwrite an
+existing database with an empty file. If Docker created a directory there,
+stop the local stack and inspect/back up its contents before correcting the bind.
 
-Request flow (typical production setup):
-
-```text
-Cloudflare (TLS/DNS)
-  -> origin Nginx reverse-proxy (deploy/nginx-proxy.conf)
-     -> Host: notoli.judeandrewalaba.com, /                 -> frontend (static SPA)
-     -> Host: notoli.judeandrewalaba.com, /{api,auth,admin} -> backend (API + admin)
+```powershell
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml ps
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml logs --tail 100 backend frontend
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml down
 ```
 
-## Backend Subdomain Settings
-When running at the subdomain root, Django should not use a script-name prefix:
-- `DJANGO_FORCE_SCRIPT_NAME=`
+A missing route in standalone HTTPS can indicate an old local image; rebuild
+from the current checkout. For occupied development ports, change the
+`NOTOLI_DEV_*_PORT` settings; standalone HTTPS requires free 80/443/3000 ports.
+Rebuild after dependency/Dockerfile changes; ordinary source edits hot reload.
+If `notoli.localhost` does not resolve, add `127.0.0.1 notoli.localhost` to your
+local hosts file.
 
-Production allowlists should include the Notoli subdomain:
-- `DJANGO_ALLOWED_HOSTS=notoli.judeandrewalaba.com`
-- `DJANGO_CORS_ALLOWED_ORIGINS=https://notoli.judeandrewalaba.com`
-- `DJANGO_CSRF_TRUSTED_ORIGINS=https://notoli.judeandrewalaba.com`
 
-Password reset email settings (Resend HTTPS API example):
-- `DJANGO_FRONTEND_BASE_URL=https://notoli.judeandrewalaba.com`
-- `DJANGO_EMAIL_BACKEND=authentication.email_backends.ResendApiEmailBackend`
-- `DJANGO_EMAIL_HOST_KEY=<your_resend_api_key>`
-- `DJANGO_EMAIL_TIMEOUT=10`
-- `DJANGO_DEFAULT_FROM_EMAIL=<from-address-on-your-domain>`
+## 🔌 Shared MCP framework
 
-## Frontend API Base URL
-The frontend is static, so its backend URL is baked at build time:
-- Prefer leaving `REACT_APP_API_BASE_URL` blank/unset in production so client calls use relative URLs like `/api/...`.
-- If an absolute URL is required, use `REACT_APP_API_BASE_URL=https://notoli.judeandrewalaba.com`.
-
-## Cloudflare Notes (Full Strict)
-- Add/verify a DNS record for `notoli.judeandrewalaba.com` pointing to the same origin as the base site.
-- Set Cloudflare SSL/TLS mode to `Full (strict)`.
-- Ensure the origin certificate covers `*.judeandrewalaba.com`.
-- Avoid caching `/api/*` and `/auth/*` at the edge for the Notoli subdomain.
-
-## Common Operations
-Run backend migrations:
-
-```bash
-cd deploy
-docker compose exec -T backend python manage.py migrate
-```
-
-Recreate the reverse proxy after changing `deploy/nginx-proxy.conf`:
-
-```bash
-cd deploy
-docker compose up -d --force-recreate proxy
-```
+The [MCP framework guide](../docs/MCP-FRAMEWORK.md) defines opt-in ASGI/proxy/readiness requirements. Local development can call the backend directly; do not treat a local/legacy proxy as production MCP onboarding.

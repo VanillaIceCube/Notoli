@@ -44,7 +44,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           ref: ${{ inputs.enable_autofix && inputs.checkout_ref || '' }}
@@ -91,7 +91,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           ref: ${{ inputs.enable_autofix && inputs.checkout_ref || '' }}
@@ -103,7 +103,7 @@ jobs:
         with:
           read_python: "false"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ steps.versions.outputs.node_version }}
           cache: 'npm'
@@ -142,7 +142,7 @@ jobs:
 
       - name: Commit auto-fixes
         if: steps.git-changes.outputs.changed == 'true'
-        uses: stefanzweifel/git-auto-commit-action@v7
+        uses: stefanzweifel/git-auto-commit-action@d0b01107b5db882071f96de5dd4b54961ea93f4c # v7
         with:
           commit_message: "Github Actions: Prettier & ESLint automatic lint fixes"
           branch: ${{ inputs.checkout_ref || github.head_ref }}
@@ -210,7 +210,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           ref: ${{ inputs.enable_autofix && inputs.checkout_ref || '' }}
@@ -222,7 +222,7 @@ jobs:
         with:
           read_node: "false"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: ${{ steps.versions.outputs.python_version }}
           cache: 'pip'
@@ -261,7 +261,7 @@ jobs:
 
       - name: Commit auto-fixes
         if: steps.git-changes.outputs.changed == 'true'
-        uses: stefanzweifel/git-auto-commit-action@v7
+        uses: stefanzweifel/git-auto-commit-action@d0b01107b5db882071f96de5dd4b54961ea93f4c # v7
         with:
           commit_message: "Github Actions: Ruff automatic lint fixes"
           branch: ${{ inputs.checkout_ref || github.head_ref }}

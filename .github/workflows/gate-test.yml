@@ -35,7 +35,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       automation: ${{ steps.filter.outputs.automation }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -50,11 +50,24 @@ jobs:
               - '.github/actions/read-versions/**'
             backend:
               - 'backend/**'
+              - 'scripts/check_mcp_framework.py'
+              - 'mcp-framework-source.json'
+              - '.github/workflows/gate-test.yml'
               - '.github/actions/read-versions/**'
             automation:
+              - '.github/actions/review-npm-malware/**'
+              - '.github/actions/collect-codeql-evidence/**'
+              - 'deploy/**'
+              - '.github/workflows/ci-deploy.yml'
               - '.github/actions/collect-prior-ai-reviews/**'
+              - '.github/actions/collect-upstream-major-upgrade-evidence/**'
+              - '.github/actions/openai-chat/**'
+              - '.github/actions/get-pr-diff/**'
+              - '.github/workflows/ci-orchestrator.yml'
               - '.github/actions/publish-ai-review/**'
               - '.github/actions/security-alerts/**'
+              - '.github/actions/prepare-vulnerability-report/**'
+              - '.github/workflows/gate-vulnerability.yml'
               - '.github/workflows/gate-test.yml'
               - '.github/workflows/review-build.yml'
               - '.github/workflows/review-code.yml'
@@ -84,7 +97,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Read versions
         id: versions
@@ -92,7 +105,7 @@ jobs:
         with:
           read_python: "false"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ steps.versions.outputs.node_version }}
           cache: 'npm'
@@ -110,6 +123,9 @@ jobs:
           set -o pipefail
           status=0
           npm test -- --watchAll=false --verbose --runInBand 2>&1 | tee test_output.txt || status=$?
+          if [ "$status" = "0" ]; then
+            npm run build 2>&1 | tee -a test_output.txt || status=$?
+          fi
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
       - name: Test summary
@@ -152,7 +168,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Read versions
         id: versions
@@ -160,7 +176,7 @@ jobs:
         with:
           read_node: "false"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: ${{ steps.versions.outputs.python_version }}
           cache: 'pip'
@@ -175,7 +191,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          python manage.py test --verbosity=2 2>&1 | tee test_output.txt || status=$?
+          { python ../scripts/check_mcp_framework.py && python manage.py test --verbosity=2; } 2>&1 | tee test_output.txt || status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
       - name: Test summary
@@ -215,7 +231,7 @@ jobs:
     if: needs.changes.outputs.automation == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Read versions
         id: versions
@@ -223,7 +239,7 @@ jobs:
         with:
           read_python: "false"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ steps.versions.outputs.node_version }}
 
@@ -234,10 +250,19 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          node --test \
+          node --test .github/actions/collect-codeql-evidence/collect-codeql-evidence.test.js \
+            .github/actions/review-npm-malware/review-npm-malware.test.js \
+            .github/actions/collect-prior-ai-reviews/collect-prior-ai-reviews.test.js \
+            .github/actions/collect-upstream-major-upgrade-evidence/collect-upstream-major-upgrade-evidence.test.js \
             .github/actions/publish-ai-review/publish-ai-review.test.js \
+            .github/actions/publish-ai-review/review-gating.test.js \
             .github/actions/security-alerts/sync-security-alerts.test.js \
+            .github/actions/prepare-vulnerability-report/prepare-vulnerability-report.test.js \
             2>&1 | tee automation_test_output.txt || status=$?
+          python3 deploy/check_parity.py \
+            2>&1 | tee -a automation_test_output.txt || status=$?
+          python3 -m unittest discover -s deploy/tests -v \
+            2>&1 | tee -a automation_test_output.txt || status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
       - name: Test summary

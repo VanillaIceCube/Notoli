@@ -1,4 +1,7 @@
 # 📝 Notoli
+
+Production release ownership: use the [app-only release/recovery guide](deploy/production/README.md).
+
 **A Notion-Inspired To-Do List App**
 Notoli is my personalized take on a list application, inspired by the flexibility of Notion databases.
 It's designed to support **multiple views** of the same list, so my wife, Diana, and I can each use the app in the way that works best for us, whether that's a clean, simple Notes-style interface or a more detailed, database-like workflow.
@@ -13,19 +16,23 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **Access scoping**: the API limits objects by `owner`/`created_by`/`collaborators`
 - **In-app notifications**: shared board activity appears under the app bar bell with persistent read state and links back to the relevant board or list
 - **Flexible organization**: notes can appear in multiple lists with per-list ordering
-- **Subdomain hosting**: designed to run at `https://notoli.judeandrewalaba.com`
-- **Dockerized deployment**: frontend + backend + Nginx reverse proxy
+- **Subdomain hosting**: runs at the root of `https://notoli.judeandrewalaba.com`, with backend URLs and static assets served without a configurable path prefix
+- **Dockerized deployment**: frontend + backend + Nginx reverse proxy, with distinct fixed backend/proxy addresses on the private network to prevent startup collisions
+- **ChatGPT integration**: 31 authenticated MCP tools for boards, lists, items, ordering, sharing, and notifications, with separate permissions for organization, sharing, notifications, and confirmed deletion; React consent uses your existing login, and Connected Apps lets you revoke access
 
 ## 🚀 Tech Stack
 - **Backend:** Django
-- **Frontend:** React + Material UI
+- **Frontend:** React + Vite, standalone Jest, ESLint 10, and Material UI 9 (Material and icons upgraded together)
 - **Environment Management:** Conda
 - **Deployment:** Docker
 - **Hosting:** DigitalOcean
 - **DNS/Proxy:** Cloudflare
 - **TLS:** Cloudflare Full (strict) to origin (Cloudflare Origin Certificate)
 - **CI/CD & Workflows:** GitHub Actions
-- **PR dependency gates:** high/critical vulnerability review and npm malware advisory review
+- **Deployment artifact retention:** Releases perform no automatic Docker pruning; host operators review disk usage and retain rollback images before targeted cleanup. Shared-ingress separation remains tracked in [#904](https://github.com/VanillaIceCube/Notoli/issues/904).
+- **Scope-aware security checks:** Required CodeQL scope and analyzer jobs let documentation-only PRs skip analysis without waiting for an absent standalone results check; see the [branch-protection policy](.github/README-WORKFLOWS.md#main-branch-required-checks).
+- **PR dependency gates:** high/critical vulnerability review and npm malware advisory review, with full dependency evidence retained as an artifact and bounded AI report output for large migrations
+- **Major dependency upgrade briefs:** Obi-Wan explains upstream breaking changes, Notoli impact, and verification recommendations with primary sources on Dependabot major updates.
 - **Daily security planning:** LLM-grouped CodeQL and Dependabot alert issues, synchronized with the Notoli GitHub Project
 
 ## 📚 Documentation
@@ -35,6 +42,8 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - Deployment (Docker + Nginx): [`deploy/README.md`](deploy/README.md)
 - CI/CD + automation: [`.github/README-WORKFLOWS.md`](.github/README-WORKFLOWS.md)
 - Changelog: [`CHANGELOG.md`](CHANGELOG.md)
+- ChatGPT plugin setup and evaluation prompts: [`plugins/notoli/README.md`](plugins/notoli/README.md)
+- ChatGPT listing updates: the installed personal cloud plugin has its own exported manifest. Use the [listing update steps](plugins/notoli/README.md#listing-metadata-and-updates) to apply repository branding while retaining its existing connection. A Docker deploy alone does not update the listing.
 
 ## Docker hot-reload development
 
@@ -59,6 +68,11 @@ The development Compose file supplies a local-only fallback when
 log in immediately. Set a unique secret before using the production-shaped
 stack.
 
+Outside Docker, debug runs generate a temporary random secret when
+`DJANGO_SECRET_KEY` is unset or blank. Set a stable local key to retain sessions
+across restarts. Non-debug startup requires a configured secret. Backend tests
+use fast hashing scoped to Django's test runner; see [backend testing](backend/README.md).
+
 The frontend synchronizes its Docker `node_modules` volume with `package.json`
 and `package-lock.json` at container start. After changing either dependency
 file, restart the frontend service:
@@ -69,8 +83,19 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart f
 
 ## 📜 License
 This project is licensed under a **Modified MIT License (Non-Commercial Use Only)**.
-See the [LICENSE](./LICENSE) file for full details.
+See the [LICENSE](./LICENSE.md) file for full details.
 
 ## 🙏 Acknowledgments
 This project includes code from [`conda_export.py`](https://github.com/andresberejnoi/Conda-Tools) by **Andres Berejnoi**,
 used under the terms of the original [MIT License](https://opensource.org/licenses/MIT).
+
+## 🔑 AI reviewer credentials
+
+Obi-Wan, Lint Eastwood, and RoboCop use separate OpenAI keys scoped to this
+repository. See the [workflow setup and deferred migration](.github/README-WORKFLOWS.md#-separate-openai-reviewer-credentials)
+for exact secret names, project configuration, verification, and rollback.
+
+
+## 🔌 Shared MCP framework
+
+Optional MCP transport/OAuth and application adoption are described in [the framework guide](docs/MCP-FRAMEWORK.md).
