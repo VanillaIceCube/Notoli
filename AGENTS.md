@@ -93,7 +93,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - `backend/.env` is auto-loaded by Django settings (`python-dotenv`).
    - Add `DJANGO_*` keys there if you don't want to set shell vars manually.
 4) Optional env vars (defaults are used if unset):
-   - `DJANGO_SECRET_KEY` (default: `default-key`)
+   - `DJANGO_SECRET_KEY` (required when `DJANGO_DEBUG=0`; debug runs generate a temporary random key if unset/blank, so set a stable local key to retain sessions across restarts)
    - `DJANGO_DEBUG` (default: `1`)
    - `DJANGO_SQLITE_PATH` (default: `backend/db.sqlite3`)
    - `DJANGO_ALLOWED_HOSTS` (comma-separated)
@@ -184,6 +184,7 @@ and Django static assets use `/static/`.
 - Browser `GET /auth/mcp/authorize/` redirects to React `/connections/authorize` using `DJANGO_FRONTEND_BASE_URL` and the original query. React reuses the existing JWT login (no second Django session). JSON GET consent and POST ticket/decision require a verified JWT header; signed tickets bind the displayed request to the account for 10 minutes. Allow/Cancel returns Django's validated callback URL. React `/connections` calls JWT-only `GET/POST /auth/mcp/connections/` to list/revoke the current user's tokens and pending grants. Cookies and posted user IDs cannot authorize these endpoints. Keep JWTs out of URLs and retain PKCE/resource/scope checks in Django. Schedule token cleanup only through the approved production maintenance plan; keep access/refresh tokens, consent tickets, and authorization codes out of logs.
 - When changing MCP routes or the issuer, review Cloudflare Redirect/WAF/Caching rules for `/mcp`, `/.well-known/*`, and `/auth/mcp/*`: no interactive challenges or path rewriting for MCP/discovery, no caching of authenticated responses, and rate limits for login/token endpoints. Existing DNS and Full (strict) TLS are reused. Details and connection steps: `deploy/production/README.md` and `plugins/notoli/README.md`.
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
+- Backend tests: `cd backend` then `python manage.py test`. The configured Django test runner scopes the fast password hasher to the test run and restores settings on exit; `DJANGO_TESTING`, command-line inspection, and imported pytest modules do not change normal password hashing.
 - Update Conda env: `conda env update --file backend/environment.yml --prune`
 - Regenerate Conda env + requirements:
   - `python backend/environment_manager.py export -o backend/environment.yml`
