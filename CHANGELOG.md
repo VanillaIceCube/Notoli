@@ -5,6 +5,7 @@
 ### Fixed
 
 - Show board drawer errors and operation feedback, guard requests without a session token, and navigate away after deleting the active board.
+- Handle singular/plural board paths, URL suffixes, and invalid inputs safely in navigation utilities.
 
 ## 2026-10-27
 

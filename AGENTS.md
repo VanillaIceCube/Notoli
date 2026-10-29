@@ -153,6 +153,7 @@ and Django static assets use `/static/`.
     - `https://notoli.judeandrewalaba.com/forgot-password`
     - `https://notoli.judeandrewalaba.com/reset-password`
   - Authenticated React integration routes: `/connections/authorize` (OAuth consent) and `/connections` (Connected Apps; also in the profile menu).
+- Navigation utilities accept `/board/` and `/boards/` inputs, strip query/fragment suffixes and a trailing slash, and ignore invalid paths or navigators. Public React routes and generated links use singular `/board/`; helper compatibility does not add a plural route.
 - Cloudflare, certificate and gateway changes belong to the separately approved
   Infrastructure operator plan; see the [production guide](deploy/production/README.md#chatgpt-mcp-deployment).
 - Required env vars for the subdomain backend:
