@@ -1,6 +1,17 @@
 # 🎨 Frontend (React)
 
-The Notoli frontend is a Create React App (CRA) single-page app with React Router and Material UI.
+Production release ownership: use the [app-only release/recovery guide](../deploy/production/README.md).
+
+The Notoli frontend is a Vite single-page app with React Router and Material UI.
+Standalone Jest and Babel run the existing tests; ESLint 10 uses
+`eslint.config.mjs` and compatible React, hooks, accessibility, and Testing Library
+plugins. Create React App and its incompatible ESLint 8 peer graph are removed.
+
+Material UI and its icons use the compatible v9 package family. Upgrade them
+together and regenerate the lockfile; isolated major bumps fail peer resolution.
+Use `sx` for layout system props and `slotProps` for component slots, including
+checkbox input labels. Supported browser minimums are Chrome 117, Edge 121,
+Firefox 121, and Safari 17. The migration follows MacroMapper PRs #103 and #130.
 
 UI styling conventions live in [`STYLE_GUIDE.md`](STYLE_GUIDE.md).
 
@@ -10,11 +21,49 @@ UI styling conventions live in [`STYLE_GUIDE.md`](STYLE_GUIDE.md).
 - `/board/:boardId` shows lists for a board
 - `/board/:boardId/list/:listId` shows notes for a list
 - Public auth routes: `/login`, `/register`, `/forgot-password`, `/reset-password?uid=<...>&token=<...>`
+- `/connections/authorize` displays OAuth consent for a pending application request
+- `/connections` lists and revokes Connected Apps (also available in the profile menu)
 - Everything else requires auth
 
+Navigation utilities accept `/board/` and `/boards/` inputs, strip query strings,
+fragments, and a trailing slash, and ignore invalid paths or navigators. Public
+React routes and generated links use `/board/`; `/boards/` is a helper input
+compatibility form, not an additional React route.
+
+ChatGPT's authorization URL remains Django's `/auth/mcp/authorize/`, which
+redirects the browser to React's `/connections/authorize` with the original
+query. Users with JWTs go directly to consent. Signed-out users sign in through
+the existing `/login?next=<encoded connection path>` and return to consent
+instead of the board landing. Return paths are limited to the two connection
+routes; external URLs cannot become login redirects. React shows application
+name, client ID, account, requested permissions, and **Allow** / **Cancel**.
+The optional sharing permission explicitly grants collaborator management on
+owned boards and access to every list/item in those boards. Existing connections
+must reconnect to approve new permissions. Organization, notification management,
+and permanent deletion have separate permission descriptions. The generic consent
+UI displays every requested permission from Django without changing the login flow.
+Deletion consent describes accessible list/item deletion, owned board cascades, and
+notification removal; clients must also confirm each requested deletion's impact.
+
+`connectionsClient` uses explicit JWT headers and `credentials: omit` for
+Django's JSON consent and connection-management endpoints. Django issues a
+signed consent ticket; React posts only that ticket and the selected decision,
+then follows Django's validated OAuth callback. OAuth tokens, PKCE validation,
+resource binding, and permission enforcement stay in Django. Revocation removes
+the current user's access/refresh tokens and pending codes. Connected Apps also lists
+applications with only an unexpired pending code, so **Revoke** works before token
+exchange. Read consent names the board owner/collaborator IDs, usernames, and email
+addresses that the app can access. There is no separate
+Django session login, and JWTs never travel through OAuth URLs. MCP item results link
+back to `/board/:boardId/list/:listId`. See the
+[plugin connection instructions](../plugins/notoli/README.md).
+
 Authentication tokens are stored in `sessionStorage` (`accessToken` and `refreshToken`).
-The refresh token is stored for later use, but the frontend currently does not auto-refresh access tokens.
-If an API request returns `401 Unauthorized` (expired/invalid token), the frontend clears stored tokens, redirects to `/login`, and shows an error snackbar explaining the logout.
+The request client retries a `401` once after refreshing an expired access token.
+Invalid refresh credentials clear stored tokens and redirect to `/login` with an
+error snackbar; temporary refresh failures retain the session. Connection
+requests preserve their pending path/query through reauthentication, including
+when a refreshed JWT is also rejected. Ordinary login still lands on the preferred board.
 Auth endpoints (`/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password`) do not trigger the global 401 logout redirect.
 
 ## 🌐 Subdomain Hosting (`notoli.judeandrewalaba.com`)
@@ -23,10 +72,14 @@ Production is hosted at the subdomain root:
 
 - `https://notoli.judeandrewalaba.com`
 
+Backend routes also use the subdomain root (`/api/`, `/auth/`, `/admin/`, and
+`/mcp`); no backend deployment path prefix is configured.
+
 Important pieces:
 
-- `frontend/package.json` does not set a CRA `homepage`, so production assets resolve from `/`.
-- `src/App.js` still uses `process.env.PUBLIC_URL` as the React Router basename, which is empty for the subdomain build and remains useful for specialized local builds.
+- `index.html` is Vite's entry point; production assets resolve from `/`.
+- `src/App.jsx` uses `process.env.PUBLIC_URL` as the React Router basename, which is empty for the subdomain build. `vite.config.mjs` explicitly exposes only `PUBLIC_URL` and `REACT_APP_API_BASE_URL`; it does not expose the shell environment.
+- Vite keeps the existing `build/` output directory and `REACT_APP_API_BASE_URL` build argument. An unset API base defaults to same-origin requests in production and localhost port 8000 in development; an explicit blank also uses same-origin requests.
 - The container's Nginx config (`frontend/nginx.conf`) serves `index.html` for deep links (`try_files ... /index.html`).
 
 ## 🤝 Board Sharing
@@ -101,6 +154,17 @@ npm run lint
 npm run format
 ```
 
+`npm start` runs Vite on port 3000. `npm run build` first runs strict lint,
+then generates `build/` for the existing Nginx image. CI runs both the full
+Jest suite and this production build. JSX-bearing source files use `.jsx`;
+extensionless imports continue to resolve normally. Local `.env` API settings
+are loaded by Vite, and Docker's `HOST`/`CHOKIDAR_USEPOLLING` settings retain
+the existing development bind and polling behavior.
+
 ## 🧱 Node Version
 
 CI reads the Node version from `frontend/package.json` (`engines.node`).
+
+## 🔌 Shared MCP framework
+
+See [the MCP framework guide](../docs/MCP-FRAMEWORK.md). Optional consent and Connected Apps routes require `VITE_MCP_ENABLED=1` in the template/MacroMapper; Notoli keeps its existing enabled UI. Preserve JWT-only consent and validated connection return paths.

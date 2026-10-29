@@ -1,5 +1,189 @@
 # Changelog
+
+## 2026-10-28
+
+### Fixed
+
+- Show board drawer errors and operation feedback, guard requests without a session token, and navigate away after deleting the active board.
+- Handle singular/plural board paths, URL suffixes, and invalid inputs safely in navigation utilities.
+
+## 2026-10-27
+
+### Fixed
+
+- Limit dependency malware advisory queries to changed package names with complete pagination and fail-closed API errors, avoiding full-corpus timeouts on dependency PRs.
+
+### Changed
+
+- Update React and React DOM together to 19.3.1, Zod to 4.6.7, ESLint to 10.13.0, the React ESLint plugin to 5.28.0, and Testing Library user-event to 14.6.8.
+- Adopt Docker login v4.7.0 from the pinned Infrastructure release template while preserving deployment parity and app-specific configuration.
+
+## 2026-10-20
+
+### Fixed
+
+- Fail closed on incomplete dependency reviews and retain sanitized structured evidence with a bounded RoboCop report.
+- Preserve alert history and Project metadata before auto-close; verify concurrent closure without suppressing unrelated API errors and use the current Work type field.
+- Forward language-specific CodeQL scope and baseline evidence to RoboCop while retaining full main/scheduled/manual analysis.
+
+
+## 2026-10-20
+
+### Added
+
+- Add a read-only reviewer-gate audit that rejects missing, skipped, cancelled and non-success results.
+
+### Fixed
+
+- Require all three AI reviewer checks on main while preserving the existing 14 gates and all other protection settings; record live human/Dependabot eligibility and blocking-verdict recovery evidence.
+- Reject missing or invalid AI verdict events as unavailable, with matching publisher and workflow regressions in FullStackTemplate.
+
+## 2026-10-20
+
+### Added
+
+- Add the reusable, hash-pinned MCP/OAuth framework and isolated consent, token lifecycle and transport tests.
+
+### Changed
+
+- Use the shared transport, consent and token lifecycle while preserving all 31 tools, existing credentials/scopes, exact proxy trust and production readiness.
+
+
+## 2026-10-19
+
+### Changed
+
+- Separate Obi-Wan, Lint Eastwood, and RoboCop OpenAI secrets, including RoboCop alert aggregation; pass only each reviewer's own credentials, stage `OPENAI_REVIEWERS_PROJECT_ID` independently, and document the deferred per-repository key migration.
 All notable changes to this project are documented in this file.
+
+## 2026-10-18
+
+### Changed
+
+- Synchronized the shared Infrastructure release-test source pin with the
+  template adoption work while preserving this application's release runtime,
+  deployment workflow, and network/trust policy.
+
+## 2026-10-18
+
+### Fixed
+
+- Aligned the security-alert workflow test with the reviewed GitHub App token
+  action v3.3.0 pin so intentional dependency updates pass automation checks.
+
+### Changed
+
+- Updated Nora and Marty to v3: one open PR per agent, with repeat runs maintaining the existing PR and integrating current main.
+
+## 2026-10-17
+### Removed
+- Retire the recurring Jules Kira downstream-reconciliation role, delete its external schedule, and preserve the evidence and remaining findings through explicit tickets.
+
+## 2026-10-11
+### Fixed
+- Adopt the shared release client identity so Cloudflare accepts public readiness probes without changing edge protections or response checks.
+
+## 2026-10-11
+### Fixed
+- Pin remaining external CI/composite actions to their existing version commits without upgrading action versions or changing gates.
+- Remove stale production proxy instructions from agent guidance, align operator authorization and verify tracked documentation links and anchors.
+
+## 2026-10-11
+### Added
+- Enforce pinned shared-source parity for release tools, workflow stages and five equivalent deployment test modules.
+- Verify app-specific readiness/configuration, offline recovery packaging and rejection of shared code/test/workflow drift.
+### Fixed
+- Include owner/reviewer replies and explicit deleted-line context when reconciling prior AI findings; preserve independent scanner and review gates.
+### Changed
+- Isolate deployment policy in `app.json`; remove unreachable cross-application branches while preserving transaction and recovery safeguards.
+- Use one canonical production guide and retain local Docker instructions separately.
+
+## 2026-10-11
+### Added
+- Add app-only production Compose, immutable digest bundles, protected maintenance/app locks, complete configuration/image/environment/SQLite recovery, explicit rollback and bounded readiness checks.
+- Validate raw credentials and Compose boundaries with disposable containers, and exercise SQLite/failure recovery and lock contention on Linux.
+### Changed
+- Pin every external production deployment action, including checkout, to an immutable commit SHA.
+- Serialize production releases and stage each CI attempt privately; activate only after the approved host-owned ingress cutover.
+### Removed
+- Remove shared Nginx/certificate lifecycle and mutable production image selection from the app deployment workflow.
+
+## 2026-10-11
+### Removed
+- Remove automatic host-wide Docker pruning from Notoli deployment to preserve other apps' artifacts and retained rollback images; document operator-reviewed cleanup and remaining shared-host release work.
+
+## 2026-10-10
+### Added
+- Exercise large evidence transport, bounded vulnerability reporting, and incomplete-review failure with automation regression tests.
+### Fixed
+- Keep large dependency-review evidence in a file and artifact, and bound RoboCop's report output so lockfile migrations do not exceed Linux process environment limits; preserve failure for every non-success dependency review.
+
+## 2026-10-10
+### Fixed
+- Complete the ESLint 10 flat-config migration with compatible React, hooks, accessibility, and Testing Library plugins, and cover the active configuration with real lint results.
+- Adapt browser-boundary, native email-validation, and computed-layout tests for standalone Jest's current browser environment.
+### Changed
+- Replace Create React App with Vite and standalone Jest/Babel, preserving the frontend API environment contract, port 3000, Nginx build output, and existing application tests.
+- Require the frontend CI test gate to run strict lint and a production build after its tests, with captured failure diagnostics.
+### Removed
+- Remove Create React App's incompatible ESLint 8 plugin graph and unused web-vitals dependency.
+
+## 2026-10-10
+### Fixed
+- Upgrade Material UI and icons together to v9, migrate removed layout system props and checkbox input props, and preserve menu context in test helpers.
+- Cover the authentication layout and real menu keyboard behavior, and update the removed Alert CSS class assertion for v9.
+
+## 2026-10-10
+### Added
+- Add complete Notoli plugin listing descriptions, developer branding, support link, and the existing product logo; add a ZIP builder that retains the installed personal plugin identity and app mapping.
+- Cover listing ZIP identity/file preservation, bundled icons, release version ordering, and validation failures with standalone temporary-fixture regression tests.
+### Fixed
+- Document why the custom-MCP cloud listing used generic metadata despite the portable source manifest, and provide the correct upload-new-version workflow instead of relying on backend deployment or tool refresh.
+### Changed
+- Release portable plugin metadata version 0.3.1 and document the separate personal-listing version, verified public publisher requirements, and missing privacy/terms prerequisites.
+
+## 2026-10-09
+### Fixed
+- Assign the production backend a distinct fixed private-network IP (`172.30.88.3`) so it cannot claim Nginx's trusted address (`172.30.88.2`) before proxy startup; add regression coverage and document container recreation and deployment checks.
+
+## 2026-10-09
+### Removed
+- Removed the backend deployment path-prefix setting from Django, environment examples, and CI deployment inputs. Notoli uses subdomain-root routing and `/static/` assets; stale path-prefix environment values are ignored.
+
+## 2026-10-09
+### Added
+- Ported MacroMapper's Dependabot major-upgrade briefs to Obi-Wan, including bounded upstream/repository evidence, major-only web search, complete-brief validation, and behavioral tests.
+### Fixed
+- Updated the security-alert workflow test to expect the GitHub App token action v3 already used on main.
+- Ported MacroMapper's incomplete-review handling for all three personas, withholding normal verdicts on truncated diffs and failing checks after a native explanation.
+- Matched MacroMapper's publisher behavior so request-changes verdicts fail the reviewer check.
+### Changed
+- Enabled the three AI reviewers for same-repository Dependabot PRs using the separate Dependabot secret store, while retaining fork exclusions and strict-only Dependabot linting.
+- Matched MacroMapper's shared 512 KiB source-diff budget, generated-lockfile diff exclusions, 16,000-token OpenAI output cap, and major-upgrade automation tests. The shared missing-final-dependency bug remains tracked separately in #890.
+
+## 2026-10-09
+### Added
+- Added a hosted, authenticated MCP endpoint with tools to discover boards/lists, read items, add items, and update statuses using existing Notoli validation and notifications.
+- Added OAuth authorization-code/S256 PKCE, resource-bound tokens, consent and connection revocation pages, and a predefined ChatGPT client registration command.
+- Added a portable Notoli plugin package, connection/deployment instructions, and OAuth/MCP integration tests.
+- Added MCP tools to inspect board owners/collaborators and add/remove collaborators using existing board sharing, owner checks, and notifications.
+- Added explicit `notoli:share` consent for board-wide access changes; existing read/write tokens cannot upgrade sharing permissions through refresh.
+- Expanded MCP coverage to 31 tools for board/list creation, editing and deletion, board-wide items, item deletion, list membership, ordering, and recipient-only notification management using existing REST services.
+- Added separate organization, notification, and deletion OAuth permissions, explicit deletion confirmation, bounded membership/order inputs, and regression coverage for cascades, scope escalation, removed creators, and cross-board access.
+### Fixed
+- Reject ambiguous collaborator usernames/emails before sharing or sending notifications in REST and MCP; disclose owner/collaborator identity and email access in read consent.
+- Show apps with unexpired pending authorization codes in Connected Apps so users can revoke before exchange, excluding expired/foreign grants and duplicate app rows; correct the documented six-scope setup.
+- Explicitly pin the ASGI HTTP client used by MCP protocol tests instead of relying on the SDK's transitive dependency.
+- Reuse the existing React JWT login for OAuth consent, preserving pending authorization through login and token refresh without a duplicate Django session sign-in.
+- Bind consent to the displayed application, permissions, callback, and authenticated account with a short-lived signed ticket; add frontend consent and Connected Apps revocation coverage.
+- Restrict forwarded headers to Nginx's exact private IP, ignore untrusted forwarding metadata in Django, and replace incoming forwarding headers at Nginx.
+- Removed the conditional standalone `CodeQL` requirement from the live main-branch ruleset so documentation-only PRs can merge after successful scope detection and skipped analysis. Retained all existing scope, analyzer, lint, test, vulnerability, and malware requirements.
+### Changed
+- Serve backend containers through Uvicorn ASGI, route MCP/OAuth discovery through Nginx, and configure `DJANGO_MCP_BASE_URL` for local and production deployments.
+- Remove the production backend's published port and isolate it from the frontend on a private proxy network while preserving outbound email on a separate bridge.
+- Documented the exact main-branch required-check list and the scope-aware CodeQL policy for ruleset maintenance and recovery.
+### Removed
+- Remove Django integration HTML templates and separate connection login/logout routes; consent and Connected Apps now use React with Django JSON endpoints.
 
 ## 2026-08-22
 ### Fixed

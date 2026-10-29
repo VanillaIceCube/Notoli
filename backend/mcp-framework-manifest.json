@@ -1,0 +1,16 @@
+{
+  "backend/mcp_framework/__init__.py": "def7d976cea533717a6ab98d0a448976484043a0eafbc02f1f3de84a7a18fb2b",
+  "backend/mcp_framework/apps.py": "67a2d804356e3195a09124094fb39c2ed695d79af0939829ce828fb320f96495",
+  "backend/mcp_framework/asgi.py": "bff8f9367d8dcd485be0ed343d4c5d5bf214cd9ab4d6fdc55645be6864965e88",
+  "backend/mcp_framework/config.py": "b38c22e22781db208aabdc0db1a5a1e72df50e1ea81a3fd3e2d08a8dd3f1c615",
+  "backend/mcp_framework/management/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "backend/mcp_framework/management/commands/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "backend/mcp_framework/management/commands/register_mcp_client.py": "705653813a392bc5b15367fe07df90644214516b9ac3d0c680e0c11d1a087a48",
+  "backend/mcp_framework/oauth.py": "c03c22b820a5345a30694839b6f27ee1bcabb36fc5da590e699da9b9a65fb221",
+  "backend/mcp_framework/proxy.py": "c2c2b2898cc5a9f7a48a7e3acc335f63040907dda92d7632a45484dc3d393683",
+  "backend/mcp_framework/routing.py": "237a2efe465e0bb6a725817a8c4125e1dc25d14c8a63faf4518fbb227badc2ab",
+  "backend/mcp_framework/server.py": "480c14499feb626bbccb7af3799b5941be90cd16fc09414fe2602f759ef471e3",
+  "backend/mcp_framework/tests.py": "4e8745a6ea442a549d26a536d6b9e48a521ec8a3c7fc462718b1fee478461e00",
+  "backend/mcp_framework/urls.py": "4c5f4ebf4a1b57b94301bda078693b4ae3e47204902a25e3817fd391ff9c8c01",
+  "backend/mcp_framework/views.py": "79b3583aea5d12209ff370cab19ec1564c251aefe530c4aac95c6fa193b772f5"
+}

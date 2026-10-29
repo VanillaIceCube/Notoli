@@ -1,6 +1,7 @@
 # Node modules and build outputs
 node_modules/
 build/
+coverage/
 
 # Docker configuration files
 Dockerfile

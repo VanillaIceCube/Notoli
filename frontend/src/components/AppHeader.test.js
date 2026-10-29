@@ -35,6 +35,12 @@ jest.mock('../services/notoliApiClient', () => ({
 }));
 
 describe('AppHeader', () => {
+  test('Connected Apps is available from the existing profile menu', async () => {
+    renderWithProviders(<AppHeader appBarHeader="Notoli" setDrawerOpen={setDrawerOpen} />);
+    await userEvent.click(screen.getByLabelText('user profile'));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Connected Apps' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/connections');
+  });
   const setDrawerOpen = jest.fn();
   const jsonResponse = (body, ok = true) => ({
     ok,

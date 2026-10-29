@@ -62,5 +62,13 @@ describe('Navigation', () => {
 
       expect(() => goBackToParent('/board/123/list/456', null)).not.toThrow();
     });
+
+    test.each([null, undefined, 123, {}, ''])('ignores invalid path %p', (path) => {
+      const navigate = jest.fn();
+
+      goBackToParent(path, navigate);
+
+      expect(navigate).not.toHaveBeenCalled();
+    });
   });
 });

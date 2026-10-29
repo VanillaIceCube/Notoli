@@ -2,6 +2,19 @@ name: CodeQL Gate
 
 on:
   workflow_call:
+    outputs:
+      scope_status:
+        description: Whether path-aware CodeQL scope detection succeeded.
+        value: ${{ jobs.changes.outputs.scope_status }}
+      scope_python:
+        description: Whether the pull request requires Python analysis.
+        value: ${{ jobs.changes.outputs.python }}
+      scope_javascript:
+        description: Whether the pull request requires JavaScript/TypeScript analysis.
+        value: ${{ jobs.changes.outputs.javascript }}
+      scope_actions:
+        description: Whether the pull request requires GitHub Actions analysis.
+        value: ${{ jobs.changes.outputs.actions }}
   push:
     branches:
       - main
@@ -33,11 +46,12 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
+      scope_status: ${{ steps.scope.outputs.scope_status }}
       python: ${{ steps.scope.outputs.python }}
       javascript: ${{ steps.scope.outputs.javascript }}
       actions: ${{ steps.scope.outputs.actions }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Detect relevant changes
         id: filter
@@ -62,7 +76,7 @@ jobs:
               - '.github/codeql/**'
 
       - name: Report path detection failure
-        if: github.event_name == 'pull_request' && steps.filter.outcome == 'failure'
+        if: github.event_name == 'pull_request' && steps.filter.outcome != 'success'
         shell: bash
         run: |
           message="GitHub API path detection failed, so CodeQL scope was not evaluated. Rerun the workflow after the API limit or service error clears."
@@ -78,24 +92,40 @@ jobs:
 
       - name: Set analysis scope
         id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PYTHON_SCOPE: ${{ steps.filter.outputs.python }}
+          JAVASCRIPT_SCOPE: ${{ steps.filter.outputs.javascript }}
+          ACTIONS_SCOPE: ${{ steps.filter.outputs.actions }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "python=${{ steps.filter.outputs.python }}" >> "$GITHUB_OUTPUT"
-            echo "javascript=${{ steps.filter.outputs.javascript }}" >> "$GITHUB_OUTPUT"
-            # Keep the Actions configuration present for relevant PRs so
-            # GitHub can compare it with the configuration on the base branch.
-            if [ "${{ steps.filter.outputs.actions }}" = "true" ] || \
-               [ "${{ steps.filter.outputs.python }}" = "true" ] || \
-               [ "${{ steps.filter.outputs.javascript }}" = "true" ]; then
-              echo "actions=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "actions=false" >> "$GITHUB_OUTPUT"
-            fi
-          else
-            echo "python=true" >> "$GITHUB_OUTPUT"
-            echo "javascript=true" >> "$GITHUB_OUTPUT"
-            echo "actions=true" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            for value in "$PYTHON_SCOPE" "$JAVASCRIPT_SCOPE" "$ACTIONS_SCOPE"; do
+              case "$value" in
+                true|false) ;;
+                *) echo '::error::CodeQL scope output is missing or invalid'; exit 1 ;;
+              esac
+            done
           fi
+          {
+            echo "scope_status=success"
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "python=${{ steps.filter.outputs.python }}"
+              echo "javascript=${{ steps.filter.outputs.javascript }}"
+              # Keep the Actions configuration present for relevant PRs so
+              # GitHub can compare it with the configuration on the base branch.
+              if [ "${{ steps.filter.outputs.actions }}" = "true" ] || \
+                 [ "${{ steps.filter.outputs.python }}" = "true" ] || \
+                 [ "${{ steps.filter.outputs.javascript }}" = "true" ]; then
+                echo "actions=true"
+              else
+                echo "actions=false"
+              fi
+            else
+              echo "python=true"
+              echo "javascript=true"
+              echo "actions=true"
+            fi
+          } >> "$GITHUB_OUTPUT"
 
   analyze-python:
     name: Analyze Python
@@ -109,16 +139,16 @@ jobs:
       pull-requests: read
       security-events: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           languages: python
           queries: security-extended,security-and-quality
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           category: "/language:python"
 
@@ -134,16 +164,16 @@ jobs:
       pull-requests: read
       security-events: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           languages: javascript-typescript
           queries: security-extended,security-and-quality
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           category: "/language:javascript-typescript"
 
@@ -159,15 +189,15 @@ jobs:
       pull-requests: read
       security-events: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           languages: actions
           queries: security-extended,security-and-quality
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           category: "/language:actions"

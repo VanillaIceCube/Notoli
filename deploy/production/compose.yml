@@ -1,0 +1,39 @@
+name: notoli
+services:
+  backend:
+    image: ${BACKEND_IMAGE:?Set the reviewed backend digest}
+    container_name: notoli-backend
+    restart: always
+    env_file:
+      - path: .backend.env
+        format: raw
+    volumes:
+      - type: bind
+        source: ${APP_DB_PATH:?Set the absolute existing SQLite file}
+        target: /backend/db.sqlite3
+        bind:
+          create_host_path: false
+    networks:
+      backend_private:
+        ipv4_address: 172.30.88.3
+        aliases: [notoli-backend]
+      backend_egress:
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  frontend:
+    image: ${FRONTEND_IMAGE:?Set the reviewed frontend digest}
+    container_name: notoli-frontend
+    restart: always
+    # Preserve the existing listener until the owner decides its disposition.
+    ports: ["0.0.0.0:3000:80", "[::]:3000:80"]
+    networks:
+      frontend:
+        aliases: [notoli-frontend]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+networks:
+  backend_private: {external: true, name: notoli_backend_private}
+  backend_egress: {external: true, name: notoli_backend_egress}
+  frontend: {external: true, name: notoli_default}

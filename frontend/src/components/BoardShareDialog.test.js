@@ -104,6 +104,26 @@ describe('BoardShareDialog', () => {
     expect(showSnackbar).toHaveBeenCalledWith('error', 'That user is already a collaborator.');
   });
 
+  test('shows an ambiguous identity error without updating board access', async () => {
+    const message =
+      'That username or email matches multiple accounts. Use an unambiguous username or email.';
+    const showSnackbar = jest.fn();
+    const onBoardUpdated = jest.fn();
+    addBoardCollaborator.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: [message] }),
+    });
+    renderDialog({ showSnackbar, onBoardUpdated });
+    await userEvent.type(
+      screen.getByLabelText('Username or email address'),
+      'ambiguous@example.com',
+    );
+    await userEvent.click(screen.getByRole('button', { name: /add/i }));
+    await waitFor(() => expect(showSnackbar).toHaveBeenCalledWith('error', message));
+    expect(onBoardUpdated).not.toHaveBeenCalled();
+  });
+
   test('allows the owner to remove a collaborator', async () => {
     const updatedBoard = { ...board, collaborators_details: [] };
     const onBoardUpdated = jest.fn();
