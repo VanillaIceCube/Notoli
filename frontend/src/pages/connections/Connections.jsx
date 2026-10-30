@@ -143,7 +143,9 @@ export default function ConnectedApps() {
           </Button>
         </>
       )}
-      {!authorizationServer && applications?.length === 0 && <Typography>No connected apps.</Typography>}
+      {!authorizationServer && applications?.length === 0 && (
+        <Typography>No connected apps.</Typography>
+      )}
       {applications?.map((app) => (
         <Stack
           key={app.id}
