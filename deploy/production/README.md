@@ -1,11 +1,9 @@
 # App-only production release and recovery
 
-The central MCP consumer policy fixes `DJANGO_MCP_AUTH_MODE=central` and requires
-the introspection-only `MCP_INTROSPECTION_CLIENT_SECRET` Actions secret in the
-existing private backend environment. **`env-prod` promotion is the live Notoli
-OAuth cutover** and waits for actual YNAB acceptance in both clients and the
-Infrastructure root checkpoint. Follow the [migration/rollback plan](central-mcp.md).
-Merging `main` alone does not deploy.
+Notoli owns MCP OAuth, consent, token validation, connections and all 31 tools.
+The unreleased central issuer migration in #973 has been withdrawn; no shared
+introspection credential or YNAB acceptance is required. Ordinary accounts and
+website/REST login remain app-owned. Merging `main` alone does not deploy.
 
 ## Main-first promotion
 
@@ -20,26 +18,20 @@ merge may have a different commit ID, but its source tree must match the reviewe
 An exceptional owner-authorized deployment iteration must return promptly through
 a reviewed `main` PR before the next promotion.
 
-The #975 audit found only historical promotion merges unique to `env-prod`, with
-no file changes relative to its merge base with `main`. Reconcile that ancestry
-without reverting reviewed source or claiming that history parity proves live
-acceptance. Current `main` selects central MCP: keep its production promotion held
-under [#973](https://github.com/VanillaIceCube/Notoli/issues/973) and the
-[cutover checkpoint](central-mcp.md) until the required acceptance and operator
-authorization are recorded. Intentional release lag while those prerequisites
-remain incomplete is not source drift and does not require a deployment.
+The #975 audit reconciled historical production promotion merges without reverting
+reviewed source. Intentional unreleased changes may remain on `main` until their
+release prerequisites are complete; history parity alone does not prove live
+acceptance or authorize deployment.
 
 ## Current production boundary
 
-The central app policy validates the shared gateway's exact five route networks,
-including YNAB `172.30.89.2` and authorization `172.30.92.2`. Notoli's backend/
-frontend memberships and proxy `172.30.88.2` stay unchanged. A matched original
-three-network legacy recovery first needs Infrastructure's explicit disabled
-YNAB/auth profiles and verified matching gateway baseline, as detailed in the
-migration plan; app recovery never modifies shared ingress or deletes networks.
-The policy also pins the gateway's audited existing MacroMapper ingress peer,
-`172.20.0.3`; this is no address migration and does not extend Notoli's trusted
-proxy list beyond `172.30.88.2`.
+The app policy retains the original three shared route networks and Notoli's exact
+trusted proxy `172.30.88.2`. Notoli does not depend on YNAB or shared-issuer networks.
+Infrastructure must restore that accepted gateway baseline before promoting this
+app policy; app releases never alter shared ingress or create/delete networks.
+Preserve existing Notoli OAuth registrations, grants, database and signing secret.
+No account linking, client reconnection or grant retirement is required for this
+withdrawal because the central migration was never deployed.
 
 This is the implementation of approved architecture v2. Every PR merge and
 every production release still requires separate explicit owner authorization.
@@ -102,14 +94,12 @@ The host must have working GHCR pull credentials, Docker Engine/Compose with
 raw env-file support (audited Compose 2.40.3), Python 3 and util-linux flock
 semantics through Python's POSIX flock. No packages are installed on the host by CI.
 
-Required app secrets: `DJANGO_SECRET_KEY`, `DJANGO_EMAIL_HOST_KEY`,
-`MCP_INTROSPECTION_CLIENT_SECRET` (Notoli-only introspection, no token issuance).
+Required app secrets: `DJANGO_SECRET_KEY`, `DJANGO_EMAIL_HOST_KEY`.
 Required variables: `DJANGO_EMAIL_BACKEND`, `DJANGO_DEFAULT_FROM_EMAIL`.
 Optional SMTP settings: `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`,
 `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_TIMEOUT`.
 Defaults remain Resend SMTP, port 587, TLS, user resend, timeout 10 seconds.
-MCP resource origin and trusted peer remain fixed to Notoli and `.2`; central
-mode uses the independent issuer `https://auth.judeandrewalaba.com`.
+MCP issuer and trusted peer are fixed to the approved production origin and `.2`.
 Canonical production host/origin/debug/DB settings are set by the app's
 `build_bundle.py`; incompatible explicit overrides fail. Values are single-line
 raw env files, so dollar signs, hashes and quotes retain their literal bytes.
@@ -174,9 +164,7 @@ Unknown or multiple current writers fail closed. Copies use DELETE journal
 mode; this does not enable WAL or relocate storage. Migration/startup use the
 selected digest, no pull at startup.
 Readiness includes direct Django /api/notifications/ returning 401, HTTPS HTML
-root and JSON 401 API response, protected-resource discovery with the fixed
-Notoli resource and central issuer, local issuer discovery 410 `issuer_moved`,
-and a 401 MCP challenge with resource metadata. Attempts are bounded by a 90-second
+root and JSON 401 API response, plus correct Notoli discovery issuer/resource and a 401 MCP challenge with resource metadata. Attempts are bounded by a 90-second
 retry window plus at most one in-flight round of bounded requests; Docker exec
 times out at 10 seconds and HTTP requests at 5 seconds. Other Docker commands
 time out at 300 seconds.
@@ -263,11 +251,6 @@ open until that evidence exists.
 
 ## ChatGPT MCP deployment
 
-Central production migration uses the [central consumer plan](central-mcp.md),
-including separate ChatGPT/Codex registrations, issuer-side consent/revocation,
-explicit local identity links and the YNAB-first cutover checkpoint. The local
-issuer instructions below apply only to `DJANGO_MCP_AUTH_MODE=legacy`.
-
 MCP runs at the canonical `/mcp` endpoint inside the existing ASGI backend.
 Keep the backend private, its address `.3`, trusted gateway `.2`, separate
 backend egress and Uvicorn `--no-proxy-headers`. App middleware authenticates the
@@ -275,9 +258,7 @@ original proxy peer before accepting forwarded scheme/client metadata. The host
 infrastructure owns Nginx routes and certificates; never upload or recreate a
 proxy through an application release.
 
-The resource and frontend origin remain `https://notoli.judeandrewalaba.com`.
-In legacy mode this is also the issuer; central production uses the independent
-`https://auth.judeandrewalaba.com` issuer.
+The bundle fixes the issuer and frontend origin to `https://notoli.judeandrewalaba.com`.
 Changing an issuer invalidates resource-bound grants; coordinate client
 reconnection and `plugins/notoli/mcp.json` updates explicitly. Listing metadata
 is published separately: follow the [listing workflow](../../plugins/notoli/README.md#listing-metadata-and-updates).
@@ -318,7 +299,7 @@ separately approved operator plan; they are not automatic release probes.
    Metadata returns JSON; `/mcp` returns `401` with a `WWW-Authenticate` resource
    metadata URL. After linking, try discovery, add one item, mark it complete,
    and revoke the connection in React's `/connections` (**Connected Apps** in the
-   profile menu). Verify already-signed-in consent, signed-out login → consent →
+   profile menu). Verify already-signed-in consent, signed-out login â†’ consent â†’
    callback, Cancel returning `access_denied` with the original state/issuer, and
    revocation preventing access and refresh. Also approve consent without exchanging
    the code: the app must appear in Connected Apps, and revoking it must block exchange.
@@ -359,6 +340,6 @@ The same immutable source commit is proposed for all three consumers. These
 source-pin PRs do not authorize merging, promotion, or deployment.
 
 
-## 🔌 Shared MCP framework
+## ðŸ”Œ Shared MCP framework
 
 Follow the [MCP framework contract](../../docs/MCP-FRAMEWORK.md) before activating an optional app. Notoli keeps its current MCP profile; MacroMapper ships the framework with MCP disabled. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.

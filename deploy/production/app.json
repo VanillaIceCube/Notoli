@@ -54,10 +54,7 @@
     "container": "host-ingress-proxy",
     "project": "host-ingress",
     "addresses": {
-      "notoli_backend_private": "172.30.88.2",
-      "macromapper-ingress": "172.20.0.3",
-      "ynab_mcp_private": "172.30.89.2",
-      "mcp_auth_private": "172.30.92.2"
+      "notoli_backend_private": "172.30.88.2"
     },
     "networks": {
       "notoli_backend_private": {
@@ -95,28 +92,6 @@
         "required": [
           "host-ingress-proxy"
         ]
-      },
-      "ynab_mcp_private": {
-        "internal": true,
-        "subnet": "172.30.89.0/29",
-        "allowed": [
-          "host-ingress-proxy",
-          "ynab-mcp-gateway-1"
-        ],
-        "required": [
-          "host-ingress-proxy"
-        ]
-      },
-      "mcp_auth_private": {
-        "internal": true,
-        "subnet": "172.30.92.0/29",
-        "allowed": [
-          "host-ingress-proxy",
-          "mcp-auth-server"
-        ],
-        "required": [
-          "host-ingress-proxy"
-        ]
       }
     }
   },
@@ -125,8 +100,7 @@
       "DJANGO_SECRET_KEY",
       "DJANGO_EMAIL_BACKEND",
       "DJANGO_EMAIL_HOST_KEY",
-      "DJANGO_DEFAULT_FROM_EMAIL",
-      "MCP_INTROSPECTION_CLIENT_SECRET"
+      "DJANGO_DEFAULT_FROM_EMAIL"
     ],
     "defaults": {
       "DJANGO_EMAIL_HOST": "smtp.resend.com",
@@ -143,7 +117,6 @@
       "DJANGO_CSRF_TRUSTED_ORIGINS": "https://notoli.judeandrewalaba.com",
       "DJANGO_FRONTEND_BASE_URL": "https://notoli.judeandrewalaba.com",
       "DJANGO_MCP_BASE_URL": "https://notoli.judeandrewalaba.com",
-      "DJANGO_MCP_AUTH_MODE": "central",
       "DJANGO_TRUSTED_PROXY_IPS": "172.30.88.2"
     }
   },
@@ -165,18 +138,16 @@
       },
       {
         "path": "/.well-known/oauth-authorization-server",
-        "status": 410,
+        "status": 200,
         "json_equals": {
-          "authorization_server": "https://auth.judeandrewalaba.com",
-          "error": "issuer_moved"
+          "issuer": "https://notoli.judeandrewalaba.com"
         }
       },
       {
         "path": "/.well-known/oauth-protected-resource/mcp",
         "status": 200,
         "json_equals": {
-          "resource": "https://notoli.judeandrewalaba.com/mcp",
-          "authorization_servers": ["https://auth.judeandrewalaba.com"]
+          "resource": "https://notoli.judeandrewalaba.com/mcp"
         }
       },
       {
@@ -190,8 +161,6 @@
   },
   "workflow": {
     "frontend_build_arg": "REACT_APP_API_BASE_URL",
-    "extra_env": {
-      "MCP_INTROSPECTION_CLIENT_SECRET": "${{ secrets.MCP_INTROSPECTION_CLIENT_SECRET }}"
-    }
+    "extra_env": {}
   }
 }

@@ -6,6 +6,10 @@
 
 - Reconcile production promotion ancestry without runtime changes and document main-first review, exact-source promotion and prompt reconciliation of owner-authorized deployment iterations under [Notoli #975](https://github.com/VanillaIceCube/Notoli/issues/975) and [FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262). Keep the central MCP cutover held under #973 pending its acceptance and operator checkpoints.
 
+### Removed
+
+- Remove the unreleased central MCP issuer migration (#973). Notoli continues to own MCP OAuth, consent, grants and all 31 tools; ordinary app accounts and login remain unchanged. Restore the original three-network release policy and remove the shared introspection credential requirement.
+
 ## 2026-10-29
 
 ### Added
@@ -583,7 +587,7 @@ All notable changes to this project are documented in this file.
 - Environment exports now always generate a minimal `environment.yml` and a separate `requirements.txt` for pip packages.
 - Pip dependencies are captured as top-level installs with pinned versions, excluding transitive dependencies.
 ### Removed
-- Removed unstable pip entries (e.g. `@ file:///…`) to ensure portable, reproducible environments.
+- Removed unstable pip entries (e.g. `@ file:///â€¦`) to ensure portable, reproducible environments.
 
 ## 2026-01-22
 ### Changed

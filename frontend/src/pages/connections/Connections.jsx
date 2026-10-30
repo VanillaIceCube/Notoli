@@ -95,7 +95,6 @@ export function OAuthConsent() {
 export default function ConnectedApps() {
   const navigate = useNavigate();
   const [applications, setApplications] = useState(null);
-  const [authorizationServer, setAuthorizationServer] = useState(null);
   const [error, setError] = useState('');
   const [revoking, setRevoking] = useState(null);
 
@@ -103,10 +102,7 @@ export default function ConnectedApps() {
     let active = true;
     loadConnections()
       .then((data) => {
-        if (active) {
-          setApplications(data.applications);
-          setAuthorizationServer(data.authorization_server ?? null);
-        }
+        if (active) setApplications(data.applications);
       })
       .catch((err) => {
         if (active) setError(err.message);
@@ -133,19 +129,7 @@ export default function ConnectedApps() {
     <ConnectionSurface title="Connected Apps">
       {error && <Alert severity="error">{error}</Alert>}
       {!applications && !error && <Typography role="status">Loading connected apps…</Typography>}
-      {authorizationServer && (
-        <>
-          <Typography>
-            Manage and revoke your MCP connections at the shared authorization service.
-          </Typography>
-          <Button component="a" href={authorizationServer.manage_url}>
-            Manage MCP connections
-          </Button>
-        </>
-      )}
-      {!authorizationServer && applications?.length === 0 && (
-        <Typography>No connected apps.</Typography>
-      )}
+      {applications?.length === 0 && <Typography>No connected apps.</Typography>}
       {applications?.map((app) => (
         <Stack
           key={app.id}

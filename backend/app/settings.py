@@ -149,10 +149,6 @@ MCP_REQUIRED_SCOPES = ["notoli:read"]
 MCP_CONSENT_SALT = "notoli.mcp.consent"
 MCP_CLIENT_ID = "notoli-chatgpt"
 MCP_SERVER_FACTORY = "integrations.server.get_server"
-MCP_AUTH_MODE = os.getenv("DJANGO_MCP_AUTH_MODE", "legacy")
-MCP_INTROSPECTION_CLIENT_SECRET = os.getenv("MCP_INTROSPECTION_CLIENT_SECRET", "")
-if MCP_AUTH_MODE not in {"legacy", "central"}:
-    raise ImproperlyConfigured("DJANGO_MCP_AUTH_MODE must be legacy or central")
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 OAUTH2_PROVIDER = {
