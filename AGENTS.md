@@ -6,6 +6,17 @@ release standard. Update the shared source, then synchronize both applications;
 CI's parity check rejects independent vendor edits. App policy lives in
 `deploy/production/app.json`; preserve its intentional network/readiness differences.
 
+Branch ownership: follow the main-first policy in
+[FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262)
+and [Notoli #975](https://github.com/VanillaIceCube/Notoli/issues/975).
+Implement and review source through PRs targeting `main`, then promote its exact reviewed source
+through an `env-prod` PR with existing review and CI gates. Exceptional deployment
+iteration requires explicit owner authorization and must return promptly through
+a reviewed `main` PR before the next promotion. History reconciliation alone
+does not authorize deployment: hold the central OAuth cutover under
+[#973](https://github.com/VanillaIceCube/Notoli/issues/973) until its acceptance
+and operator checkpoints are complete. Intentional release lag is not source drift.
+
 
 This repo uses manual setup steps so Codex does not assume Django or Node are installed.
 Follow one of the setup paths below before running the app.
