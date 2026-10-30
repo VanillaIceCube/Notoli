@@ -7,6 +7,30 @@ OAuth cutover** and waits for actual YNAB acceptance in both clients and the
 Infrastructure root checkpoint. Follow the [migration/rollback plan](central-mcp.md).
 Merging `main` alone does not deploy.
 
+## Main-first promotion
+
+Follow the canonical policy in
+[FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262)
+and the local reconciliation in
+[Notoli #975](https://github.com/VanillaIceCube/Notoli/issues/975).
+Develop and review changes through PRs targeting `main`; promote that exact reviewed source through
+an `env-prod` PR, preserving all CI, reviewer and owner/operator gates. A promotion
+merge may have a different commit ID, but its source tree must match the reviewed
+`main` commit. Do not add deployment fixes only to the promotion branch.
+An exceptional owner-authorized deployment iteration must return promptly through
+a reviewed `main` PR before the next promotion.
+
+The #975 audit found only historical promotion merges unique to `env-prod`, with
+no file changes relative to its merge base with `main`. Reconcile that ancestry
+without reverting reviewed source or claiming that history parity proves live
+acceptance. Current `main` selects central MCP: keep its production promotion held
+under [#973](https://github.com/VanillaIceCube/Notoli/issues/973) and the
+[cutover checkpoint](central-mcp.md) until the required acceptance and operator
+authorization are recorded. Intentional release lag while those prerequisites
+remain incomplete is not source drift and does not require a deployment.
+
+## Current production boundary
+
 The central app policy validates the shared gateway's exact five route networks,
 including YNAB `172.30.89.2` and authorization `172.30.92.2`. Notoli's backend/
 frontend memberships and proxy `172.30.88.2` stay unchanged. A matched original
