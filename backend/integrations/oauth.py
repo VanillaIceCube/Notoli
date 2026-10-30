@@ -1,5 +1,7 @@
 """Notoli tool permissions layered over the shared OAuth lifecycle."""
 
+from django.conf import settings
+
 from mcp_framework.oauth import ConnectionPermissionDenied as ConnectionPermissionDenied
 from mcp_framework.oauth import MCPOAuthValidator
 from mcp_framework.oauth import resolve_token as resolve_framework_token
@@ -47,4 +49,8 @@ class NotoliOAuthValidator(MCPOAuthValidator):
 
 
 def resolve_token(raw_token, scope="notoli:read"):
+    if settings.MCP_AUTH_MODE == "central":
+        from .central_oauth import resolve_token as resolve_central_token
+
+        return resolve_central_token(raw_token, scope)
     return resolve_framework_token(raw_token, scope)

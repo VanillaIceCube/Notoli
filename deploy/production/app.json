@@ -100,7 +100,8 @@
       "DJANGO_SECRET_KEY",
       "DJANGO_EMAIL_BACKEND",
       "DJANGO_EMAIL_HOST_KEY",
-      "DJANGO_DEFAULT_FROM_EMAIL"
+      "DJANGO_DEFAULT_FROM_EMAIL",
+      "MCP_INTROSPECTION_CLIENT_SECRET"
     ],
     "defaults": {
       "DJANGO_EMAIL_HOST": "smtp.resend.com",
@@ -117,6 +118,7 @@
       "DJANGO_CSRF_TRUSTED_ORIGINS": "https://notoli.judeandrewalaba.com",
       "DJANGO_FRONTEND_BASE_URL": "https://notoli.judeandrewalaba.com",
       "DJANGO_MCP_BASE_URL": "https://notoli.judeandrewalaba.com",
+      "DJANGO_MCP_AUTH_MODE": "central",
       "DJANGO_TRUSTED_PROXY_IPS": "172.30.88.2"
     }
   },
@@ -138,16 +140,18 @@
       },
       {
         "path": "/.well-known/oauth-authorization-server",
-        "status": 200,
+        "status": 410,
         "json_equals": {
-          "issuer": "https://notoli.judeandrewalaba.com"
+          "authorization_server": "https://auth.judeandrewalaba.com",
+          "error": "issuer_moved"
         }
       },
       {
         "path": "/.well-known/oauth-protected-resource/mcp",
         "status": 200,
         "json_equals": {
-          "resource": "https://notoli.judeandrewalaba.com/mcp"
+          "resource": "https://notoli.judeandrewalaba.com/mcp",
+          "authorization_servers": ["https://auth.judeandrewalaba.com"]
         }
       },
       {
@@ -161,6 +165,8 @@
   },
   "workflow": {
     "frontend_build_arg": "REACT_APP_API_BASE_URL",
-    "extra_env": {}
+    "extra_env": {
+      "MCP_INTROSPECTION_CLIENT_SECRET": "${{ secrets.MCP_INTROSPECTION_CLIENT_SECRET }}"
+    }
   }
 }

@@ -25,6 +25,37 @@ Production serves these routes from the subdomain root at `https://notoli.judean
 
 ## ChatGPT MCP authentication and tools
 
+### Central consumer (production migration #973)
+
+`DJANGO_MCP_AUTH_MODE` selects `legacy` (local default, described below) or
+`central`. Central mode uses fixed issuer `https://auth.judeandrewalaba.com`,
+resource `https://notoli.judeandrewalaba.com/mcp`, public clients
+`notoli-chatgpt` / `notoli-codex`, and dedicated `notoli-introspection` HTTP Basic
+credentials from `MCP_INTROSPECTION_CLIENT_SECRET`. Bounded uncached TLS
+introspection revalidates grants per request/tool. `MCPIdentityLink` explicitly
+maps immutable issuer UUID subjects to existing active users, with no email
+inference or account creation. Current board permissions still apply.
+
+Apply the additive migration and use `link_mcp_identity --subject '<UUID>'
+--user-id '<existing ID>'` after private verification. Links cannot be rebound;
+`--enable` / `--disable` explicitly change state. The production secret travels
+in the existing private backend environment, visible to privileged host/Docker
+administrators. No new mount/release engine is introduced. Invalid central
+configuration fails closed; issuer outage never falls back to legacy.
+
+Central mode disables local authorize/token/revoke endpoints (410), client
+registration and local issuer discovery (410 `issuer_moved`). Protected-resource
+discovery advertises the central issuer. JWT-protected Connected Apps links to
+the issuer's `/o/authorized_tokens/` for revocation. Retained local grants are
+unusable in central mode and require deliberate retirement/rollback handling.
+Ordinary registration, login, refresh, REST JWTs and data remain app-owned.
+
+Follow the [migration, acceptance and rollback plan](../deploy/production/central-mcp.md).
+Production policy selects central mode; `env-prod` promotion waits for real YNAB
+acceptance in both clients and the Infrastructure root checkpoint.
+
+### Legacy local issuer
+
 The official Python MCP SDK serves a stateless JSON Streamable HTTP endpoint
 at `/mcp`. Django OAuth Toolkit supplies migrations and the authorization-code
 flow. Run the ASGI entrypoint, not WSGI or Django `runserver`, to expose MCP.

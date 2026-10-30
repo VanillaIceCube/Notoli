@@ -306,6 +306,16 @@ acceptance in #612 or #587.
 
 ## 🔄 Shared deployment action update
 
+Notoli's app policy now fixes central MCP mode and requires the Actions secret
+`MCP_INTROSPECTION_CLIENT_SECRET`. Its generated `extra_env` entry sends the
+Notoli-only introspection credential to the existing private `.backend.env`
+bundle; no shared release-engine change, mount or CI artifact is added. Host root
+and Docker administrators can read the effective environment and retained
+recovery files. Keep these privileged and out of logs/tickets. Missing secrets
+fail bundle creation. `env-prod` promotion is the live OAuth cutover and remains
+held until real YNAB ChatGPT/Codex acceptance and the Infrastructure root
+checkpoint. See the [consumer migration plan](../deploy/production/central-mcp.md).
+
 Docker login v4.7.0 is rendered from Infrastructure commit
 `f3f049830fcd5e5869d1ae120c57d9ccb6c99200`. Keep `deploy/shared-source.json` and
 the generated workflow synchronized; deployment parity remains mandatory.

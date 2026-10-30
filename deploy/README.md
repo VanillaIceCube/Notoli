@@ -1,5 +1,11 @@
 # Local Docker development
 
+Local development defaults to `DJANGO_MCP_AUTH_MODE=legacy`. Central MCP mode
+requires the fixed production resource origin and an introspection-only secret
+in the existing private backend environment. Follow the separate
+[central migration/cutover plan](production/central-mcp.md); do not change local
+Compose networks or use local/legacy deployment commands for that production switch.
+
 For shared-host configuration, deployment and recovery, use the
 [canonical production guide](production/README.md). The commands below are for
 local development only. Host-owned gateway and certificate operations belong to
