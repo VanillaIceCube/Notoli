@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Use GPT-6 Luna for all OpenAI PR reviewers and security-alert grouping while preserving existing review gates, isolated credentials and token budgets.
+
 - Reconcile production promotion ancestry without runtime changes and document main-first review, exact-source promotion and prompt reconciliation of owner-authorized deployment iterations under [Notoli #975](https://github.com/VanillaIceCube/Notoli/issues/975) and [FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262). Keep the central MCP cutover held under #973 pending its acceptance and operator checkpoints.
 
 ### Removed
