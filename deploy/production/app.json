@@ -54,7 +54,9 @@
     "container": "host-ingress-proxy",
     "project": "host-ingress",
     "addresses": {
-      "notoli_backend_private": "172.30.88.2"
+      "notoli_backend_private": "172.30.88.2",
+      "ynab_mcp_private": "172.30.89.2",
+      "mcp_auth_private": "172.30.92.2"
     },
     "networks": {
       "notoli_backend_private": {
@@ -88,6 +90,28 @@
           "host-ingress-proxy",
           "macromapper-backend",
           "macromapper-frontend"
+        ],
+        "required": [
+          "host-ingress-proxy"
+        ]
+      },
+      "ynab_mcp_private": {
+        "internal": true,
+        "subnet": "172.30.89.0/29",
+        "allowed": [
+          "host-ingress-proxy",
+          "ynab-mcp-gateway-1"
+        ],
+        "required": [
+          "host-ingress-proxy"
+        ]
+      },
+      "mcp_auth_private": {
+        "internal": true,
+        "subnet": "172.30.92.0/29",
+        "allowed": [
+          "host-ingress-proxy",
+          "mcp-auth-server"
         ],
         "required": [
           "host-ingress-proxy"

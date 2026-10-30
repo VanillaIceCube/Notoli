@@ -76,7 +76,15 @@ Linking creates no OAuth grant or local role.
    provisions no credentials or ingress.
 3. Review Cloudflare no-cache/no-challenge rules for `/mcp`, discovery and legacy
    `/auth/mcp/*`, plus independently owned issuer routes. Preserve the existing
-   networks, proxy `.2`, backend `.3`, TLS and app-only deployment.
+   Notoli networks, proxy `172.30.88.2`, backend `.3`, TLS and app-only deployment.
+   The central app policy requires the gateway's exact five-network baseline:
+   existing `notoli_backend_private`, `notoli_default`, `macromapper-ingress`,
+   plus internal `ynab_mcp_private` (`172.30.89.0/29`, proxy `.2`) and
+   `mcp_auth_private` (`172.30.92.0/29`, proxy `.2`). Only the gateway and the
+   corresponding `ynab-mcp-gateway-1` / `mcp-auth-server` are allowed on those
+   private routes; the gateway is required and companion absence remains allowed
+   for independent app recovery. Notoli joins neither new network. Infrastructure
+   must accept the matching enabled gateway baseline before this app promotion.
 4. Promote the reviewed `env-prod` candidate at the cutover checkpoint. App policy
    fixes central mode. Readiness checks protected-resource metadata pointing to
    the central issuer, local issuer discovery 410 `issuer_moved`, anonymous MCP
@@ -101,8 +109,20 @@ change does not modify an installed personal plugin or current connection.
 Use the existing app-only release/recovery procedure. Prefer a reviewed rollback
 candidate selecting `legacy`, retaining the additive link table and current
 business data. Fixed central app policy rejects a host environment override;
-retain the previous immutable images and private release configuration. Do not
-change shared gateway/issuer state or casually restore a historical business DB.
+retain the previous immutable images and private release configuration. A new
+legacy-mode candidate can retain the five-network gateway policy. App release/
+recovery never changes shared gateway/issuer state or restores a historical
+business DB casually.
+
+Restoring an original legacy bundle with its three-network gateway policy needs
+a bounded coordinated sequence: the Infrastructure operator first accepts the
+explicit **disabled** YNAB and authorization profiles (retaining both 410
+hostnames), verifies their containment and the matching three-network gateway
+baseline, then performs the matching app-only recovery. Keep the existing network
+objects, companion app containers and private recovery evidence. Never switch
+exposed hostnames implicitly to `base`, delete shared networks, or let an app
+release recreate ingress. Re-enabling either route is a separate root-coordinated
+step after the matching consumer/gateway policy and acceptance checks are ready.
 
 Central revocation does **not** revoke retained legacy grants. Before reopening
 legacy issuance, explicitly invalidate local MCP codes/access/refresh grants

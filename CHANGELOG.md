@@ -9,6 +9,7 @@
 
 ### Changed
 
+- Require the accepted five-network gateway baseline in Notoli's central app policy, preserve existing Notoli memberships/trust, and document explicit disabled-profile sequencing before original three-network legacy recovery.
 - Select central MCP in the app-owned production policy and deliver its introspection-only secret through the existing private environment/workflow contract; preserve ordinary login, REST JWTs, local permissions and deployment networks.
 - Link central Connected Apps to shared grant management, disable local issuance in central mode and prepare plugin v0.4.0 for separate post-cutover publication.
 - Synchronize the canonical FullStackTemplate verifier/issuer hook at source commit `5a9294d550ec946a51b34bb2438a6c04ecc13461`.

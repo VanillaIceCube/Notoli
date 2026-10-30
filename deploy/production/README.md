@@ -7,6 +7,13 @@ OAuth cutover** and waits for actual YNAB acceptance in both clients and the
 Infrastructure root checkpoint. Follow the [migration/rollback plan](central-mcp.md).
 Merging `main` alone does not deploy.
 
+The central app policy validates the shared gateway's exact five route networks,
+including YNAB `172.30.89.2` and authorization `172.30.92.2`. Notoli's backend/
+frontend memberships and proxy `172.30.88.2` stay unchanged. A matched original
+three-network legacy recovery first needs Infrastructure's explicit disabled
+YNAB/auth profiles and verified matching gateway baseline, as detailed in the
+migration plan; app recovery never modifies shared ingress or deletes networks.
+
 This is the implementation of approved architecture v2. Every PR merge and
 every production release still requires separate explicit owner authorization.
 Only the operator designated in coordination #4 may perform production actions
