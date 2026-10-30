@@ -66,23 +66,42 @@ class ContractTests(unittest.TestCase):
             )
             self.assertNotIn("MACROMAPPER_OPENAI_API_KEY", builder.REQUIRED)
         elif release.APP == "macromapper":
-            self.assertEqual(
-                policy["addresses"], {"notoli_backend_private": "172.30.88.2"}
-            )
+            addresses = {"notoli_backend_private": "172.30.88.2"}
+            if builder.FIXED.get("DJANGO_MCP_ENABLED") == "1":
+                addresses["macromapper-ingress"] = "172.20.0.3"
+                self.assertEqual(builder.FIXED["DJANGO_MCP_BASE_URL"],
+                                 "https://" + release.CONFIG["domain"])
+                self.assertEqual(builder.FIXED["DJANGO_TRUSTED_PROXY_IPS"], "172.20.0.3")
+            else:
+                self.assertIn(builder.FIXED.get("DJANGO_MCP_ENABLED"), (None, "0"))
+                self.assertNotIn("DJANGO_MCP_BASE_URL", builder.FIXED)
+            self.assertEqual(policy["addresses"], addresses)
             self.assertEqual(release.CONFIG["frontend_port_bindings"], [[]])
             self.assertIn("MACROMAPPER_OPENAI_API_KEY", builder.REQUIRED)
-            self.assertNotIn("DJANGO_MCP_BASE_URL", builder.FIXED)
 
     def test_app_readiness_rejects_wrong_origin_content_and_missing_challenge(self):
         rules = {rule["path"]: rule for rule in release.CONFIG["readiness"]["public"]}
         expected = {"/", "/api/notifications/"}
-        if release.APP == "notoli":
+        mcp_enabled = release.APP == "notoli" or builder.FIXED.get("DJANGO_MCP_ENABLED") == "1"
+        if mcp_enabled:
             expected |= {
                 "/.well-known/oauth-authorization-server",
                 "/.well-known/oauth-protected-resource/mcp",
                 "/mcp",
             }
         self.assertEqual(set(rules), expected)
+        if mcp_enabled:
+            origin = "https://" + release.CONFIG["domain"]
+            self.assertEqual(rules["/.well-known/oauth-authorization-server"]["json_equals"],
+                             {"issuer": origin})
+            self.assertEqual(rules["/.well-known/oauth-protected-resource/mcp"]["json_equals"],
+                             {"resource": origin + "/mcp"})
+            if release.APP == "macromapper":
+                for path in ("/.well-known/oauth-authorization-server",
+                             "/.well-known/oauth-protected-resource/mcp"):
+                    self.assertEqual(rules[path]["content_type"], "application/json")
+                self.assertEqual(rules["/mcp"]["header_contains"]["WWW-Authenticate"],
+                                 'resource_metadata="' + origin + '/.well-known/oauth-protected-resource/mcp"')
         self.assertTrue(release.response_matches(rules["/"], {}, b"<HTML>app</HTML>"))
         self.assertFalse(release.response_matches(rules["/"], {}, b"upstream error"))
         self.assertFalse(
