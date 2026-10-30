@@ -299,7 +299,7 @@ separately approved operator plan; they are not automatic release probes.
    Metadata returns JSON; `/mcp` returns `401` with a `WWW-Authenticate` resource
    metadata URL. After linking, try discovery, add one item, mark it complete,
    and revoke the connection in React's `/connections` (**Connected Apps** in the
-   profile menu). Verify already-signed-in consent, signed-out login â†’ consent â†’
+   profile menu). Verify already-signed-in consent, signed-out login → consent →
    callback, Cancel returning `access_denied` with the original state/issuer, and
    revocation preventing access and refresh. Also approve consent without exchanging
    the code: the app must appear in Connected Apps, and revoking it must block exchange.
@@ -340,6 +340,6 @@ The same immutable source commit is proposed for all three consumers. These
 source-pin PRs do not authorize merging, promotion, or deployment.
 
 
-## ðŸ”Œ Shared MCP framework
+## 🔌 Shared MCP framework
 
 Follow the [MCP framework contract](../../docs/MCP-FRAMEWORK.md) before activating an optional app. Notoli keeps its current MCP profile; MacroMapper ships the framework with MCP disabled. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.

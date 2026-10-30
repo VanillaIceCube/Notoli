@@ -587,7 +587,7 @@ All notable changes to this project are documented in this file.
 - Environment exports now always generate a minimal `environment.yml` and a separate `requirements.txt` for pip packages.
 - Pip dependencies are captured as top-level installs with pinned versions, excluding transitive dependencies.
 ### Removed
-- Removed unstable pip entries (e.g. `@ file:///â€¦`) to ensure portable, reproducible environments.
+- Removed unstable pip entries (e.g. `@ file:///…`) to ensure portable, reproducible environments.
 
 ## 2026-01-22
 ### Changed

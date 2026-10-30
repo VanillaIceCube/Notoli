@@ -215,7 +215,7 @@ Nora and Marty use the [v3 operating rules](.jules/README.md): at most one open
 PR per agent per repository. Repeat runs maintain the existing PR, integrate
 current main, and verify its latest head instead of opening another PR.
 
-## ðŸ”‘ OpenAI reviewer isolation
+## 🔑 OpenAI reviewer isolation
 
 Use `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, and
 `ROBOCOP_OPENAI_API_KEY` for their respective reviewers; RoboCop also owns
@@ -225,7 +225,7 @@ environments, preserve visible missing-key failures, and follow the deferred
 cutover steps in `.github/README-WORKFLOWS.md`.
 
 
-## ðŸ”Œ Shared MCP framework
+## 🔌 Shared MCP framework
 
 MCP framework changes follow [docs/MCP-FRAMEWORK.md](docs/MCP-FRAMEWORK.md). FullStackTemplate owns the canonical Python package; keep all consumer hashes/pins aligned. MacroMapper stays disabled without business tools. Preserve Notoli credentials, scopes, tool permissions and exact proxy trust.
 
