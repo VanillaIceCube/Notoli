@@ -34,7 +34,7 @@ What it does:
   - Uses GitHub Dependency Review and fails when a PR introduces a high or critical vulnerability.
   - Emits a bounded vulnerability report output for RoboCop instead of posting a standalone PR comment. Full dependency and vulnerability JSON travels through a file and is retained in the `dependency-review-evidence` artifact; it is not passed through a large environment variable. The report includes change counts, vulnerable entries up to 16 KiB, and an explicit omitted-entry count. Every non-success Dependency Review outcome fails the gate, independently of report size.
 - Runs the reusable malware gate: [`.github/workflows/gate-malware.yml`](workflows/gate-malware.yml)
-  - Uses the local [npm malware review action](actions/review-npm-malware/action.yml) to compare changed `frontend/package-lock.json` packages against GitHub's npm malware advisories.
+  - Uses the local [npm malware review action](actions/review-npm-malware/action.yml) to compare changed `frontend/package-lock.json` packages against GitHub's npm malware advisories. Queries use GitHub's documented [affects filter](https://docs.github.com/en/rest/security-advisories/global-advisories#list-global-security-advisories) with one unique changed package name per query, following every result page and matching versions locally; API failures still block the gate. This avoids downloading the full global malware corpus for each dependency PR.
   - Follows GitHub's cursor-based advisory pagination and applies a per-request timeout so the gate terminates reliably as the advisory feed grows.
   - Emits a malware report output for RoboCop and fails when a changed package/version matches a known malware advisory.
 - For trusted same-repository PRs, including Dependabot, runs [`.github/workflows/review-code.yml`](workflows/review-code.yml)
@@ -135,12 +135,27 @@ The active [Main Branch Protection ruleset](https://github.com/VanillaIceCube/No
 | Tests | `Tests / Detect Changes`, `Tests / Frontend Tests (React)`, `Tests / Backend Tests (Django)`, `Tests / Test Results` |
 | CodeQL | `CodeQL / Detect CodeQL Scope`, `CodeQL / Analyze Python`, `CodeQL / Analyze JavaScript/TypeScript`, `CodeQL / Analyze GitHub Actions` |
 | Dependencies | `Vulnerability / Vulnerability`, `Malware / Malware` |
+| AI reviewers | `AI Code Review / Obi-Wan Code-nobi code review`, `AI Build Sheriff Review / Lint Eastwood build sheriff review`, `AI Security Review / RoboCop security review` |
 
 The standalone `CodeQL` Code Scanning results context is intentionally excluded. Historically it was required alongside the four explicit workflow jobs, but GitHub only emits it when analysis uploads results. A documentation-only PR such as [#844](https://github.com/VanillaIceCube/Notoli/pull/844) passes scope detection and skips all analyzers, leaving that standalone requirement pending forever. This policy matches the scope-aware configuration used by MacroMapper and FullStackTemplate.
 
 GitHub accepts skipped analyzer jobs as satisfying required checks. Scope-detection failures and failed in-scope analyzers remain merge blockers. Findings remain visible in Code Scanning and PR results when analysis runs; severity-based blocking is a separate Code Scanning policy, as described above. Removing the standalone context does not introduce a new findings-severity gate.
 
-When editing or recreating the ruleset, retain all 14 contexts above and exclude the standalone `CodeQL` context. Preserve the remaining ruleset settings, conditions, and bypass actors. Validate the live context list with `gh api repos/VanillaIceCube/Notoli/rules/branches/main` and inspect `gh pr checks` for both a documentation-only PR and a code-changing PR. No workflow rerun is needed to remove the stale requirement from existing PRs.
+When editing or recreating the ruleset, retain all 17 contexts above and exclude the standalone `CodeQL` context. Preserve the remaining ruleset settings, conditions, and bypass actors. Validate the live context list with `gh api repos/VanillaIceCube/Notoli/rules/branches/main` and inspect `gh pr checks` for both a documentation-only PR and a code-changing PR.
+
+The three reviewer requirements were activated for [#946](https://github.com/VanillaIceCube/Notoli/issues/946) after verifying exact emitted names on human PR #944 and same-repository Dependabot PR #941, the six reviewer secret names in both credential stores, and app/project variable names. [The dated evidence snapshot](review-gating-evidence.json) records the original and updated rules, successful runs, and PR #942's genuine requested-changes/failing-check followed by approval/passing-check. The existing 14 requirements and all other ruleset settings were preserved.
+
+A published `REQUEST_CHANGES` fails each persona's job, including repeated or unchanged verdicts. Valid `APPROVE` and `COMMENT` succeed; missing credentials, malformed/invalid output, incomplete major briefs and oversized diffs fail visibly. Build/security reviews use `always()` so upstream failures or skipped gates do not suppress them. No reviewer path filters exclude documentation changes. Forks receive no private credentials; review from a trusted same-repository branch is required.
+
+Missing required contexts remain pending; failed or cancelled checks require a successful rerun on the current head. GitHub accepts skipped jobs as satisfying requirements, so a skipped reviewer must never be treated as review evidence. The regression tests preserve reviewer eligibility and the publishing/incomplete-review paths. The read-only audit below rejects missing, skipped, cancelled, neutral and non-success reviewer results; it does not publish an aggregator or change protection.
+
+```powershell
+gh api repos/VanillaIceCube/Notoli/rulesets/12154610 > ruleset.json
+gh api "repos/VanillaIceCube/Notoli/commits/<HEAD_SHA>/check-runs?per_page=100" > head-check-runs.json
+node .github/actions/publish-ai-review/verify-gates.js ruleset.json head-check-runs.json
+node --test .github/actions/publish-ai-review/*.test.js
+actionlint
+```
 
 ## 🚀 Deployment
 The automation test gate verifies pinned shared-source parity before the common
@@ -163,7 +178,7 @@ Dependabot configuration:
 
 Auto-merge behavior:
 - Dependabot PRs go through CI (`ci-orchestrator.yml`), and if all gates pass, `ci-auto-merge.yml` can enable auto-merge.
-- Dependabot PRs receive the three same-repository AI reviews using Dependabot secrets. Major updates additionally receive Obi-Wan's upgrade brief and remain a human merge decision. The existing required contexts remain listed above; making reviewer verdicts required is separate branch-policy work tracked in [#656](https://github.com/VanillaIceCube/Notoli/issues/656). Independent lint, test, CodeQL, vulnerability, and malware gates continue to block auto-merge when any gate fails.
+- Dependabot PRs receive the three required same-repository AI reviews using Dependabot secrets. Major updates additionally receive Obi-Wan's upgrade brief and remain a human merge decision. [#656](https://github.com/VanillaIceCube/Notoli/issues/656) owns the existing Dependabot eligibility implementation; [#946](https://github.com/VanillaIceCube/Notoli/issues/946) adds the missing reviewer requirements. Independent lint, test, CodeQL, vulnerability, and malware gates continue to block auto-merge when any gate fails.
 - Auto-merge is restricted to patch/minor updates.
 - If a security alert is present, the workflow requires CVSS <= 6.9.
 - The workflow uses `dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98` (`v3.1.0`) and can optionally use `DEPENDABOT_PAT` for metadata/alert lookup.
@@ -246,3 +261,51 @@ See [OpenAI key security, expiration and usage guidance](https://developers.open
 ## 🔌 Shared MCP framework
 
 The backend test gate checks the pinned MCP framework manifest. Template/MacroMapper run both ordinary tests and an isolated MCP-enabled sample profile; production remains disabled there. Notoli runs its existing enabled protocol/domain suite. See [the framework guide](../docs/MCP-FRAMEWORK.md).
+
+## 🛡️ Dependency evidence and alert lifecycle parity
+
+The reusable baseline is FullStackTemplate's `.github/actions/prepare-vulnerability-report`.
+MacroMapper, Notoli and Infrastructure carry the same report implementation and
+regression contract. Dependency Review still blocks high/critical additions;
+every non-success scanner outcome, missing/malformed output or failed evidence
+preparation fails the independent Vulnerability check. No empty-array fallback
+may turn unavailable evidence into a clean scan. RoboCop receives at most 16 KiB
+of package/severity/manifest context, with omitted-entry counts. The
+`dependency-review-evidence` artifact retains every structured entry for seven
+days, excluding untrusted free text and arbitrary URLs; unavailable evidence is
+retained as structured diagnostics. Artifacts have the repository's Actions
+access controls, not an additional private storage boundary.
+
+Alert synchronization saves source history/replacement links first, ensures
+Project membership, then writes End date before Status Done. Done can trigger
+Project auto-close. The issue client re-reads state before a separate state-only
+close. Only GitHub's observed HTTP 422 `Validation Failed` with an empty errors
+array is eligible for recovery, and only if another read proves closed/completed
+with the exact saved lifecycle body. Other failures propagate. Partial Project
+failures leave the issue open for rerun; issue mutations remain attributed to
+RoboCop and Project writes use the separate Project credential. New items use
+the live `Work type` field. No credentials, branch protections or deployments
+change.
+
+Historical evidence: FullStackTemplate #192 closed at 2026-10-11 16:40:51 UTC,
+before run 38156425534's state-close PATCH returned 422 at 16:40:52 UTC with
+`errors: []`. Notoli #825 has the same earlier pattern. All four Projects have
+Auto-close issue enabled (read-only verification 2026-10-20). This establishes
+the competing-close ordering; GitHub's internal validation cause is not exposed.
+Mocks reproduce that interleaving and reject unrelated errors. Empty scheduled
+feeds do not establish that a live close race occurred.
+
+CodeQL now forwards `scope_status`, `scope_python`, `scope_javascript` and
+`scope_actions` to RoboCop's shared evidence collector. A PR language skip is
+expected only with successful, known scope and a completed matching default-
+branch baseline. Missing, failed or unavailable evidence stays an explicit gap.
+Main pushes and scheduled/manual scans still analyze every language. Existing
+check names, categories, queries and ruleset requirements remain unchanged;
+this does not independently resolve the historical default-branch/attribution
+acceptance in #612 or #587.
+
+## 🔄 Shared deployment action update
+
+Docker login v4.7.0 is rendered from Infrastructure commit
+`f3f049830fcd5e5869d1ae120c57d9ccb6c99200`. Keep `deploy/shared-source.json` and
+the generated workflow synchronized; deployment parity remains mandatory.

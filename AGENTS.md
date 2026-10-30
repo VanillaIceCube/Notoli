@@ -6,6 +6,18 @@ release standard. Update the shared source, then synchronize both applications;
 CI's parity check rejects independent vendor edits. App policy lives in
 `deploy/production/app.json`; preserve its intentional network/readiness differences.
 
+Branch ownership: follow the main-first policy in
+[FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262)
+and [Notoli #975](https://github.com/VanillaIceCube/Notoli/issues/975).
+Implement and review source through PRs targeting `main`, then promote its exact reviewed source
+through an `env-prod` PR with existing review and CI gates. Exceptional deployment
+iteration requires explicit owner authorization and must return promptly through
+a reviewed `main` PR before the next promotion. History reconciliation alone
+does not authorize deployment. Intentional release lag is not source drift.
+Notoli owns its MCP OAuth issuer, consent, grants and tools. The abandoned central
+issuer migration (#973) is not a deployment prerequisite; no YNAB or shared
+introspection service is required. Preserve the existing Notoli MCP connection.
+
 
 This repo uses manual setup steps so Codex does not assume Django or Node are installed.
 Follow one of the setup paths below before running the app.
@@ -26,6 +38,8 @@ GitHub AI PR reviews: The three persona workflows require `OBI_WAN_OPENAI_API_KE
 GitHub Dependabot reviews: All three personas run for same-repository Dependabot PRs; forks remain excluded and Dependabot lint auto-fixes remain disabled. Store `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, `ROBOCOP_OPENAI_API_KEY`, and the three reviewer private-key secrets in both Actions and Dependabot. Semver-major updates require Obi-Wan's complete, primary-source major-upgrade brief; web search is enabled only for that review type. Preserve visible failures for missing credentials, incomplete briefs, request-changes verdicts, and oversized diffs for every persona. The shared diff budget is 512 KiB, matching MacroMapper; keep dependency-usage loop fixes coordinated with #890. See `.github/README-WORKFLOWS.md` for evidence limits and the remaining branch-policy work in #656.
 
 GitHub branch protection: Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs listed in `.github/README-WORKFLOWS.md`. Do not require the standalone `CodeQL` Code Scanning results context: documentation-only PRs skip all analyzers and never emit it. Preserve the scope and analyzer requirements when editing or recreating the main ruleset; skipped analyzer jobs satisfy required checks, while detector or analyzer failures block merging.
+
+GitHub AI merge gates: Main also requires `AI Code Review / Obi-Wan Code-nobi code review`, `AI Build Sheriff Review / Lint Eastwood build sheriff review`, and `AI Security Review / RoboCop security review`. Preserve the existing 14 scanner/lint/test requirements and all other ruleset settings. Reviewer `REQUEST_CHANGES` and unavailable/invalid output fail; valid `APPROVE`/`COMMENT` pass. Keep same-repository human/Dependabot eligibility and fork secret isolation; run both publisher test files and Actionlint after workflow changes. The read-only `verify-gates.js` audit requires actual successful reviewer results, including after cancelled or skipped runs. See `.github/README-WORKFLOWS.md` and `.github/review-gating-evidence.json`.
 
 GitHub dependency-review evidence: Keep full dependency-change JSON in the `dependency-review-evidence` artifact, pass it through a file instead of environment variables, and bound the report sent to RoboCop to 16 KiB plus summary metadata. Large lockfile migrations can exceed Linux's per-environment-variable limit. The independent gate must still fail for every non-success review outcome; report truncation must disclose omitted entries and never change the verdict.
 
@@ -91,7 +105,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
    - `backend/.env` is auto-loaded by Django settings (`python-dotenv`).
    - Add `DJANGO_*` keys there if you don't want to set shell vars manually.
 4) Optional env vars (defaults are used if unset):
-   - `DJANGO_SECRET_KEY` (default: `default-key`)
+   - `DJANGO_SECRET_KEY` (required when `DJANGO_DEBUG=0`; debug runs generate a temporary random key if unset/blank, so set a stable local key to retain sessions across restarts)
    - `DJANGO_DEBUG` (default: `1`)
    - `DJANGO_SQLITE_PATH` (default: `backend/db.sqlite3`)
    - `DJANGO_ALLOWED_HOSTS` (comma-separated)
@@ -151,6 +165,7 @@ and Django static assets use `/static/`.
     - `https://notoli.judeandrewalaba.com/forgot-password`
     - `https://notoli.judeandrewalaba.com/reset-password`
   - Authenticated React integration routes: `/connections/authorize` (OAuth consent) and `/connections` (Connected Apps; also in the profile menu).
+- Navigation utilities accept `/board/` and `/boards/` inputs, strip query/fragment suffixes and a trailing slash, and ignore invalid paths or navigators. Public React routes and generated links use singular `/board/`; helper compatibility does not add a plural route.
 - Cloudflare, certificate and gateway changes belong to the separately approved
   Infrastructure operator plan; see the [production guide](deploy/production/README.md#chatgpt-mcp-deployment).
 - Required env vars for the subdomain backend:
@@ -181,6 +196,7 @@ and Django static assets use `/static/`.
 - Browser `GET /auth/mcp/authorize/` redirects to React `/connections/authorize` using `DJANGO_FRONTEND_BASE_URL` and the original query. React reuses the existing JWT login (no second Django session). JSON GET consent and POST ticket/decision require a verified JWT header; signed tickets bind the displayed request to the account for 10 minutes. Allow/Cancel returns Django's validated callback URL. React `/connections` calls JWT-only `GET/POST /auth/mcp/connections/` to list/revoke the current user's tokens and pending grants. Cookies and posted user IDs cannot authorize these endpoints. Keep JWTs out of URLs and retain PKCE/resource/scope checks in Django. Schedule token cleanup only through the approved production maintenance plan; keep access/refresh tokens, consent tickets, and authorization codes out of logs.
 - When changing MCP routes or the issuer, review Cloudflare Redirect/WAF/Caching rules for `/mcp`, `/.well-known/*`, and `/auth/mcp/*`: no interactive challenges or path rewriting for MCP/discovery, no caching of authenticated responses, and rate limits for login/token endpoints. Existing DNS and Full (strict) TLS are reused. Details and connection steps: `deploy/production/README.md` and `plugins/notoli/README.md`.
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
+- Backend tests: `cd backend` then `python manage.py test`. The configured Django test runner scopes the fast password hasher to the test run and restores settings on exit; `DJANGO_TESTING`, command-line inspection, and imported pytest modules do not change normal password hashing.
 - Update Conda env: `conda env update --file backend/environment.yml --prune`
 - Regenerate Conda env + requirements:
   - `python backend/environment_manager.py export -o backend/environment.yml`
@@ -212,3 +228,8 @@ cutover steps in `.github/README-WORKFLOWS.md`.
 ## 🔌 Shared MCP framework
 
 MCP framework changes follow [docs/MCP-FRAMEWORK.md](docs/MCP-FRAMEWORK.md). FullStackTemplate owns the canonical Python package; keep all consumer hashes/pins aligned. MacroMapper stays disabled without business tools. Preserve Notoli credentials, scopes, tool permissions and exact proxy trust.
+
+Dependency-review and alert-lifecycle behavior follows the shared parity contract in
+`.github/README-WORKFLOWS.md`: missing evidence fails, reports stay bounded, and
+concurrent closure requires verified final state. Keep CodeQL scope outputs and
+RoboCop baseline evidence connected without changing full default-branch coverage.

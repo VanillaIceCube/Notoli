@@ -1,5 +1,78 @@
 # Changelog
 
+## 2026-10-30
+
+### Changed
+
+- Reconcile production promotion ancestry without runtime changes and document main-first review, exact-source promotion and prompt reconciliation of owner-authorized deployment iterations under [Notoli #975](https://github.com/VanillaIceCube/Notoli/issues/975) and [FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262). Keep the central MCP cutover held under #973 pending its acceptance and operator checkpoints.
+
+### Removed
+
+- Remove the unreleased central MCP issuer migration (#973). Notoli continues to own MCP OAuth, consent, grants and all 31 tools; ordinary app accounts and login remain unchanged. Restore the original three-network release policy and remove the shared introspection credential requirement.
+
+## 2026-10-29
+
+### Added
+
+- Add an MCP-only central authorization-service consumer with bounded authenticated introspection, strict issuer/resource/client/scope/lifetime checks, explicit links to existing accounts and real SDK HTTP authorization regressions.
+- Document the YNAB-first cutover, separate ChatGPT/Codex acceptance, privileged credential delivery, old-grant retirement and deliberate rollback.
+
+### Fixed
+
+- Adopt the same reviewed Infrastructure release fixture pin `ee9c0d40421a8b3f4886340b188a21e86c6429cf` across all consumers, including exact app-mode topology and metadata content-type checks.
+
+- Synchronize Infrastructure's canonical release fixture so additional required app settings receive synthetic test values while missing, empty and multiline production settings still fail.
+- Synchronize canonical gateway-address/readiness regressions for the reviewed optional MCP peers while retaining exact proxy-trust and drift rejection.
+
+### Changed
+
+- Require the accepted five-network gateway baseline in Notoli's central app policy, preserve existing Notoli memberships/trust, and document explicit disabled-profile sequencing before original three-network legacy recovery.
+- Pin the audited existing MacroMapper gateway peer `172.20.0.3` in release validation without adding it to Notoli's trusted proxies or changing network identities.
+- Select central MCP in the app-owned production policy and deliver its introspection-only secret through the existing private environment/workflow contract; preserve ordinary login, REST JWTs, local permissions and deployment networks.
+- Link central Connected Apps to shared grant management, disable local issuance in central mode and prepare plugin v0.4.0 for separate post-cutover publication.
+- Synchronize the canonical FullStackTemplate verifier/issuer hook at source commit `5a9294d550ec946a51b34bb2438a6c04ecc13461`.
+
+## 2026-10-28
+
+### Fixed
+
+- Show board drawer errors and operation feedback, guard requests without a session token, and navigate away after deleting the active board.
+- Handle singular/plural board paths, URL suffixes, and invalid inputs safely in navigation utilities.
+- Scope fast password hashing to Django test execution and restore secure hashers after the run, including failures.
+- Require a configured secret for non-debug startup and generate random temporary secrets for unconfigured debug runs.
+- Restore Marty's historical journal entries for the board drawer and navigation utility changes in #942 and #779.
+
+## 2026-10-27
+
+### Fixed
+
+- Limit dependency malware advisory queries to changed package names with complete pagination and fail-closed API errors, avoiding full-corpus timeouts on dependency PRs.
+
+### Changed
+
+- Update React and React DOM together to 19.3.1, Zod to 4.6.7, ESLint to 10.13.0, the React ESLint plugin to 5.28.0, and Testing Library user-event to 14.6.8.
+- Adopt Docker login v4.7.0 from the pinned Infrastructure release template while preserving deployment parity and app-specific configuration.
+
+## 2026-10-20
+
+### Fixed
+
+- Fail closed on incomplete dependency reviews and retain sanitized structured evidence with a bounded RoboCop report.
+- Preserve alert history and Project metadata before auto-close; verify concurrent closure without suppressing unrelated API errors and use the current Work type field.
+- Forward language-specific CodeQL scope and baseline evidence to RoboCop while retaining full main/scheduled/manual analysis.
+
+
+## 2026-10-20
+
+### Added
+
+- Add a read-only reviewer-gate audit that rejects missing, skipped, cancelled and non-success results.
+
+### Fixed
+
+- Require all three AI reviewer checks on main while preserving the existing 14 gates and all other protection settings; record live human/Dependabot eligibility and blocking-verdict recovery evidence.
+- Reject missing or invalid AI verdict events as unavailable, with matching publisher and workflow regressions in FullStackTemplate.
+
 ## 2026-10-20
 
 ### Added

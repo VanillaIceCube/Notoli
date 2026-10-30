@@ -205,6 +205,16 @@ cd backend
 python manage.py test
 ```
 
+The configured Django test runner uses MD5 password hashing only while executing
+the suite and restores the original hashers on success or failure. Normal app
+settings retain Django's secure hashers regardless of `DJANGO_TESTING`, command
+arguments, or imported test modules. Tests of a specific password algorithm can
+use `override_settings(PASSWORD_HASHERS=...)` within that test.
+
+With `DJANGO_DEBUG=0`, startup requires a nonblank `DJANGO_SECRET_KEY`. Debug
+runs generate a temporary random secret if none is configured; set a stable
+local key in `backend/.env` to keep sessions valid across restarts.
+
 Migrations:
 
 ```bash

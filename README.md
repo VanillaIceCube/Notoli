@@ -68,6 +68,11 @@ The development Compose file supplies a local-only fallback when
 log in immediately. Set a unique secret before using the production-shaped
 stack.
 
+Outside Docker, debug runs generate a temporary random secret when
+`DJANGO_SECRET_KEY` is unset or blank. Set a stable local key to retain sessions
+across restarts. Non-debug startup requires a configured secret. Backend tests
+use fast hashing scoped to Django's test runner; see [backend testing](backend/README.md).
+
 The frontend synchronizes its Docker `node_modules` volume with `package.json`
 and `package-lock.json` at container start. After changing either dependency
 file, restart the frontend service:

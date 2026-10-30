@@ -55,6 +55,8 @@ jobs:
               - '.github/workflows/gate-test.yml'
               - '.github/actions/read-versions/**'
             automation:
+              - '.github/actions/review-npm-malware/**'
+              - '.github/actions/collect-codeql-evidence/**'
               - 'deploy/**'
               - '.github/workflows/ci-deploy.yml'
               - '.github/actions/collect-prior-ai-reviews/**'
@@ -174,7 +176,7 @@ jobs:
         with:
           read_node: "false"
 
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
           python-version: ${{ steps.versions.outputs.python_version }}
           cache: 'pip'
@@ -248,10 +250,12 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          node --test \
+          node --test .github/actions/collect-codeql-evidence/collect-codeql-evidence.test.js \
+            .github/actions/review-npm-malware/review-npm-malware.test.js \
             .github/actions/collect-prior-ai-reviews/collect-prior-ai-reviews.test.js \
             .github/actions/collect-upstream-major-upgrade-evidence/collect-upstream-major-upgrade-evidence.test.js \
             .github/actions/publish-ai-review/publish-ai-review.test.js \
+            .github/actions/publish-ai-review/review-gating.test.js \
             .github/actions/security-alerts/sync-security-alerts.test.js \
             .github/actions/prepare-vulnerability-report/prepare-vulnerability-report.test.js \
             2>&1 | tee automation_test_output.txt || status=$?

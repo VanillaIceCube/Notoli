@@ -25,6 +25,11 @@ UI styling conventions live in [`STYLE_GUIDE.md`](STYLE_GUIDE.md).
 - `/connections` lists and revokes Connected Apps (also available in the profile menu)
 - Everything else requires auth
 
+Navigation utilities accept `/board/` and `/boards/` inputs, strip query strings,
+fragments, and a trailing slash, and ignore invalid paths or navigators. Public
+React routes and generated links use `/board/`; `/boards/` is a helper input
+compatibility form, not an additional React route.
+
 ChatGPT's authorization URL remains Django's `/auth/mcp/authorize/`, which
 redirects the browser to React's `/connections/authorize` with the original
 query. Users with JWTs go directly to consent. Signed-out users sign in through

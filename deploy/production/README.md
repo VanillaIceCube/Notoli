@@ -1,5 +1,38 @@
 # App-only production release and recovery
 
+Notoli owns MCP OAuth, consent, token validation, connections and all 31 tools.
+The unreleased central issuer migration in #973 has been withdrawn; no shared
+introspection credential or YNAB acceptance is required. Ordinary accounts and
+website/REST login remain app-owned. Merging `main` alone does not deploy.
+
+## Main-first promotion
+
+Follow the canonical policy in
+[FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262)
+and the local reconciliation in
+[Notoli #975](https://github.com/VanillaIceCube/Notoli/issues/975).
+Develop and review changes through PRs targeting `main`; promote that exact reviewed source through
+an `env-prod` PR, preserving all CI, reviewer and owner/operator gates. A promotion
+merge may have a different commit ID, but its source tree must match the reviewed
+`main` commit. Do not add deployment fixes only to the promotion branch.
+An exceptional owner-authorized deployment iteration must return promptly through
+a reviewed `main` PR before the next promotion.
+
+The #975 audit reconciled historical production promotion merges without reverting
+reviewed source. Intentional unreleased changes may remain on `main` until their
+release prerequisites are complete; history parity alone does not prove live
+acceptance or authorize deployment.
+
+## Current production boundary
+
+The app policy retains the original three shared route networks and Notoli's exact
+trusted proxy `172.30.88.2`. Notoli does not depend on YNAB or shared-issuer networks.
+Infrastructure must restore that accepted gateway baseline before promoting this
+app policy; app releases never alter shared ingress or create/delete networks.
+Preserve existing Notoli OAuth registrations, grants, database and signing secret.
+No account linking, client reconnection or grant retirement is required for this
+withdrawal because the central migration was never deployed.
+
 This is the implementation of approved architecture v2. Every PR merge and
 every production release still requires separate explicit owner authorization.
 Only the operator designated in coordination #4 may perform production actions

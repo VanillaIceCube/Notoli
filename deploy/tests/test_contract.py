@@ -49,6 +49,9 @@ class ContractTests(unittest.TestCase):
         self.assertLessEqual(set(policy["addresses"]), set(policy["networks"]))
         self.assertEqual(release.DB_TARGET, "/backend/db.sqlite3")
         self.assertEqual(release.DB_FILE, "db.sqlite3")
+        if release.APP in {"notoli", "macromapper"}:
+            self.assertEqual(set(policy["networks"]),
+                             {"notoli_backend_private", "notoli_default", "macromapper-ingress"})
         if release.APP == "notoli":
             self.assertEqual(
                 policy["addresses"], {"notoli_backend_private": "172.30.88.2"}
@@ -89,15 +92,19 @@ class ContractTests(unittest.TestCase):
         )
         for rule in rules.values():
             if "json_equals" in rule:
+                headers = {"Content-Type": rule.get("content_type", "application/json")}
                 self.assertTrue(
                     release.response_matches(
-                        rule, {}, json.dumps(rule["json_equals"]).encode()
+                        rule, headers, json.dumps(rule["json_equals"]).encode()
                     )
                 )
                 wrong = {key: "https://wrong.invalid" for key in rule["json_equals"]}
                 self.assertFalse(
-                    release.response_matches(rule, {}, json.dumps(wrong).encode())
+                    release.response_matches(rule, headers, json.dumps(wrong).encode())
                 )
+                if "content_type" in rule:
+                    self.assertFalse(release.response_matches(
+                        rule, {"Content-Type": "text/html"}, json.dumps(rule["json_equals"]).encode()))
             if "header_contains" in rule:
                 self.assertTrue(
                     release.response_matches(rule, rule["header_contains"], b"")
