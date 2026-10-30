@@ -317,7 +317,7 @@ held until real YNAB ChatGPT/Codex acceptance and the Infrastructure root
 checkpoint. See the [consumer migration plan](../deploy/production/central-mcp.md).
 
 Docker login v4.7.0 and the common release tests are synchronized from Infrastructure
-commit `ca83a44186cadf15c9ac516056308b51c2828be0`. The fixture update supplies
+commit `ee9c0d40421a8b3f4886340b188a21e86c6429cf`. The fixture update supplies
 additional required synthetic settings and validates the reviewed central gateway
 peers/readiness without changing the runtime release engine. Keep
 `deploy/shared-source.json` and the generated workflow synchronized; deployment

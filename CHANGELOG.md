@@ -9,6 +9,8 @@
 
 ### Fixed
 
+- Adopt the same reviewed Infrastructure release fixture pin `ee9c0d40421a8b3f4886340b188a21e86c6429cf` across all consumers, including exact app-mode topology and metadata content-type checks.
+
 - Synchronize Infrastructure's canonical release fixture so additional required app settings receive synthetic test values while missing, empty and multiline production settings still fail.
 - Synchronize canonical gateway-address/readiness regressions for the reviewed optional MCP peers while retaining exact proxy-trust and drift rejection.
 

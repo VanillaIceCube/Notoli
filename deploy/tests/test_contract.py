@@ -16,37 +16,95 @@ from test_production import ROOT, builder, environment, release
 
 
 class ContractTests(unittest.TestCase):
-    def assert_reviewed_gateway_addresses(self, addresses):
-        reviewed = {
-            "notoli_backend_private": "172.30.88.2",
-            "macromapper-ingress": "172.20.0.3",
-            "ynab_mcp_private": "172.30.89.2",
-            "mcp_auth_private": "172.30.92.2",
-        }
-        self.assertEqual(addresses.get("notoli_backend_private"), "172.30.88.2")
-        self.assertLessEqual(set(addresses), set(reviewed))
-        for network, address in addresses.items():
-            self.assertEqual(address, reviewed[network])
+    def assert_reviewed_gateway_profile(self, networks, addresses, *, central=False):
+        legacy = {"macromapper-ingress", "notoli_default", "notoli_backend_private"}
+        if not central:
+            self.assertEqual(set(networks), legacy)
+            expected = {"notoli_backend_private": "172.30.88.2"}
+        else:
+            self.assertEqual(
+                set(networks), legacy | {"ynab_mcp_private", "mcp_auth_private"}
+            )
+            expected = {
+                "notoli_backend_private": "172.30.88.2",
+                "macromapper-ingress": "172.20.0.3",
+                "ynab_mcp_private": "172.30.89.2",
+                "mcp_auth_private": "172.30.92.2",
+            }
+        self.assertEqual(addresses, expected)
 
-    def test_reviewed_optional_gateway_addresses_keep_exact_proxy_trust(self):
-        baseline = {"notoli_backend_private": "172.30.88.2"}
-        self.assert_reviewed_gateway_addresses(baseline)
-        self.assert_reviewed_gateway_addresses(
-            baseline | {"ynab_mcp_private": "172.30.89.2"}
+    def test_legacy_gateway_profile_retains_exact_original_address_map(self):
+        self.assert_reviewed_gateway_profile(
+            {"macromapper-ingress", "notoli_default", "notoli_backend_private"},
+            {"notoli_backend_private": "172.30.88.2"},
         )
+
+    def test_central_gateway_profile_requires_exact_five_networks_and_four_addresses(
+        self,
+    ):
+        self.assert_reviewed_gateway_profile(
+            {
+                "macromapper-ingress",
+                "notoli_default",
+                "notoli_backend_private",
+                "ynab_mcp_private",
+                "mcp_auth_private",
+            },
+            {
+                "notoli_backend_private": "172.30.88.2",
+                "macromapper-ingress": "172.20.0.3",
+                "ynab_mcp_private": "172.30.89.2",
+                "mcp_auth_private": "172.30.92.2",
+            },
+            central=True,
+        )
+
+    def test_gateway_profiles_reject_partial_unknown_or_wrong_trust(self):
+        legacy = {"macromapper-ingress", "notoli_default", "notoli_backend_private"}
+        central = legacy | {"ynab_mcp_private", "mcp_auth_private"}
+        baseline = {"notoli_backend_private": "172.30.88.2"}
         complete = baseline | {
             "macromapper-ingress": "172.20.0.3",
             "ynab_mcp_private": "172.30.89.2",
             "mcp_auth_private": "172.30.92.2",
         }
-        self.assert_reviewed_gateway_addresses(complete)
-        for invalid in (
-            {},
-            baseline | {"unreviewed_private": "172.30.93.2"},
-            *(complete | {network: "172.30.99.2"} for network in complete),
-        ):
-            with self.subTest(addresses=invalid), self.assertRaises(AssertionError):
-                self.assert_reviewed_gateway_addresses(invalid)
+        invalid = [
+            (legacy, {}),
+            (legacy, complete),
+            (central, baseline),
+            (central | {"unreviewed_private"}, complete),
+            (central, complete | {"unreviewed_private": "172.30.93.2"}),
+            (legacy, {"notoli_backend_private": "172.30.88.9"}),
+        ]
+        invalid += [(central - {network}, complete) for network in central]
+        invalid += [
+            (central, {key: value for key, value in complete.items() if key != network})
+            for network in complete
+        ]
+        invalid += [
+            (central, complete | {network: "172.30.99.2"}) for network in complete
+        ]
+        for networks, addresses in invalid:
+            with self.subTest(networks=networks, addresses=addresses):
+                for central_mode in (False, True):
+                    with self.assertRaises(AssertionError):
+                        self.assert_reviewed_gateway_profile(
+                            networks, addresses, central=central_mode
+                        )
+
+    def test_gateway_profile_cannot_be_selected_by_changing_topology(self):
+        legacy = {"macromapper-ingress", "notoli_default", "notoli_backend_private"}
+        addresses = {"notoli_backend_private": "172.30.88.2"}
+        central = legacy | {"ynab_mcp_private", "mcp_auth_private"}
+        complete = addresses | {
+            "macromapper-ingress": "172.20.0.3",
+            "ynab_mcp_private": "172.30.89.2",
+            "mcp_auth_private": "172.30.92.2",
+        }
+        with self.assertRaises(AssertionError):
+            self.assert_reviewed_gateway_profile(central, complete)
+        with self.assertRaises(AssertionError):
+            self.assert_reviewed_gateway_profile(legacy, addresses, central=True)
 
     def test_bundle_remains_executable_offline_with_its_exact_app_configuration(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -84,7 +142,20 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(release.DB_TARGET, "/backend/db.sqlite3")
         self.assertEqual(release.DB_FILE, "db.sqlite3")
         if release.APP in {"notoli", "macromapper"}:
-            self.assert_reviewed_gateway_addresses(policy["addresses"])
+            # Select the expected topology from the independent app mode, never
+            # from the network/address policy being checked. Canonical fixtures
+            # stay legacy; central app adoption must be an explicit config change.
+            if release.APP == "notoli":
+                mode = builder.FIXED.get("DJANGO_MCP_AUTH_MODE", "legacy")
+                self.assertIn(mode, {"legacy", "central"})
+                central = mode == "central"
+            else:
+                enabled = builder.FIXED.get("DJANGO_MCP_ENABLED", "0")
+                self.assertIn(enabled, {"0", "1"})
+                central = enabled == "1"
+            self.assert_reviewed_gateway_profile(
+                policy["networks"], policy["addresses"], central=central
+            )
         if release.APP == "notoli":
             self.assertEqual(
                 release.CONFIG["backend_addresses"],
@@ -126,6 +197,7 @@ class ContractTests(unittest.TestCase):
         if macro_enabled:
             metadata = rules["/.well-known/oauth-protected-resource/mcp"]
             self.assertEqual(metadata["status"], 200)
+            self.assertEqual(metadata.get("content_type"), "application/json")
             self.assertEqual(
                 metadata.get("json_equals", {}).get("resource"),
                 "https://macromapper.judeandrewalaba.com/mcp",
@@ -148,15 +220,24 @@ class ContractTests(unittest.TestCase):
         )
         for rule in rules.values():
             if "json_equals" in rule:
+                headers = {"Content-Type": rule.get("content_type", "application/json")}
                 self.assertTrue(
                     release.response_matches(
-                        rule, {}, json.dumps(rule["json_equals"]).encode()
+                        rule, headers, json.dumps(rule["json_equals"]).encode()
                     )
                 )
                 wrong = {key: "https://wrong.invalid" for key in rule["json_equals"]}
                 self.assertFalse(
-                    release.response_matches(rule, {}, json.dumps(wrong).encode())
+                    release.response_matches(rule, headers, json.dumps(wrong).encode())
                 )
+                if "content_type" in rule:
+                    self.assertFalse(
+                        release.response_matches(
+                            rule,
+                            {"Content-Type": "text/html"},
+                            json.dumps(rule["json_equals"]).encode(),
+                        )
+                    )
             if "header_contains" in rule:
                 self.assertTrue(
                     release.response_matches(rule, rule["header_contains"], b"")
@@ -177,6 +258,7 @@ class ContractTests(unittest.TestCase):
             {
                 "path": "/.well-known/oauth-protected-resource/mcp",
                 "status": 200,
+                "content_type": "application/json",
                 "json_equals": {
                     "resource": "https://macromapper.judeandrewalaba.com/mcp",
                     "authorization_servers": ["https://auth.judeandrewalaba.com"],
@@ -215,6 +297,13 @@ class ContractTests(unittest.TestCase):
         for field in ("resource", "authorization_servers"):
             public = copy.deepcopy(enabled)
             public[2]["json_equals"][field] = "https://wrong.invalid"
+            invalid.append((fixed, public))
+        for content_type in (None, "text/html"):
+            public = copy.deepcopy(enabled)
+            if content_type is None:
+                public[2].pop("content_type")
+            else:
+                public[2]["content_type"] = content_type
             invalid.append((fixed, public))
         public = copy.deepcopy(enabled)
         public[3]["header_contains"] = {}
