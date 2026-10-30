@@ -7,9 +7,15 @@
 - Add an MCP-only central authorization-service consumer with bounded authenticated introspection, strict issuer/resource/client/scope/lifetime checks, explicit links to existing accounts and real SDK HTTP authorization regressions.
 - Document the YNAB-first cutover, separate ChatGPT/Codex acceptance, privileged credential delivery, old-grant retirement and deliberate rollback.
 
+### Fixed
+
+- Synchronize Infrastructure's canonical release fixture so additional required app settings receive synthetic test values while missing, empty and multiline production settings still fail.
+- Synchronize canonical gateway-address/readiness regressions for the reviewed optional MCP peers while retaining exact proxy-trust and drift rejection.
+
 ### Changed
 
 - Require the accepted five-network gateway baseline in Notoli's central app policy, preserve existing Notoli memberships/trust, and document explicit disabled-profile sequencing before original three-network legacy recovery.
+- Pin the audited existing MacroMapper gateway peer `172.20.0.3` in release validation without adding it to Notoli's trusted proxies or changing network identities.
 - Select central MCP in the app-owned production policy and deliver its introspection-only secret through the existing private environment/workflow contract; preserve ordinary login, REST JWTs, local permissions and deployment networks.
 - Link central Connected Apps to shared grant management, disable local issuance in central mode and prepare plugin v0.4.0 for separate post-cutover publication.
 - Synchronize the canonical FullStackTemplate verifier/issuer hook at source commit `5a9294d550ec946a51b34bb2438a6c04ecc13461`.

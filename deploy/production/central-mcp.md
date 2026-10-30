@@ -78,13 +78,17 @@ Linking creates no OAuth grant or local role.
    `/auth/mcp/*`, plus independently owned issuer routes. Preserve the existing
    Notoli networks, proxy `172.30.88.2`, backend `.3`, TLS and app-only deployment.
    The central app policy requires the gateway's exact five-network baseline:
-   existing `notoli_backend_private`, `notoli_default`, `macromapper-ingress`,
+   existing `notoli_backend_private`, `notoli_default` and `macromapper-ingress`
+   (gateway peer `172.20.0.3`),
    plus internal `ynab_mcp_private` (`172.30.89.0/29`, proxy `.2`) and
    `mcp_auth_private` (`172.30.92.0/29`, proxy `.2`). Only the gateway and the
    corresponding `ynab-mcp-gateway-1` / `mcp-auth-server` are allowed on those
    private routes; the gateway is required and companion absence remains allowed
    for independent app recovery. Notoli joins neither new network. Infrastructure
    must accept the matching enabled gateway baseline before this app promotion.
+   This records the audited existing gateway address, without changing network
+   IDs or moving any service. Notoli trusts only `172.30.88.2`; the MacroMapper
+   peer must never be added to `DJANGO_TRUSTED_PROXY_IPS`.
 4. Promote the reviewed `env-prod` candidate at the cutover checkpoint. App policy
    fixes central mode. Readiness checks protected-resource metadata pointing to
    the central issuer, local issuer discovery 410 `issuer_moved`, anonymous MCP
@@ -93,6 +97,11 @@ Linking creates no OAuth grant or local role.
    least privilege, 31-tool discovery, own/shared board reads, an approved scoped
    write and unchanged website login/refresh/REST/sharing. Check foreign-board
    denial, foreign/expired/revoked tokens, link disablement and issuer outage.
+   Central read consent must explicitly disclose board owner/collaborator IDs,
+   usernames and email addresses; sharing consent must state that owner-only
+   sharing grants access to every list and item in the board. Infrastructure owns
+   these issuer labels and their rendered consent regression tests; preserve the
+   existing Notoli disclosures before accepting either client.
    Use synthetic or approved records; record sanitized results and cleanup.
 6. JWT-protected `/connections` links to central grant management. Local MCP
    authorize/token/revoke endpoints return 410 and local registration is disabled.

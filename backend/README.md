@@ -35,6 +35,8 @@ credentials from `MCP_INTROSPECTION_CLIENT_SECRET`. Bounded uncached TLS
 introspection revalidates grants per request/tool. `MCPIdentityLink` explicitly
 maps immutable issuer UUID subjects to existing active users, with no email
 inference or account creation. Current board permissions still apply.
+Central issuer consent must retain explicit disclosure of board owner/collaborator
+IDs, usernames and emails, and owner-only sharing of every list/item in a board.
 
 Apply the additive migration and use `link_mcp_identity --subject '<UUID>'
 --user-id '<existing ID>'` after private verification. Links cannot be rebound;

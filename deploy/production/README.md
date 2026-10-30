@@ -13,6 +13,9 @@ frontend memberships and proxy `172.30.88.2` stay unchanged. A matched original
 three-network legacy recovery first needs Infrastructure's explicit disabled
 YNAB/auth profiles and verified matching gateway baseline, as detailed in the
 migration plan; app recovery never modifies shared ingress or deletes networks.
+The policy also pins the gateway's audited existing MacroMapper ingress peer,
+`172.20.0.3`; this is no address migration and does not extend Notoli's trusted
+proxy list beyond `172.30.88.2`.
 
 This is the implementation of approved architecture v2. Every PR merge and
 every production release still requires separate explicit owner authorization.
