@@ -233,3 +233,7 @@ Dependency-review and alert-lifecycle behavior follows the shared parity contrac
 `.github/README-WORKFLOWS.md`: missing evidence fails, reports stay bounded, and
 concurrent closure requires verified final state. Keep CodeQL scope outputs and
 RoboCop baseline evidence connected without changing full default-branch coverage.
+
+## 🤖 Reviewer model policy
+
+Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-alert grouping. Preserve each reviewer’s existing key/project isolation, budgets and blocking gates. Application AI model selection remains app-owned.
