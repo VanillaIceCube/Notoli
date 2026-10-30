@@ -1,5 +1,22 @@
 # App-only production release and recovery
 
+The central MCP consumer policy fixes `DJANGO_MCP_AUTH_MODE=central` and requires
+the introspection-only `MCP_INTROSPECTION_CLIENT_SECRET` Actions secret in the
+existing private backend environment. **`env-prod` promotion is the live Notoli
+OAuth cutover** and waits for actual YNAB acceptance in both clients and the
+Infrastructure root checkpoint. Follow the [migration/rollback plan](central-mcp.md).
+Merging `main` alone does not deploy.
+
+The central app policy validates the shared gateway's exact five route networks,
+including YNAB `172.30.89.2` and authorization `172.30.92.2`. Notoli's backend/
+frontend memberships and proxy `172.30.88.2` stay unchanged. A matched original
+three-network legacy recovery first needs Infrastructure's explicit disabled
+YNAB/auth profiles and verified matching gateway baseline, as detailed in the
+migration plan; app recovery never modifies shared ingress or deletes networks.
+The policy also pins the gateway's audited existing MacroMapper ingress peer,
+`172.20.0.3`; this is no address migration and does not extend Notoli's trusted
+proxy list beyond `172.30.88.2`.
+
 This is the implementation of approved architecture v2. Every PR merge and
 every production release still requires separate explicit owner authorization.
 Only the operator designated in coordination #4 may perform production actions
@@ -61,12 +78,14 @@ The host must have working GHCR pull credentials, Docker Engine/Compose with
 raw env-file support (audited Compose 2.40.3), Python 3 and util-linux flock
 semantics through Python's POSIX flock. No packages are installed on the host by CI.
 
-Required app secrets: `DJANGO_SECRET_KEY`, `DJANGO_EMAIL_HOST_KEY`.
+Required app secrets: `DJANGO_SECRET_KEY`, `DJANGO_EMAIL_HOST_KEY`,
+`MCP_INTROSPECTION_CLIENT_SECRET` (Notoli-only introspection, no token issuance).
 Required variables: `DJANGO_EMAIL_BACKEND`, `DJANGO_DEFAULT_FROM_EMAIL`.
 Optional SMTP settings: `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`,
 `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_TIMEOUT`.
 Defaults remain Resend SMTP, port 587, TLS, user resend, timeout 10 seconds.
-MCP issuer and trusted peer are fixed to the approved production origin and `.2`.
+MCP resource origin and trusted peer remain fixed to Notoli and `.2`; central
+mode uses the independent issuer `https://auth.judeandrewalaba.com`.
 Canonical production host/origin/debug/DB settings are set by the app's
 `build_bundle.py`; incompatible explicit overrides fail. Values are single-line
 raw env files, so dollar signs, hashes and quotes retain their literal bytes.
@@ -131,7 +150,9 @@ Unknown or multiple current writers fail closed. Copies use DELETE journal
 mode; this does not enable WAL or relocate storage. Migration/startup use the
 selected digest, no pull at startup.
 Readiness includes direct Django /api/notifications/ returning 401, HTTPS HTML
-root and JSON 401 API response, plus correct Notoli discovery issuer/resource and a 401 MCP challenge with resource metadata. Attempts are bounded by a 90-second
+root and JSON 401 API response, protected-resource discovery with the fixed
+Notoli resource and central issuer, local issuer discovery 410 `issuer_moved`,
+and a 401 MCP challenge with resource metadata. Attempts are bounded by a 90-second
 retry window plus at most one in-flight round of bounded requests; Docker exec
 times out at 10 seconds and HTTP requests at 5 seconds. Other Docker commands
 time out at 300 seconds.
@@ -218,6 +239,11 @@ open until that evidence exists.
 
 ## ChatGPT MCP deployment
 
+Central production migration uses the [central consumer plan](central-mcp.md),
+including separate ChatGPT/Codex registrations, issuer-side consent/revocation,
+explicit local identity links and the YNAB-first cutover checkpoint. The local
+issuer instructions below apply only to `DJANGO_MCP_AUTH_MODE=legacy`.
+
 MCP runs at the canonical `/mcp` endpoint inside the existing ASGI backend.
 Keep the backend private, its address `.3`, trusted gateway `.2`, separate
 backend egress and Uvicorn `--no-proxy-headers`. App middleware authenticates the
@@ -225,7 +251,9 @@ original proxy peer before accepting forwarded scheme/client metadata. The host
 infrastructure owns Nginx routes and certificates; never upload or recreate a
 proxy through an application release.
 
-The bundle fixes the issuer and frontend origin to `https://notoli.judeandrewalaba.com`.
+The resource and frontend origin remain `https://notoli.judeandrewalaba.com`.
+In legacy mode this is also the issuer; central production uses the independent
+`https://auth.judeandrewalaba.com` issuer.
 Changing an issuer invalidates resource-bound grants; coordinate client
 reconnection and `plugins/notoli/mcp.json` updates explicitly. Listing metadata
 is published separately: follow the [listing workflow](../../plugins/notoli/README.md#listing-metadata-and-updates).

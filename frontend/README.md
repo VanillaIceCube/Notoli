@@ -1,5 +1,10 @@
 # 🎨 Frontend (React)
 
+Connected Apps supports the [central MCP migration](../deploy/production/central-mcp.md):
+in central mode it links to the shared issuer's grant management; login and REST
+JWT handling stay unchanged. Legacy local mode retains React consent and local
+grant revocation. Production cutover waits for YNAB's real two-client acceptance.
+
 Production release ownership: use the [app-only release/recovery guide](../deploy/production/README.md).
 
 The Notoli frontend is a Vite single-page app with React Router and Material UI.

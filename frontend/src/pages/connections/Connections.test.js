@@ -82,6 +82,24 @@ beforeEach(() => {
   });
 });
 
+test('central mode links to issuer grants and does not offer legacy revoke controls', async () => {
+  connections.loadConnections.mockResolvedValue({
+    applications: [],
+    authorization_server: {
+      issuer: 'https://auth.judeandrewalaba.com',
+      manage_url: 'https://auth.judeandrewalaba.com/o/authorized_tokens/',
+    },
+  });
+  renderFlow('/connections');
+  expect(await screen.findByRole('link', { name: 'Manage MCP connections' })).toHaveAttribute(
+    'href',
+    'https://auth.judeandrewalaba.com/o/authorized_tokens/',
+  );
+  expect(screen.getByText(/Manage and revoke your MCP connections/)).toBeInTheDocument();
+  expect(screen.queryByText('No connected apps.')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Revoke/ })).not.toBeInTheDocument();
+});
+
 test('an authenticated user goes directly to consent with application, identity and permissions', async () => {
   renderFlow();
   expect(await screen.findByText('Signed in as alice')).toBeInTheDocument();

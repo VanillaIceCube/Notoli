@@ -18,7 +18,7 @@ It's designed to support **multiple views** of the same list, so my wife, Diana,
 - **Flexible organization**: notes can appear in multiple lists with per-list ordering
 - **Subdomain hosting**: runs at the root of `https://notoli.judeandrewalaba.com`, with backend URLs and static assets served without a configurable path prefix
 - **Dockerized deployment**: frontend + backend + Nginx reverse proxy, with distinct fixed backend/proxy addresses on the private network to prevent startup collisions
-- **ChatGPT integration**: 31 authenticated MCP tools for boards, lists, items, ordering, sharing, and notifications, with separate permissions for organization, sharing, notifications, and confirmed deletion; React consent uses your existing login, and Connected Apps lets you revoke access
+- **MCP integration**: 31 authenticated tools for boards, lists, items, ordering, sharing, and notifications. The [central OAuth migration](deploy/production/central-mcp.md) preserves existing accounts, board permissions and ordinary website/REST login; local development defaults to the legacy issuer. Production cutover and separate ChatGPT/Codex reconnection wait for actual YNAB acceptance.
 
 ## 🚀 Tech Stack
 - **Backend:** Django

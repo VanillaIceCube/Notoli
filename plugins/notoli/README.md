@@ -93,6 +93,11 @@ Official references: [connection and refresh](https://developers.openai.com/plug
 
 ## Connect your personal ChatGPT account
 
+This package's v0.4.0 targets the central MCP issuer. Publish/upload it only
+after the [Notoli cutover checkpoint](../../deploy/production/central-mcp.md),
+following actual YNAB acceptance in both clients. Source preparation does not
+change the installed plugin or the live legacy connection.
+
 1. Deploy the frontend and backend, apply migrations, and update Compose/Nginx using the
    [deployment instructions](../../deploy/production/README.md#chatgpt-mcp-deployment).
 2. Open [ChatGPT Plugins](https://chatgpt.com/plugins), select **Add custom MCP
@@ -101,29 +106,36 @@ Official references: [connection and refresh](https://developers.openai.com/plug
    `notoli-chatgpt`, authentication method to `none`, and scopes to
    `notoli:read notoli:write notoli:share notoli:organize notoli:notifications notoli:delete`
    for complete product coverage. Request only the permissions you need. No client secret is used.
-4. Copy the exact callback URI shown by ChatGPT. Register it on the backend
-   with `python manage.py register_mcp_client --redirect-uri "<exact URI>"`.
-   If registering before opening the form, the stable callback for a server
-   advertising issuer identification is
-   `https://chatgpt.com/connector_platform_oauth_redirect`; verify it matches
-   the connection's management page. Do not allow callback wildcards.
-5. Finish creation. React displays consent directly if you're already signed in
-   to Notoli; otherwise the existing Notoli login returns you to the pending
-   request. Review the application identity and permissions, then select
-   **Allow** (or **Cancel** to deny). Install/select Notoli in a regular ChatGPT chat.
+4. Copy the actual callback URI shown by ChatGPT. The Infrastructure operator
+   registers `notoli-chatgpt` at the shared issuer with that exact callback and
+   privately verifies the issuer subject's link to your existing Notoli account.
+   Central mode refuses the old local `register_mcp_client` command. Do not use
+   callback wildcards or infer identity from email.
+5. Finish creation and sign in/consent at the shared authorization service.
+   Review the application identity and permissions, then select **Allow** or
+   **Cancel**. Install/select Notoli in a regular ChatGPT chat. Website login
+   remains separate and unchanged.
 6. Try the prompts below, checking the affected list in Notoli after each write.
 
-The authorization URL is `/auth/mcp/authorize/`, the token URL is
-`/auth/mcp/token/`, and both are discovered from metadata. The package's
+The issuer is `https://auth.judeandrewalaba.com`; authorization uses
+`/o/authorize/`, token exchange uses `/o/token/`, and discovery follows the
+authorization server advertised by Notoli protected-resource metadata. The package's
 `mcp.json` also supplies these URLs and requests all six scopes listed above. ChatGPT account
 and workspace policies may limit custom MCP connections.
 
-Revoke your account's connection at
-`https://notoli.judeandrewalaba.com/connections` (**Connected Apps** in the profile
-menu). Apps with an unexpired pending authorization code also appear, allowing
-revocation before token exchange. Expired codes and other users' grants stay hidden.
-Revocation blocks access, refresh, and pending authorization codes. Removing a connection
-from ChatGPT alone is separate from revoking tokens in Notoli.
+Notoli's **Connected Apps** page links to central grant management at
+`https://auth.judeandrewalaba.com/o/authorized_tokens/`. Revoke the connection
+there; uncached introspection checks revocation on the next request and again
+inside tools. A previously authorized operation can finish. Removing a connection
+from ChatGPT alone is separate from central revocation. Retained legacy local
+grants do not control central access; see the migration plan for retirement and
+rollback. Legacy local development keeps React consent and local revocation as
+described in the [backend guide](../../backend/README.md#legacy-local-issuer).
+
+Codex uses the same endpoint with its **separate** `notoli-codex` registration
+and actual approved callback, scopes and PKCE. Reconnect and verify login,
+31-tool discovery, reads, an approved scoped write and revocation independently
+in both clients. Local synthetic tests do not establish live client acceptance.
 
 The portable `plugin.json` and `mcp.json` follow the
 [OpenAI packaging guide](https://developers.openai.com/plugins/build/plugins).

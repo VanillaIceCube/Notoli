@@ -63,7 +63,7 @@ class ReadinessTests(unittest.TestCase):
             release.readiness(Path("fixture"))
         self.assertEqual(probes, [500, 401])
         sleep.assert_called_once_with(2)
-        self.assertEqual(public.call_count, 5 if release.APP == "notoli" else 2)
+        self.assertEqual(public.call_count, len(release.CONFIG["readiness"]["public"]))
 
 
 @unittest.skipUnless(os.name == "posix", "Host preflight requires Linux")

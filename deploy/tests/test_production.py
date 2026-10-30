@@ -28,7 +28,7 @@ builder = module("build_bundle")
 
 
 def environment():
-    return dict(
+    values = dict(
         GITHUB_SHA="a" * 40,
         GITHUB_RUN_ID="123",
         GITHUB_RUN_ATTEMPT="1",
@@ -47,9 +47,42 @@ def environment():
         DJANGO_DEFAULT_FROM_EMAIL="test@example.invalid",
         MACROMAPPER_OPENAI_API_KEY="fake-ai",
     )
+    # App-owned app.json may add required private backend settings. Only this
+    # disposable fixture supplies synthetic values; production still requires
+    # the operator's explicit inputs and preserves its missing-setting checks.
+    for key in builder.REQUIRED:
+        values.setdefault(key, "synthetic-release-fixture-" + key.lower())
+    return values
 
 
 class BundleTests(unittest.TestCase):
+    def test_extra_app_required_secret_is_synthetic_and_still_required(self):
+        key = "APP_SPECIFIC_REQUIRED_SECRET"
+        with patch.object(builder, "REQUIRED", [*builder.REQUIRED, key]):
+            values = environment()
+            self.assertEqual(values["DJANGO_SECRET_KEY"], 'literal-$dollar#hash"quote')
+            self.assertEqual(values["DJANGO_EMAIL_HOST_KEY"], "key-$#literal")
+            self.assertTrue(values[key].startswith("synthetic-release-fixture-"))
+            with tempfile.TemporaryDirectory() as directory:
+                target = Path(directory) / "incoming"
+                identity = builder.build(target, values)
+                self.assertIn(
+                    key + "=" + values[key] + "\n",
+                    (target / identity / ".backend.env").read_text(),
+                )
+            for update in (None, "", "line\nbreak"):
+                with (
+                    self.subTest(value=update),
+                    tempfile.TemporaryDirectory() as directory,
+                ):
+                    supplied = values.copy()
+                    if update is None:
+                        supplied.pop(key)
+                    else:
+                        supplied[key] = update
+                    with self.assertRaises(ValueError):
+                        builder.build(Path(directory) / "incoming", supplied)
+
     def test_raw_secrets_immutable_images_app_only_compose_and_bind(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)
