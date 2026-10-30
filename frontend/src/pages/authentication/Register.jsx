@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
+import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { register } from '../../services/notoliApiClient';
 import { persistAuthSession, readOkJson } from '../../services/authSession';
@@ -123,13 +123,16 @@ export default function Register({ showSnackbar }) {
               sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
             >
               Already have an account?{' '}
-              <Box
-                component="span"
-                sx={{ textDecoration: 'underline', cursor: 'pointer' }}
+              <Link
+                component="button"
+                type="button"
+                variant="caption"
+                underline="always"
                 onClick={() => navigate('/login')}
+                sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
               >
                 Sign in now!
-              </Box>
+              </Link>
             </Typography>
           </Box>
         </Box>

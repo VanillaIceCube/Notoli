@@ -54,12 +54,20 @@ describe('Login', () => {
     });
   });
 
-  test('when forgot password is clicked, it navigates to /forgot-password', async () => {
+  test('when forgot password link button is clicked, it navigates to /forgot-password', async () => {
     renderWithProviders(<Login showSnackbar={jest.fn()} />);
 
-    await userEvent.click(screen.getByText(/forgot password\?/i));
+    await userEvent.click(screen.getByRole('button', { name: /forgot password\?/i }));
 
     expect(mockNavigate).toHaveBeenCalledWith('/forgot-password');
+  });
+
+  test('when create account link button is clicked, it navigates to /register', async () => {
+    renderWithProviders(<Login showSnackbar={jest.fn()} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /create account!/i }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/register');
   });
 
   test('when a pending snackbar exists in sessionStorage, it shows it once on render', async () => {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
+import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { forgotPassword } from '../../services/notoliApiClient';
 import { readOkJson } from '../../services/authSession';
@@ -90,13 +90,16 @@ export default function ForgotPassword({ showSnackbar }) {
               variant="caption"
               sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
             >
-              <Box
-                component="span"
-                sx={{ textDecoration: 'underline', cursor: 'pointer' }}
+              <Link
+                component="button"
+                type="button"
+                variant="caption"
+                underline="always"
                 onClick={() => navigate('/login')}
+                sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
               >
                 Back to Login
-              </Box>
+              </Link>
             </Typography>
           </Box>
         </Box>

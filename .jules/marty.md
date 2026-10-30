@@ -9,6 +9,10 @@ raise the limit or replace maintenance with a capacity-only stop.
 
 # Marty's Journal
 
+## 2026-10-29 - Auth Page Navigation Link Accessibility
+**Learning:** Using non-interactive `<Box component="span">` elements for routing links in React/MUI components prevents keyboard navigation (Tab/Enter) and hides controls from screen readers. Replacing them with `<Link component="button" type="button">` preserves design while providing full keyboard focusability and screen reader semantics without triggering form submission.
+**Action:** When implementing clickable text links inside forms or navigation containers, use MUI `<Link component="button" type="button">` or appropriate semantic controls, and test keyboard interactions via `screen.getByRole('button', { name: ... })`.
+
 ## 2026-10-28 - Fast backend test hashing (#834)
 **Learning:** Detecting tests through environment variables, arguments, or imported modules can enable weak password hashing in application processes. Settings imports should not create static directories or supply predictable deployment secrets.
 **Action:** Scope the fast hasher to Django's test runner, restore settings on success and failure, and verify normal hashing and required production secrets in separate processes. Preserve the test speed improvement while addressing security feedback.
