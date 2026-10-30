@@ -1,12 +1,5 @@
 # 🔌 Optional MCP framework
 
-Notoli's [central consumer migration](../deploy/production/central-mcp.md) uses
-the canonical `create_server(verifier=..., issuer_url=...)` seam at source commit
-`5a9294d550ec946a51b34bb2438a6c04ecc13461`. The app owns issuer selection,
-introspection and explicit existing-user linking; the vendored framework remains
-identical to FullStackTemplate. Central mode replaces the local issuer behavior
-described below; ordinary app auth, tools and proxy trust remain unchanged.
-
 > Notoli remains enabled with its existing application registry and settings.
 > The optional-profile instructions apply to future adopters, not disabling Notoli.
 

@@ -13,8 +13,8 @@
               "clientId": "notoli-chatgpt",
               "tokenEndpointAuthMethod": "none"
             },
-            "authorizationUrl": "https://auth.judeandrewalaba.com/o/authorize/",
-            "tokenUrl": "https://auth.judeandrewalaba.com/o/token/",
+            "authorizationUrl": "https://notoli.judeandrewalaba.com/auth/mcp/authorize/",
+            "tokenUrl": "https://notoli.judeandrewalaba.com/auth/mcp/token/",
             "baseScopes": [
               "notoli:read",
               "notoli:write",

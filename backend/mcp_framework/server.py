@@ -34,21 +34,12 @@ class DjangoTokenVerifier(TokenVerifier):
         return await sync_to_async(lookup, thread_sensitive=True)()
 
 
-def create_server(*, instructions, verifier=None, issuer_url=None):
-    issuer = settings.MCP_BASE_URL if issuer_url is None else issuer_url
-    if issuer != settings.MCP_BASE_URL and verifier is None:
-        raise ValueError("An external issuer requires an explicit token verifier")
-    if (
-        issuer != settings.MCP_BASE_URL
-        and not settings.DEBUG
-        and not str(issuer).startswith("https://")
-    ):
-        raise ValueError("Production MCP issuers require HTTPS")
+def create_server(*, instructions, verifier=None):
     return MCPServer(
         settings.MCP_NAME,
-        token_verifier=verifier if verifier is not None else DjangoTokenVerifier(),
+        token_verifier=verifier or DjangoTokenVerifier(),
         auth=AuthSettings(
-            issuer_url=issuer,
+            issuer_url=settings.MCP_BASE_URL,
             resource_server_url=settings.MCP_RESOURCE_URL,
             required_scopes=settings.MCP_REQUIRED_SCOPES,
             validate_token_resource=True,

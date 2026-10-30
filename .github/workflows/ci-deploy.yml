@@ -76,7 +76,6 @@ jobs:
           DJANGO_EMAIL_HOST_KEY: ${{ secrets.DJANGO_EMAIL_HOST_KEY }}
           DJANGO_EMAIL_TIMEOUT: ${{ vars.DJANGO_EMAIL_TIMEOUT }}
           DJANGO_DEFAULT_FROM_EMAIL: ${{ vars.DJANGO_DEFAULT_FROM_EMAIL }}
-          MCP_INTROSPECTION_CLIENT_SECRET: ${{ secrets.MCP_INTROSPECTION_CLIENT_SECRET }}
         run: |
           umask 077
           release_id="$(python3 deploy/production/build_bundle.py release_bundle)"
