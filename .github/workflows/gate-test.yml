@@ -246,6 +246,9 @@ jobs:
         with:
           node-version: ${{ steps.versions.outputs.node_version }}
 
+      - name: Install the pinned safe YAML parser
+        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
+
       - name: Run repository automation tests
         id: test_run
         continue-on-error: true

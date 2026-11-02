@@ -41,6 +41,20 @@ test("case-variant GitHub owner/repository names cannot bypass pin validation", 
   assert.throws(() => checkCodeqlPins({ gate: mixed.replace(sha, "b".repeat(40)) }), /revisions differ/);
 });
 
+test("valid YAML flow mappings, quoted keys, folded scalars and aliases cannot evade validation", () => {
+  for (const declaration of [
+    '- { uses: github/codeql-action/upload-sarif@v4 }\n',
+    '- "uses": github/codeql-action/upload-sarif@v4\n',
+    '- uses: >-\n    github/codeql-action/upload-sarif@v4\n',
+    '- value: &ref github/codeql-action/upload-sarif@v4\n- uses: *ref\n',
+    '- "u\\u0073es": "github/codeql-\\u0061ction/upload-sarif@v4"\n',
+  ]) {
+    assert.throws(() => checkCodeqlPins({ valid: source("init") + source("analyze"), other: declaration }), /immutable SHA/);
+    assert.throws(() => checkCodeqlPins({ valid: source("init") + source("analyze"), other: declaration.replace("@v4", `@${"b".repeat(40)}`) }), /revisions differ/);
+    assert.equal(checkCodeqlPins({ valid: source("init") + source("analyze"), other: declaration.replace("@v4", `@${sha}`) }), 3);
+  }
+});
+
 test("version and security updates group every CodeQL entry point", () => {
   const config = fs.readFileSync(path.join(root, ".github/dependabot.yml"), "utf8");
   for (const group of ["codeql", "codeql-security"]) {

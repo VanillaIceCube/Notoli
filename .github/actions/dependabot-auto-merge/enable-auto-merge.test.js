@@ -217,6 +217,7 @@ test("privileged workflow uses only main code and verified metadata, with no imm
   assert.match(workflow, /workflows: \[CI\]/);
   assert.match(workflow, /ref: main/);
   assert.match(workflow, /persist-credentials: false/);
+  assert.match(workflow, /context: \{ repo: context.repo, eventName: 'pull_request', payload \}/);
   assert.doesNotMatch(workflow, /pull_request_target|workflow_dispatch|secrets\.|download-artifact|actions\/cache|skip-verification|skip-commit-verification/);
   for (const pin of workflow.matchAll(/uses: ([^\s]+)@([^\s]+)/g)) assert.match(pin[2], /^[a-f0-9]{40}$/);
   const source = fs.readFileSync(__filename.replace(".test.js", ".js"), "utf8");

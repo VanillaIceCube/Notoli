@@ -377,3 +377,7 @@ API races establish the policy, not a live Dependabot follow-up merge; record th
 first real default-branch run separately in #240. Infrastructure adopts only
 CodeQL prevention and reviewer eligibility, retaining weekly updates, independent
 Required CI, owner merge and separate release/recovery authorization.
+
+The CodeQL guard parses YAML structurally with `PyYAML==6.0.3` (safe loading),
+including flow mappings, quoted/escaped keys, folded values and aliases. Install
+that exact parser for local Node regressions: `python -m pip install PyYAML==6.0.3`.

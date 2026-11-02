@@ -126,7 +126,23 @@ jobs:
     needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware, code-review, build-review, security-review]
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
+      - name: Verify branch rules are readable with the workflow token
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const rules = await github.paginate(github.rest.repos.getBranchRules, {
+              ...context.repo, branch: 'main', per_page: 100,
+              headers: { 'X-GitHub-Api-Version': '2026-03-10' },
+            });
+            if (!rules.some((rule) => rule.type === 'required_status_checks')) {
+              throw new Error('Expected protected main-branch status rules.');
+            }
+            core.info('Live branch rules are readable with the read-only workflow token.');
+
       - name: Report auto-merge status
         shell: bash
         env:

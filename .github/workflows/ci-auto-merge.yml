@@ -70,6 +70,6 @@ jobs:
           script: |
             const { enableAutoMerge } = require(`${process.env.GITHUB_WORKSPACE}/.github/actions/dependabot-auto-merge/enable-auto-merge.js`);
             const payload = JSON.parse(require('node:fs').readFileSync(`${process.env.RUNNER_TEMP}/dependabot-pr-event.json`, 'utf8'));
-            await enableAutoMerge({ github, core, context: { ...context, eventName: 'pull_request', payload }, metadata: {
+            await enableAutoMerge({ github, core, context: { repo: context.repo, eventName: 'pull_request', payload }, metadata: {
               updateType: process.env.UPDATE_TYPE, alertState: process.env.ALERT_STATE, cvss: process.env.CVSS,
             } });

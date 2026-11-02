@@ -128,7 +128,10 @@ async function enableAutoMerge({ github, context, core, metadata, sleep = (ms) =
   if (pr.mergeable !== true || !["clean", "blocked"].includes(pr.mergeable_state)) {
     throw new Error(`PR merge state is not stable: ${pr.mergeable_state}`);
   }
-  const rules = await github.paginate(github.rest.repos.getBranchRules, { owner, repo, branch: pr.base.ref, per_page: 100 });
+  const rules = await github.paginate(github.rest.repos.getBranchRules, {
+    owner, repo, branch: pr.base.ref, per_page: 100,
+    headers: { "X-GitHub-Api-Version": "2026-03-10" },
+  });
   const checks = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: pr.head.sha, per_page: 100 });
   verifyChecks(rules, checks);
   const reviews = await github.paginate(github.rest.pulls.listReviews, { ...request, per_page: 100 });
