@@ -168,3 +168,31 @@ CI reads the Node version from `frontend/package.json` (`engines.node`).
 ## 🔌 Shared MCP framework
 
 See [the MCP framework guide](../docs/MCP-FRAMEWORK.md). Optional consent and Connected Apps routes require `VITE_MCP_ENABLED=1` in the template/MacroMapper; Notoli keeps its existing enabled UI. Preserve JWT-only consent and validated connection return paths.
+
+## 🔒 Transitive dependency maintenance
+
+The frontend temporarily overrides `minimatch@>=9 <11.0.1` to `^11.0.1` for
+[GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249).
+ESLint, its config-array, the JSX accessibility plugin and typescript-estree
+still request older majors; upgrading ESLint alone does not remove the advisory.
+The lockfile resolves minimatch 11.0.4. These are build/lint dependencies, not
+browser globbing APIs. Keep the version selector scoped to the affected modern
+API family; do not apply it to legacy callable minimatch 3 consumers.
+
+Minimatch 11 removes `makeRe`, `AST` and internal matcher methods. The current
+parents use the retained matching API. Validate a clean `npm ci`, `npm ls
+minimatch glob --all`, strict lint, tests and the production build whenever a
+parent or override changes. Review upstream API changes before widening the
+selector. Remove overrides once all parent ranges natively accept patched
+versions, regenerate the lockfile and repeat those checks. Canonical rollout:
+[FullStackTemplate #267](https://github.com/VanillaIceCube/FullStackTemplate/issues/267).
+
+Notoli also overrides `glob@>=9 <14.0.2` to `^14.0.2` for
+[GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4).
+The lockfile resolves glob 14.0.3 for Jest and Babel's test-exclude, eliminating
+both glob 13 and nested glob 10 without downgrading Jest/Babel. Glob 14 retains
+the sync/async traversal calls used here and adopts minimatch 11. Run Jest with
+`npm test -- --watchAll=false --runInBand --coverage` to exercise test-exclude
+and coverage file discovery. GitHub's runtime classification for minimatch
+reflects the existing dependency placement; production serves the built static
+assets. The fixed follow-redirects dependency remains unchanged.
