@@ -55,6 +55,9 @@ jobs:
               - '.github/workflows/gate-test.yml'
               - '.github/actions/read-versions/**'
             automation:
+              - '.github/actions/dependabot-auto-merge/**'
+              - '.github/actions/check-codeql-pins/**'
+              - '.github/workflows/ci-auto-merge.yml'
               - '.github/actions/review-npm-malware/**'
               - '.github/actions/collect-codeql-evidence/**'
               - 'deploy/**'
@@ -250,7 +253,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          node --test .github/actions/collect-codeql-evidence/collect-codeql-evidence.test.js \
+          node --test .github/actions/dependabot-auto-merge/*.test.js .github/actions/check-codeql-pins/*.test.js .github/actions/collect-codeql-evidence/collect-codeql-evidence.test.js \
             .github/actions/review-npm-malware/review-npm-malware.test.js \
             .github/actions/collect-prior-ai-reviews/collect-prior-ai-reviews.test.js \
             .github/actions/collect-upstream-major-upgrade-evidence/collect-upstream-major-upgrade-evidence.test.js \

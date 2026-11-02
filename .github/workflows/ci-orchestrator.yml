@@ -123,18 +123,33 @@ jobs:
 
   auto-merge:
     name: Auto Merge
-    needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware]
-    if: >-
-      always() &&
-      github.event.pull_request.user.login == 'dependabot[bot]' &&
-      needs.lints.result == 'success' &&
-      needs.tests.result == 'success' &&
-      needs.codeql.result == 'success' &&
-      needs.dependency-vulnerability.result == 'success' &&
-      needs.dependency-malware.result == 'success'
-    uses: ./.github/workflows/ci-auto-merge.yml
-    permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-      security-events: read
+    needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware, code-review, build-review, security-review]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report auto-merge status
+        shell: bash
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          LINT_RESULT: ${{ needs.lints.result }}
+          TEST_RESULT: ${{ needs.tests.result }}
+          CODEQL_RESULT: ${{ needs.codeql.result }}
+          VULNERABILITY_RESULT: ${{ needs.dependency-vulnerability.result }}
+          MALWARE_RESULT: ${{ needs.dependency-malware.result }}
+        run: |
+          set -euo pipefail
+
+          if [ "$PR_AUTHOR" != 'dependabot[bot]' ]; then
+            echo 'Auto-merge is not applicable to this pull request.'
+            exit 0
+          fi
+
+          if [ "$LINT_RESULT" = 'success' ] && \
+             [ "$TEST_RESULT" = 'success' ] && \
+             [ "$CODEQL_RESULT" = 'success' ] && \
+             [ "$VULNERABILITY_RESULT" = 'success' ] && \
+             [ "$MALWARE_RESULT" = 'success' ]; then
+            echo 'Dependabot eligibility will be evaluated after successful CI by the main-branch follow-up.'
+          else
+            echo 'Dependabot auto-merge is not evaluated until all independent gates pass.'
+          fi

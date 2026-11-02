@@ -181,7 +181,7 @@ Auto-merge behavior:
 - Dependabot PRs receive the three required same-repository AI reviews using Dependabot secrets. Major updates additionally receive Obi-Wan's upgrade brief and remain a human merge decision. [#656](https://github.com/VanillaIceCube/Notoli/issues/656) owns the existing Dependabot eligibility implementation; [#946](https://github.com/VanillaIceCube/Notoli/issues/946) adds the missing reviewer requirements. Independent lint, test, CodeQL, vulnerability, and malware gates continue to block auto-merge when any gate fails.
 - Auto-merge is restricted to patch/minor updates.
 - If a security alert is present, the workflow requires CVSS <= 6.9.
-- The workflow uses `dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98` (`v3.1.0`) and can optionally use `DEPENDABOT_PAT` for metadata/alert lookup.
+- The workflow uses `dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98` (`v3.1.0`) using the follow-up workflow token for metadata/alert lookup.
 
 AI review context includes bounded recent owner/collaborator reviews and replies to prior findings as discussion evidence. Prior bot verdicts must be rechecked against current source/scanners; the diff legend distinguishes active added/context lines from deleted old code. This does not change reviewer verdict rules or authorize merges/deployments.
 
@@ -330,3 +330,50 @@ separate Compose updates. The template aligns its mutable CodeQL tag with the ot
 immutable v4.39.1 revision. Scanner scope, permissions and merge/deployment
 gates remain unchanged. Canonical rollout:
 [FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271).
+
+## 🔒 Protected Dependabot auto-merge
+
+The canonical application policy lives in FullStackTemplate (#240). A successful
+PR CI run triggers `ci-auto-merge.yml` on the default branch. This privileged
+follow-up checks out only reviewed `main` with credentials disabled; it never
+executes PR code or consumes PR artifacts/caches. It needs no PAT, reviewer key,
+production secret, or `pull_request_target` event. Dependabot's PR token remains
+read-only; reviewer secrets remain in the separate Dependabot store.
+
+The follow-up resolves the CI workflow ID, successful result, repository, PR
+author and current head through GitHub's API, independent of the rerun actor.
+Verified Dependabot commit metadata supplies patch/minor eligibility; open
+security alerts retain the CVSS ceiling of 6.9. Major updates and unsupported
+metadata stay manual. All three persona checks must succeed and each persona
+must approve the current head. Missing/failed/cancelled checks, requested changes,
+forks and unstable/conflicting heads cannot enable auto-merge. Unknown
+mergeability is polled at most six times with two-second waits, revalidating
+the same PR/head on every read; an unresolved state still fails closed. Required
+branch rules and all required contexts are read live; expected path-scoped skips
+remain valid only for application/analyzer child jobs.
+
+The only merge operation enables GitHub's native protected-branch auto-merge,
+with `expectedHeadOid` guarding a concurrent push. There is no immediate merge
+fallback or protection bypass. GitHub still enforces review-thread resolution
+and other branch requirements at merge time. Repeated successful events are
+idempotent; API/permission errors fail visibly unless the same head was already
+enabled by a concurrent event. The top-level `Auto Merge` status remains in CI
+and waits for all three reviewers; do not require the follow-up's separate check
+in the main ruleset because it starts only after CI completes.
+
+`node --test .github/actions/dependabot-auto-merge/*.test.js` exercises failed and
+missing reviewers/checks, forks, reruns, identity/head races and repeated events.
+`gate-codeql.yml` runs the immutable-revision guard and its negative tests
+before scope detection, so partial init/analyze or other entry-point updates
+fail the required scope job. Run locally:
+
+```sh
+node .github/actions/check-codeql-pins/check-codeql-pins.js
+node --test .github/actions/check-codeql-pins/*.test.js
+```
+
+Default-branch activation requires merge. A passing implementation PR and mocked
+API races establish the policy, not a live Dependabot follow-up merge; record the
+first real default-branch run separately in #240. Infrastructure adopts only
+CodeQL prevention and reviewer eligibility, retaining weekly updates, independent
+Required CI, owner merge and separate release/recovery authorization.
