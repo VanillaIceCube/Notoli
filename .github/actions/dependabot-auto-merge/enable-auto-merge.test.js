@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
-const { codeqlSkipAllowed, enableAutoMerge, eligible, independentChecks, reviewers, resolveRun, verifyReviews } = require("./enable-auto-merge");
+const { codeqlSkipAllowed, enableAutoMerge, eligible, independentChecks, parseMetadata, policyContext, reviewers, resolveRun, verifyAlerts, verifyReviews } = require("./enable-auto-merge");
 
 function harness() {
   const h = {
@@ -13,20 +13,23 @@ function harness() {
       user: { login: "dependabot[bot]", type: "Bot" },
       head: { sha: "a".repeat(40), repo: { full_name: "owner/app" } },
       base: { ref: "main", repo: { full_name: "owner/app" } },
-      mergeable: true, mergeable_state: "clean", auto_merge: null,
+      mergeable: true, mergeable_state: "blocked", auto_merge: null,
     },
     metadata: { updateType: "version-update:semver-patch", alertState: "", cvss: "0" },
     calls: [],
+    policyCheckId: 10000,
   };
   h.context = { eventName: "pull_request", repo: { owner: "owner", repo: "app" }, payload: { pull_request: structuredClone(h.pr) } };
   const names = [...independentChecks, ...Object.values(reviewers)];
-  h.rules = [{ type: "pull_request" }, { type: "required_status_checks", parameters: { required_status_checks: names.map((context) => ({ context })) } }];
+  h.rules = [{ type: "pull_request" }, { type: "required_status_checks", parameters: { required_status_checks: [...names.map((context) => ({ context })), { context: policyContext, integration_id: 15368 }] } }];
   h.checks = names.map((name, id) => ({ id, name, status: "completed", conclusion: "success", app: { id: 15368, slug: "github-actions" } }));
+  h.checks.push({ id: h.policyCheckId, name: policyContext, status: "in_progress", conclusion: null, app: { id: 15368, slug: "github-actions" } });
   h.reviews = Object.keys(reviewers).map((login, id) => ({ id, user: { login, type: "Bot" }, state: "APPROVED", commit_id: h.pr.head.sha }));
   h.run = { id: 8, workflow_id: 7, event: "pull_request", conclusion: "success", head_repository: { full_name: "owner/app" }, head_sha: h.pr.head.sha };
   h.github = {
     rest: {
-      pulls: { get: async () => ({ data: structuredClone(h.pr) }), listReviews() {}, listFiles() {} },
+      pulls: { get: async () => ({ data: structuredClone(h.pr) }), listReviews() {}, listFiles() {}, listCommits() {} },
+      dependabot: { listAlertsForRepo() {} },
       repos: { getBranchRules() {}, listPullRequestsAssociatedWithCommit() {} },
       checks: { listForRef() {} },
       actions: { getWorkflowRun: async () => ({ data: h.run }), getWorkflow: async () => ({ data: { id: 7 } }) },
@@ -35,6 +38,8 @@ function harness() {
       assert.equal(params.per_page, 100);
       if (method === h.github.rest.pulls.listReviews) return h.reviews;
       if (method === h.github.rest.pulls.listFiles) return h.files || [];
+      if (method === h.github.rest.pulls.listCommits) return h.commits || [{ sha: h.pr.head.sha, author: { login: "dependabot[bot]" }, commit: { verification: { verified: true }, message: `Update\n\n---\n${JSON.stringify({ "updated-dependencies": h.dependencies || [{ "dependency-name": "example", "update-type": h.metadata.updateType }] })}\n...\n` } }];
+      if (method === h.github.rest.dependabot.listAlertsForRepo) return h.alerts || [];
       if (method === h.github.rest.repos.getBranchRules) return h.rules;
       if (method === h.github.rest.repos.listPullRequestsAssociatedWithCommit) return [h.pr];
       assert.equal(params.ref, h.pr.head.sha);
@@ -97,11 +102,11 @@ test("missing metadata fails; ineligible updates skip without mutation", async (
 
 test("failed, missing, pending, cancelled and skipped reviewers cannot enable auto-merge", async () => {
   for (const conclusion of ["failure", "cancelled", "skipped", "neutral", null]) {
-    const h = harness(); h.checks.at(-1).conclusion = conclusion;
+    const h = harness(); h.checks.find((check) => check.name === Object.values(reviewers)[0]).conclusion = conclusion;
     await assert.rejects(h.enable(), /Required check/);
     assert.equal(h.calls.length, 0);
   }
-  const h = harness(); h.checks.pop();
+  const h = harness(); h.checks = h.checks.filter((check) => check.name !== Object.values(reviewers)[0]);
   await assert.rejects(h.enable(), /Required check/);
 });
 
@@ -213,7 +218,7 @@ test("transient unknown mergeability settles with bounded polling and head reval
   h.sleep = async (ms) => {
     assert.equal(ms, 2000);
     retries += 1;
-    h.pr.mergeable = true; h.pr.mergeable_state = "clean";
+    h.pr.mergeable = true; h.pr.mergeable_state = "blocked";
   };
   assert.equal(await h.enable(), "enabled");
   assert.equal(retries, 1);
@@ -232,15 +237,65 @@ test("follow-up validates authoritative CI identity, result and head, independen
   assert.equal((await h.resolve()).number, 1);
   for (const patch of [
     { workflow_id: 99 }, { event: "push" }, { conclusion: "failure" },
-    { conclusion: "cancelled" }, { head_repository: { full_name: "fork/app" } }, { head_sha: "new" },
+    { conclusion: "cancelled" }, { head_sha: "new" },
   ]) {
     const h = harness(); Object.assign(h.run, patch);
     await assert.rejects(h.resolve(), /not successful/);
   }
   const human = harness(); human.pr.user.login = "human";
-  assert.equal(await human.resolve(), null);
+  assert.equal((await human.resolve()).user.login, "human");
   const fork = harness(); fork.pr.head.repo.full_name = "fork/app";
-  assert.equal(await fork.resolve(), null);
+  fork.run.head_repository.full_name = "fork/app";
+  assert.equal((await fork.resolve()).head.repo.full_name, "fork/app");
+});
+
+test("every group member needs explicit patch/minor metadata", async () => {
+  const h = harness();
+  h.dependencies = [{ "dependency-name": "one", "update-type": "version-update:semver-patch" }, { "dependency-name": "two", "update-type": "version-update:semver-major" }];
+  assert.equal(await h.enable(), "ineligible");
+  assert.equal(h.calls.length, 0);
+  h.dependencies[1]["update-type"] = undefined;
+  await assert.rejects(h.enable(), /metadata is missing/);
+});
+
+test("signed metadata is bound to the only PR commit and exact current head", async () => {
+  for (const commits of [[], [{ sha: "other", author: { login: "dependabot[bot]" }, commit: { verification: { verified: true } } }],
+    [{ sha: "a".repeat(40), author: { login: "human" }, commit: { verification: { verified: true } } }],
+    [{ sha: "a".repeat(40), author: { login: "dependabot[bot]" }, commit: { verification: { verified: false } } }],
+    [{}, {}]]) {
+    const h = harness(); h.commits = commits;
+    await assert.rejects(h.enable(), /exactly one verified Dependabot commit/);
+    assert.equal(h.calls.length, 0);
+  }
+  assert.throws(() => parseMetadata("No metadata"), /metadata is missing/);
+});
+
+test("all open alerts across all group members enforce the CVSS ceiling", async () => {
+  const dependencies = [{ dependencyName: "one" }, { dependencyName: "two" }];
+  const alert = (name, state, score) => ({ state, dependency: { package: { name } }, security_advisory: { cvss: { score } } });
+  verifyAlerts(dependencies, [alert("one", "dismissed", 9.8), alert("two", "fixed", 9.8)]);
+  assert.throws(() => verifyAlerts(dependencies, [alert("one", "open", 1), alert("two", "open", 9.8)]), /CVSS/);
+  assert.throws(() => verifyAlerts(dependencies, [alert("two", "open", null)]), /CVSS/);
+  const h = harness(); h.alerts = Array.from({ length: 101 }, () => alert("other", "open", 1));
+  h.alerts.push(alert("example", "open", 9.8));
+  await assert.rejects(h.enable(), /CVSS/);
+  assert.equal(h.calls.length, 0);
+});
+
+test("a required pending per-head policy holds native auto-merge through later pushes", async () => {
+  const h = harness(); h.rules[1].parameters.required_status_checks.pop();
+  await assert.rejects(h.enable(), /Policy must be required/);
+  const changed = harness(); changed.checks.at(-1).id = 20000;
+  await assert.rejects(changed.enable(), /Required check/);
+  const clean = harness(); clean.pr.mergeable_state = "clean";
+  await assert.rejects(clean.enable(), /not stable/);
+});
+
+test("generated apps can configure three distinct reviewer bot identities", () => {
+  const head = "head";
+  const logins = ["app-code[bot]", "app-build[bot]", "app-security[bot]"];
+  verifyReviews(logins.map((login, id) => ({ id, state: "APPROVED", commit_id: head, user: { login, type: "Bot" } })), head, logins);
+  assert.throws(() => verifyReviews([], head, ["same[bot]", "same[bot]", "other[bot]"]), /Three distinct/);
 });
 
 test("privileged workflow uses only main code and verified metadata, with no immediate merge path", () => {
@@ -261,4 +316,10 @@ test("privileged workflow uses only main code and verified metadata, with no imm
   const gate = fs.readFileSync(path.join(workflows, "gate-test.yml"), "utf8");
   assert.match(gate, /\.github\/actions\/dependabot-auto-merge\/\*\.test.js/);
   assert.match(gate, /'\.github\/workflows\/ci-auto-merge.yml'/);
+  assert.match(gate, /'\.github\/workflows\/ci-orchestrator.yml'/);
+  assert.match(workflow, /vulnerability-alerts: read/);
+  assert.match(workflow, /checks: write/);
+  assert.match(workflow, /github.rest.checks.create/);
+  assert.match(workflow, /github.rest.checks.update/);
+  assert.doesNotMatch(workflow, /GITHUB_EVENT_PATH:/);
 });
