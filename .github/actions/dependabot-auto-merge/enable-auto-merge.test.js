@@ -42,7 +42,7 @@ function harness() {
       if (method === h.github.rest.dependabot.listAlertsForRepo) return h.alerts || [];
       if (method === h.github.rest.repos.getBranchRules) return h.rules;
       if (method === h.github.rest.repos.listPullRequestsAssociatedWithCommit) return [h.pr];
-      assert.equal(params.ref, h.pr.head.sha);
+      assert.equal(params.ref, h.context.payload.pull_request.head.sha);
       return h.checks;
     },
     async graphql(query, variables) {
@@ -295,6 +295,25 @@ test("a required pending per-head policy holds native auto-merge through later p
   await assert.rejects(changed.enable(), /Required check/);
   const clean = harness(); clean.pr.mergeable_state = "clean";
   await assert.rejects(clean.enable(), /not stable/);
+});
+
+test("policy check visibility is polled boundedly without trusting a stale head", async () => {
+  const h = harness(); const paginate = h.github.paginate.bind(h.github);
+  let reads = 0; let waits = 0;
+  h.github.paginate = async (method, params) => {
+    if (method === h.github.rest.checks.listForRef && reads++ === 0) return h.checks.filter((check) => check.name !== policyContext);
+    return paginate(method, params);
+  };
+  h.sleep = async () => { waits += 1; };
+  assert.equal(await h.enable(), "enabled");
+  assert.equal(reads, 2); assert.equal(waits, 1);
+  const stuck = harness(); stuck.checks = stuck.checks.filter((check) => check.name !== policyContext);
+  let stuckWaits = 0; stuck.sleep = async () => { stuckWaits += 1; };
+  await assert.rejects(stuck.enable(), /Required check/);
+  assert.equal(stuckWaits, 5); assert.equal(stuck.calls.length, 0);
+  const moved = harness(); moved.checks = moved.checks.filter((check) => check.name !== policyContext);
+  moved.sleep = async () => { moved.pr.head.sha = "new"; };
+  await assert.rejects(moved.enable(), /head changed/);
 });
 
 test("generated apps can configure three distinct reviewer bot identities", () => {

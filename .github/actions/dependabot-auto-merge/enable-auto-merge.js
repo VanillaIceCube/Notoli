@@ -177,7 +177,20 @@ async function enableAutoMerge({ github, context, core, policyCheckId, reviewerL
     owner, repo, branch: pr.base.ref, per_page: 100,
     headers: { "X-GitHub-Api-Version": "2026-03-10" },
   });
-  const checks = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: pr.head.sha, per_page: 100 });
+  let checks;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    checks = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: pr.head.sha, per_page: 100 });
+    if (checks.some((check) => check.id === policyCheckId && check.name === policyContext &&
+        check.app?.id === 15368 && check.status === "in_progress" && !check.conclusion)) break;
+    if (attempt < 5) {
+      const { data: current } = await github.rest.pulls.get(request);
+      if (!trusted(current, repository) || current.head.sha !== pr.head.sha || current.node_id !== pr.node_id) {
+        throw new Error("PR identity or head changed while waiting for policy check visibility");
+      }
+      core.info("Waiting for GitHub to expose this head's pending policy check; retrying in two seconds.");
+      await sleep(2000);
+    }
+  }
   // These are API diff paths, never artifact-supplied scope claims. The required
   // detector must succeed too. Mirror gate-codeql.yml's Python/JS/Actions paths.
   const files = await github.paginate(github.rest.pulls.listFiles, { ...request, per_page: 100 });
