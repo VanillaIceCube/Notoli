@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
-const { enableAutoMerge, eligible, independentChecks, reviewers, resolveRun, verifyReviews } = require("./enable-auto-merge");
+const { codeqlSkipAllowed, enableAutoMerge, eligible, independentChecks, reviewers, resolveRun, verifyReviews } = require("./enable-auto-merge");
 
 function harness() {
   const h = {
@@ -26,7 +26,7 @@ function harness() {
   h.run = { id: 8, workflow_id: 7, event: "pull_request", conclusion: "success", head_repository: { full_name: "owner/app" }, head_sha: h.pr.head.sha };
   h.github = {
     rest: {
-      pulls: { get: async () => ({ data: structuredClone(h.pr) }), listReviews() {} },
+      pulls: { get: async () => ({ data: structuredClone(h.pr) }), listReviews() {}, listFiles() {} },
       repos: { getBranchRules() {}, listPullRequestsAssociatedWithCommit() {} },
       checks: { listForRef() {} },
       actions: { getWorkflowRun: async () => ({ data: h.run }), getWorkflow: async () => ({ data: { id: 7 } }) },
@@ -34,6 +34,7 @@ function harness() {
     async paginate(method, params) {
       assert.equal(params.per_page, 100);
       if (method === h.github.rest.pulls.listReviews) return h.reviews;
+      if (method === h.github.rest.pulls.listFiles) return h.files || [];
       if (method === h.github.rest.repos.getBranchRules) return h.rules;
       if (method === h.github.rest.repos.listPullRequestsAssociatedWithCommit) return [h.pr];
       assert.equal(params.ref, h.pr.head.sha);
@@ -126,6 +127,22 @@ test("latest check rerun supersedes an earlier failure, but not a newer pending 
   h.checks.push({ ...h.checks[0], id: 101 });
   assert.equal(await h.enable(), "enabled");
   h.checks.push({ ...h.checks[0], id: 102, status: "queued", conclusion: null });
+  await assert.rejects(h.enable(), /Required check/);
+});
+
+test("CodeQL skips require successful detection and authoritative matching diff scope", async () => {
+  assert.equal(codeqlSkipAllowed("CodeQL / Analyze Python", ["frontend/package-lock.json"]), true);
+  assert.equal(codeqlSkipAllowed("CodeQL / Analyze JavaScript/TypeScript", ["backend/requirements.txt"]), true);
+  assert.equal(codeqlSkipAllowed("CodeQL / Analyze GitHub Actions", ["README.md"]), true);
+  for (const files of [undefined, ["backend/requirements.txt"], [".github/workflows/gate-codeql.yml"], [".github/actions/guard/action.yml"]]) {
+    assert.equal(codeqlSkipAllowed("CodeQL / Analyze Python", files), false);
+  }
+  const h = harness(); const name = "CodeQL / Analyze Python";
+  h.rules[1].parameters.required_status_checks.push({ context: name });
+  h.checks.push({ ...h.checks[0], name, conclusion: "skipped", id: 100 });
+  h.files = [{ filename: "frontend/package-lock.json" }];
+  assert.equal(await h.enable(), "enabled");
+  h.files = [{ filename: ".github/workflows/gate-codeql.yml" }];
   await assert.rejects(h.enable(), /Required check/);
 });
 

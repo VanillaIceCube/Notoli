@@ -51,7 +51,19 @@ function verifyReviews(reviews, head) {
   }
 }
 
-function verifyChecks(rules, checks) {
+function codeqlSkipAllowed(name, files) {
+  if (!Array.isArray(files)) return false;
+  const shared = (file) => /^\.github\/(actions|workflows|codeql)\//.test(file);
+  const python = files.some((file) => shared(file) || file.startsWith("backend/"));
+  const javascript = files.some((file) => shared(file) || file.startsWith("frontend/"));
+  return {
+    "CodeQL / Analyze Python": !python,
+    "CodeQL / Analyze JavaScript/TypeScript": !javascript,
+    "CodeQL / Analyze GitHub Actions": !python && !javascript,
+  }[name] === true;
+}
+
+function verifyChecks(rules, checks, files) {
   const required = rules.filter((rule) => rule.type === "required_status_checks")
     .flatMap((rule) => rule.parameters.required_status_checks);
   if (!rules.some((rule) => rule.type === "pull_request") || required.length === 0) {
@@ -71,7 +83,8 @@ function verifyChecks(rules, checks) {
       item.app?.slug === "github-actions" &&
       (!requirement.integration_id || item.app.id === requirement.integration_id))
       .sort((a, b) => b.id - a.id)[0];
-    const expectedSkip = scopedChecks.has(requirement.context) && check?.conclusion === "skipped";
+    const expectedSkip = scopedChecks.has(requirement.context) && check?.conclusion === "skipped" &&
+      (!requirement.context.startsWith("CodeQL / Analyze ") || codeqlSkipAllowed(requirement.context, files));
     if (check?.status !== "completed" || (check.conclusion !== "success" && !expectedSkip)) {
       throw new Error(`Required check is not passing: ${requirement.context}`);
     }
@@ -133,7 +146,10 @@ async function enableAutoMerge({ github, context, core, metadata, sleep = (ms) =
     headers: { "X-GitHub-Api-Version": "2026-03-10" },
   });
   const checks = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: pr.head.sha, per_page: 100 });
-  verifyChecks(rules, checks);
+  // These are API diff paths, never artifact-supplied scope claims. The required
+  // detector must succeed too. Mirror gate-codeql.yml's Python/JS/Actions paths.
+  const files = await github.paginate(github.rest.pulls.listFiles, { ...request, per_page: 100 });
+  verifyChecks(rules, checks, files.map((file) => file.filename));
   const reviews = await github.paginate(github.rest.pulls.listReviews, { ...request, per_page: 100 });
   verifyReviews(reviews, pr.head.sha);
   if (pr.auto_merge) {
@@ -141,6 +157,8 @@ async function enableAutoMerge({ github, context, core, metadata, sleep = (ms) =
     return "already-enabled";
   }
   try {
+    // GitHub's live EnablePullRequestAutoMergeInput includes expectedHeadOid.
+    // The read-only Auto Merge CI probe checks that schema with its actual token.
     await github.graphql(`mutation($id: ID!, $head: GitObjectID!) {
       enablePullRequestAutoMerge(input: {pullRequestId: $id, expectedHeadOid: $head, mergeMethod: MERGE}) {
         pullRequest { number }
@@ -157,4 +175,4 @@ async function enableAutoMerge({ github, context, core, metadata, sleep = (ms) =
   return "enabled";
 }
 
-module.exports = { enableAutoMerge, eligible, independentChecks, reviewers, resolveRun, trusted, verifyChecks, verifyReviews };
+module.exports = { codeqlSkipAllowed, enableAutoMerge, eligible, independentChecks, reviewers, resolveRun, trusted, verifyChecks, verifyReviews };
