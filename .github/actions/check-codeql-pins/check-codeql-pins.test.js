@@ -34,6 +34,13 @@ test("allows an atomic upgrade without hard-coding a release version", () => {
   assert.equal(checkCodeqlPins({ gate: source("init", "b".repeat(40)) + source("analyze", "b".repeat(40)) }), 2);
 });
 
+test("case-variant GitHub owner/repository names cannot bypass pin validation", () => {
+  const mixed = `- uses: GitHub/CodeQL-Action/init@${sha}\n- uses: GITHUB/CODEQL-ACTION/analyze@${sha}\n`;
+  assert.equal(checkCodeqlPins({ gate: mixed }), 2);
+  assert.throws(() => checkCodeqlPins({ gate: mixed.replace(sha, "v4") }), /immutable SHA/);
+  assert.throws(() => checkCodeqlPins({ gate: mixed.replace(sha, "b".repeat(40)) }), /revisions differ/);
+});
+
 test("version and security updates group every CodeQL entry point", () => {
   const config = fs.readFileSync(path.join(root, ".github/dependabot.yml"), "utf8");
   for (const group of ["codeql", "codeql-security"]) {
