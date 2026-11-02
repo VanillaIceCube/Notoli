@@ -49,7 +49,7 @@ What it does:
   - Consumes explicit gate results, vulnerability/malware reports, security check summaries, check annotations, prior RoboCop reviews on the PR, and the line-numbered PR diff before publishing one native PR review.
   - Requests changes for actionable security findings; approves clean security evidence.
   - Dependency Review, malware scanning, and CodeQL remain independent required checks; RoboCop does not replace them.
-- All three AI persona workflows run for trusted same-repository pull requests, including Dependabot. Fork PRs remain excluded from secret-dependent reviews and rely on the independent lint, test, CodeQL, vulnerability, and malware gates. Dependabot lint auto-fixes remain disabled; eligible patch/minor updates retain their existing independent-gate auto-merge policy.
+- All three AI persona workflows run for trusted same-repository pull requests, including Dependabot. Fork PRs remain excluded from secret-dependent reviews and rely on the independent lint, test, CodeQL, vulnerability, and malware gates. Dependabot lint auto-fixes remain disabled; eligible patch/minor updates use the per-head protected policy described below.
 
 ### Dependabot major upgrade briefs
 
@@ -409,3 +409,6 @@ node --test .github/actions/check-codeql-pins/*.test.js .github/actions/dependab
 The local actionlint 1.7.12 schema predates GitHub's documented
 `vulnerability-alerts: read` scope. Its other diagnostics remain enforced; GitHub
 validates the new permission and CI must pass before merge.
+
+The reviewer API evidence step uses direct read-only API calls and executes no
+PR-workspace module with its GitHub client.

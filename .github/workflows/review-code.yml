@@ -113,8 +113,17 @@ jobs:
             });
             if (files.some((file) => file.filename.startsWith('.github/actions/dependabot-auto-merge/') ||
               ['.github/workflows/ci-auto-merge.yml', '.github/workflows/ci-orchestrator.yml'].includes(file.filename))) {
-              const { collectApiEvidence } = require(`${process.env.GITHUB_WORKSPACE}/.github/actions/dependabot-auto-merge/collect-api-evidence.js`);
-              const evidence = await collectApiEvidence({ github, context });
+              // Direct read-only API calls; do not execute PR-workspace modules with this client.
+              const rules = await github.paginate(github.rest.repos.getBranchRules, {
+                ...context.repo, branch: 'main', per_page: 100,
+                headers: { 'X-GitHub-Api-Version': '2026-03-10' },
+              });
+              const schema = await github.graphql('query { __type(name: "EnablePullRequestAutoMergeInput") { inputFields { name } } }');
+              const evidence = { api_version: '2026-03-10', branch_rules_read_with_workflow_token: 'success',
+                rule_types: rules.map((rule) => rule.type), auto_merge_input_fields: schema.__type.inputFields.map((field) => field.name) };
+              if (!evidence.rule_types.includes('required_status_checks') || !evidence.auto_merge_input_fields.includes('expectedHeadOid')) {
+                throw new Error('Live GitHub API contracts do not satisfy protected auto-merge requirements.');
+              }
               require('node:fs').writeFileSync(`${process.env.RUNNER_TEMP}/auto-merge-api-evidence.json`, JSON.stringify(evidence, null, 2));
               core.info(JSON.stringify(evidence));
             }
