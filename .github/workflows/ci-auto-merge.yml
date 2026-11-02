@@ -1,145 +1,90 @@
-name: Auto Merge
+name: Dependabot Auto Merge
 
 on:
-  workflow_call:
-    secrets:
-      DEPENDABOT_PAT:
-        required: false
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
 
 permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-  security-events: read
+  contents: read
+
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
 
 jobs:
   dependabot-auto-merge:
     name: Dependabot Auto Merge
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request'
     runs-on: ubuntu-latest
-    env:
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+    permissions:
+      actions: read
+      checks: write
+      contents: write
+      pull-requests: write
+      vulnerability-alerts: read
     steps:
-      - name: Fetch Dependabot metadata
-        id: metadata
-        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+      # Privileged code comes only from reviewed main. No PR checkout/artifacts/caches.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          github-token: ${{ secrets.DEPENDABOT_PAT || secrets.GITHUB_TOKEN }}
-          alert-lookup: true
+          ref: main
+          persist-credentials: false
 
-      - name: Enable auto-merge
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
-        env:
-          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
-          ALERT_STATE: ${{ steps.metadata.outputs.alert-state }}
-          CVSS: ${{ steps.metadata.outputs.cvss }}
-          CVSS_AUTO_MERGE_MAX: 6.9
+      - name: Resolve successful CI and hold the required per-head policy check
+        id: pr
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
-            const { owner, repo } = context.repo;
-            const pull_number = Number(process.env.PR_NUMBER);
-            const updateType = process.env.UPDATE_TYPE;
-            const alertState = process.env.ALERT_STATE;
-            const cvssRaw = process.env.CVSS;
-            const cvssLimit = Number(process.env.CVSS_AUTO_MERGE_MAX || '6.9');
-            const cvssScore = Number.parseFloat(cvssRaw);
-
-            const isPatch = updateType === 'version-update:semver-patch';
-            const isMinor = updateType === 'version-update:semver-minor';
-            const isPatchOrMinor = isPatch || isMinor;
-            const hasAlert = alertState === 'OPEN';
-            const hasCvss = Number.isFinite(cvssScore);
-            const isLowCvss = hasCvss && cvssScore <= cvssLimit;
-
-            // Allow auto-merge only for patch/minor updates.
-            // If a security alert is present, require CVSS <= limit.
-            const shouldAutoMerge = isPatchOrMinor && (!hasAlert || isLowCvss);
-
-            if (hasAlert && !hasCvss) {
-              core.info(
-                `Security alert present but CVSS is missing/invalid: update-type=${updateType}, alert-state=${alertState}, cvss=${cvssRaw}`
-              );
-            }
-
-            if (!shouldAutoMerge) {
-              core.info(
-                `Auto-merge skipped: update-type=${updateType}, alert-state=${alertState}, cvss=${cvssRaw}`
-              );
+            const { resolveRun, trusted, policyContext } = require(`${process.env.GITHUB_WORKSPACE}/.github/actions/dependabot-auto-merge/enable-auto-merge.js`);
+            const pr = await resolveRun({ github, context });
+            if (!pr) {
+              core.info('No current open main PR for this successful CI head.');
               return;
             }
+            const { data: check } = await github.rest.checks.create({
+              ...context.repo, name: policyContext, head_sha: pr.head.sha,
+              status: 'in_progress', external_id: String(context.payload.workflow_run.id),
+            });
+            core.setOutput('policy_id', check.id);
+            core.setOutput('eligible', trusted(pr, `${context.repo.owner}/${context.repo.repo}`));
+            require('node:fs').writeFileSync(`${process.env.RUNNER_TEMP}/dependabot-pr-event.json`, JSON.stringify({ pull_request: pr }));
 
-            if (!pull_number) {
-              core.warning('PR number is not available; skipping.');
-              return;
-            }
+      - name: Install the pinned safe metadata parser
+        if: steps.pr.outputs.eligible == 'true'
+        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
 
-            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      - name: Validate this head and enable native protected-branch auto-merge
+        id: enable
+        if: steps.pr.outputs.eligible == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          POLICY_CHECK_ID: ${{ steps.pr.outputs.policy_id }}
+          OBI_WAN_REVIEWER_LOGIN: ${{ vars.OBI_WAN_REVIEWER_LOGIN || 'obi-wan-code-nobi-reviewer[bot]' }}
+          LINT_EASTWOOD_REVIEWER_LOGIN: ${{ vars.LINT_EASTWOOD_REVIEWER_LOGIN || 'lint-eastwood-build-sheriff[bot]' }}
+          ROBOCOP_REVIEWER_LOGIN: ${{ vars.ROBOCOP_REVIEWER_LOGIN || 'robocop-security-officer[bot]' }}
+        with:
+          script: |
+            const { enableAutoMerge } = require(`${process.env.GITHUB_WORKSPACE}/.github/actions/dependabot-auto-merge/enable-auto-merge.js`);
+            const payload = JSON.parse(require('node:fs').readFileSync(`${process.env.RUNNER_TEMP}/dependabot-pr-event.json`, 'utf8'));
+            await enableAutoMerge({ github, core, context: { repo: context.repo, eventName: 'pull_request', payload },
+              policyCheckId: Number(process.env.POLICY_CHECK_ID), reviewerLogins: [
+                process.env.OBI_WAN_REVIEWER_LOGIN, process.env.LINT_EASTWOOD_REVIEWER_LOGIN, process.env.ROBOCOP_REVIEWER_LOGIN,
+              ],
+            });
 
-            let pr;
-            for (let attempt = 0; attempt < 60; attempt += 1) {
-              const { data } = await github.rest.pulls.get({ owner, repo, pull_number });
-              pr = data;
-
-              if (!pr) {
-                core.warning('PR data not available; skipping auto-merge handling.');
-                return;
-              }
-
-              if (pr.mergeable !== null && pr.mergeable_state !== 'unknown') {
-                break;
-              }
-
-              if (attempt < 59) {
-                core.info('Mergeability not ready yet; retrying in 5 seconds.');
-                await sleep(5000);
-              }
-            }
-
-            if (pr.merged || pr.draft) {
-              core.info('PR is already merged or a draft; skipping auto-merge.');
-              return;
-            }
-
-            if (pr.mergeable === false || pr.mergeable_state === 'dirty') {
-              core.warning('PR has merge conflicts; skipping.');
-              return;
-            }
-
-            if (pr.auto_merge) {
-              core.info('Auto-merge is already enabled; skipping.');
-              return;
-            }
-
-            if (pr.mergeable === true && pr.mergeable_state === 'unstable') {
-              core.warning('PR is unstable; attempting immediate merge anyway.');
-              try {
-                await github.rest.pulls.merge({
-                  owner,
-                  repo,
-                  pull_number,
-                  merge_method: 'merge',
-                });
-                core.info('PR merged directly while unstable.');
-              } catch (error) {
-                const message = error?.message || 'Unknown error';
-                core.warning(`Immediate merge failed: ${message}`);
-              }
-              return;
-            }
-
-            if (pr.mergeable == null || pr.mergeable_state === 'unknown' || pr.mergeable_state === 'unstable') {
-              core.warning('PR is not yet in a stable mergeable state; skipping for now.');
-              return;
-            }
-
-            const mutation = 'mutation($pullRequestId: ID!, $mergeMethod: PullRequestMergeMethod!) { enablePullRequestAutoMerge(input: { pullRequestId: $pullRequestId, mergeMethod: $mergeMethod }) { pullRequest { number } } }';
-            try {
-              await github.graphql(mutation, {
-                pullRequestId: pr.node_id,
-                mergeMethod: "MERGE",
-              });
-              core.info('Auto-merge enabled.');
-            } catch (error) {
-              const message = error?.message || 'Unknown error';
-              core.warning(`Auto-merge not enabled: ${message}`);
-            }
+      - name: Complete the per-head policy check
+        if: always() && steps.pr.outputs.policy_id != ''
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          POLICY_CHECK_ID: ${{ steps.pr.outputs.policy_id }}
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            await github.rest.checks.update({ ...context.repo, check_run_id: Number(process.env.POLICY_CHECK_ID),
+              status: 'completed', conclusion: process.env.JOB_STATUS === 'success' ? 'success' : 'failure',
+              output: { title: 'Dependabot policy for this exact head', summary: process.env.JOB_STATUS === 'success'
+                ? 'Policy passed or automatic merging is inapplicable. GitHub still enforces all branch requirements.'
+                : 'Policy validation failed; native auto-merge remains blocked by this required check.' },
+            });

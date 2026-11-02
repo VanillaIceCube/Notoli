@@ -123,18 +123,56 @@ jobs:
 
   auto-merge:
     name: Auto Merge
-    needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware]
-    if: >-
-      always() &&
-      github.event.pull_request.user.login == 'dependabot[bot]' &&
-      needs.lints.result == 'success' &&
-      needs.tests.result == 'success' &&
-      needs.codeql.result == 'success' &&
-      needs.dependency-vulnerability.result == 'success' &&
-      needs.dependency-malware.result == 'success'
-    uses: ./.github/workflows/ci-auto-merge.yml
+    needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware, code-review, build-review, security-review]
+    if: always()
+    runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
-      issues: write
-      security-events: read
+      contents: read
+    steps:
+      - name: Verify branch rules are readable with the workflow token
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            // API 2026-03-10 requires Metadata: read for this endpoint:
+            // https://docs.github.com/en/rest/repos/rules#get-rules-for-a-branch
+            const rules = await github.paginate(github.rest.repos.getBranchRules, {
+              ...context.repo, branch: 'main', per_page: 100,
+              headers: { 'X-GitHub-Api-Version': '2026-03-10' },
+            });
+            if (!rules.some((rule) => rule.type === 'required_status_checks')) {
+              throw new Error('Expected protected main-branch status rules.');
+            }
+            core.info('Live branch rules are readable with the read-only workflow token.');
+            const schema = await github.graphql('query { __type(name: "EnablePullRequestAutoMergeInput") { inputFields { name } } }');
+            if (!schema.__type.inputFields.some((field) => field.name === 'expectedHeadOid')) {
+              throw new Error('GitHub auto-merge schema lacks the required atomic head guard.');
+            }
+            core.info('Live GitHub schema supports expectedHeadOid for native auto-merge.');
+
+      - name: Report auto-merge status
+        shell: bash
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          LINT_RESULT: ${{ needs.lints.result }}
+          TEST_RESULT: ${{ needs.tests.result }}
+          CODEQL_RESULT: ${{ needs.codeql.result }}
+          VULNERABILITY_RESULT: ${{ needs.dependency-vulnerability.result }}
+          MALWARE_RESULT: ${{ needs.dependency-malware.result }}
+        run: |
+          set -euo pipefail
+
+          if [ "$PR_AUTHOR" != 'dependabot[bot]' ]; then
+            echo 'Auto-merge is not applicable to this pull request.'
+            exit 0
+          fi
+
+          if [ "$LINT_RESULT" = 'success' ] && \
+             [ "$TEST_RESULT" = 'success' ] && \
+             [ "$CODEQL_RESULT" = 'success' ] && \
+             [ "$VULNERABILITY_RESULT" = 'success' ] && \
+             [ "$MALWARE_RESULT" = 'success' ]; then
+            echo 'Dependabot eligibility will be evaluated after successful CI by the main-branch follow-up.'
+          else
+            echo 'Dependabot auto-merge is not evaluated until all independent gates pass.'
+          fi
