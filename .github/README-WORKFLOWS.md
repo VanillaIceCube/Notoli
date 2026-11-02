@@ -387,3 +387,8 @@ canonical Python/JavaScript/Actions scope policy and a successful required scope
 detector. The read-only Auto Merge CI job probes live branch-rule access using
 API 2026-03-10 and introspects `EnablePullRequestAutoMergeInput` for
 `expectedHeadOid`, validating both operations with the actual workflow token.
+
+When auto-merge implementation or CI orchestration changes, Obi-Wan receives
+read-only live branch-rule/schema evidence from the actual workflow token before
+reviewing. This supplies current API facts alongside the diff without changing
+reviewer verdict requirements or adding credentials.

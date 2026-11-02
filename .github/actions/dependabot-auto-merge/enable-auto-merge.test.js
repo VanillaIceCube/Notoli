@@ -144,6 +144,22 @@ test("CodeQL skips require successful detection and authoritative matching diff 
   assert.equal(await h.enable(), "enabled");
   h.files = [{ filename: ".github/workflows/gate-codeql.yml" }];
   await assert.rejects(h.enable(), /Required check/);
+  h.files = [{ filename: "docs/moved.py", previous_filename: "backend/moved.py" }];
+  await assert.rejects(h.enable(), /Required check/);
+});
+
+test("live API evidence requires readable branch rules and schema-supported expectedHeadOid", async () => {
+  const { collectApiEvidence } = require("./collect-api-evidence");
+  const h = harness();
+  h.github.graphql = async () => ({ __type: { inputFields: [{ name: "expectedHeadOid" }] } });
+  const evidence = await collectApiEvidence(h);
+  assert.equal(evidence.branch_rules_read_with_workflow_token, "success");
+  assert.deepEqual(evidence.auto_merge_input_fields, ["expectedHeadOid"]);
+  assert.equal(h.calls.length, 0);
+  h.github.graphql = async () => ({ __type: { inputFields: [] } });
+  await assert.rejects(collectApiEvidence(h), /lacks expectedHeadOid/);
+  h.rules = [];
+  await assert.rejects(collectApiEvidence(h), /protected main/);
 });
 
 test("approvals must come from every persona on this head; comments do not clear blockers", async () => {

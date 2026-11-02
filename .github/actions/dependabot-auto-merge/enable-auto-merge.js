@@ -149,7 +149,7 @@ async function enableAutoMerge({ github, context, core, metadata, sleep = (ms) =
   // These are API diff paths, never artifact-supplied scope claims. The required
   // detector must succeed too. Mirror gate-codeql.yml's Python/JS/Actions paths.
   const files = await github.paginate(github.rest.pulls.listFiles, { ...request, per_page: 100 });
-  verifyChecks(rules, checks, files.map((file) => file.filename));
+  verifyChecks(rules, checks, files.flatMap((file) => [file.filename, file.previous_filename].filter(Boolean)));
   const reviews = await github.paginate(github.rest.pulls.listReviews, { ...request, per_page: 100 });
   verifyReviews(reviews, pr.head.sha);
   if (pr.auto_merge) {
