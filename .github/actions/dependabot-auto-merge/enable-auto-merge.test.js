@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
-const { codeqlSkipAllowed, enableAutoMerge, eligible, independentChecks, parseMetadata, policyContext, reviewers, resolveRun, verifyAlerts, verifyReviews } = require("./enable-auto-merge");
+const { scopeAllowsSkip, enableAutoMerge, eligible, independentChecks, parseMetadata, policyContext, reviewers, resolveRun, verifyAlerts, verifyReviews } = require("./enable-auto-merge");
 
 function harness() {
   const h = {
@@ -136,11 +136,11 @@ test("latest check rerun supersedes an earlier failure, but not a newer pending 
 });
 
 test("CodeQL skips require successful detection and authoritative matching diff scope", async () => {
-  assert.equal(codeqlSkipAllowed("CodeQL / Analyze Python", ["frontend/package-lock.json"]), true);
-  assert.equal(codeqlSkipAllowed("CodeQL / Analyze JavaScript/TypeScript", ["backend/requirements.txt"]), true);
-  assert.equal(codeqlSkipAllowed("CodeQL / Analyze GitHub Actions", ["README.md"]), true);
+  assert.equal(scopeAllowsSkip("CodeQL / Analyze Python", ["frontend/package-lock.json"]), true);
+  assert.equal(scopeAllowsSkip("CodeQL / Analyze JavaScript/TypeScript", ["backend/requirements.txt"]), true);
+  assert.equal(scopeAllowsSkip("CodeQL / Analyze GitHub Actions", ["README.md"]), true);
   for (const files of [undefined, ["backend/requirements.txt"], [".github/workflows/gate-codeql.yml"], [".github/actions/guard/action.yml"]]) {
-    assert.equal(codeqlSkipAllowed("CodeQL / Analyze Python", files), false);
+    assert.equal(scopeAllowsSkip("CodeQL / Analyze Python", files), false);
   }
   const h = harness(); const name = "CodeQL / Analyze Python";
   h.rules[1].parameters.required_status_checks.push({ context: name });
@@ -153,19 +153,24 @@ test("CodeQL skips require successful detection and authoritative matching diff 
   await assert.rejects(h.enable(), /Required check/);
 });
 
-test("live API evidence requires readable branch rules and schema-supported expectedHeadOid", async () => {
-  const { collectApiEvidence } = require("./collect-api-evidence");
-  const h = harness();
-  h.github.graphql = async () => ({ __type: { inputFields: [{ name: "expectedHeadOid" }] } });
-  const evidence = await collectApiEvidence(h);
-  assert.equal(evidence.branch_rules_read_with_workflow_token, "success");
-  assert.deepEqual(evidence.auto_merge_input_fields, ["expectedHeadOid"]);
-  assert.equal(h.calls.length, 0);
-  h.github.graphql = async () => ({ __type: { inputFields: [] } });
-  await assert.rejects(collectApiEvidence(h), /lacks expectedHeadOid/);
-  h.rules = [];
-  await assert.rejects(collectApiEvidence(h), /protected main/);
+test("lint and test skips require the actual detector to authorize that path scope", async () => {
+  for (const [name, file] of [
+    ["Lints / Lint Frontend (ESLint + Prettier)", "frontend/package.json"],
+    ["Lints / Lint Backend (Ruff)", "backend/requirements.txt"],
+    ["Tests / Frontend Tests (React)", "frontend/package-lock.json"],
+    ["Tests / Backend Tests (Django)", "backend/app/settings.py"],
+    ["Tests / Automation Tests (Node)", ".github/actions/publish-ai-review/action.yml"],
+  ]) {
+    assert.equal(scopeAllowsSkip(name, [file]), false, name);
+    assert.equal(scopeAllowsSkip(name, ["README.md"]), true, name);
+    const h = harness();
+    h.rules[1].parameters.required_status_checks.push({ context: name });
+    h.checks.push({ ...h.checks[0], name, conclusion: "skipped", id: 100 });
+    h.files = [{ filename: file }];
+    await assert.rejects(h.enable(), /Required check/);
+  }
 });
+
 
 test("approvals must come from every persona on this head; comments do not clear blockers", async () => {
   for (const mutate of [
@@ -276,6 +281,7 @@ test("all open alerts across all group members enforce the CVSS ceiling", async 
   verifyAlerts(dependencies, [alert("one", "dismissed", 9.8), alert("two", "fixed", 9.8)]);
   assert.throws(() => verifyAlerts(dependencies, [alert("one", "open", 1), alert("two", "open", 9.8)]), /CVSS/);
   assert.throws(() => verifyAlerts(dependencies, [alert("two", "open", null)]), /CVSS/);
+  assert.throws(() => verifyAlerts([{ dependencyName: "github/codeql-action/init" }], [alert("github/codeql-action", "open", 9.8)]), /CVSS/);
   const h = harness(); h.alerts = Array.from({ length: 101 }, () => alert("other", "open", 1));
   h.alerts.push(alert("example", "open", 9.8));
   await assert.rejects(h.enable(), /CVSS/);
@@ -322,4 +328,6 @@ test("privileged workflow uses only main code and verified metadata, with no imm
   assert.match(workflow, /github.rest.checks.create/);
   assert.match(workflow, /github.rest.checks.update/);
   assert.doesNotMatch(workflow, /GITHUB_EVENT_PATH:/);
+  const reviewCode = fs.readFileSync(path.join(workflows, "review-code.yml"), "utf8");
+  assert.doesNotMatch(reviewCode, /require\(`\$\{process.env.GITHUB_WORKSPACE\}\/\.github\/actions\/dependabot-auto-merge/);
 });

@@ -59,16 +59,13 @@ function verifyReviews(reviews, head, reviewerLogins = Object.keys(reviewers)) {
   }
 }
 
-function codeqlSkipAllowed(name, files) {
+function scopeAllowsSkip(name, files) {
   if (!Array.isArray(files)) return false;
-  const shared = (file) => /^\.github\/(actions|workflows|codeql)\//.test(file);
-  const python = files.some((file) => shared(file) || file.startsWith("backend/"));
-  const javascript = files.some((file) => shared(file) || file.startsWith("frontend/"));
-  return {
-    "CodeQL / Analyze Python": !python,
-    "CodeQL / Analyze JavaScript/TypeScript": !javascript,
-    "CodeQL / Analyze GitHub Actions": !python && !javascript,
-  }[name] === true;
+  const result = spawnSync(process.platform === "win32" ? "python" : "python3", [path.join(__dirname, "check-scope.py")], {
+    input: JSON.stringify({ name, files }), encoding: "utf8", env: { ...process.env, PYTHONUTF8: "1" }, maxBuffer: 1024 * 1024,
+  });
+  if (result.error || result.status !== 0) throw new Error("Unable to authorize skipped check against the reviewed scope detector");
+  return JSON.parse(result.stdout) === true;
 }
 
 function verifyChecks(rules, checks, files, policyCheckId) {
@@ -97,7 +94,7 @@ function verifyChecks(rules, checks, files, policyCheckId) {
     if (requirement.context === policyContext && check && check.id === policyCheckId &&
         check.status === "in_progress" && !check.conclusion) continue;
     const expectedSkip = scopedChecks.has(requirement.context) && check?.conclusion === "skipped" &&
-      (!requirement.context.startsWith("CodeQL / Analyze ") || codeqlSkipAllowed(requirement.context, files));
+      scopeAllowsSkip(requirement.context, files);
     if (check?.status !== "completed" || (check.conclusion !== "success" && !expectedSkip)) {
       throw new Error(`Required check is not passing: ${requirement.context}`);
     }
@@ -137,7 +134,11 @@ function parseMetadata(message) {
 function verifyAlerts(dependencies, alerts) {
   const normalize = (name) => name.toLowerCase().replace(/[-_.]+/g, "-");
   for (const alert of alerts) {
-    if (alert.state !== "open" || !dependencies.some((dependency) => normalize(dependency.dependencyName) === normalize(alert.dependency?.package?.name || ""))) continue;
+    const packageName = normalize(alert.dependency?.package?.name || "");
+    if (alert.state !== "open" || !packageName || !dependencies.some((dependency) => {
+      const name = normalize(dependency.dependencyName);
+      return name === packageName || name.startsWith(packageName + "/") || packageName.startsWith(name + "/");
+    })) continue;
     const scores = [alert.security_advisory?.cvss?.score,
       alert.security_advisory?.cvss_severities?.cvss_v3?.score,
       alert.security_advisory?.cvss_severities?.cvss_v4?.score].filter((score) => typeof score === "number" && Number.isFinite(score));
@@ -220,4 +221,4 @@ async function enableAutoMerge({ github, context, core, policyCheckId, reviewerL
   return "enabled";
 }
 
-module.exports = { codeqlSkipAllowed, enableAutoMerge, eligible, independentChecks, parseMetadata, policyContext, reviewers, resolveRun, trusted, verifyAlerts, verifyChecks, verifyReviews };
+module.exports = { scopeAllowsSkip, enableAutoMerge, eligible, independentChecks, parseMetadata, policyContext, reviewers, resolveRun, trusted, verifyAlerts, verifyChecks, verifyReviews };

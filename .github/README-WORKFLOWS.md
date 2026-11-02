@@ -412,3 +412,8 @@ validates the new permission and CI must pass before merge.
 
 The reviewer API evidence step uses direct read-only API calls and executes no
 PR-workspace module with its GitHub client.
+
+Every skipped lint, test or analyzer check is now verified against the actual
+reviewed detector filters, with original and renamed API diff paths. Unknown
+filter forms refuse skip authorization. GitHub Action subpaths also match their
+repository-level package alerts when enforcing the CVSS ceiling.
