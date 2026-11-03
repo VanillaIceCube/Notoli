@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-support/utils';
 import ResetPassword from './ResetPassword';
@@ -76,5 +76,35 @@ describe('ResetPassword', () => {
     });
     expect(showSnackbar).toHaveBeenCalledWith('success', 'Password reset successful.');
     expect(mockNavigate).toHaveBeenCalledWith('/login');
+  });
+  test('blocks duplicate submissions and recovers after a validation failure', async () => {
+    const showSnackbar = jest.fn();
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    let resolveRequest;
+    resetPassword.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRequest = resolve;
+      }),
+    );
+    renderWithProviders(<ResetPassword showSnackbar={showSnackbar} />, {
+      routeEntries: ['/reset-password?uid=test-user&token=test-token'],
+    });
+    await userEvent.type(screen.getByLabelText('New Password'), 'new-secret');
+    await userEvent.type(screen.getByLabelText('Confirm Password'), 'new-secret');
+    await userEvent.click(screen.getByRole('button', { name: 'Reset Password' }));
+    const pendingButton = screen.getByRole('button', { name: 'Resetting...' });
+    expect(pendingButton).toBeDisabled();
+    fireEvent.click(pendingButton);
+    expect(resetPassword).toHaveBeenCalledTimes(1);
+    resolveRequest({
+      ok: false,
+      status: 400,
+      json: async () => ({ password: ['Validation failed.'] }),
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Reset Password' })).toBeEnabled(),
+    );
+    expect(showSnackbar).toHaveBeenCalledWith('error', 'Validation failed.');
+    consoleError.mockRestore();
   });
 });

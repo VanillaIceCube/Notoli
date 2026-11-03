@@ -145,4 +145,30 @@ describe('authSession', () => {
       setItem.mockRestore();
     });
   });
+  test('cleans missing and whitespace-only profile fields after a new login', () => {
+    sessionStorage.setItem('username', 'old-user');
+    sessionStorage.setItem('email', 'old@example.com');
+    persistAuthSession({
+      access: 'new-access',
+      refresh: 'new-refresh',
+      username: '   ',
+      email: null,
+    });
+    expect(sessionStorage.getItem('username')).toBeNull();
+    expect(sessionStorage.getItem('email')).toBeNull();
+    persistAuthSession({
+      access: 'new-access',
+      refresh: 'new-refresh',
+      username: ' mapper ',
+      email: ' mapper@example.com ',
+    });
+    expect(sessionStorage.getItem('username')).toBe('mapper');
+    expect(sessionStorage.getItem('email')).toBe('mapper@example.com');
+  });
+  test('extracts nested password validation errors without stringifying arrays', async () => {
+    const response = { json: async () => ({ password: ['This password is too common.'] }) };
+    await expect(getResponseErrorMessage(response, 'fallback')).resolves.toBe(
+      'This password is too common.',
+    );
+  });
 });
