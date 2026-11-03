@@ -128,22 +128,90 @@ async function refreshAccessToken() {
   return refreshRequest;
 }
 
+export function normalizeHeaders(headers) {
+  if (!headers) return {};
+  const result = {};
+  if (typeof Headers !== 'undefined' && headers instanceof Headers) {
+    headers.forEach((value, key) => {
+      if (value !== undefined && value !== null) {
+        result[key] = value;
+      }
+    });
+    return result;
+  }
+  if (Array.isArray(headers)) {
+    headers.forEach(([key, value]) => {
+      if (key && value !== undefined && value !== null) {
+        result[key] = value;
+      }
+    });
+    return result;
+  }
+  Object.entries(headers).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      result[key] = value;
+    }
+  });
+  return result;
+}
+
+function hasAuthorizationHeader(headers) {
+  return Object.entries(headers).some(
+    ([key, value]) => key.toLowerCase() === 'authorization' && Boolean(value),
+  );
+}
+
+function getStoredAccessToken() {
+  try {
+    const token = sessionStorage.getItem('accessToken');
+    return typeof token === 'string' && token.trim() ? token.trim() : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function removeAuthorizationHeaders(headers) {
+  Object.keys(headers).forEach((key) => {
+    if (key.toLowerCase() === 'authorization') {
+      delete headers[key];
+    }
+  });
+}
+
 function withAccessToken(options, accessToken) {
+  const headers = normalizeHeaders(options.headers);
+  removeAuthorizationHeaders(headers);
+  headers.Authorization = `Bearer ${accessToken}`;
   return {
     ...options,
-    headers: { ...(options.headers || {}), Authorization: `Bearer ${accessToken}` },
+    headers,
   };
 }
 
 export async function apiFetch(path, options = {}) {
   const { authReturnTo, ...requestOptions } = options;
   const url = `${API_BASE_URL}${path}`;
-  const response = await fetch(url, requestOptions);
+  const headers = normalizeHeaders(requestOptions.headers);
+
+  const storedToken = getStoredAccessToken();
+  if (storedToken && !hasAuthorizationHeader(headers) && shouldRedirectToLogin(path)) {
+    removeAuthorizationHeaders(headers);
+    headers.Authorization = `Bearer ${storedToken}`;
+  }
+
+  const mergedOptions = { ...requestOptions };
+  if (Object.keys(headers).length > 0) {
+    mergedOptions.headers = headers;
+  } else {
+    delete mergedOptions.headers;
+  }
+
+  const response = await fetch(url, mergedOptions);
 
   if (response?.status === 401 && shouldRedirectToLogin(path)) {
     const refreshResult = await refreshAccessToken();
     if (refreshResult.status === 'refreshed') {
-      const retried = await fetch(url, withAccessToken(requestOptions, refreshResult.accessToken));
+      const retried = await fetch(url, withAccessToken(mergedOptions, refreshResult.accessToken));
       if (retried?.status === 401 && authReturnTo) handleUnauthorized(authReturnTo);
       return retried;
     }

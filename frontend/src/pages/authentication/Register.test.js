@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-support/utils';
 import Register from './Register';
@@ -138,5 +138,32 @@ describe('Register', () => {
 
     expect(register).not.toHaveBeenCalled();
     expect(showSnackbar).toHaveBeenCalledWith('error', 'Passwords do not match.');
+  });
+  test('blocks duplicate submissions and recovers after a validation failure', async () => {
+    const showSnackbar = jest.fn();
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    let resolveRequest;
+    register.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRequest = resolve;
+      }),
+    );
+    renderWithProviders(<Register showSnackbar={showSnackbar} />, { routeEntries: ['/register'] });
+    await userEvent.type(screen.getByLabelText('Email'), 'mapper@example.com');
+    await userEvent.type(screen.getByLabelText('Password'), 'secret');
+    await userEvent.type(screen.getByLabelText('Confirm Password'), 'secret');
+    await userEvent.click(screen.getByRole('button', { name: 'Register' }));
+    const pendingButton = screen.getByRole('button', { name: 'Registering...' });
+    expect(pendingButton).toBeDisabled();
+    fireEvent.click(pendingButton);
+    expect(register).toHaveBeenCalledTimes(1);
+    resolveRequest({
+      ok: false,
+      status: 400,
+      json: async () => ({ password: ['Validation failed.'] }),
+    });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Register' })).toBeEnabled());
+    expect(showSnackbar).toHaveBeenCalledWith('error', 'Validation failed.');
+    consoleError.mockRestore();
   });
 });

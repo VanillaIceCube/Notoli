@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -32,14 +33,16 @@ class NotificationViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["patch"], url_path="mark-all-read")
     def mark_all_read(self, request):
-        updated = (
-            self.get_queryset()
-            .filter(is_read=False)
-            .update(is_read=True, read_at=timezone.now())
-        )
+        with transaction.atomic():
+            updated = (
+                self.get_queryset()
+                .filter(is_read=False)
+                .update(is_read=True, read_at=timezone.now())
+            )
         return Response({"updated": updated}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["delete"], url_path="clear-all")
     def clear_all(self, request):
-        deleted, _ = self.get_queryset().delete()
+        with transaction.atomic():
+            deleted, _ = self.get_queryset().delete()
         return Response({"deleted": deleted}, status=status.HTTP_200_OK)

@@ -280,3 +280,12 @@ Static files:
 ## 🔌 Shared MCP framework
 
 See [the MCP framework guide](../docs/MCP-FRAMEWORK.md) for opt-in settings, ASGI startup, OAuth migrations/client registration, consent, scope/ownership requirements and disabled-profile tests.
+
+## Authentication and notification parity
+
+Registration validates passwords with Django's configured validators against the
+candidate user's final username/email before account creation. Validation failures
+return HTTP 400 with a human-readable `error`; non-string passwords also return
+400. Password reset already validates against the existing user. Notification
+bulk mark-read/clear operations are transactional and remain recipient-scoped.
+See [the adoption audit](../docs/AUTH-PARITY.md) for evidence and boundaries.

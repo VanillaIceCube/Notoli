@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-support/utils';
 import Login from './Login';
@@ -428,5 +428,31 @@ describe('Login', () => {
     } finally {
       consoleError.mockRestore();
     }
+  });
+  test('blocks duplicate submissions and recovers after a validation failure', async () => {
+    const showSnackbar = jest.fn();
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    let resolveRequest;
+    login.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRequest = resolve;
+      }),
+    );
+    renderWithProviders(<Login showSnackbar={showSnackbar} />, { routeEntries: ['/login'] });
+    await userEvent.type(screen.getByLabelText('Email'), 'mapper@example.com');
+    await userEvent.type(screen.getByLabelText('Password'), 'secret');
+    await userEvent.click(screen.getByRole('button', { name: 'Login' }));
+    const pendingButton = screen.getByRole('button', { name: 'Logging in...' });
+    expect(pendingButton).toBeDisabled();
+    fireEvent.click(pendingButton);
+    expect(login).toHaveBeenCalledTimes(1);
+    resolveRequest({
+      ok: false,
+      status: 400,
+      json: async () => ({ password: ['Validation failed.'] }),
+    });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Login' })).toBeEnabled());
+    expect(showSnackbar).toHaveBeenCalledWith('error', 'Login failed :(');
+    consoleError.mockRestore();
   });
 });

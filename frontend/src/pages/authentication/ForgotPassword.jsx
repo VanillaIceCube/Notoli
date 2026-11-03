@@ -5,10 +5,13 @@ import { forgotPassword } from '../../services/notoliApiClient';
 import { readOkJson } from '../../services/authSession';
 
 export default function ForgotPassword({ showSnackbar }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const response = await forgotPassword({ email: email.trim() });
       const data = await readOkJson(response, 'Password reset request failed :(');
@@ -26,6 +29,8 @@ export default function ForgotPassword({ showSnackbar }) {
         isNetworkError ? 'Network error :(' : err?.message || 'Password reset request failed :(',
       );
       console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -72,10 +77,11 @@ export default function ForgotPassword({ showSnackbar }) {
             fullWidth
             sx={{ backgroundColor: 'var(--secondary-color)' }}
             type="submit"
+            disabled={isSubmitting}
             variant="contained"
           >
             <Typography variant="h6" align="center">
-              Send Reset Link
+              {isSubmitting ? 'Sending...' : 'Send Reset Link'}
             </Typography>
           </Button>
           <Box

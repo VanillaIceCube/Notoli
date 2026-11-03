@@ -196,3 +196,18 @@ the sync/async traversal calls used here and adopts minimatch 11. Run Jest with
 and coverage file discovery. GitHub's runtime classification for minimatch
 reflects the existing dependency placement; production serves the built static
 assets. The fixed follow-redirects dependency remains unchanged.
+
+## Authentication and notification reliability
+
+All four authentication forms disable submission while requests are pending and
+restore it after failure. New sessions trim profile strings and remove absent or
+blank username/email fields. The request client normalizes object, tuple-array
+and native `Headers` inputs, preserves custom headers on one JWT refresh/retry,
+and attaches the stored access token when explicit Authorization is absent
+outside public auth forms. Invalid refresh credentials clear tokens/profile;
+transient refresh failures preserve the session. Existing consent return paths
+remain application-specific.
+
+Notifications expose Retry and retain failed actions. Item/bulk controls disable
+overlapping actions through response parsing. Failed/malformed mark-read responses
+keep the inbox open instead of navigating. See [the audit](../docs/AUTH-PARITY.md).

@@ -70,6 +70,58 @@ class AuthMethodTests(APITestCase):
 
 
 class RegistrationTests(APITestCase):
+    def test_register_rejects_weak_password(self):
+        response = self.client.post(
+            "/auth/register/",
+            {"email": "mapper@example.com", "password": "short"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
+        self.assertIn("too short", response.data["error"].lower())
+        self.assertFalse(User.objects.filter(email="mapper@example.com").exists())
+
+    def test_register_rejects_common_numeric_and_user_similar_passwords(self):
+        for password in ("password", "123456789012", "mapper", "macro_mapper"):
+            with self.subTest(password=password):
+                response = self.client.post(
+                    "/auth/register/",
+                    {
+                        "email": "mapper@example.com",
+                        "username": "macro_mapper",
+                        "password": password,
+                    },
+                    format="json",
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertFalse(
+                    User.objects.filter(email="mapper@example.com").exists()
+                )
+
+    def test_register_checks_similarity_to_derived_username(self):
+        response = self.client.post(
+            "/auth/register/",
+            {"email": "longusername@example.com", "password": "longusername"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("too similar", response.data["error"].lower())
+        self.assertFalse(User.objects.filter(email="longusername@example.com").exists())
+
+    def test_register_rejects_non_string_password_without_creating_user(self):
+        for password in (123456789, ["long-password"], {"value": "long-password"}):
+            with self.subTest(password=password):
+                response = self.client.post(
+                    "/auth/register/",
+                    {"email": "invalid-password@example.com", "password": password},
+                    format="json",
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertFalse(
+                    User.objects.filter(email="invalid-password@example.com").exists()
+                )
+
     def test_register_success(self):
         response = self.client.post(
             "/auth/register/",
