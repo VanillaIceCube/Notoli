@@ -356,19 +356,24 @@ describe('AppHeader', () => {
     });
     expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
-  test('retries a failed load without reporting an empty inbox', async () => {
-    sessionStorage.setItem('accessToken', 'access');
-    fetchNotifications
-      .mockRejectedValueOnce(new Error('offline'))
-      .mockResolvedValueOnce(jsonResponse([]));
-    renderWithProviders(<AppHeader appBarHeader="Notoli" setDrawerOpen={setDrawerOpen} />);
-    await userEvent.click(screen.getByLabelText('notifications'));
-    expect(await screen.findByText('Notifications are unavailable right now.')).toBeInTheDocument();
-    expect(screen.queryByText('No notifications yet.')).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByText('No notifications yet.')).toBeInTheDocument();
-    expect(fetchNotifications).toHaveBeenCalledTimes(2);
-  });
+  test.each(['network', 'malformed'])(
+    'retries a failed load without reporting an empty inbox (%s)',
+    async (failure) => {
+      sessionStorage.setItem('accessToken', 'access');
+      if (failure === 'network') fetchNotifications.mockRejectedValueOnce(new Error('offline'));
+      else fetchNotifications.mockResolvedValueOnce(jsonResponse({ invalid: true }));
+      fetchNotifications.mockResolvedValueOnce(jsonResponse([]));
+      renderWithProviders(<AppHeader appBarHeader="Notoli" setDrawerOpen={setDrawerOpen} />);
+      await userEvent.click(screen.getByLabelText('notifications'));
+      expect(
+        await screen.findByText('Notifications are unavailable right now.'),
+      ).toBeInTheDocument();
+      expect(screen.queryByText('No notifications yet.')).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(await screen.findByText('No notifications yet.')).toBeInTheDocument();
+      expect(fetchNotifications).toHaveBeenCalledTimes(2);
+    },
+  );
   test('keeps failed clear actions visible and allows retry', async () => {
     sessionStorage.setItem('accessToken', 'access');
     fetchNotifications.mockResolvedValue(
