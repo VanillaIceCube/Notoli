@@ -106,6 +106,7 @@ describe('requestClient', () => {
     await apiFetch('/path', options);
 
     expect(global.fetch).toHaveBeenCalledWith('http://localhost:8000/path', options);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   test('when a non-auth endpoint and refresh token are invalid, it clears tokens and redirects to /login', async () => {
@@ -322,6 +323,7 @@ describe('requestClient', () => {
       headers: customHeaders,
     });
 
+    expect(global.fetch).toHaveBeenCalledTimes(3); // Initial request, refresh, one retry.
     expect(response.ok).toBe(true);
     expect(global.fetch).toHaveBeenLastCalledWith('http://localhost:8000/api/custom/', {
       method: 'POST',
@@ -369,6 +371,7 @@ describe('requestClient', () => {
       headers: { authorization: 'Bearer OLD_ACCESS', 'x-custom': 'test' },
     });
 
+    expect(global.fetch).toHaveBeenCalledTimes(3); // Initial request, refresh, one retry.
     expect(response.ok).toBe(true);
     expect(global.fetch).toHaveBeenLastCalledWith('http://localhost:8000/api/custom/', {
       method: 'GET',
