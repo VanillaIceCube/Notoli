@@ -103,6 +103,31 @@ jobs:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
 
+      - name: Collect read-only auto-merge API evidence
+        if: steps.pr-diff.outputs.truncated != 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...context.repo, pull_number: context.payload.pull_request.number, per_page: 100,
+            });
+            if (files.some((file) => file.filename.startsWith('.github/actions/dependabot-auto-merge/') ||
+              ['.github/workflows/ci-auto-merge.yml', '.github/workflows/ci-orchestrator.yml'].includes(file.filename))) {
+              // Direct read-only API calls; do not execute PR-workspace modules with this client.
+              const rules = await github.paginate(github.rest.repos.getBranchRules, {
+                ...context.repo, branch: 'main', per_page: 100,
+                headers: { 'X-GitHub-Api-Version': '2026-03-10' },
+              });
+              const schema = await github.graphql('query { __type(name: "EnablePullRequestAutoMergeInput") { inputFields { name } } }');
+              const evidence = { api_version: '2026-03-10', branch_rules_read_with_workflow_token: 'success',
+                rule_types: rules.map((rule) => rule.type), auto_merge_input_fields: schema.__type.inputFields.map((field) => field.name) };
+              if (!evidence.rule_types.includes('required_status_checks') || !evidence.auto_merge_input_fields.includes('expectedHeadOid')) {
+                throw new Error('Live GitHub API contracts do not satisfy protected auto-merge requirements.');
+              }
+              require('node:fs').writeFileSync(`${process.env.RUNNER_TEMP}/auto-merge-api-evidence.json`, JSON.stringify(evidence, null, 2));
+              core.info(JSON.stringify(evidence));
+            }
+
       - name: Build code review context
         if: steps.pr-diff.outputs.truncated != 'true'
         shell: bash
@@ -191,6 +216,11 @@ jobs:
           {
             echo
             printf 'Changed-file context bytes included: %s / %s\n' "$total_bytes" "$max_total_bytes"
+            if [ -f "$RUNNER_TEMP/auto-merge-api-evidence.json" ]; then
+              echo
+              echo '=== LIVE GITHUB API CONTRACT EVIDENCE (READ-ONLY WORKFLOW TOKEN) ==='
+              cat "$RUNNER_TEMP/auto-merge-api-evidence.json"
+            fi
             if [ "$DEPENDABOT_UPDATE_TYPE" = 'version-update:semver-major' ]; then
               echo
               echo '=== DEPENDABOT MAJOR UPGRADE EVIDENCE ==='

@@ -62,6 +62,8 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
   const [notifications, setNotifications] = useState([]);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationError, setNotificationError] = useState('');
+  const [actionPending, setActionPending] = useState(false);
+  const [pendingIds, setPendingIds] = useState(() => new Set());
   const notificationsOpen = Boolean(notificationAnchorEl);
 
   const profileUsername = safeGetSessionItem('username');
@@ -88,7 +90,9 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
       if (!response.ok) {
         throw new Error('Unable to load notifications.');
       }
-      setNotifications(await response.json());
+      const data = await response.json();
+      if (!Array.isArray(data)) throw new Error('Invalid notification response.');
+      setNotifications(data);
     } catch (_err) {
       setNotificationError('Notifications are unavailable right now.');
     } finally {
@@ -100,55 +104,63 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
     loadNotifications();
   }, [loadNotifications]);
 
-  const handleMarkRead = async (notificationId) => {
+  const updateNotification = async (
+    notificationId,
+    operation,
+    errorMessage,
+    readUpdated = false,
+  ) => {
     setNotificationError('');
+    setPendingIds((prev) => new Set(prev).add(notificationId));
     try {
-      const response = await markNotificationRead(notificationId, accessToken);
-      if (!response.ok) {
-        throw new Error('Unable to mark notification read.');
+      const response = await operation(notificationId, accessToken);
+      if (!response?.ok) throw new Error(errorMessage);
+      if (readUpdated) {
+        const updated = await response.json();
+        if (!updated || updated.id !== notificationId || updated.is_read !== true) {
+          throw new Error(errorMessage);
+        }
+        return updated;
       }
-      const updatedNotification = await response.json();
-      setNotifications((currentNotifications) =>
-        currentNotifications.map((notification) =>
-          notification.id === updatedNotification.id ? updatedNotification : notification,
-        ),
-      );
-    } catch (_err) {
-      setNotificationError('Could not update that notification.');
+      return response;
+    } catch (_error) {
+      setNotificationError(errorMessage);
+      return null;
+    } finally {
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(notificationId);
+        return next;
+      });
     }
   };
 
   const handleClearNotification = async (notificationId) => {
-    setNotificationError('');
-    try {
-      const response = await clearNotification(notificationId, accessToken);
-      if (!response.ok) {
-        throw new Error('Unable to clear notification.');
-      }
-      setNotifications((currentNotifications) =>
-        currentNotifications.filter((notification) => notification.id !== notificationId),
-      );
-    } catch (_err) {
-      setNotificationError('Could not clear that notification.');
-    }
-  };
-
-  const handleClearAllNotifications = async () => {
-    setNotificationError('');
-    try {
-      const response = await clearAllNotifications(accessToken);
-      if (!response.ok) {
-        throw new Error('Unable to clear notifications.');
-      }
-      setNotifications([]);
-    } catch (_err) {
-      setNotificationError('Could not clear notifications.');
-    }
+    if (pendingIds.has(notificationId) || actionPending) return;
+    const response = await updateNotification(
+      notificationId,
+      clearNotification,
+      'Could not clear that notification.',
+    );
+    if (!response) return;
+    setNotifications((current) =>
+      current.filter((notification) => notification.id !== notificationId),
+    );
   };
 
   const handleOpenNotification = async (notification) => {
+    if (pendingIds.has(notification.id) || actionPending) return;
     if (!notification.is_read) {
-      await handleMarkRead(notification.id);
+      const updated = await updateNotification(
+        notification.id,
+        markNotificationRead,
+        'Could not update that notification.',
+        true,
+      );
+      if (!updated) return;
+      setNotifications((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
     }
     if (notification.target_path) {
       setNotificationAnchorEl(null);
@@ -157,17 +169,34 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
   };
 
   const handleMarkAllRead = async () => {
+    if (actionPending || pendingIds.size > 0) return;
     setNotificationError('');
+    setActionPending(true);
     try {
       const response = await markAllNotificationsRead(accessToken);
-      if (!response.ok) {
-        throw new Error('Unable to mark all notifications read.');
-      }
-      setNotifications((currentNotifications) =>
-        currentNotifications.map((notification) => ({ ...notification, is_read: true })),
+      if (!response?.ok) throw new Error();
+      setNotifications((current) =>
+        current.map((notification) => ({ ...notification, is_read: true })),
       );
-    } catch (_err) {
+    } catch (_error) {
       setNotificationError('Could not update notifications.');
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const handleClearAllNotifications = async () => {
+    if (actionPending || pendingIds.size > 0) return;
+    setNotificationError('');
+    setActionPending(true);
+    try {
+      const response = await clearAllNotifications(accessToken);
+      if (!response?.ok) throw new Error();
+      setNotifications([]);
+    } catch (_error) {
+      setNotificationError('Could not clear notifications.');
+    } finally {
+      setActionPending(false);
     }
   };
 
@@ -259,6 +288,7 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                 {notifications.length > 0 && (
                   <Button
                     size="small"
+                    disabled={actionPending || pendingIds.size > 0}
                     sx={{ color: 'var(--secondary-color)', fontWeight: 'bold' }}
                     onClick={unreadCount > 0 ? handleMarkAllRead : handleClearAllNotifications}
                   >
@@ -273,16 +303,28 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                 </Box>
               )}
               {!notificationsLoading && notificationError && (
-                <Typography role="status" variant="body2" sx={{ py: 2 }}>
-                  {notificationError}
-                </Typography>
+                <Stack spacing={1} sx={{ alignItems: 'flex-start' }}>
+                  <Typography role="status" variant="body2" sx={{ py: 2 }}>
+                    {notificationError}
+                  </Typography>
+                  {notifications.length === 0 && (
+                    <Button
+                      size="small"
+                      color="inherit"
+                      disabled={actionPending || pendingIds.size > 0}
+                      onClick={loadNotifications}
+                    >
+                      Retry
+                    </Button>
+                  )}
+                </Stack>
               )}
               {!notificationsLoading && !notificationError && notifications.length === 0 && (
                 <Typography variant="body2" sx={{ py: 0.25 }}>
                   No notifications yet.
                 </Typography>
               )}
-              {!notificationsLoading && !notificationError && notifications.length > 0 && (
+              {!notificationsLoading && notifications.length > 0 && (
                 <List dense disablePadding sx={{ maxHeight: 360, overflowY: 'auto', mt: 1 }}>
                   {notifications.map((notification, index) => {
                     const notificationLocation = [notification.board_name, notification.list_name]
@@ -298,6 +340,7 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                         sx={{ borderColor: 'rgba(0, 0, 0, 0.12)' }}
                       >
                         <ListItemButton
+                          disabled={actionPending || pendingIds.has(notification.id)}
                           dense
                           onClick={() => handleOpenNotification(notification)}
                           sx={{
@@ -327,6 +370,7 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                           <Tooltip title="Clear notification">
                             <IconButton
                               aria-label="Clear notification"
+                              disabled={actionPending || pendingIds.has(notification.id)}
                               size="small"
                               onClick={(event) => {
                                 event.stopPropagation();
