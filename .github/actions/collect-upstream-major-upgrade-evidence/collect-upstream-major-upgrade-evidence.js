@@ -2,13 +2,6 @@
 
 const DEFAULT_RELEASE_NOTE_LIMIT = 12000;
 
-function parseDependencyNames(value) {
-  return String(value || "")
-    .split(",")
-    .map((name) => name.trim())
-    .filter(Boolean);
-}
-
 function truncate(value, limit = DEFAULT_RELEASE_NOTE_LIMIT) {
   const text = String(value || "").trim();
   if (text.length <= limit) return text;
@@ -36,45 +29,75 @@ function packageRepositoryUrl(metadata) {
   return typeof repository === "string" ? repository : repository?.url;
 }
 
-function majorReleaseVersion(value) {
-  const match = String(value || "").match(/^(\d+)\.\d+\.\d+(?:[-+].*)?$/);
+const MAJOR_UPDATE = "version-update:semver-major";
+const ACTION_ECOSYSTEMS = new Set(["github-actions", "github_actions"]);
+
+function majorReleaseVersion(version) {
+  const match = version.match(/^(\d+)\.\d+\.\d+(?:[-+].*)?$/);
   return match ? `${match[1]}.0.0` : "";
 }
 
+function releaseTags(version, isAction) {
+  let target = version;
+  if (isAction) {
+    // Recognize numeric tags and semver, including prereleases. Branches and
+    // immutable SHA references cannot tell us which major release to look up.
+    if (/^[a-f0-9]{40}$/i.test(version) || !/^v?(?:0|[1-9]\d*)(?:\.\d+(?:\.\d+(?:-[\w.-]+)?(?:\+[\w.-]+)?)?)?$/.test(version)) {
+      return [];
+    }
+    target = version.replace(/^v/, "");
+  }
+  const tags = new Set([version, target, `v${target}`]);
+  const firstMajorRelease = isAction
+    ? `${target.split(".")[0]}.0.0`
+    : majorReleaseVersion(target);
+  if (firstMajorRelease) {
+    tags.add(firstMajorRelease);
+    tags.add(`v${firstMajorRelease}`);
+  }
+  return [...tags];
+}
+
 async function collectUpstreamMajorUpgradeEvidence({
-  dependencyNames,
-  packageEcosystem,
-  previousVersion,
-  newVersion,
+  updatedDependenciesJson,
   fetchJson,
   getReleaseByTag,
   releaseNoteLimit = DEFAULT_RELEASE_NOTE_LIMIT,
 }) {
-  const dependencies = Array.isArray(dependencyNames)
-    ? dependencyNames.filter(Boolean)
-    : parseDependencyNames(dependencyNames);
-  const ecosystem = packageEcosystem || "unknown";
-  const oldVersion = previousVersion || "unknown";
-  const targetVersion = newVersion || "unknown";
   const evidence = {
     source: "Upstream package registries and GitHub Releases",
-    package_ecosystem: ecosystem,
-    dependency_names: dependencies,
-    previous_version: oldVersion,
-    new_version: targetVersion,
+    dependencies: [],
     release_sources: [],
     retrieval_notes: [],
   };
-
-  const collectGitHubRelease = async (repository) => {
-    if (!repository) return;
-    const [owner, repo] = repository.split("/");
-    const firstMajorRelease = majorReleaseVersion(targetVersion);
-    const tags = new Set([targetVersion, `v${targetVersion}`]);
-    if (firstMajorRelease) {
-      tags.add(firstMajorRelease);
-      tags.add(`v${firstMajorRelease}`);
+  try {
+    const metadata = JSON.parse(updatedDependenciesJson);
+    if (!Array.isArray(metadata) || metadata.length === 0) {
+      throw new Error("Expected non-empty dependency metadata");
     }
+    evidence.dependencies = metadata.map((dependency) => ({
+      name: dependency?.dependencyName || "unknown",
+      package_ecosystem: dependency?.packageEcosystem || "unknown",
+      previous_version: dependency?.prevVersion || "unknown",
+      new_version: dependency?.newVersion || "unknown",
+      update_type: dependency?.updateType || "unknown",
+    }));
+  } catch {
+    evidence.retrieval_notes.push(
+      "Per-dependency Dependabot metadata was unavailable; upstream versions could not be established.",
+    );
+  }
+
+  const collectGitHubRelease = async (repository, targetVersion, isAction = false) => {
+    if (!repository) return;
+    const tags = releaseTags(targetVersion, isAction);
+    if (tags.length === 0) {
+      evidence.retrieval_notes.push(
+        `Cannot infer a release version for GitHub Action ${repository}@${targetVersion}.`,
+      );
+      return;
+    }
+    const [owner, repo] = repository.split("/");
     let foundRelease = false;
     for (const tag of tags) {
       try {
@@ -109,18 +132,26 @@ async function collectUpstreamMajorUpgradeEvidence({
     }
   };
 
-  for (const dependency of dependencies) {
+  for (const update of evidence.dependencies) {
+    if (update.update_type !== MAJOR_UPDATE) continue;
+    const { name: dependency, package_ecosystem: ecosystem, new_version: targetVersion } = update;
+    if (dependency === "unknown" || targetVersion === "unknown") {
+      evidence.retrieval_notes.push(
+        `Incomplete Dependabot metadata for ${dependency}; no upstream version was assumed.`,
+      );
+      continue;
+    }
     try {
-      if (ecosystem === "github-actions") {
-        await collectGitHubRelease(githubRepository(dependency));
+      if (ACTION_ECOSYSTEMS.has(ecosystem)) {
+        await collectGitHubRelease(githubRepository(dependency), targetVersion, true);
         continue;
       }
 
-      if (ecosystem === "npm") {
+      if (["npm", "npm_and_yarn"].includes(ecosystem)) {
         const metadata = await fetchJson(
           `https://registry.npmjs.org/${encodeURIComponent(dependency)}/${encodeURIComponent(targetVersion)}`,
         );
-        await collectGitHubRelease(githubRepository(packageRepositoryUrl(metadata)));
+        await collectGitHubRelease(githubRepository(packageRepositoryUrl(metadata)), targetVersion);
         continue;
       }
 
@@ -133,7 +164,7 @@ async function collectUpstreamMajorUpgradeEvidence({
           Object.values(projectUrls).find((url) => githubRepository(url)) ||
             metadata.info?.home_page,
         );
-        await collectGitHubRelease(repository);
+        await collectGitHubRelease(repository, targetVersion);
         continue;
       }
 
@@ -154,8 +185,6 @@ module.exports = {
   DEFAULT_RELEASE_NOTE_LIMIT,
   collectUpstreamMajorUpgradeEvidence,
   githubRepository,
-  majorReleaseVersion,
   packageRepositoryUrl,
-  parseDependencyNames,
   truncate,
 };

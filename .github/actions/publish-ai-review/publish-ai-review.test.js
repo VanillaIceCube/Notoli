@@ -799,3 +799,72 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
 
   assert.equal(fixture, examples);
 });
+
+test("retains independent body findings for duplicate inline comments and unchanged verdicts", async () => {
+  for (const duplicate of [true, false]) {
+    const bot = { login: "obi-wan-code-nobi-reviewer[bot]" };
+    const inline = { path: "src/example.js", line: 1, body: "Already reported inline" };
+    const { createdReviews, github } = createGitHubMock({
+      priorReviews: [{
+        id: 42, state: "CHANGES_REQUESTED", submitted_at: "2026-07-12T00:00:00Z",
+        body: "Previous blocking review", user: bot,
+      }],
+      priorComments: [{ ...inline, pull_request_review_id: 42, diff_hunk: "@@ -1,2 +1,2 @@", user: bot }],
+    });
+    const { core, failures } = createCore();
+
+    await publishAiReview({
+      github, context: context(), core, personaName: "Obi-Wan Code-nobi",
+      raw: JSON.stringify(review({
+        event: "REQUEST_CHANGES",
+        unchanged: !duplicate,
+        findings: ["Independent actionable body finding"],
+        comments: duplicate ? [inline] : [],
+      })),
+    });
+
+    assert.deepEqual(failures, ["Obi-Wan Code-nobi requested changes."]);
+    assert.equal(createdReviews.length, 1);
+    assert.equal(createdReviews[0].event, "REQUEST_CHANGES");
+    assert.equal(createdReviews[0].comments, undefined);
+    assert.match(createdReviews[0].body, /Independent actionable body finding/);
+    assert.doesNotMatch(createdReviews[0].body, /Already reported inline/);
+  }
+});
+
+test("requires valid HTTP(S) source strings for an otherwise complete major-upgrade brief", async () => {
+  const invalid = [{}, "arbitrary prose", "https://", "https:/example.test", "https:///example.test",
+    "https://[invalid]", "https://example.test/with spaces", "https://example.test/%GG",
+    "ftp://example.test/release", "javascript:alert(1)", ""];
+  const valid = ["http://example.test/notes", "https://example.test/release?q=v2%20notes"];
+  for (const sources of [[], invalid, [...invalid, ...valid]]) {
+    const { createdReviews, github } = createGitHubMock();
+    const { core, failures } = createCore();
+
+    await publishAiReview({
+      github, context: context(), core, personaName: "Obi-Wan Code-nobi", requireMajorUpgradeBrief: true,
+      raw: JSON.stringify(review({
+        major_upgrade_brief: {
+          dependency: "example 1 to 2",
+          upgrade_story: "The upstream project removed a deprecated API.",
+          repository_impact: "The application uses its replacement.",
+          recommendation: "Merge after the required checks pass.",
+          sources,
+        },
+      })),
+    });
+
+    assert.equal(createdReviews.length, 1);
+    if (sources.includes(valid[0])) {
+      assert.deepEqual(failures, []);
+      assert.equal(createdReviews[0].event, "APPROVE");
+      assert.ok(createdReviews[0].body.includes("**Sources:** " + valid.join(", ")));
+      assert.doesNotMatch(createdReviews[0].body, /\[object Object\]|arbitrary prose|ftp:|%GG/);
+    } else {
+      assert.equal(failures.length, 1);
+      assert.match(failures[0], /missing sources/);
+      assert.equal(createdReviews[0].event, "COMMENT");
+      assert.match(createdReviews[0].body, /Review unavailable/);
+    }
+  }
+});
