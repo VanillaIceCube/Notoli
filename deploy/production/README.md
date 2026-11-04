@@ -43,7 +43,7 @@ not authorize any agent to operate the host. Shared decisions:
 
 ## Shared implementation and app configuration
 
-Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/b56d8a9f88088122555e275549afa8b86fc10be5/docs/app-release-standard.md).
+Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/a82888c83975de486b27ec0d0dc787fb5b167301/docs/app-release-standard.md).
 `app.json` contains this app's service/container/domain/environment/network/DB
 and readiness policy; `compose.yml` defines its services. Common release and
 bundle code has no application-name branches. `deploy/shared-source.json` pins
@@ -85,6 +85,18 @@ OAuth discovery and MCP readiness after the app release. See
 [Infrastructure #23](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/23).
 Certificates remain host-administered in the legacy path and are excluded
 from every app release.
+
+
+### Port-policy transition prerequisite
+
+The port-removal release requires a healthy accepted Notoli release record
+(current.json) whose checksummed app policy permits the existing bindings.
+Preflight rejects a legacy host that still publishes port 3000 and has no
+accepted record. For such a host, use the approved app adoption process to
+establish a healthy release with the existing port policy and current
+database, then promote this removal. Keep release records under the
+controller's ownership and leave the database in place. The production
+baseline for Infrastructure #23 already has an accepted release record.
 
 ## CI inputs and private host preparation
 
