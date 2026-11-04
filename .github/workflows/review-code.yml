@@ -54,7 +54,7 @@ jobs:
         if: steps.dependabot-metadata.outputs.update-type == 'version-update:semver-major'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          UPDATED_DEPENDENCIES_JSON: \${{ steps.dependabot-metadata.outputs.updated-dependencies-json }}
+          UPDATED_DEPENDENCIES_JSON: ${{ steps.dependabot-metadata.outputs.updated-dependencies-json }}
         with:
           script: |
             const fs = require("node:fs");

@@ -57,3 +57,40 @@ test("code review context searches every dependency within the existing evidence
   assert.match(bounded, /\[truncated: dependency-usage evidence was \d+ bytes\]/);
   assert.doesNotMatch(bounded, /past-limit/);
 });
+
+test("passes evaluated per-dependency metadata intact through the workflow collector", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "review-upstream-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const workflow = fs.readFileSync(path.join(__dirname, "../../workflows/review-code.yml"), "utf8");
+  const step = workflow.split("      - name: Collect upstream major-upgrade evidence")[1]
+    .split(/^      - name:/m)[0];
+  const [, expression] = step.match(/^          UPDATED_DEPENDENCIES_JSON: (.*)$/m);
+  const output = "steps.dependabot-metadata.outputs.updated-dependencies-json";
+  assert.equal(expression, "$" + "{{ " + output + " }}");
+  const metadata = JSON.stringify([
+    { dependencyName: "first", packageEcosystem: "npm_and_yarn", prevVersion: "1.0.0",
+      newVersion: "1.1.0", updateType: "version-update:semver-minor" },
+    { dependencyName: "example/later", packageEcosystem: "github_actions", prevVersion: "6",
+      newVersion: "7", updateType: "version-update:semver-major" },
+  ]);
+  const script = step.split("          script: |")[1].trimEnd().replace(/^            /gm, "");
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  const run = new AsyncFunction("require", "process", "fetch", "github", script);
+  const requests = [];
+  await run(require, {
+    env: { UPDATED_DEPENDENCIES_JSON: metadata,
+      GITHUB_WORKSPACE: path.resolve(__dirname, "../../.."), RUNNER_TEMP: root },
+  }, async () => assert.fail("Unexpected registry request"), {
+    rest: { repos: { getReleaseByTag: async ({ owner, repo, tag }) => {
+      requests.push([owner, repo, tag]);
+      if (tag === "v7.0.0") return { data: { tag_name: tag } };
+      throw Object.assign(new Error("not found"), { status: 404 });
+    } } },
+  });
+  const evidence = JSON.parse(fs.readFileSync(path.join(root, "upstream-major-upgrade-evidence.json"), "utf8"));
+  assert.deepEqual(evidence.dependencies.map(({ previous_version, new_version }) => [previous_version, new_version]),
+    [["1.0.0", "1.1.0"], ["6", "7"]]);
+  assert.deepEqual(requests, ["7", "v7", "7.0.0", "v7.0.0"].map((tag) => ["example", "later", tag]));
+  assert.equal(evidence.release_sources[0].tag, "v7.0.0");
+  assert.deepEqual(evidence.retrieval_notes, []);
+});
