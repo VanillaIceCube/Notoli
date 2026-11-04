@@ -54,10 +54,7 @@ jobs:
         if: steps.dependabot-metadata.outputs.update-type == 'version-update:semver-major'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
-          DEPENDENCY_NAMES: ${{ steps.dependabot-metadata.outputs.dependency-names }}
-          PREVIOUS_VERSION: ${{ steps.dependabot-metadata.outputs.previous-version }}
-          NEW_VERSION: ${{ steps.dependabot-metadata.outputs.new-version }}
-          PACKAGE_ECOSYSTEM: ${{ steps.dependabot-metadata.outputs.package-ecosystem }}
+          UPDATED_DEPENDENCIES_JSON: ${{ steps.dependabot-metadata.outputs.updated-dependencies-json }}
         with:
           script: |
             const fs = require("node:fs");
@@ -80,10 +77,7 @@ jobs:
               return response.json();
             };
             const evidence = await collectUpstreamMajorUpgradeEvidence({
-              dependencyNames: process.env.DEPENDENCY_NAMES,
-              packageEcosystem: process.env.PACKAGE_ECOSYSTEM,
-              previousVersion: process.env.PREVIOUS_VERSION,
-              newVersion: process.env.NEW_VERSION,
+              updatedDependenciesJson: process.env.UPDATED_DEPENDENCIES_JSON,
               fetchJson,
               getReleaseByTag: async (request) => {
                 const { data } = await github.rest.repos.getReleaseByTag(request);
@@ -139,9 +133,6 @@ jobs:
           CONTEXT_PATH: ${{ runner.temp }}/code-review-context.txt
           DEPENDABOT_UPDATE_TYPE: ${{ steps.dependabot-metadata.outputs.update-type }}
           DEPENDABOT_DEPENDENCY_NAMES: ${{ steps.dependabot-metadata.outputs.dependency-names }}
-          DEPENDABOT_PREVIOUS_VERSION: ${{ steps.dependabot-metadata.outputs.previous-version }}
-          DEPENDABOT_NEW_VERSION: ${{ steps.dependabot-metadata.outputs.new-version }}
-          DEPENDABOT_PACKAGE_ECOSYSTEM: ${{ steps.dependabot-metadata.outputs.package-ecosystem }}
           PR_BODY: ${{ github.event.pull_request.body }}
           UPSTREAM_EVIDENCE_PATH: ${{ runner.temp }}/upstream-major-upgrade-evidence.json
         run: |
@@ -225,9 +216,6 @@ jobs:
               echo
               echo '=== DEPENDABOT MAJOR UPGRADE EVIDENCE ==='
               printf 'dependency-names: %s\n' "$DEPENDABOT_DEPENDENCY_NAMES"
-              printf 'previous-version: %s\n' "$DEPENDABOT_PREVIOUS_VERSION"
-              printf 'new-version: %s\n' "$DEPENDABOT_NEW_VERSION"
-              printf 'package-ecosystem: %s\n' "$DEPENDABOT_PACKAGE_ECOSYSTEM"
               echo
               echo '--- Externally collected upstream release evidence ---'
               cat "$UPSTREAM_EVIDENCE_PATH"
@@ -244,14 +232,14 @@ jobs:
                 {
                   printf -- '--- exact matches for %s ---\n' "$dependency"
                   if ! git grep -n -i -F -- "$dependency" -- . \
-                    ':(exclude)**/package-lock.json' \
-                    ':(exclude)**/yarn.lock' \
-                    ':(exclude)**/pnpm-lock.yaml' \
-                    ':(exclude)**/poetry.lock'; then
+                    ':(exclude,glob)**/package-lock.json' \
+                    ':(exclude,glob)**/yarn.lock' \
+                    ':(exclude,glob)**/pnpm-lock.yaml' \
+                    ':(exclude,glob)**/poetry.lock'; then
                     echo '[no exact tracked-text matches]'
                   fi
                 } >> "$usage_evidence_path"
-              done < <(printf '%s' "$DEPENDABOT_DEPENDENCY_NAMES" | tr ',' '\n')
+              done < <(printf '%s\n' "$DEPENDABOT_DEPENDENCY_NAMES" | tr ',' '\n')
               usage_evidence_bytes=$(wc -c < "$usage_evidence_path" || echo 0)
               if [ "$usage_evidence_bytes" -gt 30000 ]; then
                 head -c 30000 "$usage_evidence_path"

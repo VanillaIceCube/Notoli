@@ -179,6 +179,82 @@ def inspect(name):
     return json.loads(docker("inspect", name))[0]
 
 
+def running_ports(container):
+    return {
+        (port, binding["HostIp"], binding["HostPort"])
+        for port, bindings in (container["HostConfig"]["PortBindings"] or {}).items()
+        for binding in (bindings or [])
+    }
+
+
+def require_frontend_ports(ports, allowed):
+    if ports not in [{tuple(binding) for binding in form} for form in allowed]:
+        raise ReleaseError("Frontend published-port boundary changed")
+
+
+def current_frontend_port_policy(root):
+    # Check the baseline against its own accepted policy. The incoming policy
+    # applies to the candidate only, so it can remove a previously approved port.
+    state = root / "current.json"
+    if not state.exists() and not state.is_symlink():
+        return CONFIG["frontend_port_bindings"]
+    current = json.loads(regular(state).read_text())
+    directory = Path(current["directory"])
+    if current["healthy"] is not True:
+        raise ReleaseError("Current release is not accepted")
+    if current["id"].startswith("recovered-"):
+        recovery_id = current["id"].removeprefix("recovered-")
+        parent = root / "recovery"
+        if not RUN_ID.fullmatch(recovery_id) or directory != parent / recovery_id:
+            raise ReleaseError("Invalid current recovery directory")
+        private_dir(parent)
+        private_dir(directory)
+        directory = directory / "previous-release"
+        if not directory.exists() and not directory.is_symlink():
+            # Legacy recovery had no earlier app policy. Require the incoming one.
+            return CONFIG["frontend_port_bindings"]
+        if (
+            not (directory / "app.json").exists()
+            and not (directory / "app.json").is_symlink()
+        ):
+            return CONFIG["frontend_port_bindings"]
+    else:
+        parent = root / "releases"
+        if not RUN_ID.fullmatch(current["id"]) or directory != parent / current["id"]:
+            raise ReleaseError("Invalid current release directory")
+        private_dir(parent)
+    private_dir(directory)
+    app = regular(directory / "app.json").read_bytes()
+    manifest = json.loads(regular(directory / "manifest.json").read_text())
+    if hashlib.sha256(app).hexdigest() != manifest["app.json"]:
+        raise ReleaseError("Current app policy checksum mismatch")
+    policy = json.loads(app)
+    if (
+        policy["contract_version"] != CONFIG["contract_version"]
+        or policy["app"] != APP
+        or policy["containers"]["frontend"] != CONFIG["containers"]["frontend"]
+    ):
+        raise ReleaseError("Current app port policy identity mismatch")
+    return policy["frontend_port_bindings"]
+
+
+def validate_candidate_ports(candidate):
+    services = json.loads(compose(candidate, "config", "--format", "json"))["services"]
+    if any(service.get("network_mode") == "host" for service in services.values()):
+        raise ReleaseError("Host networking bypasses the published-port policy")
+    if services[BACKEND].get("ports"):
+        raise ReleaseError("Backend unexpectedly publishes a port")
+    ports = {
+        (
+            f"{port['target']}/{port.get('protocol', 'tcp')}",
+            port.get("host_ip", ""),
+            str(port.get("published", "")),
+        )
+        for port in services[FRONTEND].get("ports", [])
+    }
+    require_frontend_ports(ports, CONFIG["frontend_port_bindings"])
+
+
 def preflight(root):
     private_dir(root)
     regular(root / DB_FILE)
@@ -231,17 +307,7 @@ def preflight(root):
         raise ReleaseError("Backend trust invariant changed")
     if backend["HostConfig"]["PortBindings"]:
         raise ReleaseError("Backend unexpectedly publishes a port")
-    ports = {
-        (port, binding["HostIp"], binding["HostPort"])
-        for port, bindings in (frontend["HostConfig"]["PortBindings"] or {}).items()
-        for binding in (bindings or [])
-    }
-    allowed = [
-        {tuple(binding) for binding in form}
-        for form in CONFIG["frontend_port_bindings"]
-    ]
-    if ports not in allowed:
-        raise ReleaseError("Frontend published-port boundary changed")
+    require_frontend_ports(running_ports(frontend), current_frontend_port_policy(root))
     mounts = [m for m in backend["Mounts"] if m["Destination"] == DB_TARGET]
     if len(mounts) != 1 or Path(mounts[0]["Source"]) != root / DB_FILE:
         raise ReleaseError("Existing database bind source differs")
@@ -662,7 +728,7 @@ def deploy(root, bundle):
         + str(root / DB_FILE)
         + "\n",
     )
-    compose(candidate, "config", "--quiet")
+    validate_candidate_ports(candidate)
     compose(candidate, "pull", *SERVICES)
     preflight(root)  # disk policy must still pass after image staging
     recovery = root / "recovery" / release["id"]
@@ -705,6 +771,23 @@ def deploy(root, bundle):
             "--force-recreate",
             *SERVICES,
         )
+        try:
+            if running_ports(inspect(CONFIG["containers"]["backend"])):
+                raise ReleaseError("Backend unexpectedly publishes a port")
+            require_frontend_ports(
+                running_ports(inspect(CONFIG["containers"]["frontend"])),
+                CONFIG["frontend_port_bindings"],
+            )
+        except ReleaseError:
+            # A failed candidate must not keep an unexpected frontend port live.
+            try:
+                compose(candidate, "stop", FRONTEND)
+            except ReleaseError:
+                print(
+                    "Frontend stop failed; operator must contain the frontend before recovery.",
+                    file=sys.stderr,
+                )
+            raise
         readiness(candidate)
         atomic_json(
             root / "current.json",

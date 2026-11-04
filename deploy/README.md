@@ -5,6 +5,8 @@ For shared-host configuration, deployment and recovery, use the
 local development only. Host-owned gateway and certificate operations belong to
 the infrastructure repository.
 
+Production serves the frontend through the shared HTTPS gateway and publishes no host port 3000. See the [production guide](production/README.md).
+
 ## Local Docker with `notoli.localhost`
 
 From the repository root, initialize only missing local files:

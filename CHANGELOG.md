@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-03
+
+### Fixed
+
+- Collect usage evidence for every Dependabot dependency and use each major update's own versions and ecosystem for upstream release evidence.
+- Preserve independent AI review findings during duplicate suppression and require valid HTTP(S) sources in major-upgrade briefs.
+
+### Removed
+
+- Remove Notoli's production host port 3000 on IPv4 and IPv6. The frontend remains available through the shared HTTPS gateway (Infrastructure #23).
+
 ## 2026-11-02
 
 ### Fixed
