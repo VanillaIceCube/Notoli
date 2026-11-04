@@ -1,0 +1,34 @@
+[
+  {
+    "dependencyName": "actions/first",
+    "dependencyType": "direct:production",
+    "updateType": "version-update:semver-minor",
+    "directory": "/",
+    "packageEcosystem": "github_actions",
+    "targetBranch": "main",
+    "prevVersion": "1.0.0",
+    "newVersion": "1.1.0",
+    "compatScore": 0,
+    "maintainerChanges": false,
+    "dependencyGroup": "actions-group",
+    "alertState": "",
+    "ghsaId": "",
+    "cvss": 0
+  },
+  {
+    "dependencyName": "example/later",
+    "dependencyType": "direct:production",
+    "updateType": "version-update:semver-major",
+    "directory": "/",
+    "packageEcosystem": "github_actions",
+    "targetBranch": "main",
+    "prevVersion": "6",
+    "newVersion": "7",
+    "compatScore": 0,
+    "maintainerChanges": false,
+    "dependencyGroup": "actions-group",
+    "alertState": "",
+    "ghsaId": "",
+    "cvss": 0
+  }
+]

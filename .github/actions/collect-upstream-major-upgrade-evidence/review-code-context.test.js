@@ -67,12 +67,9 @@ test("passes evaluated per-dependency metadata intact through the workflow colle
   const [, expression] = step.match(/^          UPDATED_DEPENDENCIES_JSON: (.*)$/m);
   const output = "steps.dependabot-metadata.outputs.updated-dependencies-json";
   assert.equal(expression, "$" + "{{ " + output + " }}");
-  const metadata = JSON.stringify([
-    { dependencyName: "first", packageEcosystem: "npm_and_yarn", prevVersion: "1.0.0",
-      newVersion: "1.1.0", updateType: "version-update:semver-minor" },
-    { dependencyName: "example/later", packageEcosystem: "github_actions", prevVersion: "6",
-      newVersion: "7", updateType: "version-update:semver-major" },
-  ]);
+  // Captured from the pinned v3.1.0 dist/index.js with a mocked GitHub
+  // listCommits response for a signed two-dependency Actions update.
+  const metadata = fs.readFileSync(path.join(__dirname, "dependabot-group-output.json"), "utf8");
   const script = step.split("          script: |")[1].trimEnd().replace(/^            /gm, "");
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
   const run = new AsyncFunction("require", "process", "fetch", "github", script);

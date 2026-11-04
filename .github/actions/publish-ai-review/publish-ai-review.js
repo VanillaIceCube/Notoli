@@ -140,7 +140,8 @@ function cleanMajorUpgradeBrief(value) {
         return false;
       }
       try {
-        return Boolean(new URL(source).hostname);
+        const url = new URL(source);
+        return Boolean(url.hostname) && !url.username && !url.password;
       } catch {
         return false;
       }

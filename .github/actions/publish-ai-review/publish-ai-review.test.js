@@ -835,7 +835,8 @@ test("retains independent body findings for duplicate inline comments and unchan
 test("requires valid HTTP(S) source strings for an otherwise complete major-upgrade brief", async () => {
   const invalid = [{}, "arbitrary prose", "https://", "https:/example.test", "https:///example.test",
     "https://[invalid]", "https://example.test/with spaces", "https://example.test/%GG",
-    "ftp://example.test/release", "javascript:alert(1)", ""];
+    "ftp://example.test/release", "javascript:alert(1)", "",
+    "https://user@example.test/release", "https://:fixture-password@example.test/release"];
   const valid = ["http://example.test/notes", "https://example.test/release?q=v2%20notes"];
   for (const sources of [[], invalid, [...invalid, ...valid]]) {
     const { createdReviews, github } = createGitHubMock();
@@ -859,7 +860,7 @@ test("requires valid HTTP(S) source strings for an otherwise complete major-upgr
       assert.deepEqual(failures, []);
       assert.equal(createdReviews[0].event, "APPROVE");
       assert.ok(createdReviews[0].body.includes("**Sources:** " + valid.join(", ")));
-      assert.doesNotMatch(createdReviews[0].body, /\[object Object\]|arbitrary prose|ftp:|%GG/);
+      assert.doesNotMatch(createdReviews[0].body, /\[object Object\]|arbitrary prose|ftp:|%GG|user@|fixture-password/);
     } else {
       assert.equal(failures.length, 1);
       assert.match(failures[0], /missing sources/);

@@ -25,8 +25,6 @@ services:
     image: ${FRONTEND_IMAGE:?Set the reviewed frontend digest}
     container_name: notoli-frontend
     restart: always
-    # Preserve the existing listener until the owner decides its disposition.
-    ports: ["0.0.0.0:3000:80", "[::]:3000:80"]
     networks:
       frontend:
         aliases: [notoli-frontend]

@@ -43,7 +43,7 @@ not authorize any agent to operate the host. Shared decisions:
 
 ## Shared implementation and app configuration
 
-Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/b56d8a9f88088122555e275549afa8b86fc10be5/docs/app-release-standard.md).
+Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/a82888c83975de486b27ec0d0dc787fb5b167301/docs/app-release-standard.md).
 `app.json` contains this app's service/container/domain/environment/network/DB
 and readiness policy; `compose.yml` defines its services. Common release and
 bundle code has no application-name branches. `deploy/shared-source.json` pins
@@ -76,9 +76,38 @@ Nginx, runs a whole-project down/remove-orphans, or prunes host images.
 The owner-approved sequence is gateway transfer, Notoli release and independent
 repeat verification, then MacroMapper release and repeat verification.
 Notoli preserves proxy `172.30.88.2`, backend `.3`, ASGI exact-peer trust and
-Uvicorn `--no-proxy-headers`. Port 3000 is preserved pending the separate owner
-consumer/disposition decision. Certificates remain host-administered in the
-legacy path and are excluded from every app release.
+Uvicorn `--no-proxy-headers`. Production publishes no host ports for either
+service. The gateway connects to `notoli-frontend:80` on `notoli_default`. The
+port 3000 consumer inventory found no direct operational dependency, so
+the Compose file and app policy remove both wildcard bindings. Verify Docker
+bindings, IPv4/IPv6 reachability from outside the VM, HTTPS, API auth responses,
+OAuth discovery and MCP readiness after the app release. See
+[Infrastructure #23](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/23).
+Certificates remain host-administered in the legacy path and are excluded
+from every app release.
+
+
+### Port-policy transition prerequisite
+
+The port-removal release requires a healthy accepted Notoli release record
+(current.json) whose checksummed app policy permits the existing bindings.
+A recovered release can use its retained previous-release app.json and
+manifest. When those records are absent, preflight checks the running
+ports against the incoming policy and rejects a direct transition from
+legacy port 3000 to no host ports.
+
+For an unrecorded legacy deployment or a recovered release without a saved
+app policy, first use the existing app adoption process. Review a baseline
+release that keeps the live approved bindings in both Compose and app.json,
+and deploy it through env-prod with the current database. Once that release
+records its healthy policy, promote the separate port-removal change.
+The production baseline for Infrastructure #23 already has a healthy,
+checksum-verified release record.
+
+If the post-start port check fails, the controller stops the candidate frontend
+explicitly. The outer failure handler stops the backend and any management
+writers by app and service labels, verifies that each writer has stopped, and
+retains the failed release record for operator review.
 
 ## CI inputs and private host preparation
 
