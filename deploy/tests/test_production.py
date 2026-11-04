@@ -115,6 +115,8 @@ class BundleTests(unittest.TestCase):
                 text=True,
                 check=True,
             )
+            with patch.object(release, "compose", return_value=result.stdout):
+                release.validate_candidate_ports(bundle)
             model = json.loads(result.stdout)
             self.assertEqual(set(model["services"]), set(release.SERVICES))
             backend = model["services"][release.BACKEND]
@@ -238,6 +240,7 @@ class TransactionTests(unittest.TestCase):
         self.events = []
         self.fail_migration = False
         self.fail_readiness = False
+        self.frontend_ports = release.CONFIG["frontend_port_bindings"][0]
         self.model = {
             "name": release.APP,
             "services": {
@@ -256,6 +259,15 @@ class TransactionTests(unittest.TestCase):
             },
             "networks": {},
         }
+        self.model["services"][release.FRONTEND]["ports"] = [
+            {
+                "target": int(port.split("/")[0]),
+                "protocol": port.split("/")[1],
+                "host_ip": host,
+                "published": published,
+            }
+            for port, host, published in self.frontend_ports
+        ]
         self.patches = [
             patch.object(release, "app_writers", return_value=[]),
             patch.object(
@@ -306,6 +318,12 @@ class TransactionTests(unittest.TestCase):
 
     def inspect(self, name):
         suffix = name.rsplit("-", 1)[1]
+        ports = {}
+        if suffix == "frontend":
+            for port, host, published in self.frontend_ports:
+                ports.setdefault(port, []).append(
+                    {"HostIp": host, "HostPort": published}
+                )
         return {
             "Id": "old-" + suffix,
             "Image": "sha256:" + ("1" if suffix == "backend" else "2") * 64,
@@ -316,7 +334,7 @@ class TransactionTests(unittest.TestCase):
                 "User": "",
                 "Env": ['SECRET=original-$literal#quote"', "PATH=/bin"],
             },
-            "HostConfig": {"PortBindings": {}},
+            "HostConfig": {"PortBindings": ports},
             "Mounts": [
                 {
                     "Destination": "/backend/db.sqlite3",
@@ -368,6 +386,35 @@ class TransactionTests(unittest.TestCase):
             self.events.index(("stop-writers",)),
             self.events.index(("manage", "migrate", "--noinput")),
         )
+
+    def test_running_port_drift_prevents_accepting_release(self):
+        self.model["services"][release.FRONTEND]["ports"] = []
+        inspect = self.inspect
+
+        def inspect_after_compose(name):
+            container = inspect(name)
+            if name == release.CONFIG["containers"]["frontend"] and any(
+                event[:2] == ("compose", "up") for event in self.events
+            ):
+                container["HostConfig"]["PortBindings"] = {
+                    "80/tcp": [{"HostIp": "::", "HostPort": "3000"}]
+                }
+            return container
+
+        with (
+            patch.dict(release.CONFIG, {"frontend_port_bindings": [[]]}),
+            patch.object(release, "inspect", side_effect=inspect_after_compose),
+            self.assertRaisesRegex(
+                release.ReleaseError, "Frontend published-port boundary changed"
+            ),
+        ):
+            release.deploy(self.root, self.bundle)
+        self.assertFalse((self.root / "current.json").exists())
+        self.assertTrue((self.root / "FAILED.json").exists())
+        self.assertEqual(
+            self.events[-2:], [("compose", "stop", release.FRONTEND), ("stop-writers",)]
+        )
+        self.assertNotIn(("ready",), self.events)
 
     def test_migration_failure_preserves_old_db_config_and_explicit_rollback(self):
         self.fail_migration = True

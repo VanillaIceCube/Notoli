@@ -64,6 +64,7 @@ class ContractTests(unittest.TestCase):
                 release.CONFIG["backend_required_env"],
                 ["DJANGO_TRUSTED_PROXY_IPS=172.30.88.2"],
             )
+            self.assertEqual(release.CONFIG["frontend_port_bindings"], [[]])
             self.assertNotIn("MACROMAPPER_OPENAI_API_KEY", builder.REQUIRED)
         elif release.APP == "macromapper":
             addresses = {"notoli_backend_private": "172.30.88.2"}

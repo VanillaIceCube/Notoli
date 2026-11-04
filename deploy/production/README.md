@@ -76,9 +76,15 @@ Nginx, runs a whole-project down/remove-orphans, or prunes host images.
 The owner-approved sequence is gateway transfer, Notoli release and independent
 repeat verification, then MacroMapper release and repeat verification.
 Notoli preserves proxy `172.30.88.2`, backend `.3`, ASGI exact-peer trust and
-Uvicorn `--no-proxy-headers`. Port 3000 is preserved pending the separate owner
-consumer/disposition decision. Certificates remain host-administered in the
-legacy path and are excluded from every app release.
+Uvicorn `--no-proxy-headers`. Production publishes no host ports for either
+service. The gateway connects to `notoli-frontend:80` on `notoli_default`. The
+port 3000 consumer inventory found no direct operational dependency, so
+the Compose file and app policy remove both wildcard bindings. Verify Docker
+bindings, IPv4/IPv6 reachability from outside the VM, HTTPS, API auth responses,
+OAuth discovery and MCP readiness after the app release. See
+[Infrastructure #23](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/23).
+Certificates remain host-administered in the legacy path and are excluded
+from every app release.
 
 ## CI inputs and private host preparation
 

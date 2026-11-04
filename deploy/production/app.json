@@ -29,27 +29,7 @@
   "backend_required_env": [
     "DJANGO_TRUSTED_PROXY_IPS=172.30.88.2"
   ],
-  "frontend_port_bindings": [
-    [
-      [
-        "80/tcp",
-        "",
-        "3000"
-      ]
-    ],
-    [
-      [
-        "80/tcp",
-        "0.0.0.0",
-        "3000"
-      ],
-      [
-        "80/tcp",
-        "::",
-        "3000"
-      ]
-    ]
-  ],
+  "frontend_port_bindings": [[]],
   "gateway": {
     "container": "host-ingress-proxy",
     "project": "host-ingress",

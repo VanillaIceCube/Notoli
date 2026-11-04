@@ -75,6 +75,9 @@ async function collectUpstreamMajorUpgradeEvidence({
     if (!Array.isArray(metadata) || metadata.length === 0) {
       throw new Error("Expected non-empty dependency metadata");
     }
+    // fetch-metadata v3.1.0 serializes its updatedDependency records directly.
+    // See output.ts and update_metadata.ts at the commit pinned in review-code.yml:
+    // https://github.com/dependabot/fetch-metadata/blob/25dd0e34f4fe68f24cc83900b1fe3fe149efef98/src/dependabot/update_metadata.ts
     evidence.dependencies = metadata.map((dependency) => ({
       name: dependency?.dependencyName || "unknown",
       package_ecosystem: dependency?.packageEcosystem || "unknown",
