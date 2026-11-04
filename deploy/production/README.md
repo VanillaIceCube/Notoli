@@ -91,12 +91,18 @@ from every app release.
 
 The port-removal release requires a healthy accepted Notoli release record
 (current.json) whose checksummed app policy permits the existing bindings.
-Preflight rejects a legacy host that still publishes port 3000 and has no
-accepted record. For such a host, use the approved app adoption process to
-establish a healthy release with the existing port policy and current
-database, then promote this removal. Keep release records under the
-controller's ownership and leave the database in place. The production
-baseline for Infrastructure #23 already has an accepted release record.
+A recovered release can use its retained previous-release app.json and
+manifest. When those records are absent, preflight checks the running
+ports against the incoming policy and rejects a direct transition from
+legacy port 3000 to no host ports.
+
+For an unrecorded legacy deployment or a recovered release without a saved
+app policy, first use the existing app adoption process. Review a baseline
+release that keeps the live approved bindings in both Compose and app.json,
+and deploy it through env-prod with the current database. Once that release
+records its healthy policy, promote the separate port-removal change.
+The production baseline for Infrastructure #23 already has a healthy,
+checksum-verified release record.
 
 If the post-start port check fails, the controller stops the candidate frontend
 explicitly. The outer failure handler stops the backend and any management
