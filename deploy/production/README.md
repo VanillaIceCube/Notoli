@@ -98,6 +98,11 @@ database, then promote this removal. Keep release records under the
 controller's ownership and leave the database in place. The production
 baseline for Infrastructure #23 already has an accepted release record.
 
+If the post-start port check fails, the controller stops the candidate frontend
+explicitly. The outer failure handler stops the backend and any management
+writers by app and service labels, verifies that each writer has stopped, and
+retains the failed release record for operator review.
+
 ## CI inputs and private host preparation
 
 The workflow runs only on reviewed `env-prod` pushes or a manually authorized
