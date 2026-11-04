@@ -5,9 +5,16 @@ const test = require("node:test");
 const {
   collectUpstreamMajorUpgradeEvidence,
   githubRepository,
-  majorReleaseVersion,
   packageRepositoryUrl,
 } = require("./collect-upstream-major-upgrade-evidence");
+
+function dependency(dependencyName, packageEcosystem, prevVersion, newVersion, level = "major") {
+  return { dependencyName, packageEcosystem, prevVersion, newVersion, updateType: "version-update:semver-" + level };
+}
+
+function notFound() {
+  return Object.assign(new Error("not found"), { status: 404 });
+}
 
 test("normalizes npm object and string repository metadata", () => {
   assert.equal(
@@ -21,19 +28,10 @@ test("normalizes npm object and string repository metadata", () => {
   assert.equal(githubRepository("git@github.com:example/string.git"), "example/string");
 });
 
-test("derives the first release in a semver-major line", () => {
-  assert.equal(majorReleaseVersion("7.3.0"), "7.0.0");
-  assert.equal(majorReleaseVersion("7.3.0-beta.1"), "7.0.0");
-  assert.equal(majorReleaseVersion("v7.3.0"), "");
-});
-
 test("collects a scoped npm package release from string repository metadata", async () => {
   const releaseCalls = [];
   const evidence = await collectUpstreamMajorUpgradeEvidence({
-    dependencyNames: "@scope/package",
-    packageEcosystem: "npm",
-    previousVersion: "1.0.0",
-    newVersion: "2.0.0",
+    updatedDependenciesJson: JSON.stringify([dependency("@scope/package", "npm", "1.0.0", "2.0.0")]),
     fetchJson: async () => ({ repository: "https://github.com/example/package.git" }),
     getReleaseByTag: async (request) => {
       releaseCalls.push(request);
@@ -63,10 +61,7 @@ test("collects a scoped npm package release from string repository metadata", as
 
 test("returns a bounded, non-failing evidence record when upstream lookup fails", async () => {
   const evidence = await collectUpstreamMajorUpgradeEvidence({
-    dependencyNames: ["example"],
-    packageEcosystem: "npm",
-    previousVersion: "1.0.0",
-    newVersion: "2.0.0",
+    updatedDependenciesJson: JSON.stringify([dependency("example", "npm", "1.0.0", "2.0.0")]),
     fetchJson: async () => {
       throw new Error("registry unavailable");
     },
@@ -84,10 +79,7 @@ test("returns a bounded, non-failing evidence record when upstream lookup fails"
 test("collects the target and first-major release when they differ", async () => {
   const releaseCalls = [];
   const evidence = await collectUpstreamMajorUpgradeEvidence({
-    dependencyNames: "docker/build-push-action",
-    packageEcosystem: "github-actions",
-    previousVersion: "6.19.2",
-    newVersion: "7.3.0",
+    updatedDependenciesJson: JSON.stringify([dependency("docker/build-push-action", "github-actions", "6.19.2", "7.3.0")]),
     fetchJson: async () => ({}),
     getReleaseByTag: async (request) => {
       releaseCalls.push(request.tag);
@@ -106,10 +98,7 @@ test("collects the target and first-major release when they differ", async () =>
 
 test("bounds upstream release notes without losing the source record", async () => {
   const evidence = await collectUpstreamMajorUpgradeEvidence({
-    dependencyNames: ["actions/checkout"],
-    packageEcosystem: "github-actions",
-    previousVersion: "4.0.0",
-    newVersion: "5.0.0",
+    updatedDependenciesJson: JSON.stringify([dependency("actions/checkout", "github-actions", "4.0.0", "5.0.0")]),
     releaseNoteLimit: 12,
     fetchJson: async () => {
       throw new Error("should not be called");
@@ -131,10 +120,7 @@ test("bounds upstream release notes without losing the source record", async () 
 test("discovers a GitHub release from PyPI project metadata", async () => {
   const releaseCalls = [];
   const evidence = await collectUpstreamMajorUpgradeEvidence({
-    dependencyNames: "gunicorn",
-    packageEcosystem: "pip",
-    previousVersion: "22.0.0",
-    newVersion: "23.0.0",
+    updatedDependenciesJson: JSON.stringify([dependency("gunicorn", "pip", "22.0.0", "23.0.0")]),
     fetchJson: async () => ({
       info: {
         project_urls: {
@@ -158,10 +144,7 @@ test("discovers a GitHub release from PyPI project metadata", async () => {
 
 test("records missing GitHub Action releases without failing the collector", async () => {
   const evidence = await collectUpstreamMajorUpgradeEvidence({
-    dependencyNames: "actions/checkout",
-    packageEcosystem: "github-actions",
-    previousVersion: "4.0.0",
-    newVersion: "5.0.0",
+    updatedDependenciesJson: JSON.stringify([dependency("actions/checkout", "github-actions", "4.0.0", "5.0.0")]),
     fetchJson: async () => {
       throw new Error("should not be called");
     },
@@ -180,10 +163,7 @@ test("records missing GitHub Action releases without failing the collector", asy
 
 test("records GitHub API failures and unsupported ecosystems as degraded evidence", async () => {
   const apiFailure = await collectUpstreamMajorUpgradeEvidence({
-    dependencyNames: "actions/checkout",
-    packageEcosystem: "github-actions",
-    previousVersion: "4.0.0",
-    newVersion: "5.0.0",
+    updatedDependenciesJson: JSON.stringify([dependency("actions/checkout", "github-actions", "4.0.0", "5.0.0")]),
     fetchJson: async () => {
       throw new Error("should not be called");
     },
@@ -194,10 +174,7 @@ test("records GitHub API failures and unsupported ecosystems as degraded evidenc
     },
   });
   const unsupported = await collectUpstreamMajorUpgradeEvidence({
-    dependencyNames: "example",
-    packageEcosystem: "nuget",
-    previousVersion: "1.0.0",
-    newVersion: "2.0.0",
+    updatedDependenciesJson: JSON.stringify([dependency("example", "nuget", "1.0.0", "2.0.0")]),
     fetchJson: async () => {
       throw new Error("should not be called");
     },
@@ -212,4 +189,76 @@ test("records GitHub API failures and unsupported ecosystems as degraded evidenc
   assert.deepEqual(unsupported.retrieval_notes, [
     "No supported external release collector is configured for package ecosystem nuget.",
   ]);
+});
+
+test("uses each major dependency's own ecosystem and target in a grouped update", async () => {
+  const registryCalls = [];
+  const releaseCalls = [];
+  const evidence = await collectUpstreamMajorUpgradeEvidence({
+    updatedDependenciesJson: JSON.stringify([
+      dependency("first", "npm_and_yarn", "1.0.0", "1.1.0", "minor"),
+      dependency("@scope/later", "npm_and_yarn", "5.0.0", "6.0.0"),
+      dependency("different-ecosystem", "pip", "8.0.0", "9.0.0"),
+    ]),
+    fetchJson: async (url) => {
+      registryCalls.push(url);
+      return url.includes("npmjs")
+        ? { repository: "https://github.com/example/later" }
+        : { info: { home_page: "https://github.com/example/python" } };
+    },
+    getReleaseByTag: async (request) => {
+      releaseCalls.push(request);
+      return { tag_name: request.tag, html_url: "https://github.com/example/releases/" + request.tag };
+    },
+  });
+
+  assert.deepEqual(registryCalls, [
+    "https://registry.npmjs.org/%40scope%2Flater/6.0.0",
+    "https://pypi.org/pypi/different-ecosystem/9.0.0/json",
+  ]);
+  assert.deepEqual(releaseCalls.map(({ repo, tag }) => [repo, tag]), [
+    ["later", "6.0.0"], ["later", "v6.0.0"], ["python", "9.0.0"], ["python", "v9.0.0"],
+  ]);
+  assert.deepEqual(evidence.dependencies, [
+    { name: "first", package_ecosystem: "npm_and_yarn", previous_version: "1.0.0", new_version: "1.1.0", update_type: "version-update:semver-minor" },
+    { name: "@scope/later", package_ecosystem: "npm_and_yarn", previous_version: "5.0.0", new_version: "6.0.0", update_type: "version-update:semver-major" },
+    { name: "different-ecosystem", package_ecosystem: "pip", previous_version: "8.0.0", new_version: "9.0.0", update_type: "version-update:semver-major" },
+  ]);
+});
+
+test("discovers a full-semver Actions release from bare and v-prefixed versions", async () => {
+  for (const [previous, target, tags] of [
+    ["6", "7", ["7", "v7", "7.0.0", "v7.0.0"]],
+    ["v6", "v7", ["v7", "7", "7.0.0", "v7.0.0"]],
+    ["v6.0.0", "v7.3.0", ["v7.3.0", "7.3.0", "7.0.0", "v7.0.0"]],
+  ]) {
+    const calls = [];
+    const evidence = await collectUpstreamMajorUpgradeEvidence({
+      updatedDependenciesJson: JSON.stringify([dependency("actions/example", "github_actions", previous, target)]),
+      getReleaseByTag: async ({ tag }) => {
+        calls.push(tag);
+        if (tag === "v7.0.0") return { tag_name: tag };
+        throw notFound();
+      },
+    });
+    assert.deepEqual(calls, tags);
+    assert.deepEqual(evidence.release_sources.map(({ tag }) => tag), ["v7.0.0"]);
+    assert.deepEqual(evidence.retrieval_notes, []);
+  }
+});
+
+test("reports unsupported Actions refs and missing metadata without guessing versions", async () => {
+  for (const target of ["abcdef1234567890abcdef1234567890abcdef12", "main", "stable-v7", ""]) {
+    const evidence = await collectUpstreamMajorUpgradeEvidence({
+      updatedDependenciesJson: JSON.stringify([dependency("actions/example", "github_actions", "6", target)]),
+      getReleaseByTag: async () => assert.fail("Unexpected release lookup"),
+    });
+    assert.deepEqual(evidence.release_sources, []);
+    assert.match(evidence.retrieval_notes[0], /Cannot infer|Incomplete Dependabot metadata/);
+  }
+  for (const updatedDependenciesJson of [undefined, "{", "{}", "[]"]) {
+    const evidence = await collectUpstreamMajorUpgradeEvidence({ updatedDependenciesJson });
+    assert.deepEqual(evidence.dependencies, []);
+    assert.match(evidence.retrieval_notes[0], /metadata was unavailable/);
+  }
 });

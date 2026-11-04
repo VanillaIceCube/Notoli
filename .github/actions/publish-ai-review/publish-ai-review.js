@@ -131,7 +131,20 @@ function cleanMajorUpgradeBrief(value) {
     explicitUpgradeStory ||
     cleanList([upgradeTrigger, whyMajor, benefits]).join(" ");
   const repositoryImpact = explicitRepositoryImpact || repositoryExposure;
-  const sources = cleanList(value.sources);
+  const sources = (Array.isArray(value.sources) ? value.sources : [])
+    .filter((source) => typeof source === "string")
+    .map((source) => source.trim())
+    .filter((source) => {
+      // URL parsing alone repairs malformed input such as https:/example.com.
+      if (!/^https?:\/\/[^/\\?#]/i.test(source) || /[\s\\\x00-\x1f\x7f]|%(?![0-9a-f]{2})/i.test(source)) {
+        return false;
+      }
+      try {
+        return Boolean(new URL(source).hostname);
+      } catch {
+        return false;
+      }
+    });
 
   if (
     !dependency &&
@@ -535,6 +548,7 @@ async function publishAiReview({
   if (
     (declaredUnchanged || suppressed > 0 || repeatedBody) &&
     comments.length === 0 &&
+    findings.length === 0 &&
     unplacedComments.length === 0 &&
     decisionUnchanged &&
     !majorUpgradeBrief

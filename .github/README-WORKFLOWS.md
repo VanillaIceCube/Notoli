@@ -1,6 +1,17 @@
 # 🤖 GitHub Automation
 This repo uses GitHub Actions for CI and deployments, plus Dependabot for dependency updates.
 
+## Major-upgrade review evidence
+
+Obi-Wan uses Dependabot's per-dependency metadata for grouped upgrades.
+Release lookups use each major update's own ecosystem and target version.
+Repository usage searches cover every listed dependency and retain the
+tracked-file exclusions and 30,000-byte limit. Numeric Actions references
+such as 7 and v7 can match a full release tag such as v7.0.0. Opaque refs
+leave a visible evidence gap. Required briefs need at least one valid HTTP(S)
+source URL. The publisher keeps independent body findings when it suppresses
+duplicate inline comments or sees an unchanged verdict.
+
 ## ✅ Flow 1: CI (`.github/workflows/ci-orchestrator.yml`)
 Trigger:
 - Pull requests (opened/synchronize/reopened/ready_for_review)
