@@ -454,3 +454,8 @@ Only signed exact-head patch/minor metadata can enable native auto-merge. Signed
 SHA-only Action updates without update-type, restricted to Action YAML diffs,
 pass policy for manual review after all checks and current-head approvals pass;
 they never infer semver or activate auto-merge. Missing ordinary/group metadata fails.
+
+Malware classification fetches each unique GHSA referenced by this repository's
+open Dependabot alerts, rather than enumerating the global malware catalogue.
+Empty feeds make no advisory requests. Failed or unverifiable classification
+stops before source checkpoint or issue writes; it never implies no malware.

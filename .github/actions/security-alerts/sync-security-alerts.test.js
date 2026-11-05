@@ -916,3 +916,33 @@ test("partial fields resume without resetting human planning or duplicating curr
   assert.match(h.issues[1].body, /coverage moved to #20/);
   await h.run(); assert.equal(h.creates, 2);
 });
+
+
+test("malware fetch inspects only unique repository source advisories and fails before writes on uncertain classification", async () => {
+  const action = fs.readFileSync(path.join(__dirname, "action.yml"), "utf8");
+  const step = action.split("    - name: Fetch open structured alerts")[1].split("    - name: Draft grouped work items")[0];
+  const script = step.split(/        script: \|\r?\n/)[1].split(/\r?\n/).map(line => line.replace(/^          /, "")).join("\n");
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+  const run = new AsyncFunction("github", "context", "core", "process", "require", script);
+  const raw = (number, ghsa) => ({ number, html_url: `https://example.test/${number}`, security_advisory: { ghsa_id: ghsa, severity: "medium" }, dependency: { package: { name: "example", ecosystem: "npm" } } });
+  for (const mode of ["empty", "mixed", "unavailable", "malformed"]) {
+    const calls = []; const writes = [];
+    const github = {
+      rest: { dependabot: { listAlertsForRepo() {} } },
+      paginate: async method => { assert.equal(method, github.rest.dependabot.listAlertsForRepo); return mode === "empty" ? [] : [raw(1, "GHSA-one"), raw(2, "GHSA-one"), raw(3, "GHSA-two")]; },
+      request: async (route, input) => {
+        assert.equal(route, "GET /advisories/{ghsa_id}"); calls.push(input.ghsa_id);
+        if (mode === "unavailable") throw new Error("advisory unavailable");
+        if (mode === "malformed") return { data: { ghsa_id: input.ghsa_id } };
+        return { data: { ghsa_id: input.ghsa_id, type: input.ghsa_id === "GHSA-one" ? "malware" : "reviewed" } };
+      },
+    };
+    const execute = () => run(github, { repo: { owner: "owner", repo: "repo" } }, { info() {}, setOutput() {} }, { env: { FEED: "malware", RUNNER_TEMP: "/tmp" } }, name => { assert.equal(name, "fs"); return { writeFileSync: (file, body) => writes.push(JSON.parse(body)) }; });
+    if (["unavailable", "malformed"].includes(mode)) { await assert.rejects(execute()); assert.equal(writes.length, 0); }
+    else {
+      await execute();
+      assert.deepEqual(calls, mode === "empty" ? [] : ["GHSA-one", "GHSA-two"]);
+      assert.deepEqual(writes[0].alerts.map(alert => alert.ref), mode === "empty" ? [] : ["dependabot:1", "dependabot:2"]);
+    }
+  }
+});
