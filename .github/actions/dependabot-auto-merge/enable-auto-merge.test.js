@@ -350,3 +350,51 @@ test("privileged workflow uses only main code and verified metadata, with no imm
   const reviewCode = fs.readFileSync(path.join(workflows, "review-code.yml"), "utf8");
   assert.doesNotMatch(reviewCode, /require\(`\$\{process.env.GITHUB_WORKSPACE\}\/\.github\/actions\/dependabot-auto-merge/);
 });
+
+
+test("SHA-only signed Action metadata takes a reviewed manual path without semver guessing", async () => {
+  const h = harness();
+  h.dependencies = [{ "dependency-name": "dorny/paths-filter", "dependency-version": "f3360c560367c9daf72b88c0e6164162034c5721", "dependency-type": "direct:production" }];
+  h.files = [{ filename: ".github/workflows/gate-test.yml" }];
+  assert.equal(await h.enable(), "ineligible");
+  assert.equal(h.calls.length, 0);
+  h.reviews.pop();
+  await assert.rejects(h.enable(), /approval/);
+  h.reviews = harness().reviews;
+  h.files.push({ filename: "frontend/package.json" });
+  await assert.rejects(h.enable(), /exclusively GitHub Actions/);
+  h.files = [{ filename: ".github/workflows/gate-test.yml" }];
+  h.dependencies.push({ "dependency-name": "other" });
+  await assert.rejects(h.enable(), /metadata is missing/);
+});
+
+test("inconsistent success/in-progress checks wait for actual completion, boundedly", async () => {
+  const h = harness();
+  const detector = h.checks.find(check => check.name === "Tests / Detect Changes");
+  detector.status = "in_progress";
+  detector.completed_at = "2026-11-05T00:06:10Z";
+  let waits = 0;
+  h.sleep = async () => { waits++; detector.status = "completed"; };
+  assert.equal(await h.enable(), "enabled");
+  assert.equal(waits, 1);
+  const stuck = harness();
+  Object.assign(stuck.checks[2], { status: "in_progress", conclusion: "success", completed_at: detector.completed_at });
+  let attempts = 0;
+  stuck.sleep = async () => { attempts++; };
+  await assert.rejects(stuck.enable(), /Required check.*in_progress/);
+  assert.equal(attempts, 5);
+  assert.equal(stuck.calls.length, 0);
+});
+
+test("delayed checks cannot authorize failed or changed heads", async () => {
+  for (const state of ["failure", "skipped", "cancelled"]) {
+    const h = harness(); h.checks[0].conclusion = state;
+    let waits = 0; h.sleep = async () => { waits++; };
+    await assert.rejects(h.enable(), /Required check/);
+    assert.equal(waits, 0); assert.equal(h.calls.length, 0);
+  }
+  const h = harness(); h.checks[0].status = "queued";
+  h.sleep = async () => { h.pr.head.sha = "new"; };
+  await assert.rejects(h.enable(), /head changed/);
+  assert.equal(h.calls.length, 0);
+});

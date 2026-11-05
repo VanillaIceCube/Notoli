@@ -75,6 +75,35 @@ function normalizeGroups(groups) {
     .sort((left, right) => left.key.localeCompare(right.key));
 }
 
+// Recover model omissions only before reconciliation; reject unknown/duplicate refs.
+function validateGroups(source, groups, { recoverOmissions = false } = {}) {
+  if (!Array.isArray(source?.alerts) || !Array.isArray(groups)) throw new Error("Invalid alert/group inventory; no issues changed.");
+  const known = new Set();
+  for (const alert of source.alerts) {
+    if (!/^(dependabot|code-scanning):\d+$/.test(alert?.ref) || known.has(alert.ref)) throw new Error("Invalid or duplicate source alert ref; no issues changed.");
+    known.add(alert.ref);
+  }
+  const seen = new Set();
+  const result = groups.map((group) => {
+    const text = (value, max) => typeof value === "string" && value.trim().length > 0 && value.trim().length <= max;
+    if (!text(group?.title, 120) || !text(group?.summary, 2000) || !text(group?.recommendation, 1000) || !Array.isArray(group.alert_refs) || !group.alert_refs.length) throw new Error("Invalid group schema; no issues changed.");
+    for (const ref of group.alert_refs) {
+      if (!known.has(ref) || seen.has(ref)) throw new Error(`Unknown or duplicate grouped alert ${ref}; no issues changed.`);
+      seen.add(ref);
+    }
+    return { ...group, alert_refs: [...group.alert_refs].sort() };
+  });
+  const missing = [...known].filter(ref => !seen.has(ref)).sort();
+  if (missing.length && !recoverOmissions) throw new Error(`Uncovered source alerts: ${missing.join(", ")}; no issues changed.`);
+  for (const ref of missing) result.push({
+    title: `Investigate security alert ${ref}`,
+    summary: `The grouping draft omitted ${ref}. This deterministic recovery item retains its authoritative source link.`,
+    recommendation: "Review the linked advisory or scanner finding and determine the repository-specific remediation. No fix or version has been inferred.",
+    alert_refs: [ref],
+  });
+  return { groups: result, recoveredRefs: missing };
+}
+
 function planReconciliation({ feed, groups, issues }) {
   const normalizedGroups = normalizeGroups(groups);
   const managedIssues = normalizeManagedIssues(issues, feed);
@@ -238,6 +267,7 @@ async function findProjectItemId(github, projectId, contentId) {
       { project: projectId, after },
     );
     const connection = data.node?.items;
+    if (!Array.isArray(connection?.nodes)) throw new Error("Could not verify Project item readback.");
     const item = connection?.nodes?.find(
       (candidate) => candidate.content?.id === contentId,
     );
@@ -271,29 +301,43 @@ async function findProjectItemIdEventually(github, projectId, contentId) {
   return null;
 }
 
-async function ensureProjectItem(github, projectId, projectState, issue) {
+async function ensureProjectItem(github, projectId, projectState, issue, sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))) {
   const existingItemId = projectState.itemsByContentId.get(issue.node_id);
   if (existingItemId) return { itemId: existingItemId, added: false };
-
-  try {
-    const data = await github.graphql(
-      "mutation($project: ID!, $content: ID!) { addProjectV2ItemById(input: { projectId: $project, contentId: $content }) { item { id } } }",
-      { project: projectId, content: issue.node_id },
-    );
-    const itemId = data.addProjectV2ItemById.item.id;
-    projectState.itemsByContentId.set(issue.node_id, itemId);
-    return { itemId, added: true };
-  } catch (error) {
-    if (!isProjectItemAlreadyExistsError(error)) throw error;
-    const itemId = await findProjectItemIdEventually(
-      github,
-      projectId,
-      issue.node_id,
-    );
-    if (!itemId) throw error;
-    projectState.itemsByContentId.set(issue.node_id, itemId);
-    return { itemId, added: false };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const data = await github.graphql(
+        "mutation($project: ID!, $content: ID!) { addProjectV2ItemById(input: { projectId: $project, contentId: $content }) { item { id } } }",
+        { project: projectId, content: issue.node_id },
+      );
+      const itemId = data.addProjectV2ItemById.item.id;
+      projectState.itemsByContentId.set(issue.node_id, itemId);
+      return { itemId, added: true };
+    } catch (error) {
+      const duplicate = isProjectItemAlreadyExistsError(error);
+      const transient = [429, 500, 502, 503, 504].includes(error?.status) ||
+        ["ETIMEDOUT", "ECONNRESET", "EAI_AGAIN"].includes(error?.code);
+      if (!duplicate && !transient) throw new Error(`Project attachment failed for issue #${issue.number}; rerun reuses its saved source refs.`, { cause: error });
+      const itemId = await (duplicate ? findProjectItemIdEventually : findProjectItemId)(github, projectId, issue.node_id);
+      if (itemId) {
+        projectState.itemsByContentId.set(issue.node_id, itemId);
+        return { itemId, added: false };
+      }
+      if (duplicate || attempt === 2) throw new Error(`Project attachment unresolved for issue #${issue.number} after bounded recovery; rerun reuses its saved source refs.`, { cause: error });
+      await sleep(attempt === 0 ? 250 : 1000);
+    }
   }
+}
+
+async function missingProjectDefaults(github, itemId, defaults) {
+  const data = await github.graphql(
+    "query($item: ID!) { node(id: $item) { ... on ProjectV2Item { fieldValues(first: 100) { nodes { ... on ProjectV2ItemFieldSingleSelectValue { field { ... on ProjectV2SingleSelectField { name } } } ... on ProjectV2ItemFieldNumberValue { field { ... on ProjectV2Field { name } } } } } } } }",
+    { item: itemId },
+  );
+  const nodes = data.node?.fieldValues?.nodes;
+  if (!Array.isArray(nodes)) throw new Error("Cannot verify existing Project fields; rerun to resume without overwriting planning.");
+  const present = new Set(nodes.map(node => node.field?.name));
+  return Object.fromEntries(Object.entries(defaults).filter(([name]) => !present.has(name)));
 }
 
 function projectFieldValue(field, value) {
@@ -330,12 +374,12 @@ async function setProjectValues(
   }
 }
 
-// Only a state-only PATCH with GitHub's observed empty-error 422 is eligible
+// Only a state-only PATCH with GitHub's observed concurrent-close 422 is eligible
 // for race recovery. Readback must prove both the intended state and saved note.
 async function closeManagedIssue(issueGithub, parameters, expectedBody) {
   const { data: current } = await issueGithub.rest.issues.get(parameters);
   const completed = (issue) =>
-    issue.state === "closed" && issue.state_reason === "completed" &&
+    issue?.state === "closed" && issue.state_reason === "completed" &&
     issue.body === expectedBody;
   if (completed(current)) return;
   try {
@@ -345,7 +389,10 @@ async function closeManagedIssue(issueGithub, parameters, expectedBody) {
   } catch (error) {
     const data = error?.response?.data;
     if (error?.status !== 422 || data?.message !== "Validation Failed" ||
-        !Array.isArray(data.errors) || data.errors.length !== 0) throw error;
+        !Array.isArray(data.errors) || !(data.errors.length === 0 ||
+          (data.errors.length === 1 && data.errors[0]?.resource === "Issue" &&
+           data.errors[0]?.code === "custom" && data.errors[0]?.message ===
+             "This issue was closed by another request. Reload it and try again."))) throw error;
     let final;
     try {
       ({ data: final } = await issueGithub.rest.issues.get(parameters));
@@ -364,6 +411,7 @@ async function synchronizeSecurityAlerts({
   projectId,
   source,
   groups,
+  sleep,
   currentDate = new Date().toISOString().slice(0, 10),
 }) {
   if (!issueGithub || !projectGithub) {
@@ -378,6 +426,7 @@ async function synchronizeSecurityAlerts({
     malware: { label: "malware", priority: "P1" },
   }[source.feed];
   if (!config) throw new Error(`Unsupported alert feed: ${source.feed}`);
+  validateGroups(source, groups);
 
   const openIssues = await issueGithub.paginate(
     issueGithub.rest.issues.listForRepo,
@@ -446,21 +495,21 @@ async function synchronizeSecurityAlerts({
       projectId,
       projectState,
       issue,
+      sleep,
     );
-    if (!existingIssue || projectItem.added) {
+    const defaults = {
+      Status: "Backlog", Domain: "CI/CD", "Work type": "Security",
+      Priority: config.priority, Size: "M", Estimate: 3,
+    };
+    const values = !existingIssue || projectItem.added ? defaults :
+      await missingProjectDefaults(projectGithub, projectItem.itemId, defaults);
+    if (Object.keys(values).length) {
       await setProjectValues(
         projectGithub,
         projectId,
         projectState,
         projectItem.itemId,
-        {
-          Status: "Backlog",
-          Domain: "CI/CD",
-          "Work type": "Security",
-          Priority: config.priority,
-          Size: "M",
-          Estimate: 3,
-        },
+        values,
       );
     }
     for (const ref of group.alert_refs) canonicalByRef.set(ref, issue);
@@ -511,6 +560,7 @@ async function synchronizeSecurityAlerts({
 }
 
 module.exports = {
+  validateGroups,
   closeManagedIssue,
   alertRefKey,
   alertRefsFromBody,

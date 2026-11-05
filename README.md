@@ -99,3 +99,6 @@ for exact secret names, project configuration, verification, and rollback.
 ## 🔌 Shared MCP framework
 
 Optional MCP transport/OAuth and application adoption are described in [the framework guide](docs/MCP-FRAMEWORK.md).
+
+Security-alert maintenance validates complete source coverage and supports bounded,
+idempotent Project recovery; see [.github/README-WORKFLOWS.md](.github/README-WORKFLOWS.md#security-alert-recovery).
