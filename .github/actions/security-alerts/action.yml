@@ -149,43 +149,11 @@ runs:
         script: |
           const fs = require('fs');
           const source = JSON.parse(fs.readFileSync(process.env.ALERT_PATH, 'utf8'));
-          let parsed;
-          try {
-            parsed = JSON.parse(process.env.LLM_OUTPUT);
-          } catch {
-            core.setFailed('OpenAI output was not valid JSON; no issues were changed.');
-            return;
-          }
-          if (!parsed || !Array.isArray(parsed.groups) || parsed.groups.length === 0 || parsed.groups.length > 25) {
-            core.setFailed('OpenAI output must contain between 1 and 25 groups; no issues were changed.');
-            return;
-          }
-          const knownRefs = new Set(source.alerts.map((alert) => alert.ref));
-          const seenRefs = new Set();
-          const groups = [];
-          for (const group of parsed.groups) {
-            const validText = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max;
-            if (!validText(group?.title, 120) || !validText(group?.summary, 2000) ||
-                !validText(group?.recommendation, 1000) || !Array.isArray(group?.alert_refs) || group.alert_refs.length === 0) {
-              core.setFailed('OpenAI output did not match the required group schema; no issues were changed.');
-              return;
-            }
-            for (const ref of group.alert_refs) {
-              if (!knownRefs.has(ref) || seenRefs.has(ref)) {
-                core.setFailed(`OpenAI output referenced an unknown or duplicate alert (${ref}); no issues were changed.`);
-                return;
-              }
-              seenRefs.add(ref);
-            }
-            groups.push({
-              title: group.title.trim(), summary: group.summary.trim(),
-              recommendation: group.recommendation.trim(), alert_refs: [...group.alert_refs].sort(),
-            });
-          }
-          if (seenRefs.size !== knownRefs.size) {
-            core.setFailed('OpenAI output did not cover every source alert; no issues were changed.');
-            return;
-          }
+          const { validateGroups } = require(`${process.env.GITHUB_WORKSPACE}/.github/actions/security-alerts/sync-security-alerts.js`);
+          const parsed = JSON.parse(process.env.LLM_OUTPUT);
+          if (!Array.isArray(parsed?.groups) || parsed.groups.length > 25) throw new Error('Invalid model group inventory; no issues changed.');
+          const { groups, recoveredRefs } = validateGroups(source, parsed.groups, { recoverOmissions: true });
+          if (recoveredRefs.length) core.warning(`Recovered omitted alerts with deterministic source-linked groups: ${recoveredRefs.join(', ')}`);
           fs.writeFileSync(process.env.GROUP_PATH, JSON.stringify({ feed: source.feed, groups }, null, 2));
 
     - name: Prepare empty alert groups

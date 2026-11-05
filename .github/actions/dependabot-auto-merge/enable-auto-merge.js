@@ -96,7 +96,9 @@ function verifyChecks(rules, checks, files, policyCheckId) {
     const expectedSkip = scopedChecks.has(requirement.context) && check?.conclusion === "skipped" &&
       scopeAllowsSkip(requirement.context, files);
     if (check?.status !== "completed" || (check.conclusion !== "success" && !expectedSkip)) {
-      throw new Error(`Required check is not passing: ${requirement.context}`);
+      const error = new Error(`Required check is not passing: ${requirement.context} (status=${check?.status ?? "missing"}, conclusion=${check?.conclusion ?? "none"})`);
+      error.retryable = !check || ["queued", "in_progress", "waiting", "pending"].includes(check.status);
+      throw error;
     }
   }
 }
@@ -177,30 +179,47 @@ async function enableAutoMerge({ github, context, core, policyCheckId, reviewerL
     owner, repo, branch: pr.base.ref, per_page: 100,
     headers: { "X-GitHub-Api-Version": "2026-03-10" },
   });
+  // Use API diff paths, including renames, for skip authorization on every read.
+  const files = await github.paginate(github.rest.pulls.listFiles, { ...request, per_page: 100 });
+  const paths = files.flatMap((file) => [file.filename, file.previous_filename].filter(Boolean));
   let checks;
   for (let attempt = 0; attempt < 6; attempt += 1) {
     checks = await github.paginate(github.rest.checks.listForRef, { owner, repo, ref: pr.head.sha, per_page: 100 });
-    if (checks.some((check) => check.id === policyCheckId && check.name === policyContext &&
-        check.app?.id === 15368 && check.status === "in_progress" && !check.conclusion)) break;
+    try {
+      verifyChecks(rules, checks, paths, policyCheckId);
+      break;
+    } catch (error) {
+      if (!error.retryable || attempt === 5) throw error;
+      core.info(error.message);
+    }
     if (attempt < 5) {
       const { data: current } = await github.rest.pulls.get(request);
       if (!trusted(current, repository) || current.head.sha !== pr.head.sha || current.node_id !== pr.node_id) {
         throw new Error("PR identity or head changed while waiting for policy check visibility");
       }
-      core.info("Waiting for GitHub to expose this head's pending policy check; retrying in two seconds.");
+      core.info("Waiting for exact-head required checks to become consistently completed; retrying in two seconds.");
       await sleep(2000);
     }
   }
   // These are API diff paths, never artifact-supplied scope claims. The required
   // detector must succeed too. Mirror gate-codeql.yml's Python/JS/Actions paths.
-  const files = await github.paginate(github.rest.pulls.listFiles, { ...request, per_page: 100 });
-  verifyChecks(rules, checks, files.flatMap((file) => [file.filename, file.previous_filename].filter(Boolean)), policyCheckId);
+  verifyChecks(rules, checks, paths, policyCheckId);
   const commits = await github.paginate(github.rest.pulls.listCommits, { ...request, per_page: 100 });
   if (commits.length !== 1 || commits[0].sha !== pr.head.sha || commits[0].author?.login !== "dependabot[bot]" ||
       !commits[0].commit?.verification?.verified) {
     throw new Error("Automatic merge requires exactly one verified Dependabot commit matching the current head");
   }
+  const { data: currentHead } = await github.rest.pulls.get(request);
+  if (!trusted(currentHead, repository) || currentHead.head.sha !== pr.head.sha || currentHead.node_id !== pr.node_id || currentHead.state !== "open") {
+    throw new Error("PR identity or head changed after check readiness validation");
+  }
   const dependencies = parseMetadata(commits[0].commit.message);
+  if (dependencies.some((dependency) => dependency.shaOnly) &&
+      (!paths.length || !paths.every((file) => /^\.github\/(?:workflows\/[^/]+\.ya?ml|actions\/.+\/action\.ya?ml)$/.test(file)))) {
+    throw new Error("SHA-only metadata requires an exclusively GitHub Actions YAML diff; manual investigation required");
+  }
+  const reviews = await github.paginate(github.rest.pulls.listReviews, { ...request, per_page: 100 });
+  verifyReviews(reviews, pr.head.sha, reviewerLogins);
   if (!dependencies.every((dependency) => typeof dependency.dependencyName === "string" &&
       eligible({ updateType: dependency.updateType, alertState: "", cvss: "" }))) {
     if (pr.auto_merge) await github.graphql('mutation($id: ID!) { disablePullRequestAutoMerge(input: {pullRequestId: $id}) { pullRequest { number } } }', { id: pr.node_id });
@@ -209,8 +228,6 @@ async function enableAutoMerge({ github, context, core, policyCheckId, reviewerL
   }
   const alerts = await github.paginate(github.rest.dependabot.listAlertsForRepo, { owner, repo, state: "open", per_page: 100 });
   verifyAlerts(dependencies, alerts);
-  const reviews = await github.paginate(github.rest.pulls.listReviews, { ...request, per_page: 100 });
-  verifyReviews(reviews, pr.head.sha, reviewerLogins);
   if (pr.auto_merge) {
     core.info("Auto-merge is already enabled for this reviewed head.");
     return "already-enabled";

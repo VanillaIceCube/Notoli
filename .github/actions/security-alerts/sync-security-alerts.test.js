@@ -295,6 +295,7 @@ test("synchronization preserves canonical project fields and completes supersede
   };
   const projectGithub = {
     graphql: async (query, variables) => {
+      if (query.includes('fieldValues(first: 100)')) return { node: { fieldValues: { nodes: ['Status', 'Domain', 'Work type', 'Priority', 'Size', 'Estimate'].map(name => ({ field: { name } })) } } };
       if (query.includes("fields(first: 100)")) {
         return {
           node: {
@@ -434,6 +435,7 @@ test("synchronization sends issue creation, labels, and assignment only through 
   };
   const projectGithub = {
     graphql: async (query, variables) => {
+      if (query.includes('fieldValues(first: 100)')) return { node: { fieldValues: { nodes: ['Status', 'Domain', 'Work type', 'Priority', 'Size', 'Estimate'].map(name => ({ field: { name } })) } } };
       projectCalls.push({ query, variables });
       if (query.includes("fields(first: 100)")) {
         return {
@@ -755,6 +757,7 @@ function lifecycleFixture({ autoClose = false, missingItem = false, failDate = f
     } },
   };
   const projectGithub = { graphql: async (query, variables) => {
+      if (query.includes('fieldValues(first: 100)')) return { node: { fieldValues: { nodes: ['Status', 'Domain', 'Work type', 'Priority', 'Size', 'Estimate'].map(name => ({ field: { name } })) } } };
     if (query.includes('fields(first: 100)')) return { node: { fields: { nodes: [
       { id: 'STATUS', name: 'Status', dataType: 'SINGLE_SELECT', options: [{ id: 'DONE', name: 'Done' }] },
       { id: 'END_DATE', name: 'End date', dataType: 'DATE' },
@@ -799,4 +802,117 @@ test('partial Project failures leave discoverable work and reruns preserve a sin
     assert.equal(fixture.saved.body.split('security-alert-lifecycle').length, 2);
     assert.deepEqual(await fixture.run(), { created: 0, updated: 0, closed: 0 });
   }
+});
+
+
+test("exact structured concurrent-close response requires verified state and lifecycle body", async () => {
+  const observed = { resource: "Issue", code: "custom", message: "This issue was closed by another request. Reload it and try again." };
+  for (const errors of [[observed], [], [observed, { resource: "Issue", code: "invalid" }], [{ ...observed, resource: "PullRequest" }], [{ ...observed, code: "invalid" }], [null], null]) {
+    for (const final of [{ state: "closed", state_reason: "completed", body: "saved" }, { state: "open", body: "saved" }, { state: "closed", state_reason: "not_planned", body: "saved" }, { state: "closed", state_reason: "completed", body: "other" }, null, "unavailable"]) {
+      const error = { status: 422, response: { data: { message: "Validation Failed", errors } } };
+      let reads = 0;
+      const client = { rest: { issues: {
+        get: async () => { if (++reads === 1) return { data: { state: "open" } }; if (final === "unavailable") throw new Error("read denied"); return { data: final }; },
+        update: async () => { throw error; },
+      } } };
+      const benign = Array.isArray(errors) && (errors.length === 0 || (errors.length === 1 && errors[0] === observed));
+      if (benign && final?.state === "closed" && final.state_reason === "completed" && final.body === "saved") await closeManagedIssue(client, { issue_number: 11 }, "saved");
+      else await assert.rejects(closeManagedIssue(client, { issue_number: 11 }, "saved"), actual => actual === error);
+      assert.equal(reads, benign ? 2 : 1);
+    }
+  }
+});
+
+
+test("omitted-alert draft recovery accounts for each source exactly once before mutation", async () => {
+  const { validateGroups } = require("./sync-security-alerts");
+  const source = { feed, alerts: Array.from({ length: 15 }, (_, i) => ({ ref: `dependabot:${i + 1}` })) };
+  const draft = [group(source.alerts.slice(0, 12).map(alert => alert.ref), "Sanitized omitted-alert draft")];
+  const recovered = validateGroups(source, draft, { recoverOmissions: true });
+  assert.deepEqual(recovered.recoveredRefs, ["dependabot:13", "dependabot:14", "dependabot:15"]);
+  assert.deepEqual(validateGroups(source, recovered.groups).recoveredRefs, []);
+  for (const groups of [draft, [group(["dependabot:1", "dependabot:1"])], [group(["dependabot:999"])], [{ ...group(["dependabot:1"]), summary: "" }]]) {
+    let reads = 0;
+    await assert.rejects(synchronizeSecurityAlerts({ issueGithub: { paginate: async () => { reads++; } }, projectGithub: {}, source, groups, context: { repo: {} } }), /no issues changed/);
+    assert.equal(reads, 0);
+  }
+  assert.throws(() => validateGroups(source, null, { recoverOmissions: true }), /Invalid/);
+  assert.throws(() => validateGroups({ alerts: [...source.alerts, source.alerts[0]] }, []), /duplicate source/);
+});
+
+function recoveryFixture() {
+  const issues = [];
+  const items = new Map();
+  const fields = [
+    ["Status", ["Backlog", "In Progress", "Done"]], ["Domain", ["CI/CD"]], ["Work type", ["Security"]],
+    ["Priority", ["P0", "P1", "P2"]], ["Size", ["M"]], ["Estimate", null], ["End date", null],
+  ].map(([name, options]) => ({ name, id: name, dataType: options ? "SINGLE_SELECT" : name === "Estimate" ? "NUMBER" : "DATE", options: options?.map(name => ({ name, id: name })) }));
+  const h = { issues, items, creates: 0, adds: 0, waits: 0, fault: null, fieldFault: false, accepted: false };
+  const issueGithub = {
+    paginate: async () => issues.filter(issue => issue.state === "open"),
+    rest: { issues: {
+      listForRepo() {}, get: async ({ issue_number }) => ({ data: issues.find(issue => issue.number === issue_number) }),
+      create: async (input) => { h.creates++; const saved = { ...input, number: 20 + issues.length, node_id: `I${issues.length}`, state: "open" }; issues.push(saved); return { data: saved }; },
+      update: async (input) => { const saved = issues.find(issue => issue.number === input.issue_number); Object.assign(saved, input); return { data: saved }; },
+      addLabels: async () => {}, addAssignees: async () => {},
+    } },
+  };
+  const projectGithub = { graphql: async (query, vars) => {
+    if (query.includes("fields(first: 100)")) return { node: { fields: { nodes: fields } } };
+    if (query.includes("fieldValues(first: 100)")) return { node: { fieldValues: { nodes: [...items.get(vars.item).values.keys()].map(name => ({ field: { name } })) } } };
+    if (query.includes("items(first: 100")) return { node: { items: { nodes: [...items].map(([id, item]) => ({ id, content: { id: item.content } })), pageInfo: {} } } };
+    if (query.includes("addProjectV2ItemById")) {
+      h.adds++;
+      if (!h.fault || h.accepted) items.set(vars.content, { content: vars.content, values: new Map() });
+      if (h.fault) throw h.fault;
+      return { addProjectV2ItemById: { item: { id: vars.content } } };
+    }
+    if (query.includes("updateProjectV2ItemFieldValue")) {
+      if (h.fieldFault && vars.field === "Domain") { h.fieldFault = false; throw new Error("field service unavailable"); }
+      items.get(vars.item).values.set(vars.field, vars.value);
+      return {};
+    }
+    throw new Error("Unexpected query");
+  } };
+  h.source = { feed, alerts: [1, 2].map(n => ({ ref: `dependabot:${n}`, url: `https://example.test/${n}`, package: "example", severity: "medium" })) };
+  h.groups = [group(h.source.alerts.map(alert => alert.ref))];
+  h.run = () => synchronizeSecurityAlerts({ issueGithub, projectGithub, core: { info() {} }, context: { repo: { owner: "owner", repo: "repo" } }, projectId: "P", source: h.source, groups: h.groups, sleep: async () => { h.waits++; } });
+  return h;
+}
+
+test("transient Project writes recover boundedly, including a committed write with lost response", async () => {
+  for (const accepted of [false, true]) {
+    const h = recoveryFixture(); h.fault = { status: 502 }; h.accepted = accepted;
+    if (!accepted) {
+      await assert.rejects(h.run(), /issue #20.*bounded recovery/);
+      assert.equal(h.adds, 3); assert.equal(h.waits, 2);
+      assert.equal(h.issues[0].state, "open");
+      h.fault = null;
+    }
+    await h.run();
+    assert.equal(h.creates, 1); assert.equal(h.items.size, 1);
+    assert.deepEqual(alertRefsFromBody(h.issues[0].body), ["dependabot:1", "dependabot:2"]);
+    assert.equal(h.items.get("I0").values.size, 6);
+    await h.run(); assert.equal(h.creates, 1);
+  }
+  const denied = recoveryFixture(); denied.fault = { status: 403 };
+  await assert.rejects(denied.run(), /attachment failed for issue #20/);
+  assert.equal(denied.adds, 1); assert.equal(denied.waits, 0);
+});
+
+test("partial fields resume without resetting human planning or duplicating current coverage", async () => {
+  const h = recoveryFixture(); h.fieldFault = true;
+  await assert.rejects(h.run(), /field service unavailable/);
+  h.items.get("I0").values.set("Status", { singleSelectOptionId: "In Progress" });
+  await h.run();
+  assert.equal(h.creates, 1); assert.equal(h.items.get("I0").values.size, 6);
+  assert.deepEqual(h.items.get("I0").values.get("Status"), { singleSelectOptionId: "In Progress" });
+  // Expand then merge coverage, retaining the oldest canonical issue and history.
+  h.groups = [group(["dependabot:1"]), group(["dependabot:2"])];
+  await h.run(); assert.equal(h.creates, 2);
+  h.groups = [group(["dependabot:1", "dependabot:2"])];
+  await h.run();
+  assert.equal(h.issues[0].state, "open"); assert.equal(h.issues[1].state, "closed");
+  assert.match(h.issues[1].body, /coverage moved to #20/);
+  await h.run(); assert.equal(h.creates, 2);
 });
