@@ -100,11 +100,17 @@ runs:
               // High and critical findings are handled by immediate remediation/incident work.
               alerts = dependabotAlerts.filter((alert) => ['low', 'medium', 'unknown'].includes(alert.severity));
             } else if (feed === 'malware') {
-              const advisories = await github.paginate('GET /advisories', {
-                ecosystem: 'npm', type: 'malware', per_page: 100,
-                headers: { 'X-GitHub-Api-Version': '2022-11-28' },
-              });
-              const malwareGhsas = new Set(advisories.map((advisory) => advisory.ghsa_id).filter(Boolean));
+              const malwareGhsas = new Set();
+              for (const ghsa of new Set(dependabotAlerts.map(alert => alert.ghsa))) {
+                const { data: advisory } = await github.request('GET /advisories/{ghsa_id}', {
+                  ghsa_id: ghsa,
+                  headers: { 'X-GitHub-Api-Version': '2022-11-28' },
+                });
+                if (advisory.ghsa_id !== ghsa || !['reviewed', 'unreviewed', 'malware'].includes(advisory.type)) {
+                  throw new Error(`Cannot classify source advisory ${ghsa}; no issues were changed.`);
+                }
+                if (advisory.type === 'malware') malwareGhsas.add(ghsa);
+              }
               // Dependabot does not expose a malware category itself. The advisory feed supplies
               // that classification; matching GHSA IDs keeps Dependabot alert data authoritative.
               alerts = dependabotAlerts.filter((alert) => malwareGhsas.has(alert.ghsa));
