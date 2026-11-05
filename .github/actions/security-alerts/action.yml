@@ -100,11 +100,17 @@ runs:
               // High and critical findings are handled by immediate remediation/incident work.
               alerts = dependabotAlerts.filter((alert) => ['low', 'medium', 'unknown'].includes(alert.severity));
             } else if (feed === 'malware') {
-              const advisories = await github.paginate('GET /advisories', {
-                ecosystem: 'npm', type: 'malware', per_page: 100,
-                headers: { 'X-GitHub-Api-Version': '2022-11-28' },
-              });
-              const malwareGhsas = new Set(advisories.map((advisory) => advisory.ghsa_id).filter(Boolean));
+              const malwareGhsas = new Set();
+              for (const ghsa of new Set(dependabotAlerts.map(alert => alert.ghsa))) {
+                const { data: advisory } = await github.request('GET /advisories/{ghsa_id}', {
+                  ghsa_id: ghsa,
+                  headers: { 'X-GitHub-Api-Version': '2022-11-28' },
+                });
+                if (advisory.ghsa_id !== ghsa || !['reviewed', 'unreviewed', 'malware'].includes(advisory.type)) {
+                  throw new Error(`Cannot classify source advisory ${ghsa}; no issues were changed.`);
+                }
+                if (advisory.type === 'malware') malwareGhsas.add(ghsa);
+              }
               // Dependabot does not expose a malware category itself. The advisory feed supplies
               // that classification; matching GHSA IDs keeps Dependabot alert data authoritative.
               alerts = dependabotAlerts.filter((alert) => malwareGhsas.has(alert.ghsa));
@@ -149,43 +155,11 @@ runs:
         script: |
           const fs = require('fs');
           const source = JSON.parse(fs.readFileSync(process.env.ALERT_PATH, 'utf8'));
-          let parsed;
-          try {
-            parsed = JSON.parse(process.env.LLM_OUTPUT);
-          } catch {
-            core.setFailed('OpenAI output was not valid JSON; no issues were changed.');
-            return;
-          }
-          if (!parsed || !Array.isArray(parsed.groups) || parsed.groups.length === 0 || parsed.groups.length > 25) {
-            core.setFailed('OpenAI output must contain between 1 and 25 groups; no issues were changed.');
-            return;
-          }
-          const knownRefs = new Set(source.alerts.map((alert) => alert.ref));
-          const seenRefs = new Set();
-          const groups = [];
-          for (const group of parsed.groups) {
-            const validText = (value, max) => typeof value === 'string' && value.trim().length > 0 && value.trim().length <= max;
-            if (!validText(group?.title, 120) || !validText(group?.summary, 2000) ||
-                !validText(group?.recommendation, 1000) || !Array.isArray(group?.alert_refs) || group.alert_refs.length === 0) {
-              core.setFailed('OpenAI output did not match the required group schema; no issues were changed.');
-              return;
-            }
-            for (const ref of group.alert_refs) {
-              if (!knownRefs.has(ref) || seenRefs.has(ref)) {
-                core.setFailed(`OpenAI output referenced an unknown or duplicate alert (${ref}); no issues were changed.`);
-                return;
-              }
-              seenRefs.add(ref);
-            }
-            groups.push({
-              title: group.title.trim(), summary: group.summary.trim(),
-              recommendation: group.recommendation.trim(), alert_refs: [...group.alert_refs].sort(),
-            });
-          }
-          if (seenRefs.size !== knownRefs.size) {
-            core.setFailed('OpenAI output did not cover every source alert; no issues were changed.');
-            return;
-          }
+          const { validateGroups } = require(`${process.env.GITHUB_WORKSPACE}/.github/actions/security-alerts/sync-security-alerts.js`);
+          const parsed = JSON.parse(process.env.LLM_OUTPUT);
+          if (!Array.isArray(parsed?.groups) || parsed.groups.length > 25) throw new Error('Invalid model group inventory; no issues changed.');
+          const { groups, recoveredRefs } = validateGroups(source, parsed.groups, { recoverOmissions: true });
+          if (recoveredRefs.length) core.warning(`Recovered omitted alerts with deterministic source-linked groups: ${recoveredRefs.join(', ')}`);
           fs.writeFileSync(process.env.GROUP_PATH, JSON.stringify({ feed: source.feed, groups }, null, 2));
 
     - name: Prepare empty alert groups

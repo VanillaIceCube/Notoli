@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-05
+
+### Fixed
+- Bound malware classification to repository source advisories instead of scanning the global catalogue.
+- Recover the exact structured concurrent-close response only after verifying saved lifecycle state and body.
+- Recover omitted alert refs deterministically and interrupted Project synchronization without duplicate issues or resetting planning.
+- Retry inconsistent exact-head Dependabot check readiness safely and route signed SHA-only Action updates to manual review.
+
+
 ## 2026-11-03
 
 ### Fixed
