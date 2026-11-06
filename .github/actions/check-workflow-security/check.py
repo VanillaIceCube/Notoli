@@ -2,6 +2,7 @@
 import json
 import re
 import sys
+import subprocess
 
 import yaml
 from yaml.nodes import MappingNode, ScalarNode, SequenceNode
@@ -76,6 +77,45 @@ def check(text, name, grants):
     return errors
 
 
+def base_policy(root, base):
+    if not re.fullmatch(r"[0-9a-f]{40}", base):
+        raise ValueError("Invalid platform base SHA")
+
+    def git(*args):
+        return subprocess.check_output(["git", "-C", root, *args], text=True, encoding="utf-8")
+
+    git("cat-file", "-e", base + "^{commit}")
+    name = ".github/workflow-write-grants.json"
+    if git("ls-tree", "--name-only", base, "--", name).strip():
+        return json.loads(git("show", base + ":" + name))
+    # Bootstrap only from the platform-selected base's existing grants, never
+    # from the proposed checkout. Future grant extensions merge policy first.
+    policy = {}
+
+    def collect(obj, trail, grants):
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                if key == "permissions" and isinstance(value, dict):
+                    writes = [scope for scope, level in value.items() if level == "write"]
+                    if writes:
+                        grants[".".join((*trail, key))] = writes
+                collect(value, (*trail, key), grants)
+        elif isinstance(obj, list):
+            for value in obj:
+                collect(value, (*trail, "[]"), grants)
+
+    for name in git("ls-tree", "-r", "--name-only", base, "--", ".github/workflows").splitlines():
+        if name.endswith((".yml", ".yaml")):
+            grants = {}
+            collect(yaml.load(git("show", base + ":" + name), Loader=yaml.BaseLoader), (), grants)
+            if grants:
+                policy[name] = grants
+    return policy
+
+
 if __name__ == "__main__":
     data = json.load(sys.stdin)
-    print(json.dumps(check(data["text"], data["name"], data.get("grants", {}))))
+    if "base" in data:
+        print(json.dumps(base_policy(data["root"], data["base"])))
+    else:
+        print(json.dumps(check(data["text"], data["name"], data.get("grants", {}))))

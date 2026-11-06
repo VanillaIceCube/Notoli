@@ -493,3 +493,11 @@ Mapping-form writes are checked against `.github/workflow-write-grants.json`,
 which records reviewed per-workflow/job grants. Unknown scopes/grant levels and
 new writes fail. Changes to that policy require review with the workflow; it does
 not grant GitHub permissions itself or replace branch protection.
+
+On pull requests, grant authority comes from the platform event base SHA, never
+from the proposed policy file. Bootstrap derives existing writes from that exact
+base when no manifest exists. To add a grant, first merge a separately reviewed
+policy-only PR under the existing protected review gates; a later workflow PR
+can consume it. Fetch the base commit before local PR-policy audits. This detects
+self-authorizing policy/workflow changes; it does not make PR-owned code a sandbox
+or remove repository-writer privileges.
