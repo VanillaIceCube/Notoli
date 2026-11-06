@@ -25,6 +25,8 @@ test('development entrypoint handles fresh, unchanged, changed and failed instal
     assert.equal(run().status, 0); assert.equal(count(), 2);
     fs.appendFileSync(path.join(dir, 'package-lock.json'), '\n');
     assert.equal(run(0, { FAIL_INSTALL: '1' }).status, 23); assert.equal(count(), 3);
+    assert.equal(fs.existsSync(path.join(dir, 'node_modules/.dependency-manifests.sha256')), false);
+    fs.writeFileSync(path.join(dir, 'package-lock.json'), '{}');
     assert.equal(run().status, 0); assert.equal(count(), 4);
     assert.equal(run(7).status, 7); assert.equal(count(), 4);
     fs.unlinkSync(path.join(dir, 'package-lock.json'));
