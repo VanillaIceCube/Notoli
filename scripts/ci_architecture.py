@@ -34,6 +34,10 @@ def inventory(root):
             if not (folder / "action.yml").is_file() and not (folder / "action.yaml").is_file():
                 raise ValueError(f"Missing documented custom action: {relative} -> {target}")
             result["custom_action_consumers"].setdefault(target, []).append(relative)
+    result["custom_action_consumers"] = {
+        action: sorted(set(consumers))
+        for action, consumers in result["custom_action_consumers"].items()
+    }
     return result
 
 

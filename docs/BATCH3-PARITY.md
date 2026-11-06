@@ -39,7 +39,12 @@ does not add retries, a queue or delivery webhooks. Provider acceptance is not
 proof of inbox delivery. Shared tests use mocked providers and disposable data;
 production public readiness does not exercise authenticated/reset mail delivery.
 
-The promotion summary is informational and distinct from authorization. All
+The promotion summary is informational and distinct from authorization. If a
+trigger-protected label is added after publication, the timestamped/base-and-head
+summary is retained as historical evidence: the item becomes read-only, so the
+bot neither deletes nor refreshes its comment. It never represents a live gate.
+After protection is removed, an ordinary eligible event or manual refresh may
+update the same owned comment. Label transitions alone do not initiate writes. All
 applications retain the Infrastructure-pinned release engine and existing
 main-first process. The gateway keeps separate Required CI, secret scan, owner
 checks, maintenance locking and unchanged-runtime behavior. FullStackTemplate

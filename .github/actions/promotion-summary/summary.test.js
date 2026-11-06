@@ -79,5 +79,15 @@ test('permission failure and unconfirmed writes remain failures, not reported su
 
 test('documentation-only files do not manufacture runtime or release-input impact', () => {
   const groups = classify([{ filename: 'backend/README.md' }, { filename: 'deploy/production/README.md' }, { filename: '.github/README-WORKFLOWS.md' }]);
-  assert.equal(groups.documentation, 3); assert.equal(groups.backend, 0); assert.equal(groups.release, 0); assert.equal(groups.automation, 0);
+  assert.equal(groups.documentation, 3); assert.equal(groups.other, 0); assert.equal(groups.backend, 0); assert.equal(groups.release, 0); assert.equal(groups.automation, 0);
+});
+
+
+test('a newly protected PR retains historical evidence without another mutation', async () => {
+  const h = fixture(); await h.call(); const original = h.comments[0].body;
+  h.pr.labels = [{ name: 'codex' }]; h.pr.head.sha = 'c'.repeat(40);
+  assert.equal((await h.call()).status, 'skipped');
+  assert.equal(h.writes.length, 1); assert.equal(h.comments[0].body, original);
+  h.pr.labels = [];
+  assert.equal((await h.call()).status, 'updated'); assert.equal(h.comments.length, 1);
 });

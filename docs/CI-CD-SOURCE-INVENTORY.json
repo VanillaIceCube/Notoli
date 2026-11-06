@@ -11,29 +11,21 @@
       ".github/workflows/review-security.yml"
     ],
     "./.github/actions/openai-chat": [
+      ".github/actions/security-alerts/action.yml",
       ".github/workflows/review-build.yml",
       ".github/workflows/review-code.yml",
-      ".github/workflows/review-security.yml",
-      ".github/actions/security-alerts/action.yml"
+      ".github/workflows/review-security.yml"
     ],
     "./.github/actions/prepare-lint-commit": [
-      ".github/workflows/gate-lint.yml",
       ".github/workflows/gate-lint.yml"
     ],
     "./.github/actions/publish-ai-review": [
       ".github/workflows/review-build.yml",
-      ".github/workflows/review-build.yml",
       ".github/workflows/review-code.yml",
-      ".github/workflows/review-code.yml",
-      ".github/workflows/review-security.yml",
       ".github/workflows/review-security.yml"
     ],
     "./.github/actions/read-versions": [
       ".github/workflows/gate-lint.yml",
-      ".github/workflows/gate-lint.yml",
-      ".github/workflows/gate-test.yml",
-      ".github/workflows/gate-test.yml",
-      ".github/workflows/gate-test.yml",
       ".github/workflows/gate-test.yml"
     ],
     "./.github/actions/review-npm-malware": [
