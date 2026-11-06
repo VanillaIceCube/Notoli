@@ -36,3 +36,6 @@ runs:
           const fs = require('node:fs');
           fs.mkdirSync(require('node:path').dirname(process.env.OUTPUT_PATH), { recursive: true });
           fs.writeFileSync(process.env.OUTPUT_PATH, JSON.stringify(payload));
+          core.info(`Prior discussion evidence: ${JSON.stringify({ status: payload.status, head_sha: payload.head_sha,
+            own_reviews: payload.prior_reviews.length, human_reviews: payload.human_reviews.length,
+            human_replies: payload.replies_to_prior_findings.length, truncated: payload.truncated })}`);

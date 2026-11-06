@@ -87,7 +87,7 @@ test("review context retains owner intent and replies without treating them as a
         repo: { owner: "owner", repo: "app" },
         payload: { pull_request: { number: 1 } },
       },
-      { warning() {} },
+      { warning() {}, info() {} },
     );
     } finally {
       for (const [key,value] of Object.entries(savedEnv)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }

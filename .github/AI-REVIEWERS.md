@@ -11,7 +11,13 @@ app-owned. Never put a key, prompt, reset token or private source in usage evide
 
 [`collect-prior-ai-reviews`](actions/collect-prior-ai-reviews/action.yml) gets the
 authenticated token action's App slug and verifies its exact numeric Bot user ID.
-Display-name substring matching is not an ownership fallback. REST uses the
+Display-name substring matching is not an ownership fallback. The App token stays
+limited to contents-read/pull-requests-write. Reconciliation source/check/status/
+branch-rule reads use a separate client with the existing job `GITHUB_TOKEN`
+(`contents`, `pull-requests`, `checks`, `statuses`: read), never the App write
+client. A bounded read-only API probe reports readable/unavailable outcomes in
+the existing job log; API access is not a claim that checks passed. No App
+installation permission or reviewer key/project is expanded. REST uses the
 `[bot]` suffix; GraphQL Bot login omits it, and reconciliation checks both the
 API-specific login and numeric identity. No unrelated App credentials are used.
 
@@ -21,6 +27,8 @@ human replies directly to this persona's roots, before up to five own reviews an
 forty own inline comments. Body budgets are 6000/1500/4000/1200 UTF-8 bytes;
 the complete serialized payload is capped at 64 KiB. Truncation/page limits,
 revision, root/review IDs, source, authors and outdated status are disclosed.
+Older-commit attribution is separate from outdated status; an active inline
+comment remains active when the PR advances.
 Missing permissions/context are reported as unavailable, never an empty clean
 history. Common credentials, email addresses and query-bearing URLs are omitted;
 arbitrary prose can still contain personal data, so include only relevant context.
@@ -42,14 +50,33 @@ human assertions or moving a line are insufficient. Unsupported cases stay open.
 [`reconcile.js`](actions/publish-ai-review/reconcile.js) checks current open
 same-repository PR head, exact App ownership, complete thread history, one exact
 old added line from the finding's hunk, its absence from current file content and
-a concrete replacement at the reviewed head. At most five thread pages and five
-decisions are processed; large/incomplete files or threads are skipped. Resolution
+an ancestor-to-HEAD patch proving a single-line substitution at the cited location,
+and that exact replacement line at the reviewed head. Broader edits, renames and
+nonancestor histories remain open. At most five pages of25thread roots and five
+decisions are processed; each candidate conversation is limited to20comments and
+longer/incomplete histories are left alone; large/incomplete files or threads are skipped. Resolution
 also requires an outdated resolvable thread, a clean current `APPROVE` with no
-findings/inline comments, and completed non-review checks without failures.
+findings/inline comments, and completed independent checks plus reported legacy commit statuses without failures.
+The expected native lint/test/scanner inventory (with distinct Infrastructure
+secret/dependency gates) must be present and successful under the GitHub Actions
+App, including all three CodeQL analyzers. This is deliberately stricter for
+automatic resolution than ordinary path-based merge skips: otherwise valid
+scoped/omitted analyses leave feedback open. Expected other persona checks must
+be present and successful; all independent
+required branch-rule contexts must also be present and successful (including
+verified integration identity where specified). Skipped/neutral/missing required
+evidence keeps the thread open. Only this persona's active check and self-dependent Required CI/Auto Merge
+aggregates are excluded to avoid a dependency cycle; other persona failures still
+block resolution, and all native aggregate/review requirements remain unchanged.
+Missing/denied/incomplete status evidence cannot authorize resolution.
 These predicates support only narrow source replacements, not universal proof
 of arbitrary fixes. Ambiguous or unresolved security findings must remain open.
 
 Only this persona's roots can change; human/other-bot threads are never resolved.
+Own-root threads with any human/other-bot participant also stay open. Participants
+and head are checked again immediately before and after resolution; a race after
+a confirmed own resolution attempts to reopen that own thread and reports an
+incomplete result. Denied/uncertain recovery is never represented as success.
 The resolver verifies mutation output and post-reads the state/current head.
 Permission failures or uncertain results are logged as incomplete, with no
 unverified completion claim. Follow-ups contain a deterministic source-evidence
@@ -86,7 +113,8 @@ summary. Missing usage is `null`/unknown. The dated Standard token-price table i
 [`policy.cjs`](actions/openai-chat/policy.cjs) is configurable through a reviewed
 source change with official URL/date; verified rates are $0.10 input, $0.01 cached
 input, $0.50 output per million tokens. Estimate only when model/tier and relevant
-counters match. Tool/cache-write/regional/other charges are excluded; total billed
+counters match within the verified short-context band (up to272000 input tokens).
+Long-context estimates remain unknown. Tool/cache-write/regional/other charges are excluded; total billed
 cost remains unknown. Estimates are not bills or spending enforcement. Reverify
 [pricing](https://developers.openai.com/api/docs/pricing) before cost decisions.
 No raw prompts, model response bodies, provider error text, keys or private source
