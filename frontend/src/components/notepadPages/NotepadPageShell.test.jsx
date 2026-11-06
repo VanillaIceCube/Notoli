@@ -46,7 +46,7 @@ describe('NotepadPageShell', () => {
     renderShell({ title: '', loading: true, hasContent: true });
 
     expect(screen.getByTestId('notepad-page-title')).toHaveStyle({
-      minHeight: '2.625rem',
+      'min-height': '42px',
     });
     expect(screen.getByText('Rows go here')).toBeInTheDocument();
   });

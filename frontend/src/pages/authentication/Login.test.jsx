@@ -4,20 +4,18 @@ import { renderWithProviders } from '../../test-support/utils';
 import Login from './Login';
 import { fetchBoards, login } from '../../services/notoliApiClient';
 import { useNavigate } from 'react-router-dom';
-
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
-  useNavigate: jest.fn(),
+vi.mock('react-router-dom', async () => ({
+  ...(await vi.importActual('react-router-dom')),
+  useNavigate: vi.fn(),
 }));
-
-jest.mock('../../services/notoliApiClient', () => ({
-  fetchBoards: jest.fn(() =>
+vi.mock('../../services/notoliApiClient', () => ({
+  fetchBoards: vi.fn(() =>
     Promise.resolve({
       ok: true,
       json: async () => [],
     }),
   ),
-  login: jest.fn(() =>
+  login: vi.fn(() =>
     Promise.resolve({
       ok: true,
       json: async () => ({
@@ -29,23 +27,23 @@ jest.mock('../../services/notoliApiClient', () => ({
     }),
   ),
 }));
-
 describe('Login', () => {
-  const mockNavigate = jest.fn();
-
+  const mockNavigate = vi.fn();
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     sessionStorage.clear();
     localStorage.clear();
     useNavigate.mockReturnValue(mockNavigate);
   });
-
   test('when rendered, it shows email/password inputs and submit button', () => {
-    renderWithProviders(<Login showSnackbar={jest.fn()} />);
-
+    renderWithProviders(<Login showSnackbar={vi.fn()} />);
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    ).toBeInTheDocument();
     // The Stack has no accessible role; inspect its computed layout to catch removed MUI props.
     // eslint-disable-next-line testing-library/no-node-access
     expect(screen.getByText('notoli').parentElement).toHaveStyle({
@@ -53,39 +51,43 @@ describe('Login', () => {
       maxWidth: '600px',
     });
   });
-
   test('when forgot password is clicked, it navigates to /forgot-password', async () => {
-    renderWithProviders(<Login showSnackbar={jest.fn()} />);
-
+    renderWithProviders(<Login showSnackbar={vi.fn()} />);
     await userEvent.click(screen.getByText(/forgot password\?/i));
-
     expect(mockNavigate).toHaveBeenCalledWith('/forgot-password');
   });
-
   test('when a pending snackbar exists in sessionStorage, it shows it once on render', async () => {
     sessionStorage.setItem(
       'pendingSnackbar',
-      JSON.stringify({ severity: 'error', message: 'Your session expired. Please log in again.' }),
+      JSON.stringify({
+        severity: 'error',
+        message: 'Your session expired. Please log in again.',
+      }),
     );
-
-    const showSnackbar = jest.fn();
-
+    const showSnackbar = vi.fn();
     renderWithProviders(<Login showSnackbar={showSnackbar} />);
-
     await waitFor(() => {
       expect(showSnackbar).toHaveBeenCalledWith(
         'error',
         'Your session expired. Please log in again.',
       );
     });
-
     expect(sessionStorage.getItem('pendingSnackbar')).toBeNull();
   });
-
   test('when login succeeds and boards exist, it navigates to the first board', async () => {
     fetchBoards.mockResolvedValueOnce({
       ok: true,
-      json: async () => [{ id: 7 }, { id: 3 }, { id: 12 }],
+      json: async () => [
+        {
+          id: 7,
+        },
+        {
+          id: 3,
+        },
+        {
+          id: 12,
+        },
+      ],
     });
     login.mockResolvedValue({
       ok: true,
@@ -96,23 +98,38 @@ describe('Login', () => {
         email: 'test_email@example.com',
       }),
     });
-
-    renderWithProviders(<Login showSnackbar={jest.fn()} />);
-
+    renderWithProviders(<Login showSnackbar={vi.fn()} />);
     await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
-    await userEvent.click(screen.getByRole('button', { name: /login/i }));
-
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    );
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/board/3');
     });
   });
-
   test('when login succeeds and the previous board is still accessible, it navigates there', async () => {
-    localStorage.setItem('notoli:lastBoardByUser', JSON.stringify({ test_email: '12' }));
+    localStorage.setItem(
+      'notoli:lastBoardByUser',
+      JSON.stringify({
+        test_email: '12',
+      }),
+    );
     fetchBoards.mockResolvedValueOnce({
       ok: true,
-      json: async () => [{ id: 7 }, { id: 3 }, { id: 12 }],
+      json: async () => [
+        {
+          id: 7,
+        },
+        {
+          id: 3,
+        },
+        {
+          id: 12,
+        },
+      ],
     });
     login.mockResolvedValue({
       ok: true,
@@ -123,18 +140,18 @@ describe('Login', () => {
         email: 'test_email@example.com',
       }),
     });
-
-    renderWithProviders(<Login showSnackbar={jest.fn()} />);
-
+    renderWithProviders(<Login showSnackbar={vi.fn()} />);
     await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
-    await userEvent.click(screen.getByRole('button', { name: /login/i }));
-
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    );
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/board/12');
     });
   });
-
   test('when login succeeds and no boards exist, it navigates home', async () => {
     fetchBoards.mockResolvedValue({
       ok: true,
@@ -149,15 +166,18 @@ describe('Login', () => {
         email: 'test_email@example.com',
       }),
     });
-
-    renderWithProviders(<Login showSnackbar={jest.fn()} />);
+    renderWithProviders(<Login showSnackbar={vi.fn()} />);
 
     // Type credentials
     await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
 
     // Click login
-    await userEvent.click(screen.getByRole('button', { name: /login/i }));
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    );
 
     // Confirm the login request happened with the creds we typed
     await waitFor(() => {
@@ -172,7 +192,6 @@ describe('Login', () => {
       expect(mockNavigate).toHaveBeenCalledWith('/');
     });
   });
-
   test('when login succeeds, it stores access/refresh tokens', async () => {
     fetchBoards.mockResolvedValue({
       ok: true,
@@ -187,17 +206,20 @@ describe('Login', () => {
         email: 'test_email@example.com',
       }),
     });
-
-    const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
     try {
-      renderWithProviders(<Login showSnackbar={jest.fn()} />);
+      renderWithProviders(<Login showSnackbar={vi.fn()} />);
 
       // Type credentials
       await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
 
       // Click login
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
 
       // Assert tokens were saved
       await waitFor(() => {
@@ -210,7 +232,6 @@ describe('Login', () => {
       setItemSpy.mockRestore();
     }
   });
-
   test('when login succeeds, it shows a success snackbar', async () => {
     fetchBoards.mockResolvedValue({
       ok: true,
@@ -225,22 +246,25 @@ describe('Login', () => {
         email: 'test_email@example.com',
       }),
     });
-
-    const showSnackbar = jest.fn();
-
+    const showSnackbar = vi.fn();
     renderWithProviders(<Login showSnackbar={showSnackbar} />);
-
     await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
-    await userEvent.click(screen.getByRole('button', { name: /login/i }));
-
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    );
     await waitFor(() => {
       expect(showSnackbar).toHaveBeenCalledWith('success', 'Welcome test_email!');
     });
   });
-
   test('when board fetch fails after login, it navigates home', async () => {
-    fetchBoards.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+    fetchBoards.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => [],
+    });
     login.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -250,20 +274,24 @@ describe('Login', () => {
         email: 'test_email@example.com',
       }),
     });
-
-    renderWithProviders(<Login showSnackbar={jest.fn()} />);
-
+    renderWithProviders(<Login showSnackbar={vi.fn()} />);
     await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
-    await userEvent.click(screen.getByRole('button', { name: /login/i }));
-
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    );
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/');
     });
   });
-
   test('when board fetch fails after login, it shows an error snackbar', async () => {
-    fetchBoards.mockResolvedValueOnce({ ok: false, status: 500, json: async () => [] });
+    fetchBoards.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => [],
+    });
     login.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -273,40 +301,43 @@ describe('Login', () => {
         email: 'test_email@example.com',
       }),
     });
-
-    const showSnackbar = jest.fn();
-
+    const showSnackbar = vi.fn();
     renderWithProviders(<Login showSnackbar={showSnackbar} />);
-
     await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
-    await userEvent.click(screen.getByRole('button', { name: /login/i }));
-
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    );
     await waitFor(() => {
       expect(showSnackbar).toHaveBeenCalledWith('error', 'Board load failed :(');
     });
   });
-
   test('when login fails, it does not navigate', async () => {
     login.mockResolvedValue({
       ok: false,
       status: 401,
-      json: async () => ({ detail: 'Invalid credentials' }),
+      json: async () => ({
+        detail: 'Invalid credentials',
+      }),
     });
 
     // Login.js logs the auth error; silence it here to avoid noisy test output.
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
-
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
-      renderWithProviders(<Login showSnackbar={jest.fn()} />);
+      renderWithProviders(<Login showSnackbar={vi.fn()} />);
 
       // Type credentials
       await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
 
       // Click login
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
-
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
       await waitFor(() => {
         expect(mockNavigate).not.toHaveBeenCalled();
       });
@@ -315,24 +346,25 @@ describe('Login', () => {
       consoleError.mockRestore();
     }
   });
-
   test('when login fails, it does not store tokens', async () => {
     login.mockResolvedValue({
       ok: false,
       status: 401,
-      json: async () => ({ detail: 'Invalid credentials' }),
+      json: async () => ({
+        detail: 'Invalid credentials',
+      }),
     });
-
-    const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
-
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
-      renderWithProviders(<Login showSnackbar={jest.fn()} />);
-
+      renderWithProviders(<Login showSnackbar={vi.fn()} />);
       await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
-
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
       await waitFor(() => {
         expect(setItemSpy).not.toHaveBeenCalled();
       });
@@ -341,24 +373,25 @@ describe('Login', () => {
       setItemSpy.mockRestore();
     }
   });
-
   test('when login fails, it shows an error snackbar', async () => {
     login.mockResolvedValue({
       ok: false,
       status: 401,
-      json: async () => ({ detail: 'Invalid credentials' }),
+      json: async () => ({
+        detail: 'Invalid credentials',
+      }),
     });
-
-    const showSnackbar = jest.fn();
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
-
+    const showSnackbar = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       renderWithProviders(<Login showSnackbar={showSnackbar} />);
-
       await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
-
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
       await waitFor(() => {
         expect(showSnackbar).toHaveBeenCalledWith('error', 'Login failed :(');
       });
@@ -366,19 +399,18 @@ describe('Login', () => {
       consoleError.mockRestore();
     }
   });
-
   test('when login fails due to a network error, it does not navigate', async () => {
     login.mockRejectedValue(new TypeError('NetworkError when attempting to fetch resource.'));
-
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
-
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
-      renderWithProviders(<Login showSnackbar={jest.fn()} />);
-
+      renderWithProviders(<Login showSnackbar={vi.fn()} />);
       await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
-
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
       await waitFor(() => {
         expect(mockNavigate).not.toHaveBeenCalled();
       });
@@ -386,20 +418,19 @@ describe('Login', () => {
       consoleError.mockRestore();
     }
   });
-
   test('when login fails due to a network error, it does not store tokens', async () => {
     login.mockRejectedValue(new TypeError('NetworkError when attempting to fetch resource.'));
-
-    const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
-
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
-      renderWithProviders(<Login showSnackbar={jest.fn()} />);
-
+      renderWithProviders(<Login showSnackbar={vi.fn()} />);
       await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
-
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
       await waitFor(() => {
         expect(setItemSpy).not.toHaveBeenCalled();
       });
@@ -408,20 +439,19 @@ describe('Login', () => {
       setItemSpy.mockRestore();
     }
   });
-
   test('when login fails due to a network error, it shows a network error snackbar', async () => {
     login.mockRejectedValue(new TypeError('NetworkError when attempting to fetch resource.'));
-
-    const showSnackbar = jest.fn();
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
-
+    const showSnackbar = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       renderWithProviders(<Login showSnackbar={showSnackbar} />);
-
       await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
       await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
-      await userEvent.click(screen.getByRole('button', { name: /login/i }));
-
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
       await waitFor(() => {
         expect(showSnackbar).toHaveBeenCalledWith('error', 'Network error :(');
       });
@@ -430,28 +460,44 @@ describe('Login', () => {
     }
   });
   test('blocks duplicate submissions and recovers after a validation failure', async () => {
-    const showSnackbar = jest.fn();
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const showSnackbar = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     let resolveRequest;
     login.mockReturnValueOnce(
       new Promise((resolve) => {
         resolveRequest = resolve;
       }),
     );
-    renderWithProviders(<Login showSnackbar={showSnackbar} />, { routeEntries: ['/login'] });
+    renderWithProviders(<Login showSnackbar={showSnackbar} />, {
+      routeEntries: ['/login'],
+    });
     await userEvent.type(screen.getByLabelText('Email'), 'mapper@example.com');
     await userEvent.type(screen.getByLabelText('Password'), 'secret');
-    await userEvent.click(screen.getByRole('button', { name: 'Login' }));
-    const pendingButton = screen.getByRole('button', { name: 'Logging in...' });
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: 'Login',
+      }),
+    );
+    const pendingButton = screen.getByRole('button', {
+      name: 'Logging in...',
+    });
     expect(pendingButton).toBeDisabled();
     fireEvent.click(pendingButton);
     expect(login).toHaveBeenCalledTimes(1);
     resolveRequest({
       ok: false,
       status: 400,
-      json: async () => ({ password: ['Validation failed.'] }),
+      json: async () => ({
+        password: ['Validation failed.'],
+      }),
     });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Login' })).toBeEnabled());
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {
+          name: 'Login',
+        }),
+      ).toBeEnabled(),
+    );
     expect(showSnackbar).toHaveBeenCalledWith('error', 'Login failed :(');
     consoleError.mockRestore();
   });

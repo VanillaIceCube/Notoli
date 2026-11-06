@@ -211,3 +211,43 @@ remain application-specific.
 Notifications expose Retry and retain failed actions. Item/bulk controls disable
 overlapping actions through response parsing. Failed/malformed mark-read responses
 keep the inbox open instead of navigating. See [the audit](../docs/AUTH-PARITY.md).
+
+## Development dependency reproducibility
+
+Development images pin reviewed multi-platform Node 26 and Miniforge 26.9.4-0
+registry digests. Production Dockerfiles and the independent release engine are
+unchanged by this development-image policy. Refresh tags/digests together after
+registry verification and a disposable build/configuration check.
+
+The frontend development entrypoint hashes both `package.json` and
+`package-lock.json` inside its persistent `node_modules` volume. Fresh volumes
+install with `npm ci`; unchanged restarts reuse dependencies; changing either
+manifest reinstalls. Missing manifests or a failed installation stop startup and
+retry on the next invocation. Use one volume per checkout and restart after edits.
+Run `node --test tests/dev-dependencies.test.cjs` from the repository root for the
+credential-free mocked lifecycle/exit-status regression. Compose configuration
+checks do not deploy or touch application data.
+
+## Vitest and React Router acceptance
+
+`npm test` runs all existing frontend assertions in Vitest 5/jsdom. JSX test files
+use `.jsx`, mocks use the runner's native ESM API, and Jest/Babel test-only packages
+are removed. This eliminates Jest's unpatched deepmerge path and allows supported
+React Router 7.18.5 (both reported Router advisories are fixed in >=7.18.0).
+Vite development/build was already present; its `build/` output and legacy
+`REACT_APP_API_BASE_URL` behavior are retained. No SSR server is used here.
+
+Use `npm ci`, `npm run lint:strict`, `npm run format:check`, `npm test`, and
+`npm run build` from frontend. CI bounds test workers to two; use
+`npm test -- --maxWorkers=1 --reporter=json --outputFile=vitest-results.json`
+for serial profiling. Keep isolated test environments and every domain/auth
+assertion. The ESLint configuration regression now imports ESLint directly in a
+Node test environment instead of launching a second Node runtime.
+
+Independent pre-change VM baseline at 7f1db4c: backend 190 tests (one existing
+skip), 24.256s Django total; frontend 32 suites/301 tests, 72.746s Jest time.
+Both used 0.75 CPU/768 MiB, synthetic settings, no production mounts/network
+and cold test caches; dependency install time was recorded separately. Comparable
+post-change measurements are required before claiming a performance improvement.
+Backend already uses a test-scoped fast password hasher; production hashing stays
+unchanged. Slow settings subprocess/MCP tests remain meaningful integration coverage.

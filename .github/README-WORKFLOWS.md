@@ -501,3 +501,27 @@ policy-only PR under the existing protected review gates; a later workflow PR
 can consume it. Fetch the base commit before local PR-policy audits. This detects
 self-authorizing policy/workflow changes; it does not make PR-owned code a sandbox
 or remove repository-writer privileges.
+
+## Vitest and React Router acceptance
+
+`npm test` runs all existing frontend assertions in Vitest 5/jsdom. JSX test files
+use `.jsx`, mocks use the runner's native ESM API, and Jest/Babel test-only packages
+are removed. This eliminates Jest's unpatched deepmerge path and allows supported
+React Router 7.18.5 (both reported Router advisories are fixed in >=7.18.0).
+Vite development/build was already present; its `build/` output and legacy
+`REACT_APP_API_BASE_URL` behavior are retained. No SSR server is used here.
+
+Use `npm ci`, `npm run lint:strict`, `npm run format:check`, `npm test`, and
+`npm run build` from frontend. CI bounds test workers to two; use
+`npm test -- --maxWorkers=1 --reporter=json --outputFile=vitest-results.json`
+for serial profiling. Keep isolated test environments and every domain/auth
+assertion. The ESLint configuration regression now imports ESLint directly in a
+Node test environment instead of launching a second Node runtime.
+
+Independent pre-change VM baseline at 7f1db4c: backend 190 tests (one existing
+skip), 24.256s Django total; frontend 32 suites/301 tests, 72.746s Jest time.
+Both used 0.75 CPU/768 MiB, synthetic settings, no production mounts/network
+and cold test caches; dependency install time was recorded separately. Comparable
+post-change measurements are required before claiming a performance improvement.
+Backend already uses a test-scoped fast password hasher; production hashing stays
+unchanged. Slow settings subprocess/MCP tests remain meaningful integration coverage.

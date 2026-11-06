@@ -38,6 +38,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
       automation: ${{ steps.filter.outputs.automation }}
+      development: ${{ steps.filter.outputs.development }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -58,6 +59,15 @@ jobs:
               - 'mcp-framework-source.json'
               - '.github/workflows/gate-test.yml'
               - '.github/actions/read-versions/**'
+            development:
+              - 'backend/Dockerfile.dev'
+              - 'backend/environment.yml'
+              - 'backend/requirements.txt'
+              - 'frontend/Dockerfile.dev'
+              - 'frontend/docker-entrypoint-dev.sh'
+              - 'frontend/package*.json'
+              - 'scripts/test_dev_container.py'
+              - '.github/workflows/gate-test.yml'
             automation:
               - '.github/**'
               - '.github/actions/dependabot-auto-merge/**'
@@ -130,7 +140,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          npm test -- --watchAll=false --verbose --runInBand 2>&1 | tee test_output.txt || status=$?
+          npm test -- --maxWorkers=2 2>&1 | tee test_output.txt || status=$?
           if [ "$status" = "0" ]; then
             npm run build 2>&1 | tee -a test_output.txt || status=$?
           fi
@@ -263,7 +273,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          node --test .github/actions/check-workflow-security/*.test.js .github/actions/review-npm-malware/*.test.js .github/actions/dependabot-auto-merge/*.test.js .github/actions/check-codeql-pins/*.test.js .github/actions/collect-codeql-evidence/collect-codeql-evidence.test.js \
+          node --test tests/dev-dependencies.test.cjs .github/actions/check-workflow-security/*.test.js .github/actions/review-npm-malware/*.test.js .github/actions/dependabot-auto-merge/*.test.js .github/actions/check-codeql-pins/*.test.js .github/actions/collect-codeql-evidence/collect-codeql-evidence.test.js \
             .github/actions/review-npm-malware/review-npm-malware.test.js \
             .github/actions/collect-prior-ai-reviews/collect-prior-ai-reviews.test.js \
             .github/actions/collect-upstream-major-upgrade-evidence/*.test.js \
@@ -310,10 +320,25 @@ jobs:
       status: ${{ steps.test_summary.outputs.status }}
       log: ${{ steps.test_summary.outputs.log }}
 
+  development-images:
+    name: Development images and dependency volumes
+    needs: changes
+    if: needs.changes.outputs.development == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build reviewed development images
+        run: |
+          docker build --file backend/Dockerfile.dev --tag batch2-backend-dev backend
+          docker build --file frontend/Dockerfile.dev --tag batch2-frontend-dev frontend
+      - name: Verify real isolated dependency volume lifecycle
+        run: python3 scripts/test_dev_container.py batch2-frontend-dev
+
   test-results:
     name: Test Results
     if: always()
-    needs: [changes, frontend-tests, backend-tests, automation-tests]
+    needs: [changes, frontend-tests, backend-tests, automation-tests, development-images]
     runs-on: ubuntu-latest
     outputs:
       frontend_status: ${{ steps.results.outputs.frontend_status }}
@@ -323,6 +348,9 @@ jobs:
       automation_status: ${{ steps.results.outputs.automation_status }}
       automation_log: ${{ steps.results.outputs.automation_log }}
     steps:
+      - name: Require applicable development image validation
+        if: needs.changes.outputs.development == 'true' && needs.development-images.result != 'success'
+        run: exit 1
       - name: Normalize test results
         id: results
         env:
