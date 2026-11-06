@@ -84,9 +84,13 @@ describe('Register', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       renderWithProviders(<Register showSnackbar={showSnackbar} />);
-      await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-      await userEvent.type(screen.getByLabelText('Password'), 'test_password');
-      await userEvent.type(screen.getByLabelText(/confirm password/i), 'test_password');
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'test_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'test_password' } });
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'test_password' },
+      });
       await userEvent.click(
         screen.getByRole('button', {
           name: /register/i,
@@ -105,9 +109,13 @@ describe('Register', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       renderWithProviders(<Register showSnackbar={showSnackbar} />);
-      await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-      await userEvent.type(screen.getByLabelText('Password'), 'test_password');
-      await userEvent.type(screen.getByLabelText(/confirm password/i), 'test_password');
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'test_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'test_password' } });
+      fireEvent.change(screen.getByLabelText(/confirm password/i), {
+        target: { value: 'test_password' },
+      });
       await userEvent.click(
         screen.getByRole('button', {
           name: /register/i,
@@ -123,9 +131,13 @@ describe('Register', () => {
   test('when passwords do not match, it shows an error and does not call register', async () => {
     const showSnackbar = vi.fn();
     renderWithProviders(<Register showSnackbar={showSnackbar} />);
-    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-    await userEvent.type(screen.getByLabelText('Password'), 'test_password');
-    await userEvent.type(screen.getByLabelText(/confirm password/i), 'different_password');
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: 'test_email@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'test_password' } });
+    fireEvent.change(screen.getByLabelText(/confirm password/i), {
+      target: { value: 'different_password' },
+    });
     await userEvent.click(
       screen.getByRole('button', {
         name: /register/i,
@@ -146,9 +158,9 @@ describe('Register', () => {
     renderWithProviders(<Register showSnackbar={showSnackbar} />, {
       routeEntries: ['/register'],
     });
-    await userEvent.type(screen.getByLabelText('Email'), 'mapper@example.com');
-    await userEvent.type(screen.getByLabelText('Password'), 'secret');
-    await userEvent.type(screen.getByLabelText('Confirm Password'), 'secret');
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'mapper@example.com' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
+    fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'secret' } });
     await userEvent.click(
       screen.getByRole('button', {
         name: 'Register',

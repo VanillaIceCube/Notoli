@@ -238,12 +238,61 @@ for serial profiling. Keep isolated test environments and every domain/auth
 assertion. The ESLint configuration regression now imports ESLint directly in a
 Node test environment instead of launching a second Node runtime.
 
-Independent pre-change VM baseline at 7f1db4c: backend 190 tests (one existing
-skip), 24.256s Django total; frontend 32 suites/301 tests, 72.746s Jest time.
-Both used 0.75 CPU/768 MiB, synthetic settings, no production mounts/network
-and cold test caches; dependency install time was recorded separately. Comparable
-post-change measurements are required before claiming a performance improvement.
-Backend already uses a test-scoped fast password hasher; production hashing stays
-unchanged. Slow settings subprocess/MCP tests remain meaningful integration coverage.
+The supported-runtime VM comparison (Node 24.22.2, npm 11.19.1, 0.75 CPU,
+768 MiB, 512 MiB V8 heap, cold caches, network disabled during tests) measured
+Jest at 63.391s (65.044s container wall) before and the initial unoptimized
+Vitest migration at 151.839s (154.103s container wall). Both passed all 301
+tests; this initial migration was 137% slower, not a performance improvement.
+Dependency installs were separate: 36.021s versus 33.019s. Final tuned C outer wall is54.236s (16.616% lower than65.044s baseline),
+all301 cases pass with no OOM; details/limits are in docs/BATCH2-PARITY.md.
+Backend Django time was 24.256s before and 25.723s after (190 tests, one existing
+skip); no backend speedup is claimed. The existing test-scoped fast password
+hasher remains. Settings subprocess and MCP protocol tests retain their useful
+integration coverage rather than being skipped to improve timing.
+
+The tuned configuration uses native forks for six non-DOM files and fresh
+VM fork environments for DOM tests, recycling at 384 MiB. UI dependencies are
+prebundled, test environments remain isolated, and form validation/API fixtures
+use bulk changes while happy paths retain typed interaction. The shared browser
+suite also exercises real typing/filling. Use the configured projects without
+overriding `--pool`; `--maxWorkers=1` provides comparable serial profiling.
+
+The browser foundation observed a pre-existing route render loop (maximum update
+depth in `NotepadRoutes`/`onPageReady`). The same registration/session journey
+passes and emits the same warning on exact pre-change 7f1db4c. This task does not
+refactor product UI; authentication/board browser assertions remain active.
 
 Supported test/build runtimes are Node24.15+ within24.x or Node26.x. jsdom30 explicitly excludes the end-of-life Node25 line; do not treat >=24 as universal support. Use the same supported runtime for before/after timings.
+
+## Optional isolated browser tests
+
+Install the backend requirements in an activated Python environment, then from
+`frontend` run the following with Node 24.15+ within 24.x or Node 26.x:
+
+```powershell
+npm ci
+npx playwright install chromium
+npm run test:e2e
+```
+
+Linux CI uses `npx playwright install --with-deps chromium`. The wrapper creates
+a marked temporary directory, starts fresh Django/SQLite on 127.0.0.1:8001 and
+Vite on 127.0.0.1:3001, and removes only its generated state after both servers
+stop. Those ports must be free; existing servers are never reused. The backend
+does not load developer `.env` files, uses synthetic users, disables MCP, and
+writes reset messages to the temporary mail directory. No SMTP or model calls
+are made. Registration, reload/session isolation, logout/protected routing, bad
+credentials, expired access and valid/invalid password-reset tokens are covered.
+
+There is one Chromium worker, no retries, and a ten-minute global timeout. Local
+runs of the three shared journeys take roughly one minute after installation;
+CI also pays Python/npm/browser installation cost. Failure traces/screenshots
+and the HTML report are local in `test-results/` and `playwright-report/`. CI
+retains at most 20 MiB/file and 50 MiB/run for seven days, listing omitted files
+in `browser-evidence/INDEX.txt`; full text remains in the job log. Reports may
+contain disposable test tokens and should not be copied into public issues.
+
+Add product journeys under `e2e/` using these isolated users and existing APIs.
+Keep authentication journeys shared; domain fixtures belong to their app. Do not
+add real customer accounts, external email or paid-model requests. Infrastructure
+has no browser application and retains its ingress/Docker protocol suites.

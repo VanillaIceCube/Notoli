@@ -118,3 +118,12 @@ retry on the next invocation. Use one volume per checkout and restart after edit
 Run `node --test tests/dev-dependencies.test.cjs` from the repository root for the
 credential-free mocked lifecycle/exit-status regression. Compose configuration
 checks do not deploy or touch application data.
+
+## Isolated browser and automation checks
+
+The optional Chromium foundation exercises existing authentication/session and
+password-recovery behavior using a fresh disposable SQLite database and local
+file mail. Setup, commands and extension points are in [frontend/README.md](frontend/README.md).
+CI runs it only for relevant changes. No application credentials are required.
+See [automation coverage](docs/AUTOMATION-COVERAGE.md) and the
+[Batch 2 parity record](docs/BATCH2-PARITY.md) for cross-repository adoption and limits.

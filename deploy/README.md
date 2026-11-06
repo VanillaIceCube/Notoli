@@ -116,3 +116,20 @@ retry on the next invocation. Use one volume per checkout and restart after edit
 Run `node --test tests/dev-dependencies.test.cjs` from the repository root for the
 credential-free mocked lifecycle/exit-status regression. Compose configuration
 checks do not deploy or touch application data.
+
+## Non-deploying repository validation
+
+CI runs `python scripts/validate_repository.py` from the repository root with
+Actionlint, pinned PyYAML 6.0.3, Git Bash/Bash, PowerShell 7 and Docker Compose
+installed. `scripts/install_actionlint.sh` installs the checksum-verified Linux
+validator; other platforms can install the same Actionlint 1.7.12 release.
+The validator parses maintained scripts, checks workflow/composite syntax and
+renders development/local/production Compose using temporary synthetic env files.
+It starts no containers and reads no private `.env`, database or certificate.
+Actionlint's only compatibility exception is its unrecognized GitHub
+`vulnerability-alerts` permission; other findings fail normally.
+
+Browser checks use separate loopback ports and disposable settings, not the
+production release path. The Infrastructure-owned release source pin and parity
+enforcement stay authoritative; see docs/BATCH2-PARITY.md. Documentation/workflow
+changes alone do not justify restarting the application or shared gateway.

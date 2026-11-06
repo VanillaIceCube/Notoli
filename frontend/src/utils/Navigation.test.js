@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { getBoardId, getParentPath, goBackToParent } from './Navigation';
 describe('Navigation', () => {
   describe('getBoardId', () => {
@@ -52,7 +54,7 @@ describe('Navigation', () => {
       expect(navigate).not.toHaveBeenCalled();
       expect(() => goBackToParent('/board/123/list/456', null)).not.toThrow();
     });
-    test.each([null, undefined, 123, {}, ''])('ignores invalid path %p', (path) => {
+    test.each([null, undefined, 123, {}, ''])('ignores invalid path %j', (path) => {
       const navigate = vi.fn();
       goBackToParent(path, navigate);
       expect(navigate).not.toHaveBeenCalled();

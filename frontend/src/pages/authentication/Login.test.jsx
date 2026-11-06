@@ -141,8 +141,10 @@ describe('Login', () => {
       }),
     });
     renderWithProviders(<Login showSnackbar={vi.fn()} />);
-    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: 'test_email@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
     await userEvent.click(
       screen.getByRole('button', {
         name: /login/i,
@@ -169,8 +171,10 @@ describe('Login', () => {
     renderWithProviders(<Login showSnackbar={vi.fn()} />);
 
     // Type credentials
-    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: 'test_email@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
 
     // Click login
     await userEvent.click(
@@ -211,8 +215,10 @@ describe('Login', () => {
       renderWithProviders(<Login showSnackbar={vi.fn()} />);
 
       // Type credentials
-      await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'test_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
 
       // Click login
       await userEvent.click(
@@ -248,8 +254,10 @@ describe('Login', () => {
     });
     const showSnackbar = vi.fn();
     renderWithProviders(<Login showSnackbar={showSnackbar} />);
-    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: 'test_email@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
     await userEvent.click(
       screen.getByRole('button', {
         name: /login/i,
@@ -275,8 +283,10 @@ describe('Login', () => {
       }),
     });
     renderWithProviders(<Login showSnackbar={vi.fn()} />);
-    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: 'test_email@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
     await userEvent.click(
       screen.getByRole('button', {
         name: /login/i,
@@ -303,8 +313,10 @@ describe('Login', () => {
     });
     const showSnackbar = vi.fn();
     renderWithProviders(<Login showSnackbar={showSnackbar} />);
-    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: 'test_email@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
     await userEvent.click(
       screen.getByRole('button', {
         name: /login/i,
@@ -329,8 +341,10 @@ describe('Login', () => {
       renderWithProviders(<Login showSnackbar={vi.fn()} />);
 
       // Type credentials
-      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'bad_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'bad_password' } });
 
       // Click login
       await userEvent.click(
@@ -358,8 +372,10 @@ describe('Login', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       renderWithProviders(<Login showSnackbar={vi.fn()} />);
-      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'bad_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'bad_password' } });
       await userEvent.click(
         screen.getByRole('button', {
           name: /login/i,
@@ -385,8 +401,10 @@ describe('Login', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       renderWithProviders(<Login showSnackbar={showSnackbar} />);
-      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'bad_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'bad_password' } });
       await userEvent.click(
         screen.getByRole('button', {
           name: /login/i,
@@ -404,8 +422,10 @@ describe('Login', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       renderWithProviders(<Login showSnackbar={vi.fn()} />);
-      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'bad_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'bad_password' } });
       await userEvent.click(
         screen.getByRole('button', {
           name: /login/i,
@@ -424,8 +444,10 @@ describe('Login', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       renderWithProviders(<Login showSnackbar={vi.fn()} />);
-      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'bad_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'bad_password' } });
       await userEvent.click(
         screen.getByRole('button', {
           name: /login/i,
@@ -445,8 +467,10 @@ describe('Login', () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       renderWithProviders(<Login showSnackbar={showSnackbar} />);
-      await userEvent.type(screen.getByLabelText(/email/i), 'bad_email@example.com');
-      await userEvent.type(screen.getByLabelText(/password/i), 'bad_password');
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'bad_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'bad_password' } });
       await userEvent.click(
         screen.getByRole('button', {
           name: /login/i,
@@ -471,8 +495,8 @@ describe('Login', () => {
     renderWithProviders(<Login showSnackbar={showSnackbar} />, {
       routeEntries: ['/login'],
     });
-    await userEvent.type(screen.getByLabelText('Email'), 'mapper@example.com');
-    await userEvent.type(screen.getByLabelText('Password'), 'secret');
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'mapper@example.com' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
     await userEvent.click(
       screen.getByRole('button', {
         name: 'Login',

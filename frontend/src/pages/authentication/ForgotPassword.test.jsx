@@ -64,7 +64,7 @@ describe('ForgotPassword', () => {
     try {
       renderWithProviders(<ForgotPassword showSnackbar={showSnackbar} />);
       // Use valid syntax to reach the server error path after native form validation.
-      await userEvent.type(screen.getByLabelText(/email/i), 'test@example.com');
+      fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } });
       await userEvent.click(
         screen.getByRole('button', {
           name: /send reset link/i,
@@ -89,7 +89,7 @@ describe('ForgotPassword', () => {
     renderWithProviders(<ForgotPassword showSnackbar={showSnackbar} />, {
       routeEntries: ['/forgot-password'],
     });
-    await userEvent.type(screen.getByLabelText('Email'), 'mapper@example.com');
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'mapper@example.com' } });
     await userEvent.click(
       screen.getByRole('button', {
         name: 'Send Reset Link',

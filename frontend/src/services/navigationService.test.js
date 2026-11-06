@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { clearNavigate, navigate, setNavigate } from './navigationService';
 describe('navigationService', () => {
   beforeEach(() => {
