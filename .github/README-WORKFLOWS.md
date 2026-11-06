@@ -575,6 +575,8 @@ Dependabot paths, required checks, reviewer interactions, scheduled alerts,
 main-to-env-prod/manual release paths and credential trust boundaries to source.
 Its per-repository source inventory is checked against actual workflow YAML.
 
+`promotion-summary-request.yml` is a read-only PR signal with no checkout or
+artifact/cache handoff. Its default-branch `workflow_run` consumer
 `promotion-summary.yml` maintains one GitHub Actions-owned comment for each open
 same-repository `env-prod` PR using the actual current target comparison. Reruns
 update the same comment; stale/incomplete/denied evidence is reported visibly.

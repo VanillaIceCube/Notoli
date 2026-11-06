@@ -1,9 +1,9 @@
 name: Production promotion summary
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, edited, ready_for_review]
-    branches: [env-prod]
+  workflow_run:
+    workflows: [Promotion summary request]
+    types: [completed]
   push:
     branches: [env-prod]
   workflow_dispatch:
@@ -19,8 +19,10 @@ permissions:
 jobs:
   summary:
     if: >-
-      github.event_name != 'pull_request' ||
-      github.event.pull_request.head.repo.full_name == github.repository
+      (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' &&
+       github.event.workflow_run.head_repository.full_name == github.repository) ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/env-prod')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout reviewed default-branch summary code

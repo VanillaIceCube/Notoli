@@ -149,7 +149,9 @@ merge code or deploy. The deferred general Project-status project is not added.
 ```mermaid
 flowchart TD
   Reviewed[Reviewed source merged to main] --> PR[Main-to-env-prod promotion PR]
-  PR --> Summary[One managed deterministic impact summary]
+  PR --> Request[Read-only promotion event]
+  Request --> Trusted[Default-branch workflow_run]
+  Trusted --> Summary[One managed deterministic impact summary]
   PR --> Gates[Existing promotion checks and owner authorization]
   Gates --> Merge[Normal env-prod merge]
   Merge --> App[Application deploy pipeline]
@@ -170,9 +172,16 @@ flowchart TD
 ```
 
 The [promotion-summary workflow](../.github/workflows/promotion-summary.yml)
-loads reviewed `main` code, never the proposed PR checkout. A repository-wide
-serialized writer refreshes every open `env-prod` PR (up to ten) on relevant PR,
-target-branch push or manual events. It uses complete current GitHub file metadata
+uses a trusted default-branch `workflow_run` definition and reviewed `main` code,
+never a proposed PR workflow or checkout. The [read-only PR listener](../.github/workflows/promotion-summary-request.yml)
+only emits a fixed signal; it has no checkout, artifact/cache handoff, secrets or
+write token. The consumer independently fetches current metadata and does not
+trust producer conclusions or supplied PR identities. Fork producer events are
+excluded. A repository-wide serialized writer refreshes all open same-repo
+`env-prod` PRs (up to ten) after the signal, target-branch push or manual dispatch
+on `main`. A PR-controlled workflow never receives this writer's grant. See
+[GitHub's privilege-separation guidance](https://docs.github.com/en/actions/reference/security/secure-use).
+The helper uses complete current GitHub file metadata
 and identifies exact base/head revisions. Categories and counts are observations;
 risks are explicitly inferences. No PR prose, patches, secret values or arbitrary
 filenames are forwarded. Only the exact GitHub Actions bot's managed comment is

@@ -636,7 +636,7 @@
       "source_sha256": "a7fa09c8863aeda4b6889a5b44c73b05f090c9272245b177d5784ec252fc048a",
       "variable_names": []
     },
-    "promotion-summary.yml": {
+    "promotion-summary-request.yml": {
       "credential_names": [],
       "events": {
         "pull_request": {
@@ -650,17 +650,39 @@
             "edited",
             "ready_for_review"
           ]
-        },
+        }
+      },
+      "jobs": {
+        "request": {}
+      },
+      "name": "Promotion summary request",
+      "permissions": {
+        "contents": "read"
+      },
+      "source_sha256": "4845f8114ad24737d481af5f9c7267fb28b0f1e7abb8a29079cf31bf1174a425",
+      "variable_names": []
+    },
+    "promotion-summary.yml": {
+      "credential_names": [],
+      "events": {
         "push": {
           "branches": [
             "env-prod"
           ]
         },
-        "workflow_dispatch": ""
+        "workflow_dispatch": "",
+        "workflow_run": {
+          "types": [
+            "completed"
+          ],
+          "workflows": [
+            "Promotion summary request"
+          ]
+        }
       },
       "jobs": {
         "summary": {
-          "if": "github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository"
+          "if": "(github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' &&\n github.event.workflow_run.head_repository.full_name == github.repository) ||\n(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'push' && github.ref == 'refs/heads/env-prod')"
         }
       },
       "name": "Production promotion summary",
@@ -668,7 +690,7 @@
         "contents": "read",
         "pull-requests": "write"
       },
-      "source_sha256": "7df058d158637a8a1b44ca3b41c392b0af75d22ce016f9b53d1e18f9194d2e50",
+      "source_sha256": "0e2f3a76368467f5ebf33c352a97b8eb582fbd5aeba911c7d802aa6e573ad64c",
       "variable_names": []
     },
     "review-build.yml": {
