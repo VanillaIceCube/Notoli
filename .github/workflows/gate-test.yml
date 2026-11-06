@@ -297,7 +297,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          node --test .github/actions/custom-regressions/*.test.js .github/actions/collect-prior-ai-reviews/*.test.js tests/*.test.cjs .github/actions/check-workflow-security/*.test.js .github/actions/review-npm-malware/*.test.js .github/actions/dependabot-auto-merge/*.test.js .github/actions/check-codeql-pins/*.test.js .github/actions/collect-codeql-evidence/collect-codeql-evidence.test.js \
+          node --test .github/actions/custom-regressions/*.test.js .github/actions/promotion-summary/*.test.js .github/actions/collect-prior-ai-reviews/*.test.js tests/*.test.cjs .github/actions/check-workflow-security/*.test.js .github/actions/review-npm-malware/*.test.js .github/actions/dependabot-auto-merge/*.test.js .github/actions/check-codeql-pins/*.test.js .github/actions/collect-codeql-evidence/collect-codeql-evidence.test.js \
             .github/actions/review-npm-malware/review-npm-malware.test.js \
             .github/actions/collect-prior-ai-reviews/collect-prior-ai-reviews.test.js \
             .github/actions/collect-upstream-major-upgrade-evidence/*.test.js \
