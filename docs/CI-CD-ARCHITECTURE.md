@@ -240,10 +240,13 @@ remain ordinary scripts under their existing gates; they are not new services.
 
 The sibling `CI-CD-SOURCE-INVENTORY.json` records this repository's actual workflow
 events, jobs/needs, permissions, local custom-action consumers and credential names.
-Regenerate/check it with `python scripts/ci_architecture.py --check` whenever YAML
-changes. The checker parses YAML without executing workflows, verifies local
-action references, validates the documented graph's core job/dependency/event
-contracts and checks the diagrams' source contracts. Separately validate diagram syntax/rendering with
+After reviewing YAML/diagram changes, regenerate with `python scripts/ci_architecture.py`
+and verify with `python scripts/ci_architecture.py --check`. The checker parses YAML
+without executing workflows, verifies local action references, and ties key Mermaid
+edges to the checked job/dependency/event and custom-action consumer contracts.
+Diagram-only edge drift, changed workflow dependencies and privileged PR-trigger
+substitution have failure-path regressions. This validates key relationships, not
+every diagram label or a general Mermaid semantic model. Separately validate syntax/rendering with
 the official Mermaid parser/renderer when changing a diagram.
 It does not read secrets or run deployments. GitHub-renderable Mermaid remains
 ordinary source-controlled documentation, not a new reviewer-management service.

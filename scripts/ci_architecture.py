@@ -96,6 +96,30 @@ def contracts(data, root):
     diagrams = re.findall(r"```mermaid\n(.*?)```", document, flags=re.S)
     if len(diagrams) != 4 or not all(text.startswith("flowchart ") for text in diagrams):
         raise ValueError("Expected the four maintained Mermaid architecture diagrams")
+    # These four small flowcharts use one explicit edge per line. Validate key
+    # relationships against the workflow contracts above, not merely the fences.
+    edges = [set(re.findall(r"^\s*(\w+)(?:\[[^\]\n]*\])?\s*-->(?:\|[^|\n]*\|)?\s*(\w+)", text, flags=re.M)) for text in diagrams]
+    build_sources = {"lints": "LintTest", "tests": "LintTest"}
+    security_sources = {"codeql": "Scanners", "dependency-vulnerability": "Scanners", "dependency-malware": "Scanners", "secrets": "Secrets"}
+    required = [
+        {("Human", "CI"), ("Dependabot", "CI"), ("Fork", "Isolated"), ("CI", "Obi"), ("Obi", "Gate"), ("Lint", "Gate"), ("Robo", "Gate")}
+        | {(build_sources[job], "Lint") for job in as_list(jobs["build-review"].get("needs"))}
+        | {(security_sources[job], "Robo") for job in as_list(jobs["security-review"].get("needs"))},
+        {("Human", "Collector"), ("Prior", "Collector"), ("Collector", "Request"), ("Checks", "Request"), ("Request", "Luna"), ("Luna", "Schema"), ("Schema", "Publish"), ("Schema", "Reconcile"), ("Reconcile", "Proof"), ("Proof", "Own"), ("Luna", "Usage")},
+        {("Schedule", "Feeds"), ("Feeds", "Source"), ("Source", "Robo"), ("Robo", "Validate"), ("Validate", "Issues"), ("Issues", "Project")},
+        {("Reviewed", "PR"), ("PR", "Request"), ("Request", "Trusted"), ("Trusted", "Summary"), ("PR", "Gates"), ("Gates", "Merge"), ("Merge", "Gateway" if infrastructure else "App"), ("Manual", "Gateway" if infrastructure else "App"), ("Recovery", "RecoveryGuard"), ("RecoveryGuard", "Verify")},
+    ]
+    if infrastructure:
+        required[0] |= {("CI", "Secrets"), ("Secrets", "Gate"), ("Gate", "RequiredCI"), ("RequiredCI", "Main")}
+    else:
+        required[0] |= {("Gate", "Main"), ("Gate", "Auto"), ("Auto", "Platform")}
+    for index, (actual, expected_edges) in enumerate(zip(edges, required)):
+        if not expected_edges.issubset(actual):
+            raise ValueError(f"Mermaid diagram {index + 1} edge drift from checked workflow contracts")
+    for action in ["collect-prior-ai-reviews", "openai-chat", "publish-ai-review"]:
+        consumers = set(data["custom_action_consumers"].get("./.github/actions/" + action, []))
+        if not {".github/workflows/" + name for name in ["review-code.yml", "review-build.yml", "review-security.yml"]}.issubset(consumers):
+            raise ValueError("Reviewer diagram/custom-action consumer drift")
     for target in re.findall(r"\]\((\.\./[^)#]+)(?:#[^)]*)?\)", document):
         if not (root / "docs" / target).is_file():
             raise ValueError(f"Broken local architecture source link: {target}")
