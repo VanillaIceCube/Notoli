@@ -26,7 +26,10 @@ def check(text, name, grants):
               "statuses", "vulnerability-alerts"}
 
     def walk(node, trail=()):
-        if node is None or id(node) in visited:
+        if node is None:
+            return
+        if id(node) in visited:
+            error(node, "YAML aliases require explicit declarations in each policy context")
             return
         visited.add(id(node))
         if isinstance(node, MappingNode):

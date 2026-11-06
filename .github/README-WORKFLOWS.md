@@ -487,7 +487,7 @@ Repository Actions secrets are not branch-scoped: writers able to install arbitr
 workflows remain privileged. This helper validates checked-in policy but cannot
 constrain a workflow that bypasses it. GitHub rulesets and independent review
 remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
-forms, rejects duplicate and merge keys, and requires pinned PyYAML 6.0.3.
+forms, rejects aliases, duplicate and merge keys, and requires pinned PyYAML 6.0.3.
 
 Mapping-form writes are checked against `.github/workflow-write-grants.json`,
 which records reviewed per-workflow/job grants. Unknown scopes/grant levels and

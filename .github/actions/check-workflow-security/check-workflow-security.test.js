@@ -16,3 +16,8 @@ test('mapping grants cannot introduce unknown scopes, values, or unapproved writ
   }
   assert.deepEqual(check('permissions: {contents: read, issues: none}', 'example.yml'), []);
 });
+test('an approved mapping cannot authorize another job through a YAML alias', () => {
+  const source = 'jobs:\n  codeql: &granted\n    permissions: {security-events: write}\n  evil: *granted\n';
+  assert.match(check(source, '.github/workflows/ci-orchestrator.yml').join('\n'), /aliases/);
+  assert.match(check('on: &event push\nother: *event', 'example.yml').join('\n'), /aliases/);
+});
