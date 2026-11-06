@@ -33,12 +33,12 @@ Preserve existing Notoli OAuth registrations, grants, database and signing secre
 No account linking, client reconnection or grant retirement is required for this
 withdrawal because the central migration was never deployed.
 
-This is the implementation of approved architecture v2. Every PR merge and
-every production release still requires separate explicit owner authorization.
-Only the operator designated in coordination #4 may perform production actions
-under its separately approved plan. For the coordinated ingress migration, the
-owner designated Agent 3 as the sole production operator; source approval does
-not authorize any agent to operate the host. Shared decisions:
+This is the implementation of approved architecture v2. Main merges and
+production promotions require owner authorization within the current mission
+and the existing protected-branch/release gates. An explicitly authorized mission
+may cover both stages; source review alone does not authorize host operations.
+Use the owner-designated operator and its scoped plan. Agent 3 was designated for
+the historical ingress migration, not as a permanent operator identity. Shared decisions:
 [Infrastructure #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 
 ## Shared implementation and app configuration
@@ -371,4 +371,4 @@ source-pin PRs do not authorize merging, promotion, or deployment.
 
 ## 🔌 Shared MCP framework
 
-Follow the [MCP framework contract](../../docs/MCP-FRAMEWORK.md) before activating an optional app. Notoli keeps its current MCP profile; MacroMapper ships the framework with MCP disabled. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.
+Follow the [MCP framework contract](../../docs/MCP-FRAMEWORK.md) before activating an optional app. Notoli and MacroMapper retain their app-owned production MCP profiles and readiness contracts; consult each app's policy and release evidence for the accepted state. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.
