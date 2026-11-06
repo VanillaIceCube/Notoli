@@ -70,7 +70,7 @@ function lifecycle() {
   const github = { rest: { users: { getByUsername: async () => ({ data: bot }) }, pulls: {
     get: async () => ({ data: { head: context.payload.pull_request.head, state: 'open' } }),
     createReplyForReviewComment: async request => { replies.push(request); thread.comments.nodes.push({ author: { login: 'fixture', databaseId: bot.id }, body: request.body }); },
-  }, repos: { getContent: async () => ({ data: { content: Buffer.from('safe_call()').toString('base64'), encoding: 'base64', size: 11 } }) }, checks: { listForRef: async () => ({ data: { total_count: 1, check_runs: [{ name: 'CodeQL', status: 'completed', conclusion: 'success' }] } }) } },
+  }, repos: { compareCommitsWithBasehead: async () => ({ data: { merge_base_commit: { sha: 'old' }, files: [{ filename: 'backend/example.py', status: 'modified', patch: '@@ -1 +1 @@\n-unsafe_call()\n+safe_call()' }] } }), getContent: async () => ({ data: { content: Buffer.from('safe_call()').toString('base64'), encoding: 'base64', size: 11 } }) }, checks: { listForRef: async () => ({ data: { total_count: 1, check_runs: [{ name: 'CodeQL', status: 'completed', conclusion: 'success' }] } }) } },
   graphql: async (query, args) => {
     if (query.startsWith('mutation')) { resolutions.push(args); resolved = true; thread.isResolved = true; return { resolveReviewThread: { thread: { id: 'thread', isResolved: true } } }; }
     if (query.includes('node(id:')) return { node: { isResolved: resolved } };
@@ -115,4 +115,16 @@ test('persona workflow writers serialize by PR without altering required review 
 test('resolution evidence must identify the actual cited added line, not another line in its hunk', async () => {
   const h = lifecycle(); h.root.diffHunk = '@@ -1 +1,2 @@\n+still_insecure()\n+unsafe_call()';
   await h.run(); assert.equal(h.resolutions.length, 0);
+});
+
+test('unrelated replacement text, broad edits, renamed/missing files and nonancestor proofs cannot close findings', async () => {
+  for (const data of [
+    { merge_base_commit: { sha: 'old' }, files: [{ filename: 'backend/example.py', status: 'modified', patch: '@@ -2 +2 @@\n-unrelated()\n+safe_call()' }] },
+    { merge_base_commit: { sha: 'old' }, files: [{ filename: 'backend/example.py', status: 'modified', patch: '@@ -1 +1,2 @@\n-unsafe_call()\n+still_unsafe()\n+safe_call()' }] },
+    { merge_base_commit: { sha: 'other' }, files: [] },
+    { merge_base_commit: { sha: 'old' }, files: [{ filename: 'backend/example.py', status: 'renamed', previous_filename: 'old.py' }] },
+  ]) {
+    const h = lifecycle(); h.github.rest.repos.compareCommitsWithBasehead = async () => ({ data });
+    await h.run(); assert.equal(h.resolutions.length, 0); assert.equal(h.replies.length, 0);
+  }
 });

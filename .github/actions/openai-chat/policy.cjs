@@ -18,11 +18,11 @@ function metrics(response, elapsedMs, env) {
   const output = count(response.usage?.output_tokens);
   const cached = count(response.usage?.input_tokens_details?.cached_tokens);
   const reasoning = count(response.usage?.output_tokens_details?.reasoning_tokens);
-  const known = input !== null && output !== null && cached !== null && cached <= input && response.model === env.MODEL && response.service_tier === PRICING.tier;
+  const known = input !== null && output !== null && cached !== null && cached <= input && input <= 272000 && response.model === env.MODEL && response.service_tier === PRICING.tier;
   return { model: env.MODEL, reasoning_effort: env.REASONING_EFFORT || "medium", max_output_tokens: Number(env.MAX_OUTPUT_TOKENS), request_latency_ms: count(elapsedMs), input_tokens: input, cached_input_tokens: cached, output_tokens: output, reasoning_tokens: reasoning,
     estimated_known_token_cost_usd: known ? ((input - cached) * PRICING.input + cached * PRICING.cached_input + output * PRICING.output) / 1e6 : null,
     total_billed_cost_usd: null, pricing: PRICING,
-    note: "Usage/latency measured when available; token cost is an estimate for known Standard token components only. Cache-write, tool, regional and other charges are excluded. Total billed cost is unknown; unavailable fields are null, never zero. Verify pricing before using this dated estimate for decisions." };
+    note: "Usage/latency measured when available; token cost is an estimate for known short-context Standard token components only. Cache-write, tool, regional and other charges are excluded. Total billed cost is unknown; unavailable fields are null, never zero. Verify pricing before using this dated estimate for decisions." };
 }
 if (require.main === module) {
   if (process.argv[2] === "payload") {

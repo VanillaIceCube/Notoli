@@ -27,6 +27,24 @@ function citedAddedLine(root) {
   return null;
 }
 
+function replacementLine(patch, citedLine, removed, replacement) {
+  let oldLine, newLine, deleted = [], added = [], result = null;
+  const flush = () => {
+    if (deleted.length === 1 && added.length === 1 && deleted[0].line === citedLine && deleted[0].text === removed && added[0].text === replacement) result = added[0].line;
+    deleted = []; added = [];
+  };
+  for (const text of String(patch || "").split("\n")) {
+    const header = text.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)/);
+    if (header) { flush(); oldLine = Number(header[1]); newLine = Number(header[2]); continue; }
+    if (oldLine === undefined) continue;
+    if (text.startsWith("-")) { deleted.push({ line: oldLine++, text: text.slice(1) }); }
+    else if (text.startsWith("+")) { added.push({ line: newLine++, text: text.slice(1) }); }
+    else if (!text.startsWith("\\")) { flush(); oldLine++; newLine++; }
+  }
+  flush();
+  return result;
+}
+
 async function reconcileOnce({ github, context, core, parsed, appSlug }) {
   const decisions = parsed.reconciliations;
   if (!Array.isArray(decisions) || decisions.length === 0) return;
@@ -69,10 +87,20 @@ async function reconcileOnce({ github, context, core, parsed, appSlug }) {
       // finding's hunk has disappeared; a concrete replacement exists at HEAD.
       // AI must also explain why the finding is fixed. Ambiguous cases stay open.
       if (removed.trim().length < 8 || replacement.trim().length < 8 || removed === replacement || removed.length > 2000 || replacement.length > 2000 || citedAddedLine(root) !== removed || typeof evidence.reason !== "string" || evidence.reason.trim().length < 20 || !root.path || root.path.includes("..")) { report.skipped++; continue; }
+      // A generic source.includes match could certify unrelated code. Require
+      // an actual one-removed/one-added block at the cited original line in an
+      // ancestor-to-HEAD comparison, then verify that exact new line at HEAD.
+      const original = root.originalCommit?.oid;
+      if (!original) { report.skipped++; continue; }
+      const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({ ...context.repo, basehead: `${original}...${expected}` });
+      if (comparison.merge_base_commit?.sha !== original || !Array.isArray(comparison.files) || comparison.files.length >= 300) { report.skipped++; continue; }
+      const change = comparison.files.find(f => f.filename === root.path && f.status === "modified" && !f.previous_filename);
+      const at = replacementLine(change?.patch, root.originalLine, removed, replacement);
+      if (!at) { report.skipped++; continue; }
       const { data: file } = await github.rest.repos.getContent({ ...context.repo, path: root.path, ref: expected });
       if (Array.isArray(file) || file.encoding !== "base64" || file.size > 200000 || !file.content) { report.skipped++; continue; }
       const source = Buffer.from(file.content, "base64").toString("utf8");
-      if (source.includes(removed) || !source.includes(replacement)) { report.skipped++; continue; }
+      if (source.includes(removed) || source.split(/\r?\n/)[at - 1] !== replacement) { report.skipped++; continue; }
       const fingerprint = crypto.createHash("sha256").update(JSON.stringify([id, removed, replacement])).digest("hex");
       const marker = `<!-- ai-follow-up:${bot.id}:${fingerprint} -->`;
       if (thread.comments.nodes.some(c => c.author?.databaseId === bot.id && c.author.login === graphqlLogin && c.body?.includes(marker))) { report.skipped++; continue; }
@@ -117,4 +145,4 @@ async function reconcile(args) {
   pending.set(key, task);
   try { return await task; } finally { if (pending.get(key) === task) pending.delete(key); }
 }
-module.exports = { reconcile, THREADS, citedAddedLine };
+module.exports = { reconcile, THREADS, citedAddedLine, replacementLine };

@@ -42,7 +42,9 @@ human assertions or moving a line are insufficient. Unsupported cases stay open.
 [`reconcile.js`](actions/publish-ai-review/reconcile.js) checks current open
 same-repository PR head, exact App ownership, complete thread history, one exact
 old added line from the finding's hunk, its absence from current file content and
-a concrete replacement at the reviewed head. At most five thread pages and five
+an ancestor-to-HEAD patch proving a single-line substitution at the cited location,
+and that exact replacement line at the reviewed head. Broader edits, renames and
+nonancestor histories remain open. At most five thread pages and five
 decisions are processed; large/incomplete files or threads are skipped. Resolution
 also requires an outdated resolvable thread, a clean current `APPROVE` with no
 findings/inline comments, and completed non-review checks without failures.
@@ -86,7 +88,8 @@ summary. Missing usage is `null`/unknown. The dated Standard token-price table i
 [`policy.cjs`](actions/openai-chat/policy.cjs) is configurable through a reviewed
 source change with official URL/date; verified rates are $0.10 input, $0.01 cached
 input, $0.50 output per million tokens. Estimate only when model/tier and relevant
-counters match. Tool/cache-write/regional/other charges are excluded; total billed
+counters match within the verified short-context band (up to272000 input tokens).
+Long-context estimates remain unknown. Tool/cache-write/regional/other charges are excluded; total billed
 cost remains unknown. Estimates are not bills or spending enforcement. Reverify
 [pricing](https://developers.openai.com/api/docs/pricing) before cost decisions.
 No raw prompts, model response bodies, provider error text, keys or private source
