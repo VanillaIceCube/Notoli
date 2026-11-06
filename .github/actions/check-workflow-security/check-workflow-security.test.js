@@ -10,3 +10,9 @@ test('mutable references, absent version comments and broad/unsafe policies fail
 test('local actions and reusable workflows retain local paths; verified external refs carry comments', () => {
   assert.deepEqual(check(`steps:\n- uses: ./local\n- uses: ./.github/workflows/test.yml\n- uses: actions/checkout@${'a'.repeat(40)} # v7`, 'example.yml'), []);
 });
+test('mapping grants cannot introduce unknown scopes, values, or unapproved writes', () => {
+  for (const source of ['permissions: {contents: write}', 'permissions: {all: write}', 'permissions: {contents: admin}', 'jobs: {evil: {permissions: {issues: write}}}']) {
+    assert.ok(check(source, 'example.yml').length);
+  }
+  assert.deepEqual(check('permissions: {contents: read, issues: none}', 'example.yml'), []);
+});

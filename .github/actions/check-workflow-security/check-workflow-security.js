@@ -3,8 +3,9 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 function check(text, name) {
+  const policy = JSON.parse(fs.readFileSync(path.join(__dirname, '../../workflow-write-grants.json'), 'utf8'));
   return JSON.parse(execFileSync(process.platform === 'win32' ? 'python' : 'python3', [path.join(__dirname, 'check.py')], {
-    input: JSON.stringify({ text, name }), encoding: 'utf8', timeout: 10000,
+    input: JSON.stringify({ text, name, grants: policy[name.replaceAll('\\', '/')] || {} }), encoding: 'utf8', timeout: 10000,
   }));
 }
 
