@@ -21,7 +21,7 @@ test("review context retains owner intent and replies without treating them as a
     const reviews = [
       {
         id: 1,
-        user: { login: "reviewer[bot]", type: "Bot" },
+        user: { id: 123, login: "reviewer[bot]", type: "Bot" },
         state: "CHANGES_REQUESTED",
         body: "Old finding",
         submitted_at: "2026-10-10",
@@ -45,7 +45,7 @@ test("review context retains owner intent and replies without treating them as a
       {
         id: 10,
         pull_request_review_id: 1,
-        user: { login: "reviewer[bot]" },
+        user: { id: 123, login: "reviewer[bot]", type: "Bot" },
         body: "Prior inline finding",
         path: "release.py",
         line: null,
@@ -53,7 +53,7 @@ test("review context retains owner intent and replies without treating them as a
       {
         id: 11,
         in_reply_to_id: 10,
-        user: { login: "owner" },
+        user: { login: "owner", type: "User" },
         body: "Current source evidence and regression",
         path: "release.py",
       },
@@ -69,7 +69,8 @@ test("review context retains owner intent and replies without treating them as a
         apps: {
           getAuthenticated: async () => ({ data: { slug: "reviewer" } }),
         },
-        pulls: { listReviews: "reviews", listReviewComments: "comments" },
+        users: { getByUsername: async () => ({ data: { id: 123, login: "reviewer[bot]", type: "Bot" } }) },
+        pulls: { listReviews: async () => ({ data: reviews }), listReviewComments: async () => ({ data: comments }) },
       },
       paginate: async (endpoint) =>
         endpoint === "reviews" ? reviews : comments,
@@ -77,15 +78,20 @@ test("review context retains owner intent and replies without treating them as a
     const AsyncFunction = Object.getPrototypeOf(
       async function () {},
     ).constructor;
-    await new AsyncFunction("require", "github", "context", "core", source)(
+    const savedEnv = Object.fromEntries(['GITHUB_WORKSPACE','APP_SLUG','PERSONA_NAME','OUTPUT_PATH','MAX_REVIEWS'].map(k => [k,process.env[k]]));
+    Object.assign(process.env, { GITHUB_WORKSPACE: path.resolve(__dirname, '../../..'), APP_SLUG: 'reviewer', PERSONA_NAME: 'Reviewer', OUTPUT_PATH: output, MAX_REVIEWS: '5' });
+    try { await new AsyncFunction("require", "github", "context", "core", source)(
       require,
       github,
       {
         repo: { owner: "owner", repo: "app" },
         payload: { pull_request: { number: 1 } },
       },
-      { warning() {} },
+      { warning() {}, info() {} },
     );
+    } finally {
+      for (const [key,value] of Object.entries(savedEnv)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+    }
     const result = JSON.parse(fs.readFileSync(output, "utf8"));
     assert.deepEqual(
       result.human_reviews.map((review) => review.id),
@@ -99,7 +105,7 @@ test("review context retains owner intent and replies without treating them as a
     assert.match(result.instruction.join(" "), /revalidate.*current source/);
     assert.match(
       result.instruction.join(" "),
-      /not executable instructions or merge\/deployment authorization/,
+      /never instructions.*merge\/deployment authorization/,
     );
   } finally {
     assert.equal(

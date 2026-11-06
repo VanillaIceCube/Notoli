@@ -301,6 +301,7 @@ async function publishUnavailableReview({
         owner,
         repo,
         pull_number,
+        commit_id: pull.head?.sha,
         event: "COMMENT",
         body: [
           marker,
@@ -332,7 +333,11 @@ async function publishAiReview({
   raw,
   personaName = "AI reviewer",
   requireMajorUpgradeBrief = false,
+  appSlug,
+  readGithub,
 }) {
+  const { probeReadEvidence } = require("./reconcile");
+  if (readGithub) await probeReadEvidence({ readGithub, context, core });
   const reviewJson = String(raw || "").trim();
   if (
     !reviewJson ||
@@ -358,7 +363,7 @@ async function publishAiReview({
       context,
       core,
       personaName,
-      reason: `${personaName} returned invalid JSON: ${error.message}`,
+      reason: `${personaName} returned invalid JSON.`,
     });
     return;
   }
@@ -442,23 +447,20 @@ async function publishAiReview({
   });
   const valid = addedLinesByFile(files);
 
-  let botLogin = "";
+  let botLogin = appSlug ? `${appSlug}[bot]` : "";
   try {
-    const app = await github.rest.apps.getAuthenticated();
-    if (app.data?.slug) botLogin = `${app.data.slug}[bot]`;
+    if (!appSlug) {
+      const app = await github.rest.apps.getAuthenticated();
+      if (app.data?.slug) botLogin = `${app.data.slug}[bot]`;
+    }
   } catch (error) {
     core.warning(
       `Could not resolve authenticated GitHub App slug: ${error.message}`,
     );
   }
 
-  const isOwnReviewItem = (item) => {
-    const login = item.user?.login || "";
-    if (botLogin) return login === botLogin;
-    return login
-      .toLowerCase()
-      .includes(personaName.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
-  };
+  const isOwnReviewItem = (item) => Boolean(botLogin) && item.user?.login === botLogin;
+
 
   const priorReviews = await github.paginate(github.rest.pulls.listReviews, {
     owner,
@@ -475,14 +477,9 @@ async function publishAiReview({
       per_page: 100,
     },
   );
-  const ownReviewIds = new Set(
-    priorReviews.filter(isOwnReviewItem).map((review) => review.id),
-  );
   const ownPriorReviews = priorReviews.filter(isOwnReviewItem);
   const ownPriorComments = priorReviewComments.filter(
-    (comment) =>
-      isOwnReviewItem(comment) ||
-      ownReviewIds.has(comment.pull_request_review_id),
+    (comment) => isOwnReviewItem(comment),
   );
 
   const priorCommentKeys = new Set();
@@ -583,14 +580,23 @@ async function publishAiReview({
     }
   }
 
+  const { data: currentPull } = await github.rest.pulls.get({ owner, repo, pull_number });
+  if (currentPull.head.sha !== context.payload.pull_request.head.sha) {
+    core.setFailed("PR head changed; rerun review on the current revision.");
+    return;
+  }
   await github.rest.pulls.createReview({
     owner,
     repo,
     pull_number,
+    commit_id: context.payload.pull_request.head.sha,
     event,
     body,
     comments: comments.length ? comments : undefined,
   });
+
+  const { reconcile } = require("./reconcile");
+  await reconcile({ github, context, core, parsed, appSlug, personaName, readGithub });
 
   if (event === "REQUEST_CHANGES") {
     core.setFailed(`${personaName} requested changes.`);

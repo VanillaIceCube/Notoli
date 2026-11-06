@@ -30,7 +30,7 @@ function fixture(run, env, stubs, check) {
 
 test('Responses request construction and unavailable-output paths execute with mocked curl only', () => {
   const run = steps('openai-chat')[0].run;
-  const env = { OPENAI_API_KEY: 'synthetic-key', OPENAI_PROJECT_ID: 'synthetic-project', PROMPT_PREFIX: 'prefix\n', SYSTEM_PROMPT: 'system', MODEL: 'fixture-model', MAX_OUTPUT_TOKENS: '100', ENABLE_WEB_SEARCH: 'true' };
+  const env = { OPENAI_API_KEY: 'synthetic-key', OPENAI_PROJECT_ID: 'synthetic-project', PROMPT_PREFIX: 'prefix\n', SYSTEM_PROMPT: 'system', MODEL: 'gpt-6-luna', GITHUB_ACTION_PATH: posix(path.join(root, '.github/actions/openai-chat')), MAX_OUTPUT_TOKENS: '100', ENABLE_WEB_SEARCH: 'true' };
   const stubs = { curl: 'cat "$MOCK_RESPONSE"; exit "${CURL_EXIT:-0}"', uuidgen: 'printf "fixture-id\\n"' };
   fixture(run, env, stubs, (result, dir) => {
     assert.equal(result.status, 0, result.stderr);
@@ -52,27 +52,19 @@ test('Responses request construction and unavailable-output paths execute with m
     assert.equal(result.status, 0, result.stderr);
     assert.match(fs.readFileSync(path.join(dir, 'output'), 'utf8'), /not valid JSON/);
   });
+  fixture(run, env, { ...stubs, curl: 'printf "null"' }, (result, dir) => {
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(fs.readFileSync(path.join(dir, 'output'), 'utf8'), /OpenAI did not return a response/);
+    assert.match(fs.readFileSync(path.join(dir, 'summary'), 'utf8'), /"input_tokens": null/);
+  });
+
 });
 
-test('prior review context separates persona history and bounded untrusted human discussion', async () => {
+test('collector wrapper loads canonical bounded collector with env-only inputs', async () => {
   const step = steps('collect-prior-ai-reviews')[0];
-  const script = step.with.script.replaceAll('${{ inputs.persona_name }}', 'Fixture').replaceAll('${{ inputs.output_path }}', '/fixture/context.json').replaceAll('${{ inputs.max_reviews }}', '2');
-  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-  const run = new AsyncFunction('github', 'context', 'core', 'require', script);
-  const own = id => ({ id, user: { login: 'fixture[bot]', type: 'Bot' }, submitted_at: `2026-11-0${id}`, body: 'old finding' });
-  const reviews = [own(1), own(2), own(3), { id: 4, user: { login: 'human', type: 'User' }, author_association: 'OWNER', body: 'h'.repeat(7000) }, { id: 5, user: { login: 'outsider', type: 'User' }, author_association: 'NONE', body: 'untrusted outsider' }];
-  const comments = [{ id: 10, user: { login: 'fixture[bot]' }, pull_request_review_id: 3, body: 'own inline' }, { id: 11, in_reply_to_id: 10, user: { login: 'human' }, body: 'r'.repeat(2000) }];
-  const listReviews = () => {}, listReviewComments = () => {};
-  let output;
-  const github = { rest: { apps: { getAuthenticated: async () => ({ data: { slug: 'fixture' } }) }, pulls: { listReviews, listReviewComments } }, paginate: async method => method === listReviews ? reviews : comments };
-  const req = name => name === 'fs' ? { mkdirSync() {}, writeFileSync(_path, text) { output = JSON.parse(text); } } : require(name);
-  await run(github, { repo: { owner: 'fixture', repo: 'repo' }, payload: { pull_request: { number: 1 } } }, { warning() {} }, req);
-  assert.deepEqual(output.prior_reviews.map(r => r.id), [2, 3]);
-  assert.equal(output.human_reviews.length, 1); assert.equal(output.human_reviews[0].body.length, 6000);
-  assert.equal(output.replies_to_prior_findings[0].body.length, 1500);
-  assert.match(output.instruction.join(' '), /untrusted discussion evidence/);
-  github.paginate = async () => { throw new Error('API unavailable'); };
-  await assert.rejects(run(github, { repo: {}, payload: { pull_request: { number: 1 } } }, { warning() {} }, req), /API unavailable/);
+  assert.equal(step.env.APP_SLUG, '${{ inputs.app_slug }}');
+  assert.doesNotMatch(step.with.script, /\$\{\{ inputs\./);
+  assert.match(step.with.script, /await collect/);
 });
 
 if (fs.existsSync(path.join(root, '.github/actions/prepare-lint-commit/action.yml'))) {
@@ -90,3 +82,25 @@ if (fs.existsSync(path.join(root, '.github/actions/prepare-lint-commit/action.ym
     });
   });
 }
+
+test('publisher wrapper separates the existing read-only evidence token from the App write client', async () => {
+  const step = steps('publish-ai-review')[0];
+  const previous = Object.fromEntries(['EVIDENCE_TOKEN','REVIEW_BODY','PERSONA_NAME','APP_SLUG'].map(k => [k,process.env[k]]));
+  const readClient = {}; let captured;
+  const github = { constructor: class { constructor(options) { assert.equal(options.auth, 'synthetic-evidence'); return readClient; } } };
+  try {
+    Object.assign(process.env, { EVIDENCE_TOKEN: 'synthetic-evidence', REVIEW_BODY: '{}', PERSONA_NAME: 'Fixture', APP_SLUG: 'fixture' });
+    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    await new AsyncFunction('github','context','core','require',step.with.script)(github,{}, {}, () => ({ publishAiReview: async args => { captured = args; } }));
+    assert.equal(captured.github, github); assert.equal(captured.readGithub, readClient);
+    assert.doesNotMatch(JSON.stringify(captured), /synthetic-evidence/);
+  } finally { for (const [key,value] of Object.entries(previous)) { if(value === undefined) delete process.env[key]; else process.env[key]=value; } }
+});
+test('all reviewer workflows request only evidence reads from workflow token and preserve App write capability', () => {
+  for (const name of ['review-code.yml','review-build.yml','review-security.yml']) {
+    const text = fs.readFileSync(path.join(root,'.github/workflows',name),'utf8');
+    assert.match(text,/\n  checks: read/); assert.match(text,/\n  statuses: read/); assert.match(text,/\n  pull-requests: read/);
+    assert.doesNotMatch(text,/\n  pull-requests: write/);
+    assert.match(text,/permission-pull-requests: write/); assert.match(text,/evidence_token: \$\{\{ github.token \}\}/);
+  }
+});
