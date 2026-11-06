@@ -459,3 +459,45 @@ Malware classification fetches each unique GHSA referenced by this repository's
 open Dependabot alerts, rather than enumerating the global malware catalogue.
 Empty feeds make no advisory requests. Failed or unverifiable classification
 stops before source checkpoint or issue writes; it never implies no malware.
+
+## Batch 2 security baseline
+
+External Actions use verified immutable commits with readable version comments.
+The shared `check-workflow-security` tests reject mutable references, broad grants
+and privileged PR-target triggers. Automation tests run for all `.github/**`
+changes. Forks retain credential isolation and all configured reviewers remain
+required. Repository settings are audited independently of source; stage read-only
+defaults/disabled workflow-token approvals and SHA enforcement after source CI
+passes. Reviewer App tokens and scoped auto-merge/deployment grants remain explicit.
+
+The PR npm malware gate scans only added/changed exact package versions, at most
+25 per request, 200 requests total and 20 pages per batch, with 30-second timeouts.
+A missing base lock scans the complete head; a missing head lock while a frontend
+manifest remains fails. Invalid refs, unsupported/malformed locks, unverifiable
+versions, API/range evidence failures and known malware fail visibly. Removing the
+whole frontend has no remaining npm graph. This gate is distinct from the scheduled
+repository-alert feed. Mocked regressions make no API writes or model calls.
+
+Python malware coverage follows [the canonical decision](../docs/PYTHON-MALWARE-DECISION.md).
+Shared deployment files are synchronized to the Infrastructure source pin, including
+the approved Action-upgrade/unauthorized-drift regression. Update the source before
+consumers; never edit a vendored workflow or test independently.
+
+Repository Actions secrets are not branch-scoped: writers able to install arbitrary
+workflows remain privileged. This helper validates checked-in policy but cannot
+constrain a workflow that bypasses it. GitHub rulesets and independent review
+remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
+forms, rejects aliases, duplicate and merge keys, and requires pinned PyYAML 6.0.3.
+
+Mapping-form writes are checked against `.github/workflow-write-grants.json`,
+which records reviewed per-workflow/job grants. Unknown scopes/grant levels and
+new writes fail. Changes to that policy require review with the workflow; it does
+not grant GitHub permissions itself or replace branch protection.
+
+On pull requests, grant authority comes from the platform event base SHA, never
+from the proposed policy file. Bootstrap derives existing writes from that exact
+base when no manifest exists. To add a grant, first merge a separately reviewed
+policy-only PR under the existing protected review gates; a later workflow PR
+can consume it. Fetch the base commit before local PR-policy audits. This detects
+self-authorizing policy/workflow changes; it does not make PR-owned code a sandbox
+or remove repository-writer privileges.
