@@ -81,6 +81,7 @@ def main():
             source = ROOT / name
             if not source.exists():
                 continue
+            print(f"Compose configuration: {source}", flush=True)
             text = source.read_text(encoding="utf-8")
             data = yaml.safe_load(text)
             # Preserve all service structure, replacing only private env-file
@@ -96,7 +97,7 @@ def main():
                         "APP_DB_PATH": str(temp / "db.sqlite3")})
             for variable in re.findall(r"\$\{([A-Z][A-Z0-9_]*)(?::)?\?", text):
                 env.setdefault(variable, str(temp / "fixture"))
-            run("docker", "compose", "--env-file", str(fixture), "-f", str(rendered), "config", "--quiet", env=env)
+            run("docker", "compose", "--project-directory", str(source.parent), "--env-file", str(fixture), "-f", str(rendered), "config", "--quiet", env=env)
     check_whitespace()
     print("Repository files: workflow/composite syntax, script parsers and synthetic Compose validation passed")
 

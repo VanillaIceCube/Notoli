@@ -36,7 +36,7 @@
     ]
   },
   "scripts/validate_repository.py": {
-    "sha256": "6de42c6bdafab1eb5166858a2a731c3a36c335802bb9ea48434d5781bf36e504",
+    "sha256": "b66541a8ee61dfe36e959da8f3625b6dac4f5a597c555bf88d54709043280ead",
     "repositories": [
       "template",
       "notoli",
