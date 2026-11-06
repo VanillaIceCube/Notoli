@@ -1,5 +1,5 @@
 # ---- Build stage ----
-FROM node:25 AS build
+FROM node:26 AS build
 
 # Set working directory
 WORKDIR /frontend

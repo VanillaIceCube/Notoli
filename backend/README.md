@@ -195,7 +195,7 @@ The development Compose configuration supplies a local-only fallback when
 `DJANGO_SECRET_KEY` is blank, so a freshly copied `deploy/.env` can issue JWTs
 without manual configuration. Provide a unique `DJANGO_SECRET_KEY` before
 using the production-shaped stack. `backend/Dockerfile.dev` pins Miniforge
-24.04 to a reviewed digest; update that digest only through an explicit
+26.9.4-0 to a reviewed multi-platform digest; update that digest only through an explicit
 image-version and security review.
 
 Run tests:

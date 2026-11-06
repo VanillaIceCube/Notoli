@@ -67,8 +67,10 @@ jobs:
               - 'frontend/docker-entrypoint-dev.sh'
               - 'frontend/package*.json'
               - 'scripts/test_dev_container.py'
+              - 'tests/dev-dependencies.test.cjs'
               - '.github/workflows/gate-test.yml'
             automation:
+              - 'tests/**'
               - '.github/**'
               - '.github/actions/dependabot-auto-merge/**'
               - '.github/actions/check-codeql-pins/**'

@@ -3,7 +3,7 @@
 Production release ownership: use the [app-only release/recovery guide](../deploy/production/README.md).
 
 The Notoli frontend is a Vite single-page app with React Router and Material UI.
-Standalone Jest and Babel run the existing tests; ESLint 10 uses
+Vitest and jsdom run the existing tests; ESLint 10 uses
 `eslint.config.mjs` and compatible React, hooks, accessibility, and Testing Library
 plugins. Create React App and its incompatible ESLint 8 peer graph are removed.
 
@@ -148,7 +148,7 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart f
 
 ```bash
 cd frontend
-npm test -- --watchAll=false
+npm test
 npm run build
 npm run lint
 npm run format
@@ -156,7 +156,7 @@ npm run format
 
 `npm start` runs Vite on port 3000. `npm run build` first runs strict lint,
 then generates `build/` for the existing Nginx image. CI runs both the full
-Jest suite and this production build. JSX-bearing source files use `.jsx`;
+Vitest suite and this production build. JSX-bearing source files use `.jsx`;
 extensionless imports continue to resolve normally. Local `.env` API settings
 are loaded by Vite, and Docker's `HOST`/`CHOKIDAR_USEPOLLING` settings retain
 the existing development bind and polling behavior.
@@ -189,13 +189,7 @@ versions, regenerate the lockfile and repeat those checks. Canonical rollout:
 
 Notoli also overrides `glob@>=9 <14.0.2` to `^14.0.2` for
 [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4).
-The lockfile resolves glob 14.0.3 for Jest and Babel's test-exclude, eliminating
-both glob 13 and nested glob 10 without downgrading Jest/Babel. Glob 14 retains
-the sync/async traversal calls used here and adopts minimatch 11. Run Jest with
-`npm test -- --watchAll=false --runInBand --coverage` to exercise test-exclude
-and coverage file discovery. GitHub's runtime classification for minimatch
-reflects the existing dependency placement; production serves the built static
-assets. The fixed follow-redirects dependency remains unchanged.
+Jest/Babel and their glob/deepmerge test-only graph were removed by the Vitest migration. Keep lockfile updates coupled to supported lint/test dependencies.
 
 ## Authentication and notification reliability
 
@@ -251,3 +245,5 @@ and cold test caches; dependency install time was recorded separately. Comparabl
 post-change measurements are required before claiming a performance improvement.
 Backend already uses a test-scoped fast password hasher; production hashing stays
 unchanged. Slow settings subprocess/MCP tests remain meaningful integration coverage.
+
+Supported test/build runtimes are Node24.15+ within24.x or Node26.x. jsdom30 explicitly excludes the end-of-life Node25 line; do not treat >=24 as universal support. Use the same supported runtime for before/after timings.
