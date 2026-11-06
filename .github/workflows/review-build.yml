@@ -51,7 +51,9 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write
+  pull-requests: read
+  checks: read
+  statuses: read
 
 jobs:
   review:
@@ -71,6 +73,8 @@ jobs:
           private-key: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          permission-contents: read
+          permission-pull-requests: write
 
       - name: Collect prior Lint Eastwood reviews
         uses: ./.github/actions/collect-prior-ai-reviews
@@ -199,6 +203,7 @@ jobs:
         uses: ./.github/actions/publish-ai-review
         with:
           github_token: ${{ steps.app-token.outputs.token }}
+          evidence_token: ${{ github.token }}
           app_slug: ${{ steps.app-token.outputs.app-slug }}
           review_json: ${{ steps.openai.outputs.content }}
           persona_name: "Lint Eastwood"
@@ -208,6 +213,7 @@ jobs:
         uses: ./.github/actions/publish-ai-review
         with:
           github_token: ${{ steps.app-token.outputs.token }}
+          evidence_token: ${{ github.token }}
           app_slug: ${{ steps.app-token.outputs.app-slug }}
           persona_name: "Lint Eastwood"
           review_json: |

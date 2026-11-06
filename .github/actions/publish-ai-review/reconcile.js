@@ -5,6 +5,23 @@ const CORE_ANALYSES = ["CodeQL / Analyze Python", "CodeQL / Analyze JavaScript/T
 const APP_CHECKS = ["Lints / Lint Results", "Tests / Test Results", "CodeQL / Detect CodeQL Scope", "Vulnerability / Vulnerability", "Malware / Malware", ...CORE_ANALYSES];
 const INFRA_CHECKS = ["Lints / Infrastructure lint", "Tests / validate", "CodeQL / Detect CodeQL Scope", "Vulnerability / Vulnerability", "Dependency scope / Dependency scanner scope", "Secret scan / Gitleaks", ...CORE_ANALYSES];
 
+async function probeReadEvidence({ readGithub, context, core }) {
+  const report = { checks: "unknown", statuses: "unknown", branch_rules: "unknown" };
+  if (!readGithub) return report;
+  const pull = context.payload.pull_request;
+  for (const [key, request] of [
+    ["checks", () => readGithub.rest.checks.listForRef({ ...context.repo, ref: pull.head.sha, per_page: 1 })],
+    ["statuses", () => readGithub.rest.repos.getCombinedStatusForRef({ ...context.repo, ref: pull.head.sha, per_page: 1 })],
+    ["branch_rules", () => readGithub.rest.repos.getBranchRules({ ...context.repo, branch: pull.base.ref, per_page: 1 })],
+  ]) {
+    try { await request(); report[key] = "readable"; }
+    catch (error) { report[key] = Number.isInteger(error.status) ? `unavailable_http_${error.status}` : "unavailable"; }
+  }
+  core.info(`Reviewer read-only evidence access: ${JSON.stringify(report)}`);
+  if (Object.values(report).some(value => value !== "readable")) core.warning("Reviewer reconciliation evidence access is incomplete; no permission expansion or completion claim is implied.");
+  return report;
+}
+
 const THREADS = `query($owner:String!,$repo:String!,$number:Int!,$cursor:String) {
   repository(owner:$owner,name:$repo) { pullRequest(number:$number) {
     headRefOid reviewThreads(first:25,after:$cursor) { pageInfo { hasNextPage endCursor }
@@ -48,7 +65,7 @@ function replacementLine(patch, citedLine, removed, replacement) {
   return result;
 }
 
-async function reconcileOnce({ github, context, core, parsed, appSlug, personaName = "Fixture" }) {
+async function reconcileOnce({ github, context, core, parsed, appSlug, readGithub, personaName = "Fixture" }) {
   const decisions = parsed.reconciliations;
   if (!Array.isArray(decisions) || decisions.length === 0) return;
   const report = { requested: decisions.length, followed_up: 0, resolved: 0, skipped: 0, unavailable: false };
@@ -56,6 +73,7 @@ async function reconcileOnce({ github, context, core, parsed, appSlug, personaNa
   const expected = pull.head?.sha;
   const args = { ...context.repo, pull_number: pull.number };
   try {
+    if (!readGithub) throw new Error("read_only_evidence_client_unavailable");
     const bot = await identity(github, appSlug);
     const graphqlLogin = bot.login.replace(/\[bot\]$/, "");
     const current = async () => {
@@ -100,12 +118,12 @@ async function reconcileOnce({ github, context, core, parsed, appSlug, personaNa
       // ancestor-to-HEAD comparison, then verify that exact new line at HEAD.
       const original = root.originalCommit?.oid;
       if (!original) { report.skipped++; continue; }
-      const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({ ...context.repo, basehead: `${original}...${expected}` });
+      const { data: comparison } = await readGithub.rest.repos.compareCommitsWithBasehead({ ...context.repo, basehead: `${original}...${expected}` });
       if (comparison.merge_base_commit?.sha !== original || !Array.isArray(comparison.files) || comparison.files.length >= 300) { report.skipped++; continue; }
       const change = comparison.files.find(f => f.filename === root.path && f.status === "modified" && !f.previous_filename);
       const at = replacementLine(change?.patch, root.originalLine, removed, replacement);
       if (!at) { report.skipped++; continue; }
-      const { data: file } = await github.rest.repos.getContent({ ...context.repo, path: root.path, ref: expected });
+      const { data: file } = await readGithub.rest.repos.getContent({ ...context.repo, path: root.path, ref: expected });
       if (Array.isArray(file) || file.encoding !== "base64" || file.size > 200000 || !file.content) { report.skipped++; continue; }
       const source = Buffer.from(file.content, "base64").toString("utf8");
       if (source.includes(removed) || source.split(/\r?\n/)[at - 1] !== replacement) { report.skipped++; continue; }
@@ -117,7 +135,7 @@ async function reconcileOnce({ github, context, core, parsed, appSlug, personaNa
         // A clean current review plus outdated source is required. REQUEST_CHANGES,
         // new findings and uncertain/security evidence can never trigger closure.
         if (parsed.event !== "APPROVE" || !thread.isOutdated || !thread.viewerCanResolve || (parsed.findings || []).length || (parsed.comments || []).length) { report.skipped++; continue; }
-        const { data: checks } = await github.rest.checks.listForRef({ ...context.repo, ref: expected, per_page: 100 });
+        const { data: checks } = await readGithub.rest.checks.listForRef({ ...context.repo, ref: expected, per_page: 100 });
         const personaChecks = {
           "Obi-Wan Code-nobi": ["Obi-Wan Code-nobi code review", "AI Code Review / Obi-Wan Code-nobi code review"],
           "Lint Eastwood": ["Lint Eastwood build sheriff review", "AI Build Sheriff Review / Lint Eastwood build sheriff review"],
@@ -133,10 +151,10 @@ async function reconcileOnce({ github, context, core, parsed, appSlug, personaNa
         if (expectedChecks.some(name => !checks.check_runs.some(c => c.name === name && c.app?.slug === "github-actions" && c.status === "completed" && c.conclusion === "success"))) { report.skipped++; continue; }
         const independentReviewers = Object.entries(personaChecks).filter(([name]) => name !== personaName);
         if (independentReviewers.some(([, names]) => !checks.check_runs.some(c => names.includes(c.name) && c.status === "completed" && c.conclusion === "success"))) { report.skipped++; continue; }
-        const { data: legacy } = await github.rest.repos.getCombinedStatusForRef({ ...context.repo, ref: expected, per_page: 100 });
+        const { data: legacy } = await readGithub.rest.repos.getCombinedStatusForRef({ ...context.repo, ref: expected, per_page: 100 });
         if (!Number.isSafeInteger(legacy.total_count) || !Array.isArray(legacy.statuses) || legacy.total_count !== legacy.statuses.length || (legacy.total_count > 0 && (legacy.state !== "success" || legacy.statuses.some(s => s.state !== "success")))) { report.skipped++; continue; }
         const { data: currentPR } = await github.rest.pulls.get(args);
-        const { data: rules } = await github.rest.repos.getBranchRules({ ...context.repo, branch: currentPR.base.ref, per_page: 100 });
+        const { data: rules } = await readGithub.rest.repos.getBranchRules({ ...context.repo, branch: currentPR.base.ref, per_page: 100 });
         if (!Array.isArray(rules) || rules.length >= 100) { report.skipped++; continue; }
         const required = rules.filter(r => r.type === "required_status_checks").flatMap(r => r.parameters?.required_status_checks || []);
         const independentRequired = required.filter(r => ![...ownChecks, ...selfDependent].includes(r.context));
@@ -188,4 +206,4 @@ async function reconcile(args) {
   pending.set(key, task);
   try { return await task; } finally { if (pending.get(key) === task) pending.delete(key); }
 }
-module.exports = { reconcile, THREADS, citedAddedLine, replacementLine, APP_CHECKS, INFRA_CHECKS };
+module.exports = { reconcile, probeReadEvidence, THREADS, citedAddedLine, replacementLine, APP_CHECKS, INFRA_CHECKS };

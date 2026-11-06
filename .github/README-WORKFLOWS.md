@@ -560,3 +560,9 @@ The reviewed `workflow-write-grants.json` reserves only `pull-requests: write`
 for the forthcoming deterministic promotion-summary workflow. This policy merges
 before that workflow is introduced; proposed workflows cannot authorize their own
 new grants. Summary publication will not authorize releases or change gates.
+
+Reviewer evidence reads use the existing read-only workflow token, explicitly
+limited to contents/pull-requests/checks/statuses read (plus existing security
+evidence reads for RoboCop). Native review/follow-up/thread writes use the
+separate persona App token; its existing contents-read/pull-requests-write
+installation capabilities are not expanded.

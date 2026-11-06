@@ -334,7 +334,10 @@ async function publishAiReview({
   personaName = "AI reviewer",
   requireMajorUpgradeBrief = false,
   appSlug,
+  readGithub,
 }) {
+  const { probeReadEvidence } = require("./reconcile");
+  if (readGithub) await probeReadEvidence({ readGithub, context, core });
   const reviewJson = String(raw || "").trim();
   if (
     !reviewJson ||
@@ -593,7 +596,7 @@ async function publishAiReview({
   });
 
   const { reconcile } = require("./reconcile");
-  await reconcile({ github, context, core, parsed, appSlug, personaName });
+  await reconcile({ github, context, core, parsed, appSlug, personaName, readGithub });
 
   if (event === "REQUEST_CHANGES") {
     core.setFailed(`${personaName} requested changes.`);

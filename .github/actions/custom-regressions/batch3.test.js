@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { collect, LIMITS } = require('../collect-prior-ai-reviews/collect');
 const { payload, metrics } = require('../openai-chat/policy.cjs');
-const { reconcile, APP_CHECKS } = require('../publish-ai-review/reconcile');
+const { reconcile, probeReadEvidence, APP_CHECKS } = require('../publish-ai-review/reconcile');
 const bot = { id: 123, login: 'fixture[bot]', type: 'Bot' };
 const human = { id: 321, login: 'owner', type: 'User' };
 const context = { repo: { owner: 'owner', repo: 'repo' }, payload: { pull_request: { number: 1, head: { sha: 'new', repo: { full_name: 'owner/repo' } } } } };
@@ -78,7 +78,7 @@ function lifecycle() {
     return { repository: { pullRequest: { headRefOid: 'new', reviewThreads: { nodes: [thread], pageInfo: { hasNextPage: false } } } } };
   } };
   const parsed = { event: 'APPROVE', findings: [], comments: [], reconciliations: [{ comment_id: 10, action: 'resolve', evidence: { head_sha: 'new', removed_code: 'unsafe_call()', replacement_code: 'safe_call()', reason: 'The unsafe call is replaced by the validated safe implementation.' } }] };
-  const run = () => reconcile({ github, context, core, parsed, appSlug: 'fixture', personaName: 'Obi-Wan Code-nobi' });
+  const run = () => reconcile({ github, context, core, parsed, appSlug: 'fixture', readGithub: github, personaName: 'Obi-Wan Code-nobi' });
   return { github, parsed, root, thread, replies, resolutions, run };
 }
 test('own outdated finding resolves with exact-head source/check evidence, verified mutation, one bounded follow-up', async () => {
@@ -196,4 +196,23 @@ test('full independent check inventory is required for automatic resolution, inc
     };
     await h.run(); assert.equal(h.resolutions.length, 0);
   }
+});
+
+test('read evidence and App mutation clients stay separate without broader App permissions', async () => {
+  const h = lifecycle();
+  const readGithub = { rest: { repos: { ...h.github.rest.repos }, checks: { ...h.github.rest.checks } } };
+  h.github.rest.repos = new Proxy({}, { get() { throw new Error('App token must not read repository/check evidence'); } });
+  h.github.rest.checks = new Proxy({}, { get() { throw new Error('App token must not read check evidence'); } });
+  const r = await reconcile({ github: h.github, readGithub, context, core, parsed: h.parsed, appSlug: 'fixture', personaName: 'Obi-Wan Code-nobi' });
+  assert.equal(r.resolved, 1);
+});
+
+test('actual read-evidence probe exposes permission outcomes without raw errors or writes', async () => {
+  const h = lifecycle(); const reports = [];
+  const result = await probeReadEvidence({ readGithub: h.github, context: { ...context, payload: { pull_request: { ...context.payload.pull_request, base: { ref: 'main' } } } }, core: { info: text => reports.push(text), warning() {} } });
+  assert.deepEqual(result, { checks: 'readable', statuses: 'readable', branch_rules: 'readable' });
+  h.github.rest.repos.getBranchRules = async () => { throw Object.assign(new Error('private-token'), { status: 403 }); };
+  const denied = await probeReadEvidence({ readGithub: h.github, context: { ...context, payload: { pull_request: { ...context.payload.pull_request, base: { ref: 'main' } } } }, core: { info: text => reports.push(text), warning() {} } });
+  assert.equal(denied.branch_rules, 'unavailable_http_403');
+  assert.equal(h.resolutions.length, 0); assert.doesNotMatch(reports.join(' '), /private-token/);
 });

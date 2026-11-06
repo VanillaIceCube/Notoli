@@ -42,8 +42,9 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write
+  pull-requests: read
   checks: read
+  statuses: read
   actions: read
   security-events: read
 
@@ -203,6 +204,8 @@ jobs:
           private-key: ${{ secrets.ROBOCOP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          permission-contents: read
+          permission-pull-requests: write
 
       - name: Collect prior RoboCop reviews
         if: steps.pr-diff.outputs.truncated != 'true'
@@ -309,6 +312,7 @@ jobs:
         uses: ./.github/actions/publish-ai-review
         with:
           github_token: ${{ steps.app-token.outputs.token }}
+          evidence_token: ${{ github.token }}
           app_slug: ${{ steps.app-token.outputs.app-slug }}
           review_json: ${{ steps.openai.outputs.content }}
           persona_name: "RoboCop"
@@ -318,6 +322,7 @@ jobs:
         uses: ./.github/actions/publish-ai-review
         with:
           github_token: ${{ steps.app-token.outputs.token }}
+          evidence_token: ${{ github.token }}
           app_slug: ${{ steps.app-token.outputs.app-slug }}
           persona_name: "RoboCop"
           review_json: |

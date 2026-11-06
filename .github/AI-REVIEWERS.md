@@ -11,7 +11,13 @@ app-owned. Never put a key, prompt, reset token or private source in usage evide
 
 [`collect-prior-ai-reviews`](actions/collect-prior-ai-reviews/action.yml) gets the
 authenticated token action's App slug and verifies its exact numeric Bot user ID.
-Display-name substring matching is not an ownership fallback. REST uses the
+Display-name substring matching is not an ownership fallback. The App token stays
+limited to contents-read/pull-requests-write. Reconciliation source/check/status/
+branch-rule reads use a separate client with the existing job `GITHUB_TOKEN`
+(`contents`, `pull-requests`, `checks`, `statuses`: read), never the App write
+client. A bounded read-only API probe reports readable/unavailable outcomes in
+the existing job log; API access is not a claim that checks passed. No App
+installation permission or reviewer key/project is expanded. REST uses the
 `[bot]` suffix; GraphQL Bot login omits it, and reconciliation checks both the
 API-specific login and numeric identity. No unrelated App credentials are used.
 

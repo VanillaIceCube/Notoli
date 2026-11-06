@@ -82,3 +82,25 @@ if (fs.existsSync(path.join(root, '.github/actions/prepare-lint-commit/action.ym
     });
   });
 }
+
+test('publisher wrapper separates the existing read-only evidence token from the App write client', async () => {
+  const step = steps('publish-ai-review')[0];
+  const previous = Object.fromEntries(['EVIDENCE_TOKEN','REVIEW_BODY','PERSONA_NAME','APP_SLUG'].map(k => [k,process.env[k]]));
+  const readClient = {}; let captured;
+  const github = { constructor: class { constructor(options) { assert.equal(options.auth, 'synthetic-evidence'); return readClient; } } };
+  try {
+    Object.assign(process.env, { EVIDENCE_TOKEN: 'synthetic-evidence', REVIEW_BODY: '{}', PERSONA_NAME: 'Fixture', APP_SLUG: 'fixture' });
+    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    await new AsyncFunction('github','context','core','require',step.with.script)(github,{}, {}, () => ({ publishAiReview: async args => { captured = args; } }));
+    assert.equal(captured.github, github); assert.equal(captured.readGithub, readClient);
+    assert.doesNotMatch(JSON.stringify(captured), /synthetic-evidence/);
+  } finally { for (const [key,value] of Object.entries(previous)) { if(value === undefined) delete process.env[key]; else process.env[key]=value; } }
+});
+test('all reviewer workflows request only evidence reads from workflow token and preserve App write capability', () => {
+  for (const name of ['review-code.yml','review-build.yml','review-security.yml']) {
+    const text = fs.readFileSync(path.join(root,'.github/workflows',name),'utf8');
+    assert.match(text,/\n  checks: read/); assert.match(text,/\n  statuses: read/); assert.match(text,/\n  pull-requests: read/);
+    assert.doesNotMatch(text,/\n  pull-requests: write/);
+    assert.match(text,/permission-pull-requests: write/); assert.match(text,/evidence_token: \$\{\{ github.token \}\}/);
+  }
+});
