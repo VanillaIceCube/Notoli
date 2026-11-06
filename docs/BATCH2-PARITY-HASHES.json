@@ -1,0 +1,145 @@
+{
+  "scripts/bounded_log.py": {
+    "sha256": "2faa343b0961674698904afea9cb15a37e623de424aed0b6ff9f1f57cb35f2a3",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper",
+      "infra"
+    ]
+  },
+  "tests/bounded-log.test.cjs": {
+    "sha256": "ccc5edd3f3eba816559717801646b0dd9d7ac2339a6d27b2d49adf38f2095288",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper",
+      "infra"
+    ]
+  },
+  ".github/actions/check-workflow-security/check.py": {
+    "sha256": "83d268aed185561a290525a08303ea586934c6e83e5f8c85b8ebb2217b1cd438",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper",
+      "infra"
+    ]
+  },
+  ".github/actions/check-workflow-security/check-workflow-security.js": {
+    "sha256": "0e9c6aaccd17387ff2cda0cb75dcf2e98f70cf6dd6ebed26ce644c894f5bfc55",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper",
+      "infra"
+    ]
+  },
+  "scripts/validate_repository.py": {
+    "sha256": "8062dd20f61609d33dbcea155172846066d56d6806496027dee5de6894c45a8a",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper"
+    ]
+  },
+  "scripts/install_actionlint.sh": {
+    "sha256": "479cfadff987dfa2df19ca70106d70a5ec3fb65cb1a4dd77a440c596b67db3f5",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper",
+      "infra"
+    ]
+  },
+  "scripts/collect_browser_artifacts.py": {
+    "sha256": "1e3f9a8a05de600f1a568363b5525a492f1124e2ea12a67934c410110ee8a0c3",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper"
+    ]
+  },
+  "scripts/run_e2e.cjs": {
+    "sha256": "036a609736950c695861b0f1db2b36b36c313b5c0b5ea1787fb7f0ac22f8223f",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper"
+    ]
+  },
+  "scripts/e2e_backend.py": {
+    "sha256": "ffbaff29a063b8ac80e114e4a3fff4cdedf9f4bcad145a3f55f401085140a812",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper"
+    ]
+  },
+  "scripts/e2e_settings.py": {
+    "sha256": "b91bd7d539698c102b4035b8a5cd81de1eea3be81f420ed05880e0bf3fca724a",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper"
+    ]
+  },
+  "frontend/e2e/auth.spec.mjs": {
+    "sha256": "016a7ccd7e8fe63f02a57942f41918d7aff55bf97d498b29c2d991e538a098db",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper"
+    ]
+  },
+  "frontend/playwright.config.mjs": {
+    "sha256": "2691a3b4326237c6f00946ad126cb44d3289dd04c9b1bf5181c20a4ec5fc3bc4",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper"
+    ]
+  },
+  "frontend/docker-entrypoint-dev.sh": {
+    "sha256": "375c976293d9097585a242bdd14246702929a4a087a611f9f78ac3ae80b2582a",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper"
+    ]
+  },
+  "tests/dev-dependencies.test.cjs": {
+    "sha256": "87cf0421a085b7d66ca46abb9a6d633124eee695346816bdc425e6970087eaf8",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper"
+    ]
+  },
+  ".github/actions/review-npm-malware/review.cjs": {
+    "sha256": "9b66dbfa2c1949a9d6a46c99b78d57ef3567bef4c85a1dcbcccfdfc7a29d88fe",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper"
+    ]
+  },
+  ".github/actions/collect-prior-ai-reviews/action.yml": {
+    "sha256": "af65fa1054e0db39d27a62030d10a37e64942c39944fbc69aef52d44f4044ed4",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper",
+      "infra"
+    ]
+  },
+  ".github/actions/custom-regressions/custom.test.js": {
+    "sha256": "921372b0da0ef7d6e353c4552d741a1e88d9a29175059a46eb778f775ec77d6c",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper",
+      "infra"
+    ]
+  }
+}

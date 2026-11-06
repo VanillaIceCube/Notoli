@@ -305,3 +305,13 @@ retry on the next invocation. Use one volume per checkout and restart after edit
 Run `node --test tests/dev-dependencies.test.cjs` from the repository root for the
 credential-free mocked lifecycle/exit-status regression. Compose configuration
 checks do not deploy or touch application data.
+
+## Disposable browser-test backend
+
+The frontend `npm run test:e2e` wrapper runs `scripts/e2e_backend.py` with
+`scripts/e2e_settings.py`: synthetic secret, fresh temporary SQLite, local file
+email, test-only fast hashing, disabled MCP and loopback-only binding. It refuses
+state directories without the wrapper marker and prevents dotenv loading.
+Install `backend/requirements.txt` in your activated Python environment first.
+This harness never reads the developer database or production settings and does
+not change the normal server/test-runner hashing policy. See frontend/README.md.

@@ -2,6 +2,16 @@
 
 ## 2026-11-05
 ### Added
+- Shared isolated authentication browser tests with disposable data and local-only reset mail.
+- Repository syntax/Compose validation and mocked request/history/lint attribution coverage.
+### Fixed
+- Preserve early, failing and late CI diagnostics within bounded reviewer context and failure artifacts.
+### Changed
+- Use bulk form setup for validation/API unit cases while retaining typed happy paths and assertions.
+- Separate pure Node tests and isolated VM DOM workers; prebundle UI dependencies for the full 301-test suite.
+
+## 2026-11-05
+### Added
 - Shared development dependency lifecycle regression for fresh, unchanged, changed and failed installs.
 ### Fixed
 - Upgrade React Router past both reported advisories and remove the unpatched Jest/deepmerge dependency path.

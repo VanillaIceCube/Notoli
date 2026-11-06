@@ -241,3 +241,9 @@ Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-aler
 Batch 2 workflow controls and bounded npm malware review are documented in `.github/README-WORKFLOWS.md`; Python malware coverage follows `docs/PYTHON-MALWARE-DECISION.md`. Shared deployment changes require the pinned Infrastructure source.
 
 Frontend testing now uses Vitest (`npm test`, optional `-- --maxWorkers=2`) with jsdom; Vite retains the documented REACT_APP_API_BASE_URL compatibility and build/ output. Jest/Babel test tooling is removed. Development images use reviewed digest pins and manifest-aware dependency startup. See frontend/README.md and deploy/README.md.
+
+Browser checks: activate an isolated Python environment with backend requirements,
+then `cd frontend`, `npx playwright install chromium`, `npm run test:e2e`. Ports
+8001/3001 must be free. Tests use disposable SQLite/file mail and no real accounts.
+Vitest projects isolate pure Node files from VM DOM forks; do not override the
+configured pool for timing. See frontend/README.md and docs/BATCH2-PARITY.md.
