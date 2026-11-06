@@ -556,10 +556,10 @@ writers, dated usage estimates and configuration recovery. The owner-selected
 Repository variables `AI_REVIEW_MODEL`, `AI_REVIEW_REASONING_EFFORT` and
 `AI_REVIEW_MAX_OUTPUT_TOKENS` are validated; unset values retain Luna/medium/16000.
 
-The reviewed `workflow-write-grants.json` reserves only `pull-requests: write`
-for the forthcoming deterministic promotion-summary workflow. This policy merges
-before that workflow is introduced; proposed workflows cannot authorize their own
-new grants. Summary publication will not authorize releases or change gates.
+The reviewed `workflow-write-grants.json` grants only `pull-requests: write`
+to the deterministic promotion-summary workflow. That policy merged before the
+workflow was introduced; proposed workflows cannot authorize their own new grants.
+Summary publication does not authorize releases or change gates.
 
 Reviewer evidence reads use the existing read-only workflow token, explicitly
 limited to contents/pull-requests/checks/statuses read (plus existing security

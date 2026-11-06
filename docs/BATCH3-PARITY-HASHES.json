@@ -1,0 +1,134 @@
+{
+  "date": "2026-11-06",
+  "normalization": "UTF-8 text with LF newlines; shared-function hashes use ast.dump(include_attributes=False). This is a Batch 3 source snapshot, not production evidence.",
+  "matching_files": {
+    ".github/actions/collect-prior-ai-reviews/action.yml": {
+      "FullStackTemplate": "0feb35062e3c68273e6f65e0e25d07d6e79189aa8ca37342f6f8961f07326f83",
+      "Notoli": "0feb35062e3c68273e6f65e0e25d07d6e79189aa8ca37342f6f8961f07326f83",
+      "MacroMapper": "0feb35062e3c68273e6f65e0e25d07d6e79189aa8ca37342f6f8961f07326f83",
+      "JudeAndrewAlabaInfrastructure": "0feb35062e3c68273e6f65e0e25d07d6e79189aa8ca37342f6f8961f07326f83"
+    },
+    ".github/actions/collect-prior-ai-reviews/collect.js": {
+      "FullStackTemplate": "4ddb9e122c9ab50bacf93032184c9f2f032efaf86072b380a882f2e78d290ec7",
+      "Notoli": "4ddb9e122c9ab50bacf93032184c9f2f032efaf86072b380a882f2e78d290ec7",
+      "MacroMapper": "4ddb9e122c9ab50bacf93032184c9f2f032efaf86072b380a882f2e78d290ec7",
+      "JudeAndrewAlabaInfrastructure": "4ddb9e122c9ab50bacf93032184c9f2f032efaf86072b380a882f2e78d290ec7"
+    },
+    ".github/actions/openai-chat/action.yml": {
+      "FullStackTemplate": "b058481130e7ac5279ac65e0f656749f3fcede529ad76456732455961fc54d2c",
+      "Notoli": "b058481130e7ac5279ac65e0f656749f3fcede529ad76456732455961fc54d2c",
+      "MacroMapper": "b058481130e7ac5279ac65e0f656749f3fcede529ad76456732455961fc54d2c",
+      "JudeAndrewAlabaInfrastructure": "b058481130e7ac5279ac65e0f656749f3fcede529ad76456732455961fc54d2c"
+    },
+    ".github/actions/openai-chat/policy.cjs": {
+      "FullStackTemplate": "3f5866f9446c08850696c24e44e425c4317592ade28016e414a6c8e3fcd24ee0",
+      "Notoli": "3f5866f9446c08850696c24e44e425c4317592ade28016e414a6c8e3fcd24ee0",
+      "MacroMapper": "3f5866f9446c08850696c24e44e425c4317592ade28016e414a6c8e3fcd24ee0",
+      "JudeAndrewAlabaInfrastructure": "3f5866f9446c08850696c24e44e425c4317592ade28016e414a6c8e3fcd24ee0"
+    },
+    ".github/actions/publish-ai-review/action.yml": {
+      "FullStackTemplate": "e8a6d685fd567f7cb29b40f1e9b153c4928c9608badd12f35968fff3077bccdc",
+      "Notoli": "e8a6d685fd567f7cb29b40f1e9b153c4928c9608badd12f35968fff3077bccdc",
+      "MacroMapper": "e8a6d685fd567f7cb29b40f1e9b153c4928c9608badd12f35968fff3077bccdc",
+      "JudeAndrewAlabaInfrastructure": "e8a6d685fd567f7cb29b40f1e9b153c4928c9608badd12f35968fff3077bccdc"
+    },
+    ".github/actions/publish-ai-review/reconcile.js": {
+      "FullStackTemplate": "7c074f52fb5a436b339c1fd4a1c6faab1a0424b4e4495c94f4e8106526f19c52",
+      "Notoli": "7c074f52fb5a436b339c1fd4a1c6faab1a0424b4e4495c94f4e8106526f19c52",
+      "MacroMapper": "7c074f52fb5a436b339c1fd4a1c6faab1a0424b4e4495c94f4e8106526f19c52",
+      "JudeAndrewAlabaInfrastructure": "7c074f52fb5a436b339c1fd4a1c6faab1a0424b4e4495c94f4e8106526f19c52"
+    },
+    ".github/actions/custom-regressions/custom.test.js": {
+      "FullStackTemplate": "47340db170b3a1b99975936cc2c238afe8ad298798948833aff6879843607ed9",
+      "Notoli": "47340db170b3a1b99975936cc2c238afe8ad298798948833aff6879843607ed9",
+      "MacroMapper": "47340db170b3a1b99975936cc2c238afe8ad298798948833aff6879843607ed9",
+      "JudeAndrewAlabaInfrastructure": "47340db170b3a1b99975936cc2c238afe8ad298798948833aff6879843607ed9"
+    },
+    ".github/actions/custom-regressions/batch3.test.js": {
+      "FullStackTemplate": "82d243a31d579e493efbb4ff6f0e56580afa9f584b1ceedbddf3f18601faab90",
+      "Notoli": "82d243a31d579e493efbb4ff6f0e56580afa9f584b1ceedbddf3f18601faab90",
+      "MacroMapper": "82d243a31d579e493efbb4ff6f0e56580afa9f584b1ceedbddf3f18601faab90",
+      "JudeAndrewAlabaInfrastructure": "82d243a31d579e493efbb4ff6f0e56580afa9f584b1ceedbddf3f18601faab90"
+    },
+    ".github/AI-REVIEWERS.md": {
+      "FullStackTemplate": "5cee6d8a473ee65e87d2946af314cf02697b053aef6813b18fcb457bfa4197d1",
+      "Notoli": "5cee6d8a473ee65e87d2946af314cf02697b053aef6813b18fcb457bfa4197d1",
+      "MacroMapper": "5cee6d8a473ee65e87d2946af314cf02697b053aef6813b18fcb457bfa4197d1",
+      "JudeAndrewAlabaInfrastructure": "5cee6d8a473ee65e87d2946af314cf02697b053aef6813b18fcb457bfa4197d1"
+    },
+    ".github/actions/promotion-summary/summary.js": {
+      "FullStackTemplate": "c7924620dc027f6f395cf9cb7b9323ebc85af764b0685ce27fd9142e7a11aa4a",
+      "Notoli": "c7924620dc027f6f395cf9cb7b9323ebc85af764b0685ce27fd9142e7a11aa4a",
+      "MacroMapper": "c7924620dc027f6f395cf9cb7b9323ebc85af764b0685ce27fd9142e7a11aa4a",
+      "JudeAndrewAlabaInfrastructure": "c7924620dc027f6f395cf9cb7b9323ebc85af764b0685ce27fd9142e7a11aa4a"
+    },
+    ".github/actions/promotion-summary/summary.test.js": {
+      "FullStackTemplate": "c1bcaf1bdcbf80d1f65498f8a2c61d823049c2fb649f88723f57558f39e81d2f",
+      "Notoli": "c1bcaf1bdcbf80d1f65498f8a2c61d823049c2fb649f88723f57558f39e81d2f",
+      "MacroMapper": "c1bcaf1bdcbf80d1f65498f8a2c61d823049c2fb649f88723f57558f39e81d2f",
+      "JudeAndrewAlabaInfrastructure": "c1bcaf1bdcbf80d1f65498f8a2c61d823049c2fb649f88723f57558f39e81d2f"
+    },
+    ".github/actions/promotion-summary/architecture.test.js": {
+      "FullStackTemplate": "3bd3763b3b56501a37bd98571e6e083dcae6e6bbdf67081b70a4b3f031fca22a",
+      "Notoli": "3bd3763b3b56501a37bd98571e6e083dcae6e6bbdf67081b70a4b3f031fca22a",
+      "MacroMapper": "3bd3763b3b56501a37bd98571e6e083dcae6e6bbdf67081b70a4b3f031fca22a",
+      "JudeAndrewAlabaInfrastructure": "3bd3763b3b56501a37bd98571e6e083dcae6e6bbdf67081b70a4b3f031fca22a"
+    },
+    ".github/workflows/promotion-summary.yml": {
+      "FullStackTemplate": "7df058d158637a8a1b44ca3b41c392b0af75d22ce016f9b53d1e18f9194d2e50",
+      "Notoli": "7df058d158637a8a1b44ca3b41c392b0af75d22ce016f9b53d1e18f9194d2e50",
+      "MacroMapper": "7df058d158637a8a1b44ca3b41c392b0af75d22ce016f9b53d1e18f9194d2e50",
+      "JudeAndrewAlabaInfrastructure": "7df058d158637a8a1b44ca3b41c392b0af75d22ce016f9b53d1e18f9194d2e50"
+    },
+    "scripts/ci_architecture.py": {
+      "FullStackTemplate": "d42846c750c822f6de43768bf17939c242e9fb74b9c12e66dc97d14655d48b28",
+      "Notoli": "d42846c750c822f6de43768bf17939c242e9fb74b9c12e66dc97d14655d48b28",
+      "MacroMapper": "d42846c750c822f6de43768bf17939c242e9fb74b9c12e66dc97d14655d48b28",
+      "JudeAndrewAlabaInfrastructure": "d42846c750c822f6de43768bf17939c242e9fb74b9c12e66dc97d14655d48b28"
+    },
+    "docs/CI-CD-ARCHITECTURE.md": {
+      "FullStackTemplate": "faf34c75ad016824015cd4e5fa33a89f7dc6733c4246747624793b4024b78448",
+      "Notoli": "faf34c75ad016824015cd4e5fa33a89f7dc6733c4246747624793b4024b78448",
+      "MacroMapper": "faf34c75ad016824015cd4e5fa33a89f7dc6733c4246747624793b4024b78448",
+      "JudeAndrewAlabaInfrastructure": "faf34c75ad016824015cd4e5fa33a89f7dc6733c4246747624793b4024b78448"
+    },
+    "docs/BATCH3-PARITY.md": {
+      "FullStackTemplate": "9cbc0851662605b82a57f980e5ad060e2825626d5a1f8b796f69a62d10d66aa8",
+      "Notoli": "9cbc0851662605b82a57f980e5ad060e2825626d5a1f8b796f69a62d10d66aa8",
+      "MacroMapper": "9cbc0851662605b82a57f980e5ad060e2825626d5a1f8b796f69a62d10d66aa8",
+      "JudeAndrewAlabaInfrastructure": "9cbc0851662605b82a57f980e5ad060e2825626d5a1f8b796f69a62d10d66aa8"
+    }
+  },
+  "email_equivalents": {
+    "FullStackTemplate": {
+      "shared_function_ast_sha256": {
+        "send_messages": "149881a111bcb691d1b52a89ffa7a59077d80220fbd65e08573dcac99b0e5af5",
+        "_log_failure": "ecd2303e95adfb34773ee08bbd84dd8e05f1b06255217e9d0fb27f47244ffd0e"
+      },
+      "regression_module_sha256": "4dffb87f97bc51fee65af5a4c60a6b338f356085fbcdfa9f05432ec5d6c0f529"
+    },
+    "Notoli": {
+      "shared_function_ast_sha256": {
+        "send_messages": "149881a111bcb691d1b52a89ffa7a59077d80220fbd65e08573dcac99b0e5af5",
+        "_log_failure": "ecd2303e95adfb34773ee08bbd84dd8e05f1b06255217e9d0fb27f47244ffd0e"
+      },
+      "regression_module_sha256": "4dffb87f97bc51fee65af5a4c60a6b338f356085fbcdfa9f05432ec5d6c0f529"
+    },
+    "MacroMapper": {
+      "shared_function_ast_sha256": {
+        "send_messages": "149881a111bcb691d1b52a89ffa7a59077d80220fbd65e08573dcac99b0e5af5",
+        "_log_failure": "ecd2303e95adfb34773ee08bbd84dd8e05f1b06255217e9d0fb27f47244ffd0e"
+      },
+      "regression_module_sha256": "4dffb87f97bc51fee65af5a4c60a6b338f356085fbcdfa9f05432ec5d6c0f529"
+    }
+  },
+  "intentional_differences": [
+    "Publisher unavailable-marker repository prefix; per-repository workflow configurations and architecture inventory; template HTML/reply-to email payload."
+  ],
+  "publisher_normalized_marker_prefix_sha256": {
+    "batch1-template": "d4e983de57473861e182e87c3b1f80dc41dd9c6b60ec64321c69ba0a2823d6ed",
+    "batch1-notoli": "d4e983de57473861e182e87c3b1f80dc41dd9c6b60ec64321c69ba0a2823d6ed",
+    "batch1-macromapper": "d4e983de57473861e182e87c3b1f80dc41dd9c6b60ec64321c69ba0a2823d6ed",
+    "batch1-infra": "d4e983de57473861e182e87c3b1f80dc41dd9c6b60ec64321c69ba0a2823d6ed"
+  }
+}

@@ -33,11 +33,12 @@ function classify(files) {
   }
   return groups;
 }
-function render({ repo, number, base, head, files }) {
-  if (!Number.isSafeInteger(number) || number < 1 || !/^[0-9a-f]{40}$/.test(base) || !/^[0-9a-f]{40}$/.test(head) || !/^[A-Za-z0-9_.-]+$/.test(repo)) throw new Error("invalid_identity");
+function render({ owner = "VanillaIceCube", repo, number, base, head, files }) {
+  if (!Number.isSafeInteger(number) || number < 1 || !/^[0-9a-f]{40}$/.test(base) || !/^[0-9a-f]{40}$/.test(head) || !/^[A-Za-z0-9_.-]+$/.test(repo) || !/^[A-Za-z0-9-]+$/.test(owner)) throw new Error("invalid_identity");
   const groups = classify(files);
   const gateway = repo === "JudeAndrewAlabaInfrastructure";
-  const rows = Object.entries(groups).filter(([, count]) => count).map(([group, count]) => `| ${group} | ${count} |`);
+  const labels = { backend: "Backend", frontend: "Frontend", authentication_email: "Authentication/email", automation: "GitHub automation", migrations: "Migrations", dependencies: "Dependencies", configuration: "Configuration", release: "Release", documentation: "Documentation", other: "Other" };
+  const rows = Object.entries(groups).filter(([, count]) => count).map(([group, count]) => `| ${labels[group]} | ${count} |`);
   const changes = files.reduce((result, file) => { result.additions += Number.isSafeInteger(file.additions) ? file.additions : 0; result.deletions += Number.isSafeInteger(file.deletions) ? file.deletions : 0; return result; }, { additions: 0, deletions: 0 });
   const risks = [];
   if (groups.migrations) risks.push("Schema migration files changed: inspect operations and compatibility with retained data before promotion. File detection does not prove reversibility.");
@@ -47,7 +48,7 @@ function render({ repo, number, base, head, files }) {
   if (groups.backend || groups.frontend) risks.push("Application files changed: run the relevant tests and confirm routing/authentication behavior for the reviewed images.");
   if (!risks.length) risks.push("No application, migration, dependency or release/configuration impact was detected by path rules. Other changes still require ordinary review.");
   return [MARKER, "## Production promotion impact", "", `Observed comparison for #${number}: \`env-prod@${base}\` → \`${head}\`.`,
-    `Source: [GitHub target-branch comparison](https://github.com/VanillaIceCube/${repo}/compare/${base}...${head}).`, "",
+    `Source: [GitHub target-branch comparison](https://github.com/${owner}/${repo}/compare/${base}...${head}).`, "",
     `${files.length} changed file(s), ${changes.additions} added / ${changes.deletions} removed lines. Categories overlap; renames include old and new paths.`, "",
     ...(rows.length ? ["| Observed area | Files |", "| --- | ---: |", ...rows] : ["No changed files in the current target comparison."]), "",
     "### Inferred review considerations", "", ...risks.map(r => `- ${r}`), "",
@@ -72,7 +73,7 @@ async function summarize({ github, context, core, number }) {
   // GitHub caps PR file responses at3000. Refuse incomplete summaries.
   if (!Number.isSafeInteger(pr.changed_files) || files.length !== pr.changed_files || files.length >= 3000) throw new Error("incomplete_file_comparison");
   await verify();
-  const body = render({ repo: context.repo.repo, number, base, head, files });
+  const body = render({ owner: context.repo.owner, repo: context.repo.repo, number, base, head, files });
   const { data: bot } = await github.rest.users.getByUsername({ username: "github-actions[bot]" });
   if (bot.login !== "github-actions[bot]" || bot.type !== "Bot" || !Number.isSafeInteger(bot.id)) throw new Error("bot_identity_unavailable");
   const comments = await pages(github.rest.issues.listComments, { ...context.repo, issue_number: number }, 20);
