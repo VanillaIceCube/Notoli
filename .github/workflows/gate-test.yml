@@ -303,6 +303,8 @@ jobs:
             .github/actions/security-alerts/sync-security-alerts.test.js \
             .github/actions/prepare-vulnerability-report/prepare-vulnerability-report.test.js \
             2>&1 | tee automation_test_output.txt || status=$?
+          python3 scripts/validate_repository.py \
+            2>&1 | tee -a automation_test_output.txt || status=$?
           python3 deploy/check_parity.py \
             2>&1 | tee -a automation_test_output.txt || status=$?
           python3 -m unittest discover -s deploy/tests -v \

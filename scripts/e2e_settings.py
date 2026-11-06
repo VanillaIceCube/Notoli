@@ -1,12 +1,17 @@
 """Disposable browser-test settings. Never load a developer/production .env."""
 import os
+from importlib import import_module
 from pathlib import Path
 
 import dotenv
 
 dotenv.load_dotenv = lambda *args, **kwargs: False
 
-from app.settings import *  # noqa: F403,E402
+# Copy only Django setting constants; keep imported helper names private.
+base_settings = import_module("app.settings")
+for setting_name in dir(base_settings):
+    if setting_name.isupper():
+        globals()[setting_name] = getattr(base_settings, setting_name)
 
 state = Path(os.environ["E2E_STATE_DIR"])
 SECRET_KEY = "isolated-browser-test-key-not-for-deployment"

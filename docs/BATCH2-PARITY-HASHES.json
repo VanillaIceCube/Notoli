@@ -77,7 +77,7 @@
     ]
   },
   "scripts/e2e_settings.py": {
-    "sha256": "b91bd7d539698c102b4035b8a5cd81de1eea3be81f420ed05880e0bf3fca724a",
+    "sha256": "352b59863deb2afd95b544770567234c3298668b87b284b9e370f29497b82c17",
     "repositories": [
       "template",
       "notoli",
