@@ -33,6 +33,7 @@ if (require.main === module) {
     try { response = JSON.parse(fs.readFileSync("response.json", "utf8")); } catch { /* unavailable evidence remains null */ }
     const data = metrics(response, Number(process.argv[3]), process.env);
     // Only aggregate counters/configuration; never source, prompts or API errors.
+    console.log(`OpenAI usage evidence: ${JSON.stringify(data)}`);
     if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `\n### OpenAI usage evidence\n\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\`\n`);
   }
 }
