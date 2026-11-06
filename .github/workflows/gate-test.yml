@@ -26,6 +26,10 @@ concurrency:
   group: tests-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
   changes:
     name: Detect Changes
@@ -34,6 +38,8 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
       automation: ${{ steps.filter.outputs.automation }}
+      development: ${{ steps.filter.outputs.development }}
+      e2e: ${{ steps.filter.outputs.e2e }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -42,7 +48,7 @@ jobs:
       - name: Detect relevant changes
         id: filter
         continue-on-error: true
-        uses: dorny/paths-filter@f3360c560367c9daf72b88c0e6164162034c5721
+        uses: dorny/paths-filter@f3360c560367c9daf72b88c0e6164162034c5721 # v4
         with:
           filters: |
             frontend:
@@ -54,7 +60,35 @@ jobs:
               - 'mcp-framework-source.json'
               - '.github/workflows/gate-test.yml'
               - '.github/actions/read-versions/**'
+            development:
+              - 'backend/Dockerfile.dev'
+              - 'backend/environment.yml'
+              - 'backend/requirements.txt'
+              - 'frontend/Dockerfile.dev'
+              - 'frontend/docker-entrypoint-dev.sh'
+              - 'frontend/package*.json'
+              - 'scripts/test_dev_container.py'
+              - 'tests/dev-dependencies.test.cjs'
+              - '.github/workflows/gate-test.yml'
+            e2e:
+              - 'backend/**'
+              - 'frontend/src/**'
+              - 'frontend/e2e/**'
+              - 'frontend/playwright.config.mjs'
+              - 'frontend/vite.config.mjs'
+              - 'scripts/run_e2e.cjs'
+              - 'frontend/package*.json'
+              - 'scripts/e2e_*.py'
+              - '.github/workflows/gate-test.yml'
             automation:
+              - 'scripts/**'
+              - 'docs/**'
+              - 'README.md'
+              - 'CHANGELOG.md'
+              - 'AGENTS.md'
+              - 'LICENSE.md'
+              - 'tests/**'
+              - '.github/**'
               - '.github/actions/dependabot-auto-merge/**'
               - '.github/actions/check-codeql-pins/**'
               - '.github/workflows/ci-auto-merge.yml'
@@ -125,7 +159,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          npm test -- --watchAll=false --verbose --runInBand 2>&1 | tee test_output.txt || status=$?
+          npm test -- --maxWorkers=2 2>&1 | tee test_output.txt || status=$?
           if [ "$status" = "0" ]; then
             npm run build 2>&1 | tee -a test_output.txt || status=$?
           fi
@@ -145,15 +179,16 @@ jobs:
             echo "status=failure" >> "$GITHUB_OUTPUT"
           fi
 
-          {
-            echo 'log<<EOF'
-            if [ -f test_output.txt ]; then
-              tail -n 200 test_output.txt
-            else
-              echo "No test output captured."
-            fi
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+          python3 ../scripts/bounded_log.py test_output.txt "$GITHUB_OUTPUT"
+
+      - name: Retain bounded failure diagnostics
+        if: always() && steps.test_summary.outputs.status != 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: failure-diagnostics-${{ github.job }}
+          path: '**/*_output.bounded.txt'
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Fail if tests failed
         if: steps.test_run.outputs.exit_code != '0'
@@ -211,15 +246,16 @@ jobs:
             echo "status=failure" >> "$GITHUB_OUTPUT"
           fi
 
-          {
-            echo 'log<<EOF'
-            if [ -f test_output.txt ]; then
-              tail -n 200 test_output.txt
-            else
-              echo "No test output captured."
-            fi
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+          python3 ../scripts/bounded_log.py test_output.txt "$GITHUB_OUTPUT"
+
+      - name: Retain bounded failure diagnostics
+        if: always() && steps.test_summary.outputs.status != 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: failure-diagnostics-${{ github.job }}
+          path: '**/*_output.bounded.txt'
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Fail if tests failed
         if: steps.test_run.outputs.exit_code != '0'
@@ -235,6 +271,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
 
       - name: Read versions
         id: versions
@@ -249,6 +287,9 @@ jobs:
       - name: Install the pinned safe YAML parser
         run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
 
+      - name: Install verified workflow validator
+        run: bash scripts/install_actionlint.sh
+
       - name: Run repository automation tests
         id: test_run
         continue-on-error: true
@@ -256,7 +297,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          node --test .github/actions/dependabot-auto-merge/*.test.js .github/actions/check-codeql-pins/*.test.js .github/actions/collect-codeql-evidence/collect-codeql-evidence.test.js \
+          node --test .github/actions/custom-regressions/*.test.js tests/*.test.cjs .github/actions/check-workflow-security/*.test.js .github/actions/review-npm-malware/*.test.js .github/actions/dependabot-auto-merge/*.test.js .github/actions/check-codeql-pins/*.test.js .github/actions/collect-codeql-evidence/collect-codeql-evidence.test.js \
             .github/actions/review-npm-malware/review-npm-malware.test.js \
             .github/actions/collect-prior-ai-reviews/collect-prior-ai-reviews.test.js \
             .github/actions/collect-upstream-major-upgrade-evidence/*.test.js \
@@ -265,6 +306,8 @@ jobs:
             .github/actions/security-alerts/sync-security-alerts.test.js \
             .github/actions/prepare-vulnerability-report/prepare-vulnerability-report.test.js \
             2>&1 | tee automation_test_output.txt || status=$?
+          python3 scripts/validate_repository.py \
+            2>&1 | tee -a automation_test_output.txt || status=$?
           python3 deploy/check_parity.py \
             2>&1 | tee -a automation_test_output.txt || status=$?
           python3 -m unittest discover -s deploy/tests -v \
@@ -286,15 +329,16 @@ jobs:
             echo "status=failure" >> "$GITHUB_OUTPUT"
           fi
 
-          {
-            echo 'log<<EOF'
-            if [ -f automation_test_output.txt ]; then
-              tail -n 200 automation_test_output.txt
-            else
-              echo "No automation test output captured."
-            fi
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+          python3 scripts/bounded_log.py automation_test_output.txt "$GITHUB_OUTPUT"
+
+      - name: Retain bounded failure diagnostics
+        if: always() && steps.test_summary.outputs.status != 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: failure-diagnostics-${{ github.job }}
+          path: '**/*_output.bounded.txt'
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Fail if tests failed
         if: steps.test_run.outputs.exit_code != '0'
@@ -303,10 +347,65 @@ jobs:
       status: ${{ steps.test_summary.outputs.status }}
       log: ${{ steps.test_summary.outputs.log }}
 
+  development-images:
+    name: Development images and dependency volumes
+    needs: changes
+    if: needs.changes.outputs.development == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Build reviewed development images
+        run: |
+          docker build --file backend/Dockerfile.dev --tag batch2-backend-dev backend
+          docker build --file frontend/Dockerfile.dev --tag batch2-frontend-dev frontend
+      - name: Verify real isolated dependency volume lifecycle
+        run: python3 scripts/test_dev_container.py batch2-frontend-dev
+
+  e2e-tests:
+    name: Isolated authentication browser tests
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Read supported versions
+        id: versions
+        uses: ./.github/actions/read-versions
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: ${{ steps.versions.outputs.node_version }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: ${{ steps.versions.outputs.python_version }}
+      - name: Install isolated test dependencies
+        run: |
+          python -m pip install -r ../backend/requirements.txt
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Exercise existing authentication and session behavior
+        env:
+          CI: 'true'
+        run: npm run test:e2e
+      - name: Bound generated browser failure artifacts
+        if: failure()
+        run: python ../scripts/collect_browser_artifacts.py
+      - name: Retain failed browser evidence
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: browser-failure-evidence
+          path: frontend/browser-evidence
+          retention-days: 7
+
   test-results:
     name: Test Results
     if: always()
-    needs: [changes, frontend-tests, backend-tests, automation-tests]
+    needs: [changes, frontend-tests, backend-tests, automation-tests, development-images, e2e-tests]
     runs-on: ubuntu-latest
     outputs:
       frontend_status: ${{ steps.results.outputs.frontend_status }}
@@ -316,6 +415,12 @@ jobs:
       automation_status: ${{ steps.results.outputs.automation_status }}
       automation_log: ${{ steps.results.outputs.automation_log }}
     steps:
+      - name: Require scope detection and applicable browser tests
+        if: needs.changes.result != 'success' || (needs.changes.outputs.e2e == 'true' && needs.e2e-tests.result != 'success')
+        run: exit 1
+      - name: Require applicable development image validation
+        if: needs.changes.outputs.development == 'true' && needs.development-images.result != 'success'
+        run: exit 1
       - name: Normalize test results
         id: results
         env:
@@ -333,9 +438,10 @@ jobs:
           if [ "$FRONTEND_RELEVANT" = "true" ]; then
             echo "frontend_status=${FRONTEND_STATUS:-failure}" >> "$GITHUB_OUTPUT"
             {
-              echo 'frontend_log<<EOF'
+              delimiter="RESULT_$(uuidgen)"
+              echo "frontend_log<<$delimiter"
               echo "$FRONTEND_LOG"
-              echo 'EOF'
+              echo "$delimiter"
             } >> "$GITHUB_OUTPUT"
           else
             echo "frontend_status=not-applicable" >> "$GITHUB_OUTPUT"
@@ -345,9 +451,10 @@ jobs:
           if [ "$BACKEND_RELEVANT" = "true" ]; then
             echo "backend_status=${BACKEND_STATUS:-failure}" >> "$GITHUB_OUTPUT"
             {
-              echo 'backend_log<<EOF'
+              delimiter="RESULT_$(uuidgen)"
+              echo "backend_log<<$delimiter"
               echo "$BACKEND_LOG"
-              echo 'EOF'
+              echo "$delimiter"
             } >> "$GITHUB_OUTPUT"
           else
             echo "backend_status=not-applicable" >> "$GITHUB_OUTPUT"
@@ -357,9 +464,10 @@ jobs:
           if [ "$AUTOMATION_RELEVANT" = "true" ]; then
             echo "automation_status=${AUTOMATION_STATUS:-failure}" >> "$GITHUB_OUTPUT"
             {
-              echo 'automation_log<<EOF'
+              delimiter="RESULT_$(uuidgen)"
+              echo "automation_log<<$delimiter"
               echo "$AUTOMATION_LOG"
-              echo 'EOF'
+              echo "$delimiter"
             } >> "$GITHUB_OUTPUT"
           else
             echo "automation_status=not-applicable" >> "$GITHUB_OUTPUT"

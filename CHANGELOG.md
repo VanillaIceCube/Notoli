@@ -1,6 +1,35 @@
 # Changelog
 
 ## 2026-11-05
+### Added
+- Shared isolated authentication browser tests with disposable data and local-only reset mail.
+- Repository syntax/Compose validation and mocked request/history/lint attribution coverage.
+### Fixed
+- Preserve early, failing and late CI diagnostics within bounded reviewer context and failure artifacts.
+### Changed
+- Use bulk form setup for validation/API unit cases while retaining typed happy paths and assertions.
+- Separate pure Node tests and isolated VM DOM workers; prebundle UI dependencies for the full 301-test suite.
+
+## 2026-11-05
+### Added
+- Shared development dependency lifecycle regression for fresh, unchanged, changed and failed installs.
+### Fixed
+- Upgrade React Router past both reported advisories and remove the unpatched Jest/deepmerge dependency path.
+### Changed
+- Complete frontend Vitest migration with all existing assertions preserved; retain Vite routing/build compatibility.
+- Pin development Node/Miniforge multi-platform image digests and refresh frontend dependencies only when manifests change.
+
+## 2026-11-05
+### Added
+- Immutable workflow-policy and bounded changed-version malware regression coverage.
+- Evidence-based Python malware scanning decision and shared release upgrade regression.
+### Fixed
+- Missing or invalid dependency evidence now fails PR malware review visibly.
+### Changed
+- Explicit scanner/path-filter grants support read-only repository defaults; unused orchestration issue writes removed.
+- Adopt the reviewed Infrastructure release template/test contract with readable Action versions.
+
+## 2026-11-05
 
 ### Fixed
 - Bound malware classification to repository source advisories instead of scanning the global catalogue.

@@ -1,3 +1,5 @@
+// @vitest-environment node
+
 import { connectionReturnTo, loginPath } from './authRedirect';
 
 test('pending consent is preserved without decoding its query', () => {

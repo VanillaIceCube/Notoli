@@ -26,14 +26,14 @@ What it does:
   - The shared [`.github/actions/prepare-lint-commit`](actions/prepare-lint-commit/action.yml) action validates that identity, configures the token only as the Git remote's push URL, and the lint job restores the unauthenticated push URL immediately after the commit step.
   - Auto-fix is enabled only for non-Dependabot pull requests whose head branch belongs to this repository. Those jobs explicitly check out the writable head branch. Fork and Dependabot pull requests use GitHub's standard pull-request checkout, skip mutating lint steps, and still run strict formatting/lint checks against the submitted code. The lint workflow does not receive an App secret from forks; Dependabot review credentials are handled separately below.
 - Runs the reusable test gate: [`.github/workflows/gate-test.yml`](workflows/gate-test.yml)
-  - Frontend: standalone Jest via `npm test` (CI mode), then `npm run build` (strict ESLint 10 and Vite production build). Build failures fail the existing frontend test gate and remain in its captured diagnostics.
+  - Frontend: Vitest via `npm test` (CI mode), then `npm run build` (strict ESLint 10 and Vite production build). Build failures fail the existing frontend test gate and remain in its captured diagnostics.
   - Backend: `python manage.py test`
   - Repository automation: Node's built-in test runner executes colocated behavioral tests for upstream major-upgrade evidence, the AI review publisher, the security-alert reconciler, and large dependency-review report transport. Changes to the report helper or vulnerability workflow also select this test job.
 - Lint and test jobs use the same change filters:
   - Frontend checks run for `frontend/**` changes.
   - Backend checks run for `backend/**` changes.
   - Changes to `.github/actions/read-versions/**` or `.github/actions/prepare-lint-commit/**` run both frontend and backend checks because those actions are shared by both lint jobs.
-  - Changes to the AI review publisher, prior-review and upstream-evidence collectors, OpenAI/diff actions, CI orchestrator, persona review workflows, repository automation test workflow, or security-alert reconciler run the dedicated repository automation test job without coupling GitHub Action behavior to the frontend Jest suite.
+  - Changes to the AI review publisher, prior-review and upstream-evidence collectors, OpenAI/diff actions, CI orchestrator, persona review workflows, repository automation test workflow, or security-alert reconciler run the dedicated repository automation test job without coupling GitHub Action behavior to the frontend unit suite.
   - Other workflow/action changes are validated by Actionlint and CodeQL Actions analysis without forcing application test suites to run.
   - Jobs skipped because their paths are not relevant report `not-applicable` to downstream review workflows.
   - Lint, test, and CodeQL change detection uses the pinned `dorny/paths-filter` action. If its GitHub API request fails, the detector remains failed but adds a titled error annotation and workflow summary explaining that no scope was evaluated and the workflow should be rerun.
@@ -459,3 +459,89 @@ Malware classification fetches each unique GHSA referenced by this repository's
 open Dependabot alerts, rather than enumerating the global malware catalogue.
 Empty feeds make no advisory requests. Failed or unverifiable classification
 stops before source checkpoint or issue writes; it never implies no malware.
+
+## Batch 2 security baseline
+
+External Actions use verified immutable commits with readable version comments.
+The shared `check-workflow-security` tests reject mutable references, broad grants
+and privileged PR-target triggers. Automation tests run for all `.github/**`
+changes. Forks retain credential isolation and all configured reviewers remain
+required. Repository settings are audited independently of source; stage read-only
+defaults/disabled workflow-token approvals and SHA enforcement after source CI
+passes. Reviewer App tokens and scoped auto-merge/deployment grants remain explicit.
+
+The PR npm malware gate scans only added/changed exact package versions, at most
+25 per request, 200 requests total and 20 pages per batch, with 30-second timeouts.
+A missing base lock scans the complete head; a missing head lock while a frontend
+manifest remains fails. Invalid refs, unsupported/malformed locks, unverifiable
+versions, API/range evidence failures and known malware fail visibly. Removing the
+whole frontend has no remaining npm graph. This gate is distinct from the scheduled
+repository-alert feed. Mocked regressions make no API writes or model calls.
+
+Python malware coverage follows [the canonical decision](../docs/PYTHON-MALWARE-DECISION.md).
+Shared deployment files are synchronized to the Infrastructure source pin, including
+the approved Action-upgrade/unauthorized-drift regression. Update the source before
+consumers; never edit a vendored workflow or test independently.
+
+Repository Actions secrets are not branch-scoped: writers able to install arbitrary
+workflows remain privileged. This helper validates checked-in policy but cannot
+constrain a workflow that bypasses it. GitHub rulesets and independent review
+remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
+forms, rejects aliases, duplicate and merge keys, and requires pinned PyYAML 6.0.3.
+
+Mapping-form writes are checked against `.github/workflow-write-grants.json`,
+which records reviewed per-workflow/job grants. Unknown scopes/grant levels and
+new writes fail. Changes to that policy require review with the workflow; it does
+not grant GitHub permissions itself or replace branch protection.
+
+On pull requests, grant authority comes from the platform event base SHA, never
+from the proposed policy file. Bootstrap derives existing writes from that exact
+base when no manifest exists. To add a grant, first merge a separately reviewed
+policy-only PR under the existing protected review gates; a later workflow PR
+can consume it. Fetch the base commit before local PR-policy audits. This detects
+self-authorizing policy/workflow changes; it does not make PR-owned code a sandbox
+or remove repository-writer privileges.
+
+## Vitest and React Router acceptance
+
+`npm test` runs all existing frontend assertions in Vitest 5/jsdom. JSX test files
+use `.jsx`, mocks use the runner's native ESM API, and Jest/Babel test-only packages
+are removed. This eliminates Jest's unpatched deepmerge path and allows supported
+React Router 7.18.5 (both reported Router advisories are fixed in >=7.18.0).
+Vite development/build was already present; its `build/` output and legacy
+`REACT_APP_API_BASE_URL` behavior are retained. No SSR server is used here.
+
+Use `npm ci`, `npm run lint:strict`, `npm run format:check`, `npm test`, and
+`npm run build` from frontend. CI bounds test workers to two; use
+`npm test -- --maxWorkers=1 --reporter=json --outputFile=vitest-results.json`
+for serial profiling. Keep isolated test environments and every domain/auth
+assertion. The ESLint configuration regression now imports ESLint directly in a
+Node test environment instead of launching a second Node runtime.
+
+Independent pre-change VM baseline at 7f1db4c: backend 190 tests (one existing
+skip), 24.256s Django total; frontend 32 suites/301 tests, 72.746s Jest time.
+Both used 0.75 CPU/768 MiB, synthetic settings, no production mounts/network
+and cold test caches; dependency install time was recorded separately. Comparable
+post-change measurements are required before claiming a performance improvement.
+Backend already uses a test-scoped fast password hasher; production hashing stays
+unchanged. Slow settings subprocess/MCP tests remain meaningful integration coverage.
+
+## Repository validation and browser diagnostics
+
+The path-aware test gate includes `.github/**`, `scripts/**`, `deploy/**`,
+`tests/**` and maintained docs in automation validation. It runs workflow and
+composite syntax, parser-only script checks and synthetic Compose configuration
+plus the existing Batch 1 suites and focused mocked composite regressions.
+[Coverage and external boundaries](../docs/AUTOMATION-COVERAGE.md) are explicit.
+
+`scripts/bounded_log.py` retains early, sampled failing and late context within
+16,000 characters for reviewers. Full output is streamed with `tee`; failed
+logs have roughly 1 MiB capped artifacts retained seven days. Random delimiters
+protect multiline outputs and the original command status still determines the
+gate. An unavailable check cannot become success through log summarization.
+
+Relevant app/harness changes also require the isolated Chromium job; its failure
+or an applicable development-image failure fails Test Results. Browser traces
+and screenshots use a 20 MiB/file, 50 MiB/run cap and seven-day retention.
+See frontend/README.md for setup and local commands. No job uses real accounts,
+production data, live email or paid AI requests for these tests.

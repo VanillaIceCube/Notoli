@@ -186,7 +186,7 @@ and Django static assets use `/static/`.
 
 ## Maintenance
 - Deployments must not run host-wide Docker pruning. Retain prior release images for rollback; cleanup requires a host operator to review disk usage and explicitly select unused app images. Production releases use immutable digests and manage only Notoli's backend/frontend through `deploy/production/release.py`. Shared ingress/certificates belong to the infrastructure repository under approved architecture v2. See `deploy/production/README.md` and `.github/README-WORKFLOWS.md`.
-- Frontend builds use Vite and tests use standalone Jest/Babel. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite explicitly maps the existing `REACT_APP_API_BASE_URL`/`PUBLIC_URL` settings, keeps port 3000 and `build/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
+- Frontend builds use Vite and tests use Vitest/jsdom. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite explicitly maps the existing `REACT_APP_API_BASE_URL`/`PUBLIC_URL` settings, keeps port 3000 and `build/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
 - Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for the browser baseline.
 - ChatGPT listing metadata: `plugins/notoli/plugin.json` is the canonical branding source, but personal custom-MCP plugins use a separate generated compatibility manifest. Download the installed plugin ZIP and use `plugins/notoli/build_listing.py` to apply branding while preserving its exported name and `.app.json`; upload a new version to the same plugin. Keep account-specific exports/build ZIPs out of Git. Listing publication is separate from Docker deployment and MCP tool refresh. Privacy/terms pages and verified publisher identity remain prerequisites for public submission. See `plugins/notoli/README.md`.
 - MCP review regressions: Connected Apps must include the current user's unexpired grants before token exchange, exclude expired/foreign grants, and deduplicate apps across grants/tokens. Read consent must explicitly disclose owner/collaborator IDs, usernames, and emails. The shared REST/MCP collaborator resolver must reject multiple matching identities before membership or notification writes; never choose a recipient with `.first()`.
@@ -237,3 +237,13 @@ RoboCop baseline evidence connected without changing full default-branch coverag
 ## 🤖 Reviewer model policy
 
 Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-alert grouping. Preserve each reviewer’s existing key/project isolation, budgets and blocking gates. Application AI model selection remains app-owned.
+
+Batch 2 workflow controls and bounded npm malware review are documented in `.github/README-WORKFLOWS.md`; Python malware coverage follows `docs/PYTHON-MALWARE-DECISION.md`. Shared deployment changes require the pinned Infrastructure source.
+
+Frontend testing now uses Vitest (`npm test`, optional `-- --maxWorkers=2`) with jsdom; Vite retains the documented REACT_APP_API_BASE_URL compatibility and build/ output. Jest/Babel test tooling is removed. Development images use reviewed digest pins and manifest-aware dependency startup. See frontend/README.md and deploy/README.md.
+
+Browser checks: activate an isolated Python environment with backend requirements,
+then `cd frontend`, `npx playwright install chromium`, `npm run test:e2e`. Ports
+8001/3001 must be free. Tests use disposable SQLite/file mail and no real accounts.
+Vitest projects isolate pure Node files from VM DOM forks; do not override the
+configured pool for timing. See frontend/README.md and docs/BATCH2-PARITY.md.

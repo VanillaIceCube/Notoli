@@ -162,7 +162,7 @@ test("lint and test skips require the actual detector to authorize that path sco
     ["Tests / Automation Tests (Node)", ".github/actions/publish-ai-review/action.yml"],
   ]) {
     assert.equal(scopeAllowsSkip(name, [file]), false, name);
-    assert.equal(scopeAllowsSkip(name, ["README.md"]), true, name);
+    assert.equal(scopeAllowsSkip(name, ["LICENSE"]), true, name);
     const h = harness();
     h.rules[1].parameters.required_status_checks.push({ context: name });
     h.checks.push({ ...h.checks[0], name, conclusion: "skipped", id: 100 });
@@ -171,6 +171,12 @@ test("lint and test skips require the actual detector to authorize that path sco
   }
 });
 
+
+test("repository automation documentation and helper changes cannot authorize a skip", () => {
+  for (const file of ["README.md", "CHANGELOG.md", "AGENTS.md", "docs/AUTOMATION-COVERAGE.md", "scripts/bounded_log.py", "tests/bounded-log.test.cjs"]) {
+    assert.equal(scopeAllowsSkip("Tests / Automation Tests (Node)", [file]), false, file);
+  }
+});
 
 test("approvals must come from every persona on this head; comments do not clear blockers", async () => {
   for (const mutate of [

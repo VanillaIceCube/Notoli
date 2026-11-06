@@ -1,0 +1,528 @@
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { renderWithProviders } from '../../test-support/utils';
+import Login from './Login';
+import { fetchBoards, login } from '../../services/notoliApiClient';
+import { useNavigate } from 'react-router-dom';
+vi.mock('react-router-dom', async () => ({
+  ...(await vi.importActual('react-router-dom')),
+  useNavigate: vi.fn(),
+}));
+vi.mock('../../services/notoliApiClient', () => ({
+  fetchBoards: vi.fn(() =>
+    Promise.resolve({
+      ok: true,
+      json: async () => [],
+    }),
+  ),
+  login: vi.fn(() =>
+    Promise.resolve({
+      ok: true,
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
+    }),
+  ),
+}));
+describe('Login', () => {
+  const mockNavigate = vi.fn();
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionStorage.clear();
+    localStorage.clear();
+    useNavigate.mockReturnValue(mockNavigate);
+  });
+  test('when rendered, it shows email/password inputs and submit button', () => {
+    renderWithProviders(<Login showSnackbar={vi.fn()} />);
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    ).toBeInTheDocument();
+    // The Stack has no accessible role; inspect its computed layout to catch removed MUI props.
+    // eslint-disable-next-line testing-library/no-node-access
+    expect(screen.getByText('notoli').parentElement).toHaveStyle({
+      alignItems: 'center',
+      maxWidth: '600px',
+    });
+  });
+  test('when forgot password is clicked, it navigates to /forgot-password', async () => {
+    renderWithProviders(<Login showSnackbar={vi.fn()} />);
+    await userEvent.click(screen.getByText(/forgot password\?/i));
+    expect(mockNavigate).toHaveBeenCalledWith('/forgot-password');
+  });
+  test('when a pending snackbar exists in sessionStorage, it shows it once on render', async () => {
+    sessionStorage.setItem(
+      'pendingSnackbar',
+      JSON.stringify({
+        severity: 'error',
+        message: 'Your session expired. Please log in again.',
+      }),
+    );
+    const showSnackbar = vi.fn();
+    renderWithProviders(<Login showSnackbar={showSnackbar} />);
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith(
+        'error',
+        'Your session expired. Please log in again.',
+      );
+    });
+    expect(sessionStorage.getItem('pendingSnackbar')).toBeNull();
+  });
+  test('when login succeeds and boards exist, it navigates to the first board', async () => {
+    fetchBoards.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [
+        {
+          id: 7,
+        },
+        {
+          id: 3,
+        },
+        {
+          id: 12,
+        },
+      ],
+    });
+    login.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
+    });
+    renderWithProviders(<Login showSnackbar={vi.fn()} />);
+    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
+    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    );
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/board/3');
+    });
+  });
+  test('when login succeeds and the previous board is still accessible, it navigates there', async () => {
+    localStorage.setItem(
+      'notoli:lastBoardByUser',
+      JSON.stringify({
+        test_email: '12',
+      }),
+    );
+    fetchBoards.mockResolvedValueOnce({
+      ok: true,
+      json: async () => [
+        {
+          id: 7,
+        },
+        {
+          id: 3,
+        },
+        {
+          id: 12,
+        },
+      ],
+    });
+    login.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
+    });
+    renderWithProviders(<Login showSnackbar={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: 'test_email@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    );
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/board/12');
+    });
+  });
+  test('when login succeeds and no boards exist, it navigates home', async () => {
+    fetchBoards.mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    });
+    login.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
+    });
+    renderWithProviders(<Login showSnackbar={vi.fn()} />);
+
+    // Type credentials
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: 'test_email@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
+
+    // Click login
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    );
+
+    // Confirm the login request happened with the creds we typed
+    await waitFor(() => {
+      expect(login).toHaveBeenCalledWith({
+        email: 'test_email@example.com',
+        password: 'test_password',
+      });
+    });
+
+    // Confirm we navigated to the main page when no boards are returned
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/');
+    });
+  });
+  test('when login succeeds, it stores access/refresh tokens', async () => {
+    fetchBoards.mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    });
+    login.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access: 'test_access_token',
+        refresh: 'test_refresh_token',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
+    });
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    try {
+      renderWithProviders(<Login showSnackbar={vi.fn()} />);
+
+      // Type credentials
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'test_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
+
+      // Click login
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
+
+      // Assert tokens were saved
+      await waitFor(() => {
+        expect(setItemSpy).toHaveBeenCalledWith('accessToken', 'test_access_token');
+      });
+      await waitFor(() => {
+        expect(setItemSpy).toHaveBeenCalledWith('refreshToken', 'test_refresh_token');
+      });
+    } finally {
+      setItemSpy.mockRestore();
+    }
+  });
+  test('when login succeeds, it shows a success snackbar', async () => {
+    fetchBoards.mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    });
+    login.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
+    });
+    const showSnackbar = vi.fn();
+    renderWithProviders(<Login showSnackbar={showSnackbar} />);
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: 'test_email@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    );
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith('success', 'Welcome test_email!');
+    });
+  });
+  test('when board fetch fails after login, it navigates home', async () => {
+    fetchBoards.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => [],
+    });
+    login.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
+    });
+    renderWithProviders(<Login showSnackbar={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: 'test_email@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    );
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/');
+    });
+  });
+  test('when board fetch fails after login, it shows an error snackbar', async () => {
+    fetchBoards.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => [],
+    });
+    login.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        access: 'ACCESS',
+        refresh: 'REFRESH',
+        username: 'test_email',
+        email: 'test_email@example.com',
+      }),
+    });
+    const showSnackbar = vi.fn();
+    renderWithProviders(<Login showSnackbar={showSnackbar} />);
+    fireEvent.change(screen.getByLabelText(/email/i), {
+      target: { value: 'test_email@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /login/i,
+      }),
+    );
+    await waitFor(() => {
+      expect(showSnackbar).toHaveBeenCalledWith('error', 'Board load failed :(');
+    });
+  });
+  test('when login fails, it does not navigate', async () => {
+    login.mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({
+        detail: 'Invalid credentials',
+      }),
+    });
+
+    // Login.js logs the auth error; silence it here to avoid noisy test output.
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      renderWithProviders(<Login showSnackbar={vi.fn()} />);
+
+      // Type credentials
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'bad_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'bad_password' } });
+
+      // Click login
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
+      await waitFor(() => {
+        expect(mockNavigate).not.toHaveBeenCalled();
+      });
+    } finally {
+      // Restore console logging for the rest of the test suite.
+      consoleError.mockRestore();
+    }
+  });
+  test('when login fails, it does not store tokens', async () => {
+    login.mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({
+        detail: 'Invalid credentials',
+      }),
+    });
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      renderWithProviders(<Login showSnackbar={vi.fn()} />);
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'bad_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'bad_password' } });
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
+      await waitFor(() => {
+        expect(setItemSpy).not.toHaveBeenCalled();
+      });
+    } finally {
+      consoleError.mockRestore();
+      setItemSpy.mockRestore();
+    }
+  });
+  test('when login fails, it shows an error snackbar', async () => {
+    login.mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({
+        detail: 'Invalid credentials',
+      }),
+    });
+    const showSnackbar = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      renderWithProviders(<Login showSnackbar={showSnackbar} />);
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'bad_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'bad_password' } });
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
+      await waitFor(() => {
+        expect(showSnackbar).toHaveBeenCalledWith('error', 'Login failed :(');
+      });
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+  test('when login fails due to a network error, it does not navigate', async () => {
+    login.mockRejectedValue(new TypeError('NetworkError when attempting to fetch resource.'));
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      renderWithProviders(<Login showSnackbar={vi.fn()} />);
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'bad_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'bad_password' } });
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
+      await waitFor(() => {
+        expect(mockNavigate).not.toHaveBeenCalled();
+      });
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+  test('when login fails due to a network error, it does not store tokens', async () => {
+    login.mockRejectedValue(new TypeError('NetworkError when attempting to fetch resource.'));
+    const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      renderWithProviders(<Login showSnackbar={vi.fn()} />);
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'bad_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'bad_password' } });
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
+      await waitFor(() => {
+        expect(setItemSpy).not.toHaveBeenCalled();
+      });
+    } finally {
+      consoleError.mockRestore();
+      setItemSpy.mockRestore();
+    }
+  });
+  test('when login fails due to a network error, it shows a network error snackbar', async () => {
+    login.mockRejectedValue(new TypeError('NetworkError when attempting to fetch resource.'));
+    const showSnackbar = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      renderWithProviders(<Login showSnackbar={showSnackbar} />);
+      fireEvent.change(screen.getByLabelText(/email/i), {
+        target: { value: 'bad_email@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'bad_password' } });
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /login/i,
+        }),
+      );
+      await waitFor(() => {
+        expect(showSnackbar).toHaveBeenCalledWith('error', 'Network error :(');
+      });
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+  test('blocks duplicate submissions and recovers after a validation failure', async () => {
+    const showSnackbar = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let resolveRequest;
+    login.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRequest = resolve;
+      }),
+    );
+    renderWithProviders(<Login showSnackbar={showSnackbar} />, {
+      routeEntries: ['/login'],
+    });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'mapper@example.com' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } });
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: 'Login',
+      }),
+    );
+    const pendingButton = screen.getByRole('button', {
+      name: 'Logging in...',
+    });
+    expect(pendingButton).toBeDisabled();
+    fireEvent.click(pendingButton);
+    expect(login).toHaveBeenCalledTimes(1);
+    resolveRequest({
+      ok: false,
+      status: 400,
+      json: async () => ({
+        password: ['Validation failed.'],
+      }),
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {
+          name: 'Login',
+        }),
+      ).toBeEnabled(),
+    );
+    expect(showSnackbar).toHaveBeenCalledWith('error', 'Login failed :(');
+    consoleError.mockRestore();
+  });
+});

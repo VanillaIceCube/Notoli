@@ -49,3 +49,9 @@ certs/*.der
 
 # Misc
 *.lock
+
+# Disposable browser test artifacts
+frontend/playwright-report/
+frontend/test-results/
+
+browser-evidence/
