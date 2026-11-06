@@ -1,5 +1,6 @@
 """Non-deploying workflow, script and Compose validation using synthetic env."""
 import ast
+import json
 import os
 from pathlib import Path
 import re
@@ -13,6 +14,32 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def run(*args, **kwargs):
     subprocess.run(args, check=True, cwd=ROOT, **kwargs)
+
+
+def check_whitespace():
+    # A clean checkout has no worktree diff. CI must check committed PR/push
+    # revisions from the platform event, while local edits are checked as well.
+    event_name = os.environ.get("GITHUB_EVENT_NAME")
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+    if event_name in {"pull_request", "push"}:
+        if not event_path:
+            raise ValueError("CI whitespace validation requires the platform event")
+        event = json.loads(Path(event_path).read_text(encoding="utf-8"))
+        if event_name == "pull_request":
+            first = event["pull_request"]["base"]["sha"]
+            last = event["pull_request"]["head"]["sha"]
+        else:
+            first, last = event["before"], event["after"]
+        for commit in (first, last):
+            if not isinstance(commit, str) or not re.fullmatch(r"[0-9a-fA-F]{40}", commit):
+                raise ValueError("Invalid platform commit for whitespace validation")
+        if first == "0" * 40:
+            run("git", "show", "--format=", "--check", last, "--")
+        else:
+            run("git", "diff", "--check", first, last, "--")
+    elif os.environ.get("CI"):
+        run("git", "show", "--format=", "--check", "HEAD", "--")
+    run("git", "diff", "--check", "HEAD", "--")
 
 
 def main():
@@ -70,7 +97,7 @@ def main():
             for variable in re.findall(r"\$\{([A-Z][A-Z0-9_]*)(?::)?\?", text):
                 env.setdefault(variable, str(temp / "fixture"))
             run("docker", "compose", "--env-file", str(fixture), "-f", str(rendered), "config", "--quiet", env=env)
-    run("git", "diff", "--check")
+    check_whitespace()
     print("Repository files: workflow/composite syntax, script parsers and synthetic Compose validation passed")
 
 

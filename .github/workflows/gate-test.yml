@@ -83,7 +83,10 @@ jobs:
             automation:
               - 'scripts/**'
               - 'docs/**'
-              - '*.md'
+              - 'README.md'
+              - 'CHANGELOG.md'
+              - 'AGENTS.md'
+              - 'LICENSE.md'
               - 'tests/**'
               - '.github/**'
               - '.github/actions/dependabot-auto-merge/**'

@@ -21,6 +21,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'python ../scripts/e2e_backend.py',
+      // Playwright accepts 200 <= status < 404: the expected unauthenticated 401 proves Django is listening.
       url: 'http://127.0.0.1:8001/api/notifications/',
       reuseExistingServer: false,
       timeout: 120000,

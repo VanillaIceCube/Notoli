@@ -36,7 +36,7 @@
     ]
   },
   "scripts/validate_repository.py": {
-    "sha256": "8062dd20f61609d33dbcea155172846066d56d6806496027dee5de6894c45a8a",
+    "sha256": "6de42c6bdafab1eb5166858a2a731c3a36c335802bb9ea48434d5781bf36e504",
     "repositories": [
       "template",
       "notoli",
@@ -93,7 +93,7 @@
     ]
   },
   "frontend/playwright.config.mjs": {
-    "sha256": "2691a3b4326237c6f00946ad126cb44d3289dd04c9b1bf5181c20a4ec5fc3bc4",
+    "sha256": "654f60f57ad42bf9cdbf633f6082aaf10e223988d5bdf80ffa6ffb67cd3fb142",
     "repositories": [
       "template",
       "notoli",
@@ -140,6 +140,14 @@
       "notoli",
       "macromapper",
       "infra"
+    ]
+  },
+  "tests/repository-validation.test.cjs": {
+    "sha256": "7a6b8e54fbe557e0c4b908923d8aa3fe2529b272345ae3ba08eb6a955c19d9c2",
+    "repositories": [
+      "template",
+      "notoli",
+      "macromapper"
     ]
   }
 }
