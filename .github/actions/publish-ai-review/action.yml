@@ -14,6 +14,9 @@ inputs:
     description: Require a complete major-upgrade brief rather than publishing a partial one.
     required: false
     default: "false"
+  app_slug:
+    description: Authenticated app-slug output from the same token step.
+    required: true
 runs:
   using: composite
   steps:
@@ -21,6 +24,7 @@ runs:
       uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
       env:
         REVIEW_BODY: ${{ inputs.review_json }}
+        APP_SLUG: ${{ inputs.app_slug }}
         PERSONA_NAME: ${{ inputs.persona_name }}
         REQUIRE_MAJOR_UPGRADE_BRIEF: ${{ inputs.require_major_upgrade_brief }}
       with:
@@ -36,5 +40,6 @@ runs:
             core,
             raw: process.env.REVIEW_BODY,
             personaName: process.env.PERSONA_NAME,
+            appSlug: process.env.APP_SLUG,
             requireMajorUpgradeBrief: process.env.REQUIRE_MAJOR_UPGRADE_BRIEF === "true",
           });

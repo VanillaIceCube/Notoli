@@ -21,6 +21,10 @@ inputs:
     description: OpenAI model name.
     required: false
     default: "gpt-6-luna"
+  reasoning_effort:
+    description: Verified reasoning effort; defaults preserve the accepted medium behavior.
+    required: false
+    default: "medium"
   max_output_tokens:
     description: Maximum combined reasoning and visible output token budget.
     required: false
@@ -43,6 +47,7 @@ runs:
         OPENAI_PROJECT_ID: ${{ inputs.project_id }}
         PROMPT_PREFIX: ${{ inputs.prompt_prefix }}
         SYSTEM_PROMPT: ${{ inputs.system_prompt }}
+        REASONING_EFFORT: ${{ inputs.reasoning_effort }}
         MODEL: ${{ inputs.model }}
         MAX_OUTPUT_TOKENS: ${{ inputs.max_output_tokens }}
         ENABLE_WEB_SEARCH: ${{ inputs.enable_web_search }}
@@ -90,39 +95,10 @@ runs:
           exit 0
         fi
 
-        {
-          printf '%s' "$PROMPT_PREFIX"
-          cat "$DIFF_PATH"
-        } > prompt.txt
-
-        # Build JSON safely
-        jq -n \
-          --rawfile prompt prompt.txt \
-          --arg model "$MODEL" \
-          --arg system_prompt "$SYSTEM_PROMPT" \
-          --arg enable_web_search "$ENABLE_WEB_SEARCH" \
-          --argjson max_output_tokens "$MAX_OUTPUT_TOKENS" \
-          '
-          {
-            model: $model,
-            instructions: $system_prompt,
-            input: $prompt,
-            max_output_tokens: $max_output_tokens
-          }
-          + if $enable_web_search == "true" then
-              {
-                tools: [
-                  {
-                    type: "web_search",
-                    search_context_size: "medium"
-                  }
-                ],
-                tool_choice: "required"
-              }
-            else
-              {}
-            end
-          ' > body.json
+        # Reject invalid configuration before contacting the provider. The helper
+        # writes only the request file, never raw prompts or source to logs.
+        node "$GITHUB_ACTION_PATH/policy.cjs" payload
+        request_start=$(date +%s%3N)
 
         # Make API request (project is passed via header)
         if ! RESPONSE=$(curl -sS \
@@ -133,11 +109,16 @@ runs:
           -H "Authorization: Bearer $OPENAI_API_KEY" \
           -H "OpenAI-Project: $OPENAI_PROJECT_ID" \
           --data @body.json); then
+          printf '{}' > response.json
+          node "$GITHUB_ACTION_PATH/policy.cjs" metrics "$(( $(date +%s%3N) - request_start ))"
           CONTENT="OpenAI request failed before a response was received."
           write_content "$CONTENT"
           report_unavailable "$CONTENT"
           exit 0
         fi
+
+        printf '%s' "$RESPONSE" > response.json
+        node "$GITHUB_ACTION_PATH/policy.cjs" metrics "$(( $(date +%s%3N) - request_start ))"
 
         # Extract content or error.
         if ! CONTENT=$(echo "$RESPONSE" | jq -r '
@@ -155,7 +136,7 @@ runs:
                 $text
               end
           elif .error and .error.message then
-            "OpenAI API error: " + .error.message
+            "OpenAI API error: provider rejected the request; inspect access/configuration and provider status without logging raw error content."
           else
             "OpenAI did not return a response."
           end
@@ -163,8 +144,6 @@ runs:
           CONTENT="OpenAI API error: the response was not valid JSON."
         fi
 
-        echo "Response content:"
-        echo "$CONTENT"
 
         write_content "$CONTENT"
         if [[ "$CONTENT" == OpenAI\ * ]]; then

@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-11-06
+
+### Added
+
+- Bounded, attributed human discussion context and conservative App-owned reviewer follow-ups, with adversarial, stale-head, idempotency and permission regressions.
+- Safe Responses token/latency evidence, dated partial cost estimates and validated owner configuration/recovery controls; existing Luna model selection is preserved.
+
+### Fixed
+
+- Reviewer ownership no longer falls back to persona-name matching; old-head verdicts are rejected and writer runs serialize.
+
 ## 2026-11-05
 ### Added
 - Shared isolated authentication browser tests with disposable data and local-only reset mail.
