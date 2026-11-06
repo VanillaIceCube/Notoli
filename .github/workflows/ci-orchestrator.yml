@@ -13,7 +13,6 @@ concurrency:
 permissions:
   contents: read
   pull-requests: write
-  issues: write
 
 jobs:
   lints:
@@ -47,14 +46,14 @@ jobs:
     uses: ./.github/workflows/gate-vulnerability.yml
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: read
 
   dependency-malware:
     name: Malware
     uses: ./.github/workflows/gate-malware.yml
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: read
 
   code-review:
     name: AI Code Review

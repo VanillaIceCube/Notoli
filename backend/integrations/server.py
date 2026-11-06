@@ -12,7 +12,9 @@ from pydantic import Field
 
 from mcp_framework.server import create_server, http_application
 
-from .oauth import ConnectionPermissionDenied, required_scopes
+from mcp_framework.oauth import ConnectionPermissionDenied
+
+from .oauth import required_scopes
 from .schemas import (
     BoardCollaboratorPage,
     BoardPage,

@@ -1,6 +1,16 @@
 # Changelog
 
 ## 2026-11-05
+### Added
+- Immutable workflow-policy and bounded changed-version malware regression coverage.
+- Evidence-based Python malware scanning decision and shared release upgrade regression.
+### Fixed
+- Missing or invalid dependency evidence now fails PR malware review visibly.
+### Changed
+- Explicit scanner/path-filter grants support read-only repository defaults; unused orchestration issue writes removed.
+- Adopt the reviewed Infrastructure release template/test contract with readable Action versions.
+
+## 2026-11-05
 
 ### Fixed
 - Bound malware classification to repository source advisories instead of scanning the global catalogue.

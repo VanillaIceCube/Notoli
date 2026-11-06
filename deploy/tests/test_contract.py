@@ -169,3 +169,34 @@ class ContractTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     parity.verify(root, manifest, workflow)
                 path.write_bytes(original)
+
+    def test_action_upgrade_requires_the_approved_shared_template(self):
+        spec = importlib.util.spec_from_file_location(
+            "parity_upgrade", ROOT / "deploy/check_parity.py"
+        )
+        parity = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(parity)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in (*parity.FILES, "deploy/production/app.json",
+                         ".github/workflows/ci-deploy.yml"):
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / name, target)
+            manifest = {"contract_version": 1, "files": {
+                name: parity.digest((root / name).read_bytes()) for name in parity.FILES
+            }}
+            path = root / ".github/workflows/ci-deploy.yml"
+            previous = path.read_text(encoding="utf-8")
+            # This fixture models a reviewed source upgrade, not an allowlist
+            # for arbitrary workflow edits or mutable Action tags.
+            old = "docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6"
+            self.assertIn(old, previous)
+            approved = previous.replace(old, "docker/login-action@" + "a" * 40)
+            path.write_text(approved, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "workflow differs"):
+                parity.verify(root, manifest, previous)
+            parity.verify(root, manifest, approved)
+            path.write_text(approved + "\n# unrelated deployment drift\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "workflow differs"):
+                parity.verify(root, manifest, approved)

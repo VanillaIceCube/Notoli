@@ -1,6 +1,5 @@
 """Notoli tool permissions layered over the shared OAuth lifecycle."""
 
-from mcp_framework.oauth import ConnectionPermissionDenied as ConnectionPermissionDenied
 from mcp_framework.oauth import MCPOAuthValidator
 from mcp_framework.oauth import resolve_token as resolve_framework_token
 

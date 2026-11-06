@@ -9,7 +9,9 @@ from notes.models import Board, ListNote, Note
 from notes.models import List as NoteList
 from notifications.models import Notification
 
-from .oauth import ConnectionPermissionDenied, required_scopes
+from mcp_framework.oauth import ConnectionPermissionDenied
+
+from .oauth import required_scopes
 from .tests import make_client, make_token
 from .tools import execute
 

@@ -237,3 +237,5 @@ RoboCop baseline evidence connected without changing full default-branch coverag
 ## 🤖 Reviewer model policy
 
 Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-alert grouping. Preserve each reviewer’s existing key/project isolation, budgets and blocking gates. Application AI model selection remains app-owned.
+
+Batch 2 workflow controls and bounded npm malware review are documented in `.github/README-WORKFLOWS.md`; Python malware coverage follows `docs/PYTHON-MALWARE-DECISION.md`. Shared deployment changes require the pinned Infrastructure source.
