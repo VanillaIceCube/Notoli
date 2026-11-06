@@ -1,12 +1,15 @@
 "use strict";
 const crypto = require("node:crypto");
 const { identity } = require("../collect-prior-ai-reviews/collect");
+const CORE_ANALYSES = ["CodeQL / Analyze Python", "CodeQL / Analyze JavaScript/TypeScript", "CodeQL / Analyze GitHub Actions"];
+const APP_CHECKS = ["Lints / Lint Results", "Tests / Test Results", "CodeQL / Detect CodeQL Scope", "Vulnerability / Vulnerability", "Malware / Malware", ...CORE_ANALYSES];
+const INFRA_CHECKS = ["Lints / Infrastructure lint", "Tests / validate", "CodeQL / Detect CodeQL Scope", "Vulnerability / Vulnerability", "Dependency scope / Dependency scanner scope", "Secret scan / Gitleaks", ...CORE_ANALYSES];
 
 const THREADS = `query($owner:String!,$repo:String!,$number:Int!,$cursor:String) {
   repository(owner:$owner,name:$repo) { pullRequest(number:$number) {
-    headRefOid reviewThreads(first:100,after:$cursor) { pageInfo { hasNextPage endCursor }
-      nodes { id isResolved isOutdated viewerCanResolve comments(first:100) {
-        pageInfo { hasNextPage } nodes { id databaseId body diffHunk path originalLine
+    headRefOid reviewThreads(first:25,after:$cursor) { pageInfo { hasNextPage endCursor }
+      nodes { id isResolved isOutdated viewerCanResolve comments(first:1) {
+        nodes { id databaseId diffHunk path originalLine
           originalCommit { oid } author { login ... on Bot { databaseId } }
         }
       } }
@@ -80,7 +83,12 @@ async function reconcileOnce({ github, context, core, parsed, appSlug, personaNa
       const evidence = decision.evidence;
       // Resolve only fully observed threads rooted in this exact App's bot ID.
       // Human/other-bot participation is never authority to change ownership.
-      if (!thread || thread.isResolved || thread.comments.pageInfo.hasNextPage || root.author?.databaseId !== bot.id || root.author.login !== graphqlLogin || !evidence || evidence.head_sha !== expected || !["follow_up", "resolve"].includes(decision.action)) { report.skipped++; continue; }
+      if (!thread || thread.isResolved || root.author?.databaseId !== bot.id || root.author.login !== graphqlLogin || !evidence || evidence.head_sha !== expected || !["follow_up", "resolve"].includes(decision.action)) { report.skipped++; continue; }
+      const conversation = `query($id:ID!) { node(id:$id) { ... on PullRequestReviewThread { id isResolved isOutdated viewerCanResolve comments(first:20) { pageInfo { hasNextPage } nodes { databaseId body author { login ... on Bot { databaseId } } } } } } }`;
+      const candidate = await github.graphql(conversation, { id: thread.id });
+      if (candidate.node?.id !== thread.id || candidate.node.isResolved || candidate.node.comments.pageInfo.hasNextPage || candidate.node.comments.nodes[0]?.databaseId !== id) { report.skipped++; continue; }
+      thread.comments = candidate.node.comments;
+      if (decision.action === "resolve" && thread.comments.nodes.some(c => c.author?.databaseId !== bot.id || c.author.login !== graphqlLogin)) { report.skipped++; continue; }
       const removed = String(evidence.removed_code || "");
       const replacement = String(evidence.replacement_code || "");
       // Narrow, mechanically checked evidence: an exact old added line from the
@@ -110,25 +118,50 @@ async function reconcileOnce({ github, context, core, parsed, appSlug, personaNa
         // new findings and uncertain/security evidence can never trigger closure.
         if (parsed.event !== "APPROVE" || !thread.isOutdated || !thread.viewerCanResolve || (parsed.findings || []).length || (parsed.comments || []).length) { report.skipped++; continue; }
         const { data: checks } = await github.rest.checks.listForRef({ ...context.repo, ref: expected, per_page: 100 });
-        const ownChecks = {
+        const personaChecks = {
           "Obi-Wan Code-nobi": ["Obi-Wan Code-nobi code review", "AI Code Review / Obi-Wan Code-nobi code review"],
           "Lint Eastwood": ["Lint Eastwood build sheriff review", "AI Build Sheriff Review / Lint Eastwood build sheriff review"],
           RoboCop: ["RoboCop security review", "AI Security Review / RoboCop security review"],
-        }[personaName] || [];
+        };
+        const ownChecks = personaChecks[personaName] || [];
         // These aggregate jobs depend on this very review; their completion is
         // still a native merge prerequisite, not a prerequisite for own feedback.
         const selfDependent = ["Required CI", "Auto Merge"];
         const nonReview = checks.check_runs.filter(c => ![...ownChecks, ...selfDependent].includes(c.name));
         if (!nonReview.length || checks.total_count > 100 || nonReview.some(c => c.status !== "completed" || !["success", "neutral", "skipped"].includes(c.conclusion))) { report.skipped++; continue; }
+        const expectedChecks = context.repo.repo === "JudeAndrewAlabaInfrastructure" ? INFRA_CHECKS : APP_CHECKS;
+        if (expectedChecks.some(name => !checks.check_runs.some(c => c.name === name && c.app?.slug === "github-actions" && c.status === "completed" && c.conclusion === "success"))) { report.skipped++; continue; }
+        const independentReviewers = Object.entries(personaChecks).filter(([name]) => name !== personaName);
+        if (independentReviewers.some(([, names]) => !checks.check_runs.some(c => names.includes(c.name) && c.status === "completed" && c.conclusion === "success"))) { report.skipped++; continue; }
         const { data: legacy } = await github.rest.repos.getCombinedStatusForRef({ ...context.repo, ref: expected, per_page: 100 });
         if (!Number.isSafeInteger(legacy.total_count) || !Array.isArray(legacy.statuses) || legacy.total_count !== legacy.statuses.length || (legacy.total_count > 0 && (legacy.state !== "success" || legacy.statuses.some(s => s.state !== "success")))) { report.skipped++; continue; }
+        const { data: currentPR } = await github.rest.pulls.get(args);
+        const { data: rules } = await github.rest.repos.getBranchRules({ ...context.repo, branch: currentPR.base.ref, per_page: 100 });
+        if (!Array.isArray(rules) || rules.length >= 100) { report.skipped++; continue; }
+        const required = rules.filter(r => r.type === "required_status_checks").flatMap(r => r.parameters?.required_status_checks || []);
+        const independentRequired = required.filter(r => ![...ownChecks, ...selfDependent].includes(r.context));
+        const satisfied = rule => checks.check_runs.some(c => c.name === rule.context && c.status === "completed" && c.conclusion === "success" && (!rule.integration_id || c.app?.id === rule.integration_id)) ||
+          (!rule.integration_id && legacy.statuses.some(s => s.context === rule.context && s.state === "success"));
+        if (independentRequired.some(r => !satisfied(r))) { report.skipped++; continue; }
+        const ownConversation = node => node?.id === thread.id && !node.comments.pageInfo.hasNextPage && node.comments.nodes.length > 0 && node.comments.nodes.every(c => c.author?.databaseId === bot.id && c.author.login === graphqlLogin) && node.comments.nodes[0].databaseId === id;
+        // A human/other bot reply makes this a shared conversation. Never
+        // automatically settle it, even when its original root belongs to us.
+        const before = await github.graphql(conversation, { id: thread.id });
+        if (!ownConversation(before.node) || before.node.isResolved || !before.node.isOutdated || !before.node.viewerCanResolve) { report.skipped++; continue; }
         await current();
         const result = await github.graphql(`mutation($id:ID!) { resolveReviewThread(input:{threadId:$id}) { thread { id isResolved } } }`, { id: thread.id });
         if (result.resolveReviewThread?.thread?.id !== thread.id || result.resolveReviewThread.thread.isResolved !== true) throw new Error("resolution_unconfirmed");
-        // Post-read verification prevents claiming a mutation with uncertain outcome.
-        const verified = await github.graphql(`query($id:ID!) { node(id:$id) { ... on PullRequestReviewThread { isResolved } } }`, { id: thread.id });
-        if (verified.node?.isResolved !== true) throw new Error("resolution_unconfirmed");
-        await current();
+        try {
+          const verified = await github.graphql(conversation, { id: thread.id });
+          if (!ownConversation(verified.node) || verified.node.isResolved !== true) throw new Error("resolution_unconfirmed");
+          await current();
+        } catch (error) {
+          // Undo only this confirmed own mutation when a head/participant race
+          // invalidated the evidence. Never claim the raced resolution completed.
+          const undone = await github.graphql(`mutation($id:ID!) { unresolveReviewThread(input:{threadId:$id}) { thread { id isResolved } } }`, { id: thread.id });
+          if (undone.unresolveReviewThread?.thread?.isResolved !== false) throw new Error("resolution_recovery_unconfirmed");
+          throw error;
+        }
         report.resolved++;
       }
       // No raw source, human content or model-generated commands in follow-ups.
@@ -155,4 +188,4 @@ async function reconcile(args) {
   pending.set(key, task);
   try { return await task; } finally { if (pending.get(key) === task) pending.delete(key); }
 }
-module.exports = { reconcile, THREADS, citedAddedLine, replacementLine };
+module.exports = { reconcile, THREADS, citedAddedLine, replacementLine, APP_CHECKS, INFRA_CHECKS };

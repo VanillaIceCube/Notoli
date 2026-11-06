@@ -21,6 +21,8 @@ human replies directly to this persona's roots, before up to five own reviews an
 forty own inline comments. Body budgets are 6000/1500/4000/1200 UTF-8 bytes;
 the complete serialized payload is capped at 64 KiB. Truncation/page limits,
 revision, root/review IDs, source, authors and outdated status are disclosed.
+Older-commit attribution is separate from outdated status; an active inline
+comment remains active when the PR advances.
 Missing permissions/context are reported as unavailable, never an empty clean
 history. Common credentials, email addresses and query-bearing URLs are omitted;
 arbitrary prose can still contain personal data, so include only relevant context.
@@ -44,11 +46,20 @@ same-repository PR head, exact App ownership, complete thread history, one exact
 old added line from the finding's hunk, its absence from current file content and
 an ancestor-to-HEAD patch proving a single-line substitution at the cited location,
 and that exact replacement line at the reviewed head. Broader edits, renames and
-nonancestor histories remain open. At most five thread pages and five
-decisions are processed; large/incomplete files or threads are skipped. Resolution
+nonancestor histories remain open. At most five pages of25thread roots and five
+decisions are processed; each candidate conversation is limited to20comments and
+longer/incomplete histories are left alone; large/incomplete files or threads are skipped. Resolution
 also requires an outdated resolvable thread, a clean current `APPROVE` with no
 findings/inline comments, and completed independent checks plus reported legacy commit statuses without failures.
-Only this persona's active check and self-dependent Required CI/Auto Merge
+The expected native lint/test/scanner inventory (with distinct Infrastructure
+secret/dependency gates) must be present and successful under the GitHub Actions
+App, including all three CodeQL analyzers. This is deliberately stricter for
+automatic resolution than ordinary path-based merge skips: otherwise valid
+scoped/omitted analyses leave feedback open. Expected other persona checks must
+be present and successful; all independent
+required branch-rule contexts must also be present and successful (including
+verified integration identity where specified). Skipped/neutral/missing required
+evidence keeps the thread open. Only this persona's active check and self-dependent Required CI/Auto Merge
 aggregates are excluded to avoid a dependency cycle; other persona failures still
 block resolution, and all native aggregate/review requirements remain unchanged.
 Missing/denied/incomplete status evidence cannot authorize resolution.
@@ -56,6 +67,10 @@ These predicates support only narrow source replacements, not universal proof
 of arbitrary fixes. Ambiguous or unresolved security findings must remain open.
 
 Only this persona's roots can change; human/other-bot threads are never resolved.
+Own-root threads with any human/other-bot participant also stay open. Participants
+and head are checked again immediately before and after resolution; a race after
+a confirmed own resolution attempts to reopen that own thread and reports an
+incomplete result. Denied/uncertain recovery is never represented as success.
 The resolver verifies mutation output and post-reads the state/current head.
 Permission failures or uncertain results are logged as incomplete, with no
 unverified completion claim. Follow-ups contain a deterministic source-evidence

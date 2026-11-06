@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { collect, LIMITS } = require('../collect-prior-ai-reviews/collect');
 const { payload, metrics } = require('../openai-chat/policy.cjs');
-const { reconcile } = require('../publish-ai-review/reconcile');
+const { reconcile, APP_CHECKS } = require('../publish-ai-review/reconcile');
 const bot = { id: 123, login: 'fixture[bot]', type: 'Bot' };
 const human = { id: 321, login: 'owner', type: 'User' };
 const context = { repo: { owner: 'owner', repo: 'repo' }, payload: { pull_request: { number: 1, head: { sha: 'new', repo: { full_name: 'owner/repo' } } } } };
@@ -68,16 +68,17 @@ function lifecycle() {
   const root = { id: 'comment-node', databaseId: 10, author: { login: 'fixture', databaseId: bot.id }, body: 'old finding', path: 'backend/example.py', originalLine: 1, diffHunk: '@@ -1 +1 @@\n+unsafe_call()', originalCommit: { oid: 'old' } };
   const thread = { id: 'thread', isResolved: false, isOutdated: true, viewerCanResolve: true, comments: { pageInfo: { hasNextPage: false }, nodes: [root] } };
   const github = { rest: { users: { getByUsername: async () => ({ data: bot }) }, pulls: {
-    get: async () => ({ data: { head: context.payload.pull_request.head, state: 'open' } }),
+    get: async () => ({ data: { head: context.payload.pull_request.head, state: 'open', base: { ref: 'main' }, labels: [] } }),
     createReplyForReviewComment: async request => { replies.push(request); thread.comments.nodes.push({ author: { login: 'fixture', databaseId: bot.id }, body: request.body }); },
-  }, repos: { getCombinedStatusForRef: async () => ({ data: { total_count: 0, statuses: [], state: 'pending' } }), compareCommitsWithBasehead: async () => ({ data: { merge_base_commit: { sha: 'old' }, files: [{ filename: 'backend/example.py', status: 'modified', patch: '@@ -1 +1 @@\n-unsafe_call()\n+safe_call()' }] } }), getContent: async () => ({ data: { content: Buffer.from('safe_call()').toString('base64'), encoding: 'base64', size: 11 } }) }, checks: { listForRef: async () => ({ data: { total_count: 1, check_runs: [{ name: 'CodeQL', status: 'completed', conclusion: 'success' }] } }) } },
+  }, repos: { getBranchRules: async () => ({ data: [{ type: 'required_status_checks', parameters: { required_status_checks: [{ context: 'CodeQL' }] } }] }), getCombinedStatusForRef: async () => ({ data: { total_count: 0, statuses: [], state: 'pending' } }), compareCommitsWithBasehead: async () => ({ data: { merge_base_commit: { sha: 'old' }, files: [{ filename: 'backend/example.py', status: 'modified', patch: '@@ -1 +1 @@\n-unsafe_call()\n+safe_call()' }] } }), getContent: async () => ({ data: { content: Buffer.from('safe_call()').toString('base64'), encoding: 'base64', size: 11 } }) }, checks: { listForRef: async () => ({ data: { total_count: 3, check_runs: [{ name: 'CodeQL', status: 'completed', conclusion: 'success' }, { name: 'AI Build Sheriff Review / Lint Eastwood build sheriff review', status: 'completed', conclusion: 'success' }, { name: 'AI Security Review / RoboCop security review', status: 'completed', conclusion: 'success' }, ...APP_CHECKS.map(name => ({ name, app: { slug: 'github-actions' }, status: 'completed', conclusion: 'success' }))] } }) } },
   graphql: async (query, args) => {
+    if (query.includes('unresolveReviewThread')) { resolved = false; thread.isResolved = false; return { unresolveReviewThread: { thread: { id: 'thread', isResolved: false } } }; }
     if (query.startsWith('mutation')) { resolutions.push(args); resolved = true; thread.isResolved = true; return { resolveReviewThread: { thread: { id: 'thread', isResolved: true } } }; }
-    if (query.includes('node(id:')) return { node: { isResolved: resolved } };
+    if (query.includes('node(id:')) return { node: { ...thread, isResolved: resolved } };
     return { repository: { pullRequest: { headRefOid: 'new', reviewThreads: { nodes: [thread], pageInfo: { hasNextPage: false } } } } };
   } };
   const parsed = { event: 'APPROVE', findings: [], comments: [], reconciliations: [{ comment_id: 10, action: 'resolve', evidence: { head_sha: 'new', removed_code: 'unsafe_call()', replacement_code: 'safe_call()', reason: 'The unsafe call is replaced by the validated safe implementation.' } }] };
-  const run = () => reconcile({ github, context, core, parsed, appSlug: 'fixture' });
+  const run = () => reconcile({ github, context, core, parsed, appSlug: 'fixture', personaName: 'Obi-Wan Code-nobi' });
   return { github, parsed, root, thread, replies, resolutions, run };
 }
 test('own outdated finding resolves with exact-head source/check evidence, verified mutation, one bounded follow-up', async () => {
@@ -146,4 +147,53 @@ test('valid non-object JSON and long-context usage remain unknown rather than th
     assert.equal(result.input_tokens, null); assert.equal(result.estimated_known_token_cost_usd, null);
   }
   assert.equal(metrics({ model: 'gpt-6-luna', service_tier: 'default', usage: { input_tokens: 272001, output_tokens: 1, input_tokens_details: { cached_tokens: 0 } } }, 1, env).estimated_known_token_cost_usd, null);
+});
+
+test('older-commit active inline feedback stays active, with separate revision attribution', async () => {
+  const r = await collect({ github: collectorFixture([{ id: 1, user: bot }], [{ id: 10, user: bot, pull_request_review_id: 1, commit_id: 'old', position: 2, body: 'still relevant' }]), context, core, appSlug: 'fixture' });
+  assert.equal(r.prior_inline_comments[0].outdated, false); assert.equal(r.prior_inline_comments[0].on_previous_revision, true);
+});
+test('missing/skipped/neutral independent reviewers and missing/skipped required contexts keep threads open', async () => {
+  for (const mode of ['missing-reviewer', 'skipped-reviewer', 'neutral-reviewer', 'missing-required', 'skipped-required']) {
+    const h = lifecycle(); const original = h.github.rest.checks.listForRef;
+    h.github.rest.checks.listForRef = async args => {
+      const result = await original(args); const checks = result.data.check_runs;
+      if (mode === 'missing-reviewer') checks.pop();
+      if (mode === 'skipped-reviewer') checks[1].conclusion = 'skipped';
+      if (mode === 'neutral-reviewer') checks[1].conclusion = 'neutral';
+      if (mode === 'skipped-required') checks[0].conclusion = 'skipped';
+      if (mode === 'missing-required') checks.shift();
+      return result;
+    };
+    await h.run(); assert.equal(h.resolutions.length, 0);
+  }
+});
+test('human or other-bot participants prevent own-root resolution, including a late participant race', async () => {
+  for (const author of [{ login: 'human', databaseId: 999 }, { login: 'other-bot', databaseId: 999 }]) {
+    const h = lifecycle(); h.thread.comments.nodes.push({ databaseId: 20, author, body: 'separate concern' });
+    await h.run(); assert.equal(h.resolutions.length, 0);
+  }
+  const h = lifecycle(); const original = h.github.graphql; let undone = false;
+  h.github.graphql = async (query, args) => {
+    const result = await original(query, args);
+    if (query.includes('resolveReviewThread(input:') && !query.includes('unresolveReviewThread')) h.thread.comments.nodes.push({ databaseId: 20, author: { login: 'human', databaseId: 999 } });
+    if (query.includes('unresolveReviewThread')) undone = true;
+    return result;
+  };
+  const result = await h.run(); assert.equal(undone, true); assert.equal(h.thread.isResolved, false); assert.equal(result.resolved, 0); assert.equal(result.unavailable, true);
+});
+
+test('full independent check inventory is required for automatic resolution, including aggregate and analysis presence', async () => {
+  for (const mode of ['missing', 'skipped', 'neutral', 'wrong-app']) {
+    const h = lifecycle(); const original = h.github.rest.checks.listForRef;
+    h.github.rest.checks.listForRef = async args => {
+      const result = await original(args); const rows = result.data.check_runs;
+      const index = rows.findIndex(c => c.name === 'Tests / Test Results');
+      if (mode === 'missing') rows.splice(index, 1);
+      else if (mode === 'wrong-app') rows[index].app.slug = 'other-app';
+      else rows[index].conclusion = mode;
+      return result;
+    };
+    await h.run(); assert.equal(h.resolutions.length, 0);
+  }
 });
