@@ -139,3 +139,11 @@ test('failing, pending, incomplete and unavailable legacy statuses block resolut
   const security = lifecycle(); security.github.rest.checks.listForRef = async () => ({ data: { total_count: 1, check_runs: [{ name: 'AI Security Review / RoboCop security review', status: 'completed', conclusion: 'failure' }] } });
   await security.run(); assert.equal(security.resolutions.length, 0);
 });
+
+test('valid non-object JSON and long-context usage remain unknown rather than throwing or underpricing', () => {
+  for (const response of [null, [], 1, true, 'private response']) {
+    const result = metrics(response, 1, env);
+    assert.equal(result.input_tokens, null); assert.equal(result.estimated_known_token_cost_usd, null);
+  }
+  assert.equal(metrics({ model: 'gpt-6-luna', service_tier: 'default', usage: { input_tokens: 272001, output_tokens: 1, input_tokens_details: { cached_tokens: 0 } } }, 1, env).estimated_known_token_cost_usd, null);
+});

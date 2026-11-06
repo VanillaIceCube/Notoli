@@ -14,6 +14,7 @@ function payload(env, prompt) {
 }
 const count = n => Number.isSafeInteger(n) && n >= 0 ? n : null;
 function metrics(response, elapsedMs, env) {
+  if (!response || typeof response !== "object" || Array.isArray(response)) response = {};
   const input = count(response.usage?.input_tokens);
   const output = count(response.usage?.output_tokens);
   const cached = count(response.usage?.input_tokens_details?.cached_tokens);

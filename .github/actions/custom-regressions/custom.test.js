@@ -52,6 +52,12 @@ test('Responses request construction and unavailable-output paths execute with m
     assert.equal(result.status, 0, result.stderr);
     assert.match(fs.readFileSync(path.join(dir, 'output'), 'utf8'), /not valid JSON/);
   });
+  fixture(run, env, { ...stubs, curl: 'printf "null"' }, (result, dir) => {
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(fs.readFileSync(path.join(dir, 'output'), 'utf8'), /OpenAI did not return a response/);
+    assert.match(fs.readFileSync(path.join(dir, 'summary'), 'utf8'), /"input_tokens": null/);
+  });
+
 });
 
 test('collector wrapper loads canonical bounded collector with env-only inputs', async () => {
