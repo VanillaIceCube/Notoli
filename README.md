@@ -127,3 +127,15 @@ file mail. Setup, commands and extension points are in [frontend/README.md](fron
 CI runs it only for relevant changes. No application credentials are required.
 See [automation coverage](docs/AUTOMATION-COVERAGE.md) and the
 [Batch 2 parity record](docs/BATCH2-PARITY.md) for cross-repository adoption and limits.
+
+
+Reviewer discussion, feedback ownership, safe usage evidence and recovery are
+documented in [.github/AI-REVIEWERS.md](.github/AI-REVIEWERS.md).
+
+
+CI/CD events, reviewer flow, credential boundaries and production-summary behavior
+are mapped in [the architecture reference](docs/CI-CD-ARCHITECTURE.md).
+Shared adoption and justified differences are recorded in [Batch 3 parity](docs/BATCH3-PARITY.md).
+
+Transactional mail failure categories, finite timeouts and password-reset recovery
+are documented in [backend/README.md](backend/README.md#transactional-email-failure-handling).

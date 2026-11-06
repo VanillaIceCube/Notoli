@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: continuous-integration-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -56,6 +56,11 @@ jobs:
       pull-requests: read
 
   code-review:
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
+      statuses: read
     name: AI Code Review
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository
@@ -76,8 +81,10 @@ jobs:
       LINT_EASTWOOD_OPENAI_API_KEY: ${{ secrets.LINT_EASTWOOD_OPENAI_API_KEY }}
       LINT_EASTWOOD_PRIVATE_KEY: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
     permissions:
+      statuses: read
+      checks: read
       contents: read
-      pull-requests: write
+      pull-requests: read
     with:
       lint_result: ${{ needs.lints.result }}
       test_result: ${{ needs.tests.result }}
@@ -104,10 +111,11 @@ jobs:
       ROBOCOP_OPENAI_API_KEY: ${{ secrets.ROBOCOP_OPENAI_API_KEY }}
       ROBOCOP_PRIVATE_KEY: ${{ secrets.ROBOCOP_PRIVATE_KEY }}
     permissions:
+      statuses: read
       actions: read
       checks: read
       contents: read
-      pull-requests: write
+      pull-requests: read
       security-events: read
     with:
       codeql_result: ${{ needs.codeql.result }}

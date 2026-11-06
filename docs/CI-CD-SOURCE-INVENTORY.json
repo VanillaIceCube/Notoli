@@ -1,0 +1,901 @@
+{
+  "custom_action_consumers": {
+    "./.github/actions/collect-prior-ai-reviews": [
+      ".github/workflows/review-build.yml",
+      ".github/workflows/review-code.yml",
+      ".github/workflows/review-security.yml"
+    ],
+    "./.github/actions/get-pr-diff": [
+      ".github/workflows/review-build.yml",
+      ".github/workflows/review-code.yml",
+      ".github/workflows/review-security.yml"
+    ],
+    "./.github/actions/openai-chat": [
+      ".github/actions/security-alerts/action.yml",
+      ".github/workflows/review-build.yml",
+      ".github/workflows/review-code.yml",
+      ".github/workflows/review-security.yml"
+    ],
+    "./.github/actions/prepare-lint-commit": [
+      ".github/workflows/gate-lint.yml"
+    ],
+    "./.github/actions/publish-ai-review": [
+      ".github/workflows/review-build.yml",
+      ".github/workflows/review-code.yml",
+      ".github/workflows/review-security.yml"
+    ],
+    "./.github/actions/read-versions": [
+      ".github/workflows/gate-lint.yml",
+      ".github/workflows/gate-test.yml"
+    ],
+    "./.github/actions/review-npm-malware": [
+      ".github/workflows/gate-malware.yml"
+    ],
+    "./.github/actions/security-alerts": [
+      ".github/workflows/alert-codeql.yml",
+      ".github/workflows/alert-malware.yml",
+      ".github/workflows/alert-vulnerability.yml"
+    ]
+  },
+  "workflows": {
+    "alert-codeql.yml": {
+      "credential_names": [
+        "ROBOCOP_OPENAI_API_KEY",
+        "ROBOCOP_PRIVATE_KEY",
+        "SECURITY_ALERTS_TOKEN"
+      ],
+      "events": {
+        "schedule": [
+          {
+            "cron": "10 11 * * *"
+          }
+        ],
+        "workflow_dispatch": ""
+      },
+      "jobs": {
+        "aggregate": {
+          "permissions": {
+            "contents": "read"
+          }
+        }
+      },
+      "name": "CodeQL Alert",
+      "permissions": {},
+      "source_sha256": "1feb2f0df97f76957f939b9a66c8e48e5f54608013e43f45ed217d991af41a24",
+      "variable_names": [
+        "OPENAI_REVIEWERS_PROJECT_ID",
+        "ROBOCOP_APP_ID",
+        "SECURITY_ALERTS_PROJECT_ID"
+      ]
+    },
+    "alert-malware.yml": {
+      "credential_names": [
+        "ROBOCOP_OPENAI_API_KEY",
+        "ROBOCOP_PRIVATE_KEY",
+        "SECURITY_ALERTS_TOKEN"
+      ],
+      "events": {
+        "schedule": [
+          {
+            "cron": "35 11 * * *"
+          }
+        ],
+        "workflow_dispatch": ""
+      },
+      "jobs": {
+        "aggregate": {
+          "permissions": {
+            "contents": "read"
+          }
+        }
+      },
+      "name": "Malware Alert",
+      "permissions": {},
+      "source_sha256": "dd3b46b6cbcc5fef891443dd590514b274518dc7a10c08b46ffddaabc140de2a",
+      "variable_names": [
+        "OPENAI_REVIEWERS_PROJECT_ID",
+        "ROBOCOP_APP_ID",
+        "SECURITY_ALERTS_PROJECT_ID"
+      ]
+    },
+    "alert-vulnerability.yml": {
+      "credential_names": [
+        "ROBOCOP_OPENAI_API_KEY",
+        "ROBOCOP_PRIVATE_KEY",
+        "SECURITY_ALERTS_TOKEN"
+      ],
+      "events": {
+        "schedule": [
+          {
+            "cron": "20 11 * * *"
+          }
+        ],
+        "workflow_dispatch": ""
+      },
+      "jobs": {
+        "aggregate": {
+          "permissions": {
+            "contents": "read"
+          }
+        }
+      },
+      "name": "Vulnerability Alert",
+      "permissions": {},
+      "source_sha256": "6b6a05b1f9ab7dd65422449b87cd0395fe980421e2d73acc93b8685833c0f637",
+      "variable_names": [
+        "OPENAI_REVIEWERS_PROJECT_ID",
+        "ROBOCOP_APP_ID",
+        "SECURITY_ALERTS_PROJECT_ID"
+      ]
+    },
+    "ci-auto-merge.yml": {
+      "credential_names": [],
+      "events": {
+        "workflow_run": {
+          "types": [
+            "completed"
+          ],
+          "workflows": [
+            "CI"
+          ]
+        }
+      },
+      "jobs": {
+        "dependabot-auto-merge": {
+          "if": "github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request'",
+          "name": "Dependabot Auto Merge",
+          "permissions": {
+            "actions": "read",
+            "checks": "write",
+            "contents": "write",
+            "pull-requests": "write",
+            "vulnerability-alerts": "read"
+          }
+        }
+      },
+      "name": "Dependabot Auto Merge",
+      "permissions": {
+        "contents": "read"
+      },
+      "source_sha256": "7c034be23ef8564af16a927c7edeb57f5f1b2c334d7a805b5fee0af6ee6391d6",
+      "variable_names": [
+        "LINT_EASTWOOD_REVIEWER_LOGIN",
+        "OBI_WAN_REVIEWER_LOGIN",
+        "ROBOCOP_REVIEWER_LOGIN"
+      ]
+    },
+    "ci-deploy.yml": {
+      "credential_names": [
+        "DEPLOY_SSH_KEY",
+        "DJANGO_EMAIL_HOST_KEY",
+        "DJANGO_SECRET_KEY",
+        "GITHUB_TOKEN"
+      ],
+      "events": {
+        "push": {
+          "branches": [
+            "env-prod"
+          ]
+        },
+        "workflow_dispatch": ""
+      },
+      "jobs": {
+        "build-and-deploy": {
+          "if": "github.ref == 'refs/heads/env-prod'"
+        }
+      },
+      "name": "Deploy",
+      "permissions": {
+        "contents": "read",
+        "packages": "write"
+      },
+      "source_sha256": "e0aa3dd1f299ecf3c78fc580bf80cfa1eef59105e0e40fb00c0ab5a40b3a2130",
+      "variable_names": [
+        "DEPLOY_HOST",
+        "DEPLOY_HOST_FINGERPRINT",
+        "DEPLOY_PATH",
+        "DEPLOY_PORT",
+        "DEPLOY_USER",
+        "DJANGO_DEFAULT_FROM_EMAIL",
+        "DJANGO_EMAIL_BACKEND",
+        "DJANGO_EMAIL_HOST",
+        "DJANGO_EMAIL_HOST_USER",
+        "DJANGO_EMAIL_PORT",
+        "DJANGO_EMAIL_TIMEOUT",
+        "DJANGO_EMAIL_USE_TLS"
+      ]
+    },
+    "ci-orchestrator.yml": {
+      "credential_names": [
+        "LINT_EASTWOOD_OPENAI_API_KEY",
+        "LINT_EASTWOOD_PRIVATE_KEY",
+        "OBI_WAN_CODE_NOBI_PRIVATE_KEY",
+        "OBI_WAN_OPENAI_API_KEY",
+        "ROBOCOP_OPENAI_API_KEY",
+        "ROBOCOP_PRIVATE_KEY"
+      ],
+      "events": {
+        "pull_request": {
+          "branches-ignore": [
+            "env-prod"
+          ],
+          "types": [
+            "opened",
+            "synchronize",
+            "reopened",
+            "ready_for_review"
+          ]
+        }
+      },
+      "jobs": {
+        "auto-merge": {
+          "if": "always()",
+          "name": "Auto Merge",
+          "needs": [
+            "lints",
+            "tests",
+            "codeql",
+            "dependency-vulnerability",
+            "dependency-malware",
+            "code-review",
+            "build-review",
+            "security-review"
+          ],
+          "permissions": {
+            "contents": "read"
+          }
+        },
+        "build-review": {
+          "if": "always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository",
+          "name": "AI Build Sheriff Review",
+          "needs": [
+            "lints",
+            "tests"
+          ],
+          "permissions": {
+            "checks": "read",
+            "contents": "read",
+            "pull-requests": "read",
+            "statuses": "read"
+          },
+          "uses": "./.github/workflows/review-build.yml"
+        },
+        "code-review": {
+          "if": "github.event.pull_request.head.repo.full_name == github.repository",
+          "name": "AI Code Review",
+          "permissions": {
+            "checks": "read",
+            "contents": "read",
+            "pull-requests": "read",
+            "statuses": "read"
+          },
+          "uses": "./.github/workflows/review-code.yml"
+        },
+        "codeql": {
+          "name": "CodeQL",
+          "permissions": {
+            "actions": "read",
+            "contents": "read",
+            "pull-requests": "read",
+            "security-events": "write"
+          },
+          "uses": "./.github/workflows/gate-codeql.yml"
+        },
+        "dependency-malware": {
+          "name": "Malware",
+          "permissions": {
+            "contents": "read",
+            "pull-requests": "read"
+          },
+          "uses": "./.github/workflows/gate-malware.yml"
+        },
+        "dependency-vulnerability": {
+          "name": "Vulnerability",
+          "permissions": {
+            "contents": "read",
+            "pull-requests": "read"
+          },
+          "uses": "./.github/workflows/gate-vulnerability.yml"
+        },
+        "lints": {
+          "name": "Lints",
+          "uses": "./.github/workflows/gate-lint.yml"
+        },
+        "security-review": {
+          "if": "always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository",
+          "name": "AI Security Review",
+          "needs": [
+            "codeql",
+            "dependency-vulnerability",
+            "dependency-malware"
+          ],
+          "permissions": {
+            "actions": "read",
+            "checks": "read",
+            "contents": "read",
+            "pull-requests": "read",
+            "security-events": "read",
+            "statuses": "read"
+          },
+          "uses": "./.github/workflows/review-security.yml"
+        },
+        "tests": {
+          "name": "Tests",
+          "uses": "./.github/workflows/gate-test.yml"
+        }
+      },
+      "name": "CI",
+      "permissions": {
+        "contents": "read",
+        "pull-requests": "write"
+      },
+      "source_sha256": "d5e6753d498cea787172a0abfc79d13325a436632a638abaedc959f90ecbc035",
+      "variable_names": []
+    },
+    "gate-codeql.yml": {
+      "credential_names": [],
+      "events": {
+        "push": {
+          "branches": [
+            "main"
+          ],
+          "paths": [
+            "backend/**",
+            "frontend/**",
+            ".github/actions/**",
+            ".github/workflows/**",
+            ".github/codeql/**"
+          ]
+        },
+        "schedule": [
+          {
+            "cron": "24 10 * * 1"
+          }
+        ],
+        "workflow_call": {
+          "outputs": {
+            "scope_actions": {
+              "description": "Whether the pull request requires GitHub Actions analysis.",
+              "value": "${{ jobs.changes.outputs.actions }}"
+            },
+            "scope_javascript": {
+              "description": "Whether the pull request requires JavaScript/TypeScript analysis.",
+              "value": "${{ jobs.changes.outputs.javascript }}"
+            },
+            "scope_python": {
+              "description": "Whether the pull request requires Python analysis.",
+              "value": "${{ jobs.changes.outputs.python }}"
+            },
+            "scope_status": {
+              "description": "Whether path-aware CodeQL scope detection succeeded.",
+              "value": "${{ jobs.changes.outputs.scope_status }}"
+            }
+          }
+        },
+        "workflow_dispatch": ""
+      },
+      "jobs": {
+        "analyze-actions": {
+          "if": "needs.changes.outputs.actions == 'true'",
+          "name": "Analyze GitHub Actions",
+          "needs": "changes",
+          "permissions": {
+            "actions": "read",
+            "contents": "read",
+            "pull-requests": "read",
+            "security-events": "write"
+          }
+        },
+        "analyze-javascript": {
+          "if": "needs.changes.outputs.javascript == 'true'",
+          "name": "Analyze JavaScript/TypeScript",
+          "needs": "changes",
+          "permissions": {
+            "actions": "read",
+            "contents": "read",
+            "pull-requests": "read",
+            "security-events": "write"
+          }
+        },
+        "analyze-python": {
+          "if": "needs.changes.outputs.python == 'true'",
+          "name": "Analyze Python",
+          "needs": "changes",
+          "permissions": {
+            "actions": "read",
+            "contents": "read",
+            "pull-requests": "read",
+            "security-events": "write"
+          }
+        },
+        "changes": {
+          "name": "Detect CodeQL Scope",
+          "permissions": {
+            "contents": "read",
+            "pull-requests": "read"
+          }
+        }
+      },
+      "name": "CodeQL Gate",
+      "permissions": {
+        "actions": "read",
+        "contents": "read",
+        "pull-requests": "read",
+        "security-events": "write"
+      },
+      "source_sha256": "6001a88c8f428c00e9cf0b04ee4a390182db86a5df2f30bbcdd88d0e619b9203",
+      "variable_names": []
+    },
+    "gate-lint.yml": {
+      "credential_names": [
+        "LINT_EASTWOOD_PRIVATE_KEY"
+      ],
+      "events": {
+        "workflow_call": {
+          "inputs": {
+            "checkout_ref": {
+              "description": "Branch or ref to check out for auto-fix commits.",
+              "required": "false",
+              "type": "string"
+            },
+            "enable_autofix": {
+              "default": "false",
+              "description": "Allow lint fixes to be committed and pushed for a trusted same-repository branch.",
+              "required": "false",
+              "type": "boolean"
+            }
+          },
+          "outputs": {
+            "lint_backend_log": {
+              "description": "Backend lint log tail.",
+              "value": "${{ jobs.lint-results.outputs.backend_log }}"
+            },
+            "lint_backend_status": {
+              "description": "Backend lint status (success/failure/not-applicable).",
+              "value": "${{ jobs.lint-results.outputs.backend_status }}"
+            },
+            "lint_frontend_log": {
+              "description": "Frontend lint log tail.",
+              "value": "${{ jobs.lint-results.outputs.frontend_log }}"
+            },
+            "lint_frontend_status": {
+              "description": "Frontend lint status (success/failure/not-applicable).",
+              "value": "${{ jobs.lint-results.outputs.frontend_status }}"
+            }
+          },
+          "secrets": {
+            "LINT_EASTWOOD_PRIVATE_KEY": {
+              "required": "false"
+            }
+          }
+        }
+      },
+      "jobs": {
+        "changes": {
+          "name": "Detect Changes"
+        },
+        "lint-backend": {
+          "if": "needs.changes.outputs.backend == 'true'",
+          "name": "Lint Backend (Ruff)",
+          "needs": "changes"
+        },
+        "lint-frontend": {
+          "if": "needs.changes.outputs.frontend == 'true'",
+          "name": "Lint Frontend (ESLint + Prettier)",
+          "needs": "changes"
+        },
+        "lint-results": {
+          "if": "always()",
+          "name": "Lint Results",
+          "needs": [
+            "changes",
+            "lint-frontend",
+            "lint-backend"
+          ]
+        }
+      },
+      "name": "Lint Gate",
+      "permissions": {
+        "contents": "read",
+        "pull-requests": "read"
+      },
+      "source_sha256": "8ec799d0120fd29a332327289f78e81cff7ec81ccd86213e771bb602ef255f75",
+      "variable_names": [
+        "LINT_EASTWOOD_APP_ID"
+      ]
+    },
+    "gate-malware.yml": {
+      "credential_names": [],
+      "events": {
+        "workflow_call": {
+          "outputs": {
+            "malware_report": {
+              "description": "Markdown report from the npm malware review.",
+              "value": "${{ jobs.malware.outputs.report }}"
+            }
+          }
+        }
+      },
+      "jobs": {
+        "malware": {
+          "name": "Malware"
+        }
+      },
+      "name": "Malware Gate",
+      "permissions": {
+        "contents": "read",
+        "pull-requests": "read"
+      },
+      "source_sha256": "94d59050afb01ce00f49813947ee57aa2cb48d5bf7171dfca0fa1f2e8edc06d9",
+      "variable_names": []
+    },
+    "gate-test.yml": {
+      "credential_names": [],
+      "events": {
+        "workflow_call": {
+          "outputs": {
+            "test_automation_log": {
+              "description": "Repository automation test log tail.",
+              "value": "${{ jobs.test-results.outputs.automation_log }}"
+            },
+            "test_automation_status": {
+              "description": "Repository automation test status (success/failure/not-applicable).",
+              "value": "${{ jobs.test-results.outputs.automation_status }}"
+            },
+            "test_backend_log": {
+              "description": "Backend test log tail.",
+              "value": "${{ jobs.test-results.outputs.backend_log }}"
+            },
+            "test_backend_status": {
+              "description": "Backend test status (success/failure/not-applicable).",
+              "value": "${{ jobs.test-results.outputs.backend_status }}"
+            },
+            "test_frontend_log": {
+              "description": "Frontend test log tail.",
+              "value": "${{ jobs.test-results.outputs.frontend_log }}"
+            },
+            "test_frontend_status": {
+              "description": "Frontend test status (success/failure/not-applicable).",
+              "value": "${{ jobs.test-results.outputs.frontend_status }}"
+            }
+          }
+        }
+      },
+      "jobs": {
+        "automation-tests": {
+          "if": "needs.changes.outputs.automation == 'true'",
+          "name": "Automation Tests (Node)",
+          "needs": "changes"
+        },
+        "backend-tests": {
+          "if": "needs.changes.outputs.backend == 'true'",
+          "name": "Backend Tests (Django)",
+          "needs": "changes"
+        },
+        "changes": {
+          "name": "Detect Changes"
+        },
+        "development-images": {
+          "if": "needs.changes.outputs.development == 'true'",
+          "name": "Development images and dependency volumes",
+          "needs": "changes"
+        },
+        "e2e-tests": {
+          "if": "needs.changes.outputs.e2e == 'true'",
+          "name": "Isolated authentication browser tests",
+          "needs": "changes"
+        },
+        "frontend-tests": {
+          "if": "needs.changes.outputs.frontend == 'true'",
+          "name": "Frontend Tests (React)",
+          "needs": "changes"
+        },
+        "test-results": {
+          "if": "always()",
+          "name": "Test Results",
+          "needs": [
+            "changes",
+            "frontend-tests",
+            "backend-tests",
+            "automation-tests",
+            "development-images",
+            "e2e-tests"
+          ]
+        }
+      },
+      "name": "Test Gate",
+      "permissions": {
+        "contents": "read",
+        "pull-requests": "read"
+      },
+      "source_sha256": "e98a6daefde8d06c5b77d763d0284e2b7839c6ed4b2dfd3b107c15a121dbe3e1",
+      "variable_names": []
+    },
+    "gate-vulnerability.yml": {
+      "credential_names": [],
+      "events": {
+        "workflow_call": {
+          "outputs": {
+            "vulnerability_report": {
+              "description": "Summary of the dependency vulnerability review result.",
+              "value": "${{ jobs.vulnerability.outputs.report }}"
+            }
+          }
+        }
+      },
+      "jobs": {
+        "vulnerability": {
+          "name": "Vulnerability"
+        }
+      },
+      "name": "Vulnerability Gate",
+      "permissions": {
+        "contents": "read",
+        "pull-requests": "read"
+      },
+      "source_sha256": "a7fa09c8863aeda4b6889a5b44c73b05f090c9272245b177d5784ec252fc048a",
+      "variable_names": []
+    },
+    "promotion-summary-request.yml": {
+      "credential_names": [],
+      "events": {
+        "pull_request": {
+          "branches": [
+            "env-prod"
+          ],
+          "types": [
+            "opened",
+            "synchronize",
+            "reopened",
+            "edited",
+            "ready_for_review"
+          ]
+        },
+        "push": {
+          "branches": [
+            "env-prod"
+          ]
+        }
+      },
+      "jobs": {
+        "request": {}
+      },
+      "name": "Promotion summary request",
+      "permissions": {
+        "contents": "read"
+      },
+      "source_sha256": "7ef0a68971f700796590172cfa67be1feb249a744acf16616605101f5fe738d2",
+      "variable_names": []
+    },
+    "promotion-summary.yml": {
+      "credential_names": [],
+      "events": {
+        "workflow_dispatch": "",
+        "workflow_run": {
+          "types": [
+            "completed"
+          ],
+          "workflows": [
+            "Promotion summary request"
+          ]
+        }
+      },
+      "jobs": {
+        "summary": {
+          "if": "(github.event_name == 'workflow_run' &&\n github.event.workflow_run.head_repository.full_name == github.repository &&\n (github.event.workflow_run.event == 'pull_request' ||\n  (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'env-prod'))) ||\n(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')"
+        }
+      },
+      "name": "Production promotion summary",
+      "permissions": {
+        "contents": "read",
+        "pull-requests": "write"
+      },
+      "source_sha256": "db2c0139c129bedecfb6bd12a27329c9b34df58365ed4295a485c1d3ec9062e0",
+      "variable_names": []
+    },
+    "review-build.yml": {
+      "credential_names": [
+        "LINT_EASTWOOD_OPENAI_API_KEY",
+        "LINT_EASTWOOD_PRIVATE_KEY"
+      ],
+      "events": {
+        "workflow_call": {
+          "inputs": {
+            "lint_backend_log": {
+              "required": "false",
+              "type": "string"
+            },
+            "lint_backend_status": {
+              "required": "false",
+              "type": "string"
+            },
+            "lint_frontend_log": {
+              "required": "false",
+              "type": "string"
+            },
+            "lint_frontend_status": {
+              "required": "false",
+              "type": "string"
+            },
+            "lint_result": {
+              "required": "false",
+              "type": "string"
+            },
+            "test_automation_log": {
+              "required": "false",
+              "type": "string"
+            },
+            "test_automation_status": {
+              "required": "false",
+              "type": "string"
+            },
+            "test_backend_log": {
+              "required": "false",
+              "type": "string"
+            },
+            "test_backend_status": {
+              "required": "false",
+              "type": "string"
+            },
+            "test_frontend_log": {
+              "required": "false",
+              "type": "string"
+            },
+            "test_frontend_status": {
+              "required": "false",
+              "type": "string"
+            },
+            "test_result": {
+              "required": "false",
+              "type": "string"
+            }
+          },
+          "secrets": {
+            "LINT_EASTWOOD_OPENAI_API_KEY": {
+              "required": "true"
+            },
+            "LINT_EASTWOOD_PRIVATE_KEY": {
+              "required": "true"
+            }
+          }
+        }
+      },
+      "jobs": {
+        "review": {
+          "name": "Lint Eastwood build sheriff review"
+        }
+      },
+      "name": "AI Build Sheriff Review",
+      "permissions": {
+        "checks": "read",
+        "contents": "read",
+        "pull-requests": "read",
+        "statuses": "read"
+      },
+      "source_sha256": "998939f92ca47784d0db3e790d43d60f0afc77c978001fcf8fe292817221dc66",
+      "variable_names": [
+        "AI_REVIEW_MAX_OUTPUT_TOKENS",
+        "AI_REVIEW_MODEL",
+        "AI_REVIEW_REASONING_EFFORT",
+        "LINT_EASTWOOD_APP_ID",
+        "OPENAI_REVIEWERS_PROJECT_ID"
+      ]
+    },
+    "review-code.yml": {
+      "credential_names": [
+        "OBI_WAN_CODE_NOBI_PRIVATE_KEY",
+        "OBI_WAN_OPENAI_API_KEY"
+      ],
+      "events": {
+        "workflow_call": {
+          "secrets": {
+            "OBI_WAN_CODE_NOBI_PRIVATE_KEY": {
+              "required": "true"
+            },
+            "OBI_WAN_OPENAI_API_KEY": {
+              "required": "true"
+            }
+          }
+        }
+      },
+      "jobs": {
+        "review": {
+          "name": "Obi-Wan Code-nobi code review"
+        }
+      },
+      "name": "AI Code Review",
+      "permissions": {
+        "checks": "read",
+        "contents": "read",
+        "pull-requests": "read",
+        "statuses": "read"
+      },
+      "source_sha256": "70dbb7995184da55e189a643dc6869ee6a923f514f6143344e3885c3063a9272",
+      "variable_names": [
+        "AI_REVIEW_MAX_OUTPUT_TOKENS",
+        "AI_REVIEW_MODEL",
+        "AI_REVIEW_REASONING_EFFORT",
+        "OBI_WAN_CODE_NOBI_APP_ID",
+        "OPENAI_REVIEWERS_PROJECT_ID"
+      ]
+    },
+    "review-security.yml": {
+      "credential_names": [
+        "ROBOCOP_OPENAI_API_KEY",
+        "ROBOCOP_PRIVATE_KEY"
+      ],
+      "events": {
+        "workflow_call": {
+          "inputs": {
+            "codeql_result": {
+              "required": "false",
+              "type": "string"
+            },
+            "codeql_scope_actions": {
+              "required": "false",
+              "type": "string"
+            },
+            "codeql_scope_javascript": {
+              "required": "false",
+              "type": "string"
+            },
+            "codeql_scope_python": {
+              "required": "false",
+              "type": "string"
+            },
+            "codeql_scope_status": {
+              "required": "false",
+              "type": "string"
+            },
+            "dependency_malware_report": {
+              "required": "false",
+              "type": "string"
+            },
+            "dependency_malware_result": {
+              "required": "false",
+              "type": "string"
+            },
+            "dependency_vulnerability_report": {
+              "required": "false",
+              "type": "string"
+            },
+            "dependency_vulnerability_result": {
+              "required": "false",
+              "type": "string"
+            }
+          },
+          "secrets": {
+            "ROBOCOP_OPENAI_API_KEY": {
+              "required": "true"
+            },
+            "ROBOCOP_PRIVATE_KEY": {
+              "required": "true"
+            }
+          }
+        }
+      },
+      "jobs": {
+        "review": {
+          "name": "RoboCop security review"
+        }
+      },
+      "name": "AI Security Review",
+      "permissions": {
+        "actions": "read",
+        "checks": "read",
+        "contents": "read",
+        "pull-requests": "read",
+        "security-events": "read",
+        "statuses": "read"
+      },
+      "source_sha256": "b39b640ee14545958cc5a0a7c2a28a5275e966faecd5c0ef2f2bb23ca17d30a9",
+      "variable_names": [
+        "AI_REVIEW_MAX_OUTPUT_TOKENS",
+        "AI_REVIEW_MODEL",
+        "AI_REVIEW_REASONING_EFFORT",
+        "OPENAI_REVIEWERS_PROJECT_ID",
+        "ROBOCOP_APP_ID"
+      ]
+    }
+  }
+}

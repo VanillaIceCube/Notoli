@@ -1,5 +1,34 @@
 # Changelog
 
+## 2026-11-06
+
+### Fixed
+
+- Transactional email failures now expose safe categories/status codes without exception payloads, tracebacks or recipient/token data; reset responses remain generic.
+- Resend requests use a finite bounded timeout, with explicit safe fallback and mocked coverage for failure policy and both fail_silently modes.
+
+## 2026-11-06
+
+### Added
+
+- Managed production-promotion impact summaries from the actual current target comparison, with bounded metadata, owned-comment updates and race/permission coverage.
+- Source-linked Mermaid CI/CD architecture and checked per-repository workflow/action inventories, preserving application and gateway trust differences.
+
+### Fixed
+
+- Architecture guidance no longer presents completed reviewer credential migration or obsolete test/runtime assumptions as future work.
+
+## 2026-11-06
+
+### Added
+
+- Bounded, attributed human discussion context and conservative App-owned reviewer follow-ups, with adversarial, stale-head, idempotency and permission regressions.
+- Safe Responses token/latency evidence, dated partial cost estimates and validated owner configuration/recovery controls; existing Luna model selection is preserved.
+
+### Fixed
+
+- Reviewer ownership no longer falls back to persona-name matching; old-head verdicts are rejected and writer runs serialize.
+
 ## 2026-11-05
 ### Added
 - Shared isolated authentication browser tests with disposable data and local-only reset mail.

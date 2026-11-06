@@ -154,7 +154,9 @@ class ForgotPasswordView(APIView):
                 )
             except Exception:
                 # Keep response generic to avoid account enumeration.
-                logger.exception("Password reset email failed for user_id=%s", user.id)
+                logger.error(
+                    "Password reset email delivery failed; public response remains generic."
+                )
 
         return Response(
             {"message": ("Password reset link has been sent!")},
