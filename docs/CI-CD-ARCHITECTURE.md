@@ -173,13 +173,14 @@ flowchart TD
 
 The [promotion-summary workflow](../.github/workflows/promotion-summary.yml)
 uses a trusted default-branch `workflow_run` definition and reviewed `main` code,
-never a proposed PR workflow or checkout. The [read-only PR listener](../.github/workflows/promotion-summary-request.yml)
+never a proposed PR workflow or checkout. The [read-only PR/target-push listener](../.github/workflows/promotion-summary-request.yml)
 only emits a fixed signal; it has no checkout, artifact/cache handoff, secrets or
 write token. The consumer independently fetches current metadata and does not
 trust producer conclusions or supplied PR identities. Fork producer events are
 excluded. A repository-wide serialized writer refreshes all open same-repo
-`env-prod` PRs (up to ten) after the signal, target-branch push or manual dispatch
-on `main`. A PR-controlled workflow never receives this writer's grant. See
+`env-prod` PRs (up to ten) after the PR or target-branch push signal, or manual dispatch on `main`.
+Both event-driven writes use only the default-branch consumer definition; an
+`env-prod` push never executes a write-capable workflow definition from that branch. A PR-controlled workflow never receives this writer's grant. See
 [GitHub's privilege-separation guidance](https://docs.github.com/en/actions/reference/security/secure-use).
 The helper uses complete current GitHub file metadata
 and identifies exact base/head revisions. Categories and counts are observations;

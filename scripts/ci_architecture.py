@@ -83,10 +83,10 @@ def contracts(data, root):
     if deploy.get("push", {}).get("branches") != ["env-prod"] or "workflow_dispatch" not in deploy:
         raise ValueError("Production/manual diagram drift")
     summary = workflows["promotion-summary.yml"]["events"]
-    if set(summary) != {"workflow_run", "push", "workflow_dispatch"} or summary["workflow_run"] != {"workflows": ["Promotion summary request"], "types": ["completed"]} or summary.get("push", {}).get("branches") != ["env-prod"]:
+    if set(summary) != {"workflow_run", "workflow_dispatch"} or summary["workflow_run"] != {"workflows": ["Promotion summary request"], "types": ["completed"]}:
         raise ValueError("Trusted promotion summary event diagram drift")
     request = workflows["promotion-summary-request.yml"]
-    if request["events"].get("pull_request", {}).get("branches") != ["env-prod"] or request["permissions"] != {"contents": "read"}:
+    if request["events"].get("pull_request", {}).get("branches") != ["env-prod"] or request["events"].get("push", {}).get("branches") != ["env-prod"] or request["permissions"] != {"contents": "read"}:
         raise ValueError("Read-only promotion listener boundary drift")
     raw_request = (root / ".github/workflows/promotion-summary-request.yml").read_text(encoding="utf-8")
     raw_summary = (root / ".github/workflows/promotion-summary.yml").read_text(encoding="utf-8")

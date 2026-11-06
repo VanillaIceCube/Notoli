@@ -75,22 +75,22 @@
       "JudeAndrewAlabaInfrastructure": "3bd3763b3b56501a37bd98571e6e083dcae6e6bbdf67081b70a4b3f031fca22a"
     },
     ".github/workflows/promotion-summary.yml": {
-      "FullStackTemplate": "0e2f3a76368467f5ebf33c352a97b8eb582fbd5aeba911c7d802aa6e573ad64c",
-      "Notoli": "0e2f3a76368467f5ebf33c352a97b8eb582fbd5aeba911c7d802aa6e573ad64c",
-      "MacroMapper": "0e2f3a76368467f5ebf33c352a97b8eb582fbd5aeba911c7d802aa6e573ad64c",
-      "JudeAndrewAlabaInfrastructure": "0e2f3a76368467f5ebf33c352a97b8eb582fbd5aeba911c7d802aa6e573ad64c"
+      "FullStackTemplate": "db2c0139c129bedecfb6bd12a27329c9b34df58365ed4295a485c1d3ec9062e0",
+      "Notoli": "db2c0139c129bedecfb6bd12a27329c9b34df58365ed4295a485c1d3ec9062e0",
+      "MacroMapper": "db2c0139c129bedecfb6bd12a27329c9b34df58365ed4295a485c1d3ec9062e0",
+      "JudeAndrewAlabaInfrastructure": "db2c0139c129bedecfb6bd12a27329c9b34df58365ed4295a485c1d3ec9062e0"
     },
     "scripts/ci_architecture.py": {
-      "FullStackTemplate": "4609fbb8af041a79f94af8cd5e01c8d87d6c31ba679dfcbf4ddf69bbc50c491d",
-      "Notoli": "4609fbb8af041a79f94af8cd5e01c8d87d6c31ba679dfcbf4ddf69bbc50c491d",
-      "MacroMapper": "4609fbb8af041a79f94af8cd5e01c8d87d6c31ba679dfcbf4ddf69bbc50c491d",
-      "JudeAndrewAlabaInfrastructure": "4609fbb8af041a79f94af8cd5e01c8d87d6c31ba679dfcbf4ddf69bbc50c491d"
+      "FullStackTemplate": "9a85ad6dbff9f5150162c81a8d18b176313a4bf473a4ce7a9a5a72dadd6fcbd8",
+      "Notoli": "9a85ad6dbff9f5150162c81a8d18b176313a4bf473a4ce7a9a5a72dadd6fcbd8",
+      "MacroMapper": "9a85ad6dbff9f5150162c81a8d18b176313a4bf473a4ce7a9a5a72dadd6fcbd8",
+      "JudeAndrewAlabaInfrastructure": "9a85ad6dbff9f5150162c81a8d18b176313a4bf473a4ce7a9a5a72dadd6fcbd8"
     },
     "docs/CI-CD-ARCHITECTURE.md": {
-      "FullStackTemplate": "d2088dacb3aba2f0f405474aa2f9689d3e8bf9662b363aea053b301d7e66969b",
-      "Notoli": "d2088dacb3aba2f0f405474aa2f9689d3e8bf9662b363aea053b301d7e66969b",
-      "MacroMapper": "d2088dacb3aba2f0f405474aa2f9689d3e8bf9662b363aea053b301d7e66969b",
-      "JudeAndrewAlabaInfrastructure": "d2088dacb3aba2f0f405474aa2f9689d3e8bf9662b363aea053b301d7e66969b"
+      "FullStackTemplate": "677f464f75bac5c9dc4a624e8f350bcc77bf81e683e9b263750d90dc554115dc",
+      "Notoli": "677f464f75bac5c9dc4a624e8f350bcc77bf81e683e9b263750d90dc554115dc",
+      "MacroMapper": "677f464f75bac5c9dc4a624e8f350bcc77bf81e683e9b263750d90dc554115dc",
+      "JudeAndrewAlabaInfrastructure": "677f464f75bac5c9dc4a624e8f350bcc77bf81e683e9b263750d90dc554115dc"
     },
     "docs/BATCH3-PARITY.md": {
       "FullStackTemplate": "b76fb2a110cdb5c5b3e45efe1e15354402ad7479bcab569835d740dce2009552",
@@ -99,10 +99,10 @@
       "JudeAndrewAlabaInfrastructure": "b76fb2a110cdb5c5b3e45efe1e15354402ad7479bcab569835d740dce2009552"
     },
     ".github/workflows/promotion-summary-request.yml": {
-      "FullStackTemplate": "4845f8114ad24737d481af5f9c7267fb28b0f1e7abb8a29079cf31bf1174a425",
-      "Notoli": "4845f8114ad24737d481af5f9c7267fb28b0f1e7abb8a29079cf31bf1174a425",
-      "MacroMapper": "4845f8114ad24737d481af5f9c7267fb28b0f1e7abb8a29079cf31bf1174a425",
-      "JudeAndrewAlabaInfrastructure": "4845f8114ad24737d481af5f9c7267fb28b0f1e7abb8a29079cf31bf1174a425"
+      "FullStackTemplate": "7ef0a68971f700796590172cfa67be1feb249a744acf16616605101f5fe738d2",
+      "Notoli": "7ef0a68971f700796590172cfa67be1feb249a744acf16616605101f5fe738d2",
+      "MacroMapper": "7ef0a68971f700796590172cfa67be1feb249a744acf16616605101f5fe738d2",
+      "JudeAndrewAlabaInfrastructure": "7ef0a68971f700796590172cfa67be1feb249a744acf16616605101f5fe738d2"
     }
   },
   "email_equivalents": {

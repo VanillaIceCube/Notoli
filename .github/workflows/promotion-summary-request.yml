@@ -4,6 +4,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, edited, ready_for_review]
     branches: [env-prod]
+  push:
+    branches: [env-prod]
 
 permissions:
   contents: read

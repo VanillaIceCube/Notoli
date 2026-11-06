@@ -4,8 +4,6 @@ on:
   workflow_run:
     workflows: [Promotion summary request]
     types: [completed]
-  push:
-    branches: [env-prod]
   workflow_dispatch:
 
 concurrency:
@@ -19,10 +17,11 @@ permissions:
 jobs:
   summary:
     if: >-
-      (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' &&
-       github.event.workflow_run.head_repository.full_name == github.repository) ||
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/env-prod')
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
+       (github.event.workflow_run.event == 'pull_request' ||
+        (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'env-prod'))) ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout reviewed default-branch summary code

@@ -650,6 +650,11 @@
             "edited",
             "ready_for_review"
           ]
+        },
+        "push": {
+          "branches": [
+            "env-prod"
+          ]
         }
       },
       "jobs": {
@@ -659,17 +664,12 @@
       "permissions": {
         "contents": "read"
       },
-      "source_sha256": "4845f8114ad24737d481af5f9c7267fb28b0f1e7abb8a29079cf31bf1174a425",
+      "source_sha256": "7ef0a68971f700796590172cfa67be1feb249a744acf16616605101f5fe738d2",
       "variable_names": []
     },
     "promotion-summary.yml": {
       "credential_names": [],
       "events": {
-        "push": {
-          "branches": [
-            "env-prod"
-          ]
-        },
         "workflow_dispatch": "",
         "workflow_run": {
           "types": [
@@ -682,7 +682,7 @@
       },
       "jobs": {
         "summary": {
-          "if": "(github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request' &&\n github.event.workflow_run.head_repository.full_name == github.repository) ||\n(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event_name == 'push' && github.ref == 'refs/heads/env-prod')"
+          "if": "(github.event_name == 'workflow_run' &&\n github.event.workflow_run.head_repository.full_name == github.repository &&\n (github.event.workflow_run.event == 'pull_request' ||\n  (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'env-prod'))) ||\n(github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')"
         }
       },
       "name": "Production promotion summary",
@@ -690,7 +690,7 @@
         "contents": "read",
         "pull-requests": "write"
       },
-      "source_sha256": "0e2f3a76368467f5ebf33c352a97b8eb582fbd5aeba911c7d802aa6e573ad64c",
+      "source_sha256": "db2c0139c129bedecfb6bd12a27329c9b34df58365ed4295a485c1d3ec9062e0",
       "variable_names": []
     },
     "review-build.yml": {
