@@ -133,3 +133,9 @@ Browser checks use separate loopback ports and disposable settings, not the
 production release path. The Infrastructure-owned release source pin and parity
 enforcement stay authoritative; see docs/BATCH2-PARITY.md. Documentation/workflow
 changes alone do not justify restarting the application or shared gateway.
+
+
+Production-promotion PRs receive a managed impact summary derived from their
+current env-prod comparison. It informs review; release authorization, migration
+guards and data-safe recovery still follow the [production guide](production/README.md).
+See [CI/CD architecture](../docs/CI-CD-ARCHITECTURE.md).

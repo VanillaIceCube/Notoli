@@ -17,6 +17,9 @@ flowchart TD
   Fork[Fork PR] --> Isolated[Applicable checks with fork credential isolation]
   CI --> LintTest[Lint and test workflows]
   CI --> Scanners[CodeQL and dependency scanners]
+  CI -->|Infrastructure| Secrets[Gitleaks secret scan]
+  Secrets --> Robo
+  Secrets --> Gate
   CI --> Obi[Obi-Wan code review]
   LintTest --> Lint[Lint Eastwood build review]
   Scanners --> Robo[RoboCop security review]
@@ -26,7 +29,9 @@ flowchart TD
   LintTest --> Gate
   Scanners --> Gate
   Isolated --> ForkEvidence[No secret-bearing AI review acceptance inferred]
-  Gate --> Main[Normal protected main merge]
+  Gate -->|Applications| Main[Normal protected main merge]
+  Gate -->|Infrastructure| RequiredCI[Required CI aggregate and owner merge]
+  RequiredCI --> Main
   Gate --> Auto[Application Dependabot eligibility and exact-head auto-merge checks]
   Auto --> Platform[GitHub protected auto-merge]
 ```
@@ -72,6 +77,7 @@ flowchart LR
   Reconcile --> Proof[Exact App ID, cited replacement, current head and checks]
   Proof --> Own[Own follow-up or verified own-thread resolution]
   Request --> Usage[Aggregate tokens, latency and dated partial cost estimate]
+  Luna --> Usage
 ```
 
 The [reviewer contract](../.github/AI-REVIEWERS.md) defines exact byte/page/count
@@ -157,7 +163,10 @@ flowchart TD
   Accepted --> Verify[Independent VM identity, routing, auth and sanitized-log checks]
   Same --> Verify
   Changed --> Verify
-  Manual[Authorized manual dispatch or documented recovery] --> Gates
+  Manual[Authorized manual dispatch of reviewed env-prod source] --> App
+  Manual --> Gateway
+  Recovery[Authorized documented recovery] --> RecoveryGuard[Existing owner, lock and data-generation guards]
+  RecoveryGuard --> Verify
 ```
 
 The [promotion-summary workflow](../.github/workflows/promotion-summary.yml)

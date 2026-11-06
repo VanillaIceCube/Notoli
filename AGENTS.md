@@ -251,3 +251,7 @@ configured pool for timing. See frontend/README.md and docs/BATCH2-PARITY.md.
 Reviewer configuration and safe follow-up rules now follow `.github/AI-REVIEWERS.md`;
 keep validated optional AI_REVIEW_* variables, per-persona identity, serialized
 writers and existing blocking checks aligned when editing CI.
+
+Maintain CI architecture diagrams and regenerate `docs/CI-CD-SOURCE-INVENTORY.json`
+with `python scripts/ci_architecture.py` after workflow edits. Promotion summaries
+are informational; preserve existing release/check authorization and secret boundaries.
