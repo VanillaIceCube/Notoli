@@ -216,9 +216,11 @@ source-pin PRs do not authorize merging, promotion, or deployment.
 
 ## 🔑 Separate OpenAI reviewer credentials
 
-Credential provisioning is a separate operator step. Configure the new secrets
-and project variable before activating these workflows. Missing keys fail
-visibly; there is no fallback to the old shared `OPENAI_API_KEY`.
+The four existing repositories already use the accepted persona-specific
+credentials and reviewer projects. The following is an onboarding/operator
+reference, not a pending model or credential migration. Configure these names
+before activating a new installation; missing keys fail visibly and there is
+no fallback to a shared `OPENAI_API_KEY`.
 
 Use a dedicated **Notoli · AI Reviewers** OpenAI project (or the
 repository's existing reviewer-only project). Never share credentials between
@@ -257,21 +259,19 @@ stores as well (six review secrets total).
 5. In OpenAI Usage, filter by the reviewer project and individual API key to
    confirm each persona's attribution. An empty alert feed may make no model
    call; record that outcome rather than assuming usage was verified.
-6. Stage the new secrets and `OPENAI_REVIEWERS_PROJECT_ID` while leaving the
-   legacy `OPENAI_API_KEY` and `OPENAI_PROJECT_ID` unchanged. Existing default-
-   branch jobs can continue using the legacy pair until the source is merged.
-   Keep old keys valid until every affected consumer has verified the new keys;
-   retain any Default-project key still used elsewhere. To reverse the source
-   change, revert the workflow change; the retained legacy pair remains usable.
-   Do not place a shared legacy key into the three new secret slots or expose
-   key values in logs/issues.
+6. For configuration recovery, restore the last accepted persona-specific key/
+   project bindings and validated reviewer variables, then rerun the latest head.
+   Any source revert must use ordinary protected review and retain its matching
+   credential contract. A legacy key used elsewhere is not an active reviewer
+   fallback; never copy it into all three persona slots or expose key values.
+   This reference does not rotate or provision credentials during Batch 3.
 
 See [OpenAI key security, expiration and usage guidance](https://developers.openai.com/api/docs/guides/production-best-practices#api-keys).
 
 
 ## 🔌 Shared MCP framework
 
-The backend test gate checks the pinned MCP framework manifest. Template/MacroMapper run both ordinary tests and an isolated MCP-enabled sample profile; production remains disabled there. Notoli runs its existing enabled protocol/domain suite. See [the framework guide](../docs/MCP-FRAMEWORK.md).
+The backend test gate checks the pinned MCP framework manifest and each repository's documented ordinary/MCP-enabled profiles. Template sample fixtures do not create a production target; Notoli and MacroMapper retain their app-owned enabled protocol/domain acceptance. See [the framework guide](../docs/MCP-FRAMEWORK.md) and the application MCP guide where present.
 
 ## 🛡️ Dependency evidence and alert lifecycle parity
 
@@ -556,13 +556,31 @@ writers, dated usage estimates and configuration recovery. The owner-selected
 Repository variables `AI_REVIEW_MODEL`, `AI_REVIEW_REASONING_EFFORT` and
 `AI_REVIEW_MAX_OUTPUT_TOKENS` are validated; unset values retain Luna/medium/16000.
 
-The reviewed `workflow-write-grants.json` reserves only `pull-requests: write`
-for the forthcoming deterministic promotion-summary workflow. This policy merges
-before that workflow is introduced; proposed workflows cannot authorize their own
-new grants. Summary publication will not authorize releases or change gates.
+The reviewed `workflow-write-grants.json` grants only `pull-requests: write`
+to the deterministic promotion-summary workflow. That policy merged before the
+workflow was introduced; proposed workflows cannot authorize their own new grants.
+Summary publication does not authorize releases or change gates.
 
 Reviewer evidence reads use the existing read-only workflow token, explicitly
 limited to contents/pull-requests/checks/statuses read (plus existing security
 evidence reads for RoboCop). Native review/follow-up/thread writes use the
 separate persona App token; its existing contents-read/pull-requests-write
 installation capabilities are not expanded.
+
+
+## Architecture and production summaries
+
+The [canonical architecture reference](../docs/CI-CD-ARCHITECTURE.md) maps PR/fork/
+Dependabot paths, required checks, reviewer interactions, scheduled alerts,
+main-to-env-prod/manual release paths and credential trust boundaries to source.
+Its per-repository source inventory is checked against actual workflow YAML.
+
+`promotion-summary-request.yml` is a read-only PR/target-push signal with no checkout or
+artifact/cache handoff. Its default-branch `workflow_run` consumer
+`promotion-summary.yml` maintains one GitHub Actions-owned comment for each open
+same-repository `env-prod` PR using the actual current target comparison. Reruns
+update the same comment; stale/incomplete/denied evidence is reported visibly.
+Observed area counts are separate from inferred risks. The workflow loads trusted
+main code, never PR code/prose or secret values, and does not change review,
+merge, release or recovery authorization. Infrastructure uses gateway-specific
+wording. FullStackTemplate's inactive target is not created for symmetry.
