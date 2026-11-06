@@ -251,3 +251,7 @@ configured pool for timing. See frontend/README.md and docs/BATCH2-PARITY.md.
 Reviewer configuration and safe follow-up rules now follow `.github/AI-REVIEWERS.md`;
 keep validated optional AI_REVIEW_* variables, per-persona identity, serialized
 writers and existing blocking checks aligned when editing CI.
+
+Resend timeout supports `0 < seconds <= 30` with safe 10-second fallback; preserve original
+fail_silently behavior and generic reset responses. Never log delivery exception
+text/tracebacks or recipient/token data. See backend/README.md.
