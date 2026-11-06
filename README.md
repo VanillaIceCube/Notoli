@@ -136,3 +136,6 @@ documented in [.github/AI-REVIEWERS.md](.github/AI-REVIEWERS.md).
 CI/CD events, reviewer flow, credential boundaries and production-summary behavior
 are mapped in [the architecture reference](docs/CI-CD-ARCHITECTURE.md).
 Shared adoption and justified differences are recorded in [Batch 3 parity](docs/BATCH3-PARITY.md).
+
+Transactional mail failure categories, finite timeouts and password-reset recovery
+are documented in [backend/README.md](backend/README.md#transactional-email-failure-handling).

@@ -2,6 +2,13 @@
 
 ## 2026-11-06
 
+### Fixed
+
+- Transactional email failures now expose safe categories/status codes without exception payloads, tracebacks or recipient/token data; reset responses remain generic.
+- Resend requests use a finite bounded timeout, with explicit safe fallback and mocked coverage for failure policy and both fail_silently modes.
+
+## 2026-11-06
+
 ### Added
 
 - Managed production-promotion impact summaries from the actual current target comparison, with bounded metadata, owned-comment updates and race/permission coverage.

@@ -255,3 +255,7 @@ writers and existing blocking checks aligned when editing CI.
 Maintain CI architecture diagrams and regenerate `docs/CI-CD-SOURCE-INVENTORY.json`
 with `python scripts/ci_architecture.py` after workflow edits. Promotion summaries
 are informational; preserve existing release/check authorization and secret boundaries.
+
+Resend timeout supports `0 < seconds <= 30` with safe 10-second fallback; preserve original
+fail_silently behavior and generic reset responses. Never log delivery exception
+text/tracebacks or recipient/token data. See backend/README.md.
