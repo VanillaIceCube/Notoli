@@ -24,7 +24,9 @@ docs changes. Actionlint plus safe YAML/composite validation, Bash syntax parsin
 PowerShell parser-only validation, Python AST parsing and synthetic Compose `config`
 run without deployments or private environment files. Infrastructure retains its
 existing stronger shellcheck/Compose/manifest/RequiredCI strategy instead of an
-application clone. Markdown uses `git diff --check`; no brittle external-link crawler
+application clone. Markdown whitespace uses platform PR base/head or push before/after commits
+plus local edits (`git diff --check`); a clean-checkout committed-error regression
+proves it checks submitted changes; no brittle external-link crawler
 is introduced. Actionlint's only compatibility exception is the existing newly
 supported GitHub `vulnerability-alerts` scope, not a generic syntax waiver.
 

@@ -14,7 +14,8 @@ establish acceptance. Dates below are UTC unless a local test log says otherwise
 | Infrastructure | [116](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/pull/116), merge `0417fcbaa23cc3356e96164684ed88c0843a0df7` | Shared-source adoption is in A; no app development image | [120](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/pull/120), merge `f7fd326c015045f8aa66446ca998fb3cfcedfd1f` |
 
 A/B final-head checks and configured persona reviews passed before normal merges;
-C application delivery still requires its final-head CI/reviews and promotion.
+C acceptance requires the linked PR final-head CI/reviews and applicable
+production run/independent acceptance receipts; implementation alone is insufficient.
 No check removal, stale-head approval, bypass or blocking-review dismissal is used.
 
 ## Capability matrix
@@ -71,7 +72,7 @@ discovery remains active; it is not silently merged as part of Batch2.
 | Template50 | Implemented C with risk inventory and mocked high-risk paths; Batch1 coverage retained. Real provider/service behavior is a documented external boundary. |
 | Template51 | Implemented C across all four; original statuses preserved with bounded early/failure/late evidence. |
 | Template44 | Implemented C foundation and minimal existing Notoli domain fixture; no new product behavior. Final reviewed CI and fresh documented setup establish adoption. |
-| Notoli563 | Measurement and tuning implemented C; final comparable frontend timing pending. Backend bottlenecks documented, no backend speedup claimed. Protected tracker stays read-only; do not claim an unmeasured improvement. |
+| Notoli563 | Implemented measurement and tuning C; final frontend wall54.236s vs65.044s baseline (16.616% lower in one comparable run), all301 cases retained. Backend bottlenecks documented, no backend speedup claimed. Protected tracker stays read-only; do not claim an unmeasured improvement. |
 | Template64 | Implemented B across all three app dev stacks with real CI volume lifecycle; Infrastructure N/A. |
 | Notoli715 | Remaining Jest/Babel test migration implemented B; existing Vite build/env/output interface preserved, all301 tests pass. Protected tracker stays read-only. |
 | Macro224 | Blocked upstream; retain supported TypeScript6.0.3 with exact released-peer evidence, no incompatible override/retry. |
@@ -88,8 +89,25 @@ Supported-runtime independent VM pair: Node24.22.2/npm11.19.1, 0.75 CPU/768MiB,
 63.391s (65.044s container wall); initial B Vitest151.839s (154.103s wall),
 all301/32 pass in both. The initial migration is 137% slower. npm installs are
 separate (36.021s vs33.019s). Backend190 tests/one existing skip:24.256s vs25.723s.
-The final tuned C candidate needs a supported-runtime repeat with the configured
-projects (no --pool override); no speedup is claimed from an unrelated local run.
+Final C candidate23687b53fc3f755970ccb00f5fe9ffa9715374d4 used the same limits,
+configured projects and maxWorkers1 without a pool override: all32 files/301 cases
+pass (56 Node/245 DOM; normalized case identities/multiplicity match baseline).
+Outer wall54.236s versus65.044s is10.808s /16.616% lower in this single comparison.
+Reporter window50.462s versus Jest63.391s is secondary because runner semantics
+differ. Installation35.023s is separate. The observed cgroup memory peak is
+698,650,624 bytes (666.285MiB), with zero OOM/kill events and exit0. All225 installed
+third-party engine declarations accept Node24.22.2; npm ls exits0 and registry audit
+reports0 findings. No statistical or general CI speedup is claimed. Slowest C case
+windows: BoardNavigationDrawer9.261s, ListTasksPage4.583s, BoardListsPage4.138s,
+AppHeader2.993s. Backend optimization beyond existing fast hashing is explicitly
+deferred; meaningful settings/MCP integration tests are retained.
+
+MacroMapper Linux CI on Node24.22.2 passed all214 tests/31 files in47.47s at
+caf7f94. Local Windows24.22.1 repeated two unchanged DiaryPage pagination tests
+hit the existing15s per-case limit (212/214 passed; isolated repeat35/37). Those
+product/test/setup sources have zero diff from merged B; no assertion is weakened
+or timeout raised. Final-head Linux CI remains required, and this local platform
+limitation is reported rather than called a passing local full suite.
 
 The shared browser foundation observed a pre-existing Notoli maximum-update-depth
 route warning. The same journey also passes and emits the warning on baseline
@@ -101,7 +119,19 @@ FullStackTemplate has no env-prod production branch and none is created.
 Infrastructure A promotion118/run42166006596 accepted source54d1743e8cd0beb98dbc7f8daa0c0f87bb59d98f
 with unchanged gateway runtime source6baeaf178811c792639f494a6db202e686a2e1f1;
 all five container identities/start times/restart counts/networks stayed unchanged.
-App promotions are coalesced after C to avoid repeated releases. The documented
+C promotion121 sourcec10d000671ef2ab1cf3666f5837d3347d4c8cc8d/run42173363825
+attempt1 failed before any release/attempt record or barrier. The task benchmark
+left4,381,122,560 bytes free (17.6%), a confirmed failing20% capacity guard
+consistent with the early exit; the original swallowed exception is unavailable.
+Task-only dependency/tool cleanup restored5,106,024,448 bytes versus required
+4,976,633,446 and the guard passes. Production identities/ten public checks stay
+unchanged. Normal pipeline attempt2 is separately tracked; attempt1 is not accepted.
+Do not infer peak release capacity from this narrow guard margin.
+Complete release-diff reconciliation also includes pre-existing reviewed development
+updates ahead of env-prod: Notoli1005 (CodeQL) and1006 (Vite React plugin),
+Macro363 (Vite React plugin),365 (Vitest),366 (Babel parser). These are reviewed
+main dependency maintenance, not pending product features; final full builds/tests
+validate the combined tree. App promotions are coalesced after C to avoid repeated releases. The documented
 app pipeline rebuilds/deploys changed manifests/build inputs; no new release engine
 or advanced rollback feature is introduced.
 
