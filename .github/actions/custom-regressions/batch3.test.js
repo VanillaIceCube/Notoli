@@ -70,7 +70,7 @@ function lifecycle() {
   const github = { rest: { users: { getByUsername: async () => ({ data: bot }) }, pulls: {
     get: async () => ({ data: { head: context.payload.pull_request.head, state: 'open' } }),
     createReplyForReviewComment: async request => { replies.push(request); thread.comments.nodes.push({ author: { login: 'fixture', databaseId: bot.id }, body: request.body }); },
-  }, repos: { compareCommitsWithBasehead: async () => ({ data: { merge_base_commit: { sha: 'old' }, files: [{ filename: 'backend/example.py', status: 'modified', patch: '@@ -1 +1 @@\n-unsafe_call()\n+safe_call()' }] } }), getContent: async () => ({ data: { content: Buffer.from('safe_call()').toString('base64'), encoding: 'base64', size: 11 } }) }, checks: { listForRef: async () => ({ data: { total_count: 1, check_runs: [{ name: 'CodeQL', status: 'completed', conclusion: 'success' }] } }) } },
+  }, repos: { getCombinedStatusForRef: async () => ({ data: { total_count: 0, statuses: [], state: 'pending' } }), compareCommitsWithBasehead: async () => ({ data: { merge_base_commit: { sha: 'old' }, files: [{ filename: 'backend/example.py', status: 'modified', patch: '@@ -1 +1 @@\n-unsafe_call()\n+safe_call()' }] } }), getContent: async () => ({ data: { content: Buffer.from('safe_call()').toString('base64'), encoding: 'base64', size: 11 } }) }, checks: { listForRef: async () => ({ data: { total_count: 1, check_runs: [{ name: 'CodeQL', status: 'completed', conclusion: 'success' }] } }) } },
   graphql: async (query, args) => {
     if (query.startsWith('mutation')) { resolutions.push(args); resolved = true; thread.isResolved = true; return { resolveReviewThread: { thread: { id: 'thread', isResolved: true } } }; }
     if (query.includes('node(id:')) return { node: { isResolved: resolved } };
@@ -127,4 +127,15 @@ test('unrelated replacement text, broad edits, renamed/missing files and nonance
     const h = lifecycle(); h.github.rest.repos.compareCommitsWithBasehead = async () => ({ data });
     await h.run(); assert.equal(h.resolutions.length, 0); assert.equal(h.replies.length, 0);
   }
+});
+
+test('failing, pending, incomplete and unavailable legacy statuses block resolution; other persona findings stay authoritative', async () => {
+  for (const legacy of [{ total_count: 1, state: 'failure', statuses: [{ state: 'failure' }] }, { total_count: 1, state: 'pending', statuses: [{ state: 'pending' }] }, { total_count: 101, state: 'success', statuses: [] }]) {
+    const h = lifecycle(); h.github.rest.repos.getCombinedStatusForRef = async () => ({ data: legacy });
+    await h.run(); assert.equal(h.resolutions.length, 0);
+  }
+  const denied = lifecycle(); denied.github.rest.repos.getCombinedStatusForRef = async () => { throw Object.assign(new Error('denied'), { status: 403 }); };
+  assert.equal((await denied.run()).unavailable, true); assert.equal(denied.resolutions.length, 0);
+  const security = lifecycle(); security.github.rest.checks.listForRef = async () => ({ data: { total_count: 1, check_runs: [{ name: 'AI Security Review / RoboCop security review', status: 'completed', conclusion: 'failure' }] } });
+  await security.run(); assert.equal(security.resolutions.length, 0);
 });

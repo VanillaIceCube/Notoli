@@ -593,7 +593,7 @@ async function publishAiReview({
   });
 
   const { reconcile } = require("./reconcile");
-  await reconcile({ github, context, core, parsed, appSlug });
+  await reconcile({ github, context, core, parsed, appSlug, personaName });
 
   if (event === "REQUEST_CHANGES") {
     core.setFailed(`${personaName} requested changes.`);

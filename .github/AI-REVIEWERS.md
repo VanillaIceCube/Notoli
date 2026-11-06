@@ -47,7 +47,11 @@ and that exact replacement line at the reviewed head. Broader edits, renames and
 nonancestor histories remain open. At most five thread pages and five
 decisions are processed; large/incomplete files or threads are skipped. Resolution
 also requires an outdated resolvable thread, a clean current `APPROVE` with no
-findings/inline comments, and completed non-review checks without failures.
+findings/inline comments, and completed independent checks plus reported legacy commit statuses without failures.
+Only this persona's active check and self-dependent Required CI/Auto Merge
+aggregates are excluded to avoid a dependency cycle; other persona failures still
+block resolution, and all native aggregate/review requirements remain unchanged.
+Missing/denied/incomplete status evidence cannot authorize resolution.
 These predicates support only narrow source replacements, not universal proof
 of arbitrary fixes. Ambiguous or unresolved security findings must remain open.
 

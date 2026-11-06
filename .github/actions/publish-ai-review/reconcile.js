@@ -45,7 +45,7 @@ function replacementLine(patch, citedLine, removed, replacement) {
   return result;
 }
 
-async function reconcileOnce({ github, context, core, parsed, appSlug }) {
+async function reconcileOnce({ github, context, core, parsed, appSlug, personaName = "Fixture" }) {
   const decisions = parsed.reconciliations;
   if (!Array.isArray(decisions) || decisions.length === 0) return;
   const report = { requested: decisions.length, followed_up: 0, resolved: 0, skipped: 0, unavailable: false };
@@ -57,7 +57,7 @@ async function reconcileOnce({ github, context, core, parsed, appSlug }) {
     const graphqlLogin = bot.login.replace(/\[bot\]$/, "");
     const current = async () => {
       const { data } = await github.rest.pulls.get(args);
-      if (data.head.sha !== expected || data.state !== "open" || data.head.repo.full_name !== `${context.repo.owner}/${context.repo.repo}`) throw new Error("stale_or_ineligible_head");
+      if (data.head.sha !== expected || data.state !== "open" || data.head.repo.full_name !== `${context.repo.owner}/${context.repo.repo}` || (data.labels || []).some(l => ["jules", "codex"].includes(l.name))) throw new Error("stale_or_ineligible_head");
     };
     await current();
     let cursor;
@@ -110,8 +110,18 @@ async function reconcileOnce({ github, context, core, parsed, appSlug }) {
         // new findings and uncertain/security evidence can never trigger closure.
         if (parsed.event !== "APPROVE" || !thread.isOutdated || !thread.viewerCanResolve || (parsed.findings || []).length || (parsed.comments || []).length) { report.skipped++; continue; }
         const { data: checks } = await github.rest.checks.listForRef({ ...context.repo, ref: expected, per_page: 100 });
-        const nonReview = checks.check_runs.filter(c => !/Obi-Wan|Lint Eastwood|RoboCop/.test(c.name));
+        const ownChecks = {
+          "Obi-Wan Code-nobi": ["Obi-Wan Code-nobi code review", "AI Code Review / Obi-Wan Code-nobi code review"],
+          "Lint Eastwood": ["Lint Eastwood build sheriff review", "AI Build Sheriff Review / Lint Eastwood build sheriff review"],
+          RoboCop: ["RoboCop security review", "AI Security Review / RoboCop security review"],
+        }[personaName] || [];
+        // These aggregate jobs depend on this very review; their completion is
+        // still a native merge prerequisite, not a prerequisite for own feedback.
+        const selfDependent = ["Required CI", "Auto Merge"];
+        const nonReview = checks.check_runs.filter(c => ![...ownChecks, ...selfDependent].includes(c.name));
         if (!nonReview.length || checks.total_count > 100 || nonReview.some(c => c.status !== "completed" || !["success", "neutral", "skipped"].includes(c.conclusion))) { report.skipped++; continue; }
+        const { data: legacy } = await github.rest.repos.getCombinedStatusForRef({ ...context.repo, ref: expected, per_page: 100 });
+        if (!Number.isSafeInteger(legacy.total_count) || !Array.isArray(legacy.statuses) || legacy.total_count !== legacy.statuses.length || (legacy.total_count > 0 && (legacy.state !== "success" || legacy.statuses.some(s => s.state !== "success")))) { report.skipped++; continue; }
         await current();
         const result = await github.graphql(`mutation($id:ID!) { resolveReviewThread(input:{threadId:$id}) { thread { id isResolved } } }`, { id: thread.id });
         if (result.resolveReviewThread?.thread?.id !== thread.id || result.resolveReviewThread.thread.isResolved !== true) throw new Error("resolution_unconfirmed");
