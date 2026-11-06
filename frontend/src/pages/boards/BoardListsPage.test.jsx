@@ -15,8 +15,10 @@ import {
   fetchBoard as fetchBoardApi,
   updateList,
 } from '../../services/notoliApiClient';
-const mockNavigate = vi.fn();
-const mockUseParams = vi.fn();
+const { mockNavigate, mockUseParams } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+  mockUseParams: vi.fn(),
+}));
 vi.mock('react-router-dom', async () => ({
   ...(await vi.importActual('react-router-dom')),
   useNavigate: () => mockNavigate,

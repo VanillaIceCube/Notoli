@@ -11,8 +11,10 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../services/notoliApiClient';
-const mockNavigate = vi.fn();
-const mockUseLocation = vi.fn();
+const { mockNavigate, mockUseLocation } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+  mockUseLocation: vi.fn(),
+}));
 vi.mock('react-router-dom', async () => ({
   ...(await vi.importActual('react-router-dom')),
   useLocation: () => mockUseLocation(),

@@ -1,7 +1,9 @@
 import { renderWithProviders } from '../test-support/utils';
 import NavigationBridge from './NavigationBridge';
 import { navigate } from '../services/navigationService';
-const mockNavigate = vi.fn();
+const { mockNavigate } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+}));
 vi.mock('react-router-dom', async () => ({
   ...(await vi.importActual('react-router-dom')),
   useNavigate: () => mockNavigate,
