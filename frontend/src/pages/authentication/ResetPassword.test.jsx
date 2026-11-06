@@ -4,69 +4,67 @@ import { renderWithProviders } from '../../test-support/utils';
 import ResetPassword from './ResetPassword';
 import { resetPassword } from '../../services/notoliApiClient';
 import { useNavigate } from 'react-router-dom';
-
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
-  useNavigate: jest.fn(),
+vi.mock('react-router-dom', async () => ({
+  ...(await vi.importActual('react-router-dom')),
+  useNavigate: vi.fn(),
 }));
-
-jest.mock('../../services/notoliApiClient', () => ({
-  resetPassword: jest.fn(),
+vi.mock('../../services/notoliApiClient', () => ({
+  resetPassword: vi.fn(),
 }));
-
 describe('ResetPassword', () => {
-  const mockNavigate = jest.fn();
-
+  const mockNavigate = vi.fn();
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     useNavigate.mockReturnValue(mockNavigate);
   });
-
   test('when reset params are missing, it shows an error and does not call API', async () => {
-    const showSnackbar = jest.fn();
-
+    const showSnackbar = vi.fn();
     renderWithProviders(<ResetPassword showSnackbar={showSnackbar} />, {
       routeEntries: ['/reset-password'],
     });
-
     await userEvent.type(screen.getByLabelText(/new password/i), 'new_password_123!');
     await userEvent.type(screen.getByLabelText(/confirm password/i), 'new_password_123!');
-    await userEvent.click(screen.getByRole('button', { name: /reset password/i }));
-
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /reset password/i,
+      }),
+    );
     expect(resetPassword).not.toHaveBeenCalled();
     expect(showSnackbar).toHaveBeenCalledWith('error', 'Invalid or expired reset link.');
   });
-
   test('when passwords mismatch, it shows an error and does not call API', async () => {
-    const showSnackbar = jest.fn();
-
+    const showSnackbar = vi.fn();
     renderWithProviders(<ResetPassword showSnackbar={showSnackbar} />, {
       routeEntries: ['/reset-password?uid=abc&token=tok'],
     });
-
     await userEvent.type(screen.getByLabelText(/new password/i), 'one');
     await userEvent.type(screen.getByLabelText(/confirm password/i), 'two');
-    await userEvent.click(screen.getByRole('button', { name: /reset password/i }));
-
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /reset password/i,
+      }),
+    );
     expect(resetPassword).not.toHaveBeenCalled();
     expect(showSnackbar).toHaveBeenCalledWith('error', 'Passwords do not match.');
   });
-
   test('when reset succeeds, it shows success and navigates to login', async () => {
     resetPassword.mockResolvedValue({
       ok: true,
-      json: async () => ({ message: 'Password reset successful.' }),
+      json: async () => ({
+        message: 'Password reset successful.',
+      }),
     });
-    const showSnackbar = jest.fn();
-
+    const showSnackbar = vi.fn();
     renderWithProviders(<ResetPassword showSnackbar={showSnackbar} />, {
       routeEntries: ['/reset-password?uid=abc&token=tok'],
     });
-
     await userEvent.type(screen.getByLabelText(/new password/i), 'new_password_123!');
     await userEvent.type(screen.getByLabelText(/confirm password/i), 'new_password_123!');
-    await userEvent.click(screen.getByRole('button', { name: /reset password/i }));
-
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /reset password/i,
+      }),
+    );
     await waitFor(() => {
       expect(resetPassword).toHaveBeenCalledWith({
         uid: 'abc',
@@ -78,8 +76,8 @@ describe('ResetPassword', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
   test('blocks duplicate submissions and recovers after a validation failure', async () => {
-    const showSnackbar = jest.fn();
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const showSnackbar = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     let resolveRequest;
     resetPassword.mockReturnValueOnce(
       new Promise((resolve) => {
@@ -91,18 +89,30 @@ describe('ResetPassword', () => {
     });
     await userEvent.type(screen.getByLabelText('New Password'), 'new-secret');
     await userEvent.type(screen.getByLabelText('Confirm Password'), 'new-secret');
-    await userEvent.click(screen.getByRole('button', { name: 'Reset Password' }));
-    const pendingButton = screen.getByRole('button', { name: 'Resetting...' });
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: 'Reset Password',
+      }),
+    );
+    const pendingButton = screen.getByRole('button', {
+      name: 'Resetting...',
+    });
     expect(pendingButton).toBeDisabled();
     fireEvent.click(pendingButton);
     expect(resetPassword).toHaveBeenCalledTimes(1);
     resolveRequest({
       ok: false,
       status: 400,
-      json: async () => ({ password: ['Validation failed.'] }),
+      json: async () => ({
+        password: ['Validation failed.'],
+      }),
     });
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Reset Password' })).toBeEnabled(),
+      expect(
+        screen.getByRole('button', {
+          name: 'Reset Password',
+        }),
+      ).toBeEnabled(),
     );
     expect(showSnackbar).toHaveBeenCalledWith('error', 'Validation failed.');
     consoleError.mockRestore();

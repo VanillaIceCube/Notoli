@@ -1,6 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-
 import AppHeader from './AppHeader';
 import { renderWithProviders } from '../test-support/utils';
 import { goBackToParent } from '../utils/Navigation';
@@ -12,49 +11,55 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../services/notoliApiClient';
-
-const mockNavigate = jest.fn();
-const mockUseLocation = jest.fn();
-
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
+const { mockNavigate, mockUseLocation } = vi.hoisted(() => ({
+  mockNavigate: vi.fn(),
+  mockUseLocation: vi.fn(),
+}));
+vi.mock('react-router-dom', async () => ({
+  ...(await vi.importActual('react-router-dom')),
   useLocation: () => mockUseLocation(),
   useNavigate: () => mockNavigate,
 }));
-
-jest.mock('../utils/Navigation', () => ({
-  goBackToParent: jest.fn(),
+vi.mock('../utils/Navigation', () => ({
+  goBackToParent: vi.fn(),
 }));
-
-jest.mock('../services/notoliApiClient', () => ({
-  clearAllNotifications: jest.fn(),
-  clearNotification: jest.fn(),
-  fetchNotifications: jest.fn(),
-  markAllNotificationsRead: jest.fn(),
-  markNotificationRead: jest.fn(),
+vi.mock('../services/notoliApiClient', () => ({
+  clearAllNotifications: vi.fn(),
+  clearNotification: vi.fn(),
+  fetchNotifications: vi.fn(),
+  markAllNotificationsRead: vi.fn(),
+  markNotificationRead: vi.fn(),
 }));
-
 describe('AppHeader', () => {
   test('Connected Apps is available from the existing profile menu', async () => {
     renderWithProviders(<AppHeader appBarHeader="Notoli" setDrawerOpen={setDrawerOpen} />);
     await userEvent.click(screen.getByLabelText('user profile'));
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Connected Apps' }));
+    await userEvent.click(
+      screen.getByRole('menuitem', {
+        name: 'Connected Apps',
+      }),
+    );
     expect(mockNavigate).toHaveBeenCalledWith('/connections');
   });
-  const setDrawerOpen = jest.fn();
+  const setDrawerOpen = vi.fn();
   const jsonResponse = (body, ok = true) => ({
     ok,
-    json: jest.fn().mockResolvedValue(body),
+    json: vi.fn().mockResolvedValue(body),
   });
-
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     sessionStorage.clear();
     setNavigate(mockNavigate);
-    mockUseLocation.mockReturnValue({ pathname: '/' });
+    mockUseLocation.mockReturnValue({
+      pathname: '/',
+    });
     fetchNotifications.mockResolvedValue(jsonResponse([]));
-    clearAllNotifications.mockResolvedValue({ ok: true });
-    clearNotification.mockResolvedValue({ ok: true });
+    clearAllNotifications.mockResolvedValue({
+      ok: true,
+    });
+    clearNotification.mockResolvedValue({
+      ok: true,
+    });
     markNotificationRead.mockResolvedValue(
       jsonResponse({
         id: 1,
@@ -64,95 +69,83 @@ describe('AppHeader', () => {
         board_name: 'Shared Board',
       }),
     );
-    markAllNotificationsRead.mockResolvedValue(jsonResponse({ updated: 1 }));
+    markAllNotificationsRead.mockResolvedValue(
+      jsonResponse({
+        updated: 1,
+      }),
+    );
   });
-
   test('when the route is /login, it does not render the app bar', () => {
-    mockUseLocation.mockReturnValue({ pathname: '/login' });
-
+    mockUseLocation.mockReturnValue({
+      pathname: '/login',
+    });
     renderWithProviders(<AppHeader appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
-
     expect(screen.queryByText('Header')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
   });
-
   test('when the route is /register, it does not render the app bar', () => {
-    mockUseLocation.mockReturnValue({ pathname: '/register' });
-
+    mockUseLocation.mockReturnValue({
+      pathname: '/register',
+    });
     renderWithProviders(<AppHeader appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
-
     expect(screen.queryByText('Header')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
   });
-
   test('when the route is /forgot-password, it does not render the app bar', () => {
-    mockUseLocation.mockReturnValue({ pathname: '/forgot-password' });
-
+    mockUseLocation.mockReturnValue({
+      pathname: '/forgot-password',
+    });
     renderWithProviders(<AppHeader appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
-
     expect(screen.queryByText('Header')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
   });
-
   test('when the route is /reset-password, it does not render the app bar', () => {
-    mockUseLocation.mockReturnValue({ pathname: '/reset-password' });
-
+    mockUseLocation.mockReturnValue({
+      pathname: '/reset-password',
+    });
     renderWithProviders(<AppHeader appBarHeader="Header" setDrawerOpen={setDrawerOpen} />);
-
     expect(screen.queryByText('Header')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('menu')).not.toBeInTheDocument();
   });
-
   test('when the path includes /list, it shows the back button', () => {
-    mockUseLocation.mockReturnValue({ pathname: '/boards/1/list/2' });
-
+    mockUseLocation.mockReturnValue({
+      pathname: '/boards/1/list/2',
+    });
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     expect(screen.getByLabelText('back button')).toBeInTheDocument();
   });
-
   test('when the path does not include /list, it does not show the back button', () => {
-    mockUseLocation.mockReturnValue({ pathname: '/boards/1' });
-
+    mockUseLocation.mockReturnValue({
+      pathname: '/boards/1',
+    });
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     expect(screen.queryByLabelText('back button')).not.toBeInTheDocument();
   });
-
   test('when the back button is clicked, it calls goBackToParent', async () => {
-    mockUseLocation.mockReturnValue({ pathname: '/boards/1/list/2' });
-
+    mockUseLocation.mockReturnValue({
+      pathname: '/boards/1/list/2',
+    });
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     await userEvent.click(screen.getByLabelText('back button'));
-
     expect(goBackToParent).toHaveBeenCalledWith('/boards/1/list/2', mockNavigate);
   });
-
   test('when the menu icon is clicked, it toggles setDrawerOpen', async () => {
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     await userEvent.click(screen.getByLabelText('menu'));
-
     expect(setDrawerOpen).toHaveBeenCalled();
     const [updater] = setDrawerOpen.mock.calls[0];
     expect(typeof updater).toBe('function');
   });
-
   test('when the user profile icon is clicked, it opens the profile menu', async () => {
     sessionStorage.setItem('username', 'judea');
     sessionStorage.setItem('email', 'judea@example.com');
-
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     await userEvent.click(screen.getByLabelText('user profile'));
-
     expect(screen.getByTestId('menu')).toBeInTheDocument();
     expect(screen.getByText('Logout')).toBeInTheDocument();
     expect(screen.getByText('judea')).toBeInTheDocument();
     expect(screen.getByText('judea@example.com')).toBeInTheDocument();
   });
-
   test('when notifications are unread, it shows a badge and notification panel', async () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     fetchNotifications.mockResolvedValue(
@@ -167,31 +160,27 @@ describe('AppHeader', () => {
         },
       ]),
     );
-
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     expect(await screen.findByText('1')).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText('notifications'));
-
     expect(screen.getByText('Notifications')).toBeInTheDocument();
     expect(screen.getByText('collaborator created "Plan".')).toBeInTheDocument();
     expect(screen.getByText('Shared Board · Ideas')).toBeInTheDocument();
     expect(screen.queryByText('collaborator created "Plan" in Ideas.')).toBeNull();
     expect(screen.queryByText('New note in Shared Board')).toBeNull();
-    expect(screen.getByRole('button', { name: /clear notification/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: /clear notification/i,
+      }),
+    ).toBeInTheDocument();
   });
-
   test('when there are no notifications, it shows the empty state', async () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
-
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     await waitFor(() => expect(fetchNotifications).toHaveBeenCalledWith('ACCESS'));
     await userEvent.click(screen.getByLabelText('notifications'));
-
     expect(screen.getByText('No notifications yet.')).toBeInTheDocument();
   });
-
   test('when a notification is cleared, it removes the notification from the panel', async () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     fetchNotifications.mockResolvedValue(
@@ -205,20 +194,23 @@ describe('AppHeader', () => {
         },
       ]),
     );
-
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     await screen.findByText('1');
     await userEvent.click(screen.getByLabelText('notifications'));
-
-    await userEvent.click(screen.getByRole('button', { name: /clear notification/i }));
-
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /clear notification/i,
+      }),
+    );
     expect(clearNotification).toHaveBeenCalledWith(1, 'ACCESS');
     await waitFor(() =>
-      expect(screen.queryByRole('button', { name: /clear notification/i })).toBeNull(),
+      expect(
+        screen.queryByRole('button', {
+          name: /clear notification/i,
+        }),
+      ).toBeNull(),
     );
   });
-
   test('when a notification row is clicked, it marks read and navigates to the target path', async () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     fetchNotifications.mockResolvedValue(
@@ -245,17 +237,13 @@ describe('AppHeader', () => {
         target_path: '/board/12/list/34',
       }),
     );
-
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     await screen.findByText('1');
     await userEvent.click(screen.getByLabelText('notifications'));
     await userEvent.click(screen.getByText('collaborator added "Plan".'));
-
     expect(markNotificationRead).toHaveBeenCalledWith(1, 'ACCESS');
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/board/12/list/34'));
   });
-
   test('when mark all read is clicked, it updates all notifications', async () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     fetchNotifications.mockResolvedValue(
@@ -276,17 +264,21 @@ describe('AppHeader', () => {
         },
       ]),
     );
-
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     expect(await screen.findByText('2')).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText('notifications'));
-    await userEvent.click(screen.getByRole('button', { name: /mark all read/i }));
-
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /mark all read/i,
+      }),
+    );
     expect(markAllNotificationsRead).toHaveBeenCalledWith('ACCESS');
-    expect(await screen.findByRole('button', { name: /clear all/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', {
+        name: /clear all/i,
+      }),
+    ).toBeInTheDocument();
   });
-
   test('when all notifications are read, Clear all removes them from the panel', async () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     fetchNotifications.mockResolvedValue(
@@ -300,52 +292,45 @@ describe('AppHeader', () => {
         },
       ]),
     );
-
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     await userEvent.click(screen.getByLabelText('notifications'));
-    await userEvent.click(await screen.findByRole('button', { name: /clear all/i }));
-
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: /clear all/i,
+      }),
+    );
     expect(clearAllNotifications).toHaveBeenCalledWith('ACCESS');
     expect(await screen.findByText('No notifications yet.')).toBeInTheDocument();
   });
-
   test('when no profile info exists, it falls back to username + username@gmail.com', async () => {
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     await userEvent.click(screen.getByLabelText('user profile'));
-
     expect(screen.getByText('username')).toBeInTheDocument();
     expect(screen.getByText('username@gmail.com')).toBeInTheDocument();
   });
-
   test('when sessionStorage reads throw, it still renders fallback profile values', async () => {
-    const getItem = jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('blocked');
     });
-
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     await userEvent.click(screen.getByLabelText('user profile'));
-
     expect(screen.getByText('username')).toBeInTheDocument();
     expect(screen.getByText('username@gmail.com')).toBeInTheDocument();
-
     getItem.mockRestore();
   });
-
   test('when Logout is clicked, it clears tokens and redirects to /login', async () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
     sessionStorage.setItem('username', 'judea');
     sessionStorage.setItem('email', 'judea@example.com');
     window.history.replaceState({}, '', '/');
-
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-
     await userEvent.click(screen.getByLabelText('user profile'));
-    await userEvent.click(screen.getByRole('menuitem', { name: /logout/i }));
-
+    await userEvent.click(
+      screen.getByRole('menuitem', {
+        name: /logout/i,
+      }),
+    );
     expect(sessionStorage.getItem('accessToken')).toBeNull();
     expect(sessionStorage.getItem('refreshToken')).toBeNull();
     expect(sessionStorage.getItem('username')).toBeNull();
@@ -354,14 +339,21 @@ describe('AppHeader', () => {
       severity: 'success',
       message: 'Logout Successful :)',
     });
-    expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
+    expect(mockNavigate).toHaveBeenCalledWith('/login', {
+      replace: true,
+    });
   });
   test.each(['network', 'malformed'])(
     'retries a failed load without reporting an empty inbox (%s)',
     async (failure) => {
       sessionStorage.setItem('accessToken', 'access');
       if (failure === 'network') fetchNotifications.mockRejectedValueOnce(new Error('offline'));
-      else fetchNotifications.mockResolvedValueOnce(jsonResponse({ invalid: true }));
+      else
+        fetchNotifications.mockResolvedValueOnce(
+          jsonResponse({
+            invalid: true,
+          }),
+        );
       fetchNotifications.mockResolvedValueOnce(jsonResponse([]));
       renderWithProviders(<AppHeader appBarHeader="Notoli" setDrawerOpen={setDrawerOpen} />);
       await userEvent.click(screen.getByLabelText('notifications'));
@@ -369,7 +361,11 @@ describe('AppHeader', () => {
         await screen.findByText('Notifications are unavailable right now.'),
       ).toBeInTheDocument();
       expect(screen.queryByText('No notifications yet.')).not.toBeInTheDocument();
-      await userEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: 'Retry',
+        }),
+      );
       expect(await screen.findByText('No notifications yet.')).toBeInTheDocument();
       expect(fetchNotifications).toHaveBeenCalledTimes(2);
     },
@@ -377,9 +373,22 @@ describe('AppHeader', () => {
   test('keeps failed clear actions visible and allows retry', async () => {
     sessionStorage.setItem('accessToken', 'access');
     fetchNotifications.mockResolvedValue(
-      jsonResponse([{ id: 1, title: 'Parity notice', message: 'Parity message', is_read: false }]),
+      jsonResponse([
+        {
+          id: 1,
+          title: 'Parity notice',
+          message: 'Parity message',
+          is_read: false,
+        },
+      ]),
     );
-    clearNotification.mockResolvedValueOnce({ ok: false }).mockResolvedValueOnce({ ok: true });
+    clearNotification
+      .mockResolvedValueOnce({
+        ok: false,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+      });
     renderWithProviders(<AppHeader appBarHeader="Notoli" setDrawerOpen={setDrawerOpen} />);
     await userEvent.click(screen.getByLabelText('notifications'));
     await screen.findByText('Parity message');
@@ -406,12 +415,17 @@ describe('AppHeader', () => {
       );
       markNotificationRead.mockResolvedValue(
         failure === 'http'
-          ? { ok: false }
+          ? {
+              ok: false,
+            }
           : {
               ok: true,
               json: async () => {
                 if (failure === 'json') throw new Error('Invalid JSON');
-                return { id: 99, is_read: true };
+                return {
+                  id: 99,
+                  is_read: true,
+                };
               },
             },
       );
@@ -419,7 +433,11 @@ describe('AppHeader', () => {
       await userEvent.click(screen.getByLabelText('notifications'));
       await userEvent.click(await screen.findByText('Parity message'));
       expect(await screen.findByText('Could not update that notification.')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Mark all read' })).toBeEnabled();
+      expect(
+        screen.getByRole('button', {
+          name: 'Mark all read',
+        }),
+      ).toBeEnabled();
       expect(mockNavigate).not.toHaveBeenCalledWith('/must-not-navigate');
     },
   );
@@ -444,16 +462,36 @@ describe('AppHeader', () => {
     await userEvent.click(screen.getByLabelText('notifications'));
     await userEvent.click(await screen.findByText('Parity message'));
     expect(screen.getByLabelText('Clear notification')).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Mark all read' })).toBeDisabled();
+    expect(
+      screen.getByRole('button', {
+        name: 'Mark all read',
+      }),
+    ).toBeDisabled();
     fireEvent.click(screen.getByLabelText('Clear notification'));
     expect(clearNotification).not.toHaveBeenCalled();
-    resolveJson({ ...notification, is_read: true });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Clear all' })).toBeEnabled());
+    resolveJson({
+      ...notification,
+      is_read: true,
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {
+          name: 'Clear all',
+        }),
+      ).toBeEnabled(),
+    );
   });
   test('blocks item actions while a bulk clear is pending and preserves records on failure', async () => {
     sessionStorage.setItem('accessToken', 'access');
     fetchNotifications.mockResolvedValue(
-      jsonResponse([{ id: 1, title: 'Parity notice', message: 'Parity message', is_read: true }]),
+      jsonResponse([
+        {
+          id: 1,
+          title: 'Parity notice',
+          message: 'Parity message',
+          is_read: true,
+        },
+      ]),
     );
     let resolveClear;
     clearAllNotifications.mockReturnValueOnce(
@@ -463,11 +501,21 @@ describe('AppHeader', () => {
     );
     renderWithProviders(<AppHeader appBarHeader="Notoli" setDrawerOpen={setDrawerOpen} />);
     await userEvent.click(screen.getByLabelText('notifications'));
-    await userEvent.click(await screen.findByRole('button', { name: 'Clear all' }));
+    await userEvent.click(
+      await screen.findByRole('button', {
+        name: 'Clear all',
+      }),
+    );
     expect(screen.getByLabelText('Clear notification')).toBeDisabled();
-    resolveClear({ ok: false });
+    resolveClear({
+      ok: false,
+    });
     expect(await screen.findByText('Could not clear notifications.')).toBeInTheDocument();
     expect(screen.getByText('Parity message')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Clear all' })).toBeEnabled();
+    expect(
+      screen.getByRole('button', {
+        name: 'Clear all',
+      }),
+    ).toBeEnabled();
   });
 });

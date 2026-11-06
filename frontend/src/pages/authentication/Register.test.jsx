@@ -4,37 +4,35 @@ import { renderWithProviders } from '../../test-support/utils';
 import Register from './Register';
 import { register } from '../../services/notoliApiClient';
 import { useNavigate } from 'react-router-dom';
-
-jest.setTimeout(15000);
-
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
-  useNavigate: jest.fn(),
+vi.setConfig({
+  testTimeout: 15000,
+});
+vi.mock('react-router-dom', async () => ({
+  ...(await vi.importActual('react-router-dom')),
+  useNavigate: vi.fn(),
 }));
-
-jest.mock('../../services/notoliApiClient', () => ({
-  register: jest.fn(),
+vi.mock('../../services/notoliApiClient', () => ({
+  register: vi.fn(),
 }));
-
 describe('Register', () => {
-  const mockNavigate = jest.fn();
-
+  const mockNavigate = vi.fn();
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     useNavigate.mockReturnValue(mockNavigate);
     sessionStorage.clear();
   });
-
   test('when rendered, it shows email/username/password inputs and submit button', () => {
-    renderWithProviders(<Register showSnackbar={jest.fn()} />);
-
+    renderWithProviders(<Register showSnackbar={vi.fn()} />);
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /register/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: /register/i,
+      }),
+    ).toBeInTheDocument();
   });
-
   test('when registration succeeds, it stores tokens, navigates to board, and shows success', async () => {
     register.mockResolvedValue({
       ok: true,
@@ -47,17 +45,17 @@ describe('Register', () => {
         board_id: 12,
       }),
     });
-
-    const showSnackbar = jest.fn();
-
+    const showSnackbar = vi.fn();
     renderWithProviders(<Register showSnackbar={showSnackbar} />);
-
     await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText(/username/i), 'test_username');
     await userEvent.type(screen.getByLabelText('Password'), 'test_password');
     await userEvent.type(screen.getByLabelText(/confirm password/i), 'test_password');
-    await userEvent.click(screen.getByRole('button', { name: /register/i }));
-
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /register/i,
+      }),
+    );
     await waitFor(() => {
       expect(register).toHaveBeenCalledWith({
         email: 'test_email@example.com',
@@ -65,37 +63,35 @@ describe('Register', () => {
         password: 'test_password',
       });
     });
-
     await waitFor(() => {
       expect(showSnackbar).toHaveBeenCalledWith('success', 'Account created! Welcome to Notoli!');
     });
-
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/board/12');
     });
-
     expect(sessionStorage.getItem('accessToken')).toBe('access-token');
     expect(sessionStorage.getItem('refreshToken')).toBe('refresh-token');
   });
-
   test('when registration fails, it shows the server error', async () => {
     register.mockResolvedValue({
       ok: false,
       status: 400,
-      json: async () => ({ error: 'Email already exists.' }),
+      json: async () => ({
+        error: 'Email already exists.',
+      }),
     });
-
-    const showSnackbar = jest.fn();
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
-
+    const showSnackbar = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       renderWithProviders(<Register showSnackbar={showSnackbar} />);
-
       await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
       await userEvent.type(screen.getByLabelText('Password'), 'test_password');
       await userEvent.type(screen.getByLabelText(/confirm password/i), 'test_password');
-      await userEvent.click(screen.getByRole('button', { name: /register/i }));
-
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /register/i,
+        }),
+      );
       await waitFor(() => {
         expect(showSnackbar).toHaveBeenCalledWith('error', 'Email already exists.');
       });
@@ -103,21 +99,20 @@ describe('Register', () => {
       consoleError.mockRestore();
     }
   });
-
   test('when registration fails due to a network error, it shows a network error snackbar', async () => {
     register.mockRejectedValue(new TypeError('NetworkError when attempting to fetch resource.'));
-
-    const showSnackbar = jest.fn();
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
-
+    const showSnackbar = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       renderWithProviders(<Register showSnackbar={showSnackbar} />);
-
       await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
       await userEvent.type(screen.getByLabelText('Password'), 'test_password');
       await userEvent.type(screen.getByLabelText(/confirm password/i), 'test_password');
-      await userEvent.click(screen.getByRole('button', { name: /register/i }));
-
+      await userEvent.click(
+        screen.getByRole('button', {
+          name: /register/i,
+        }),
+      );
       await waitFor(() => {
         expect(showSnackbar).toHaveBeenCalledWith('error', 'Network error :(');
       });
@@ -125,44 +120,60 @@ describe('Register', () => {
       consoleError.mockRestore();
     }
   });
-
   test('when passwords do not match, it shows an error and does not call register', async () => {
-    const showSnackbar = jest.fn();
-
+    const showSnackbar = vi.fn();
     renderWithProviders(<Register showSnackbar={showSnackbar} />);
-
     await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
     await userEvent.type(screen.getByLabelText('Password'), 'test_password');
     await userEvent.type(screen.getByLabelText(/confirm password/i), 'different_password');
-    await userEvent.click(screen.getByRole('button', { name: /register/i }));
-
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /register/i,
+      }),
+    );
     expect(register).not.toHaveBeenCalled();
     expect(showSnackbar).toHaveBeenCalledWith('error', 'Passwords do not match.');
   });
   test('blocks duplicate submissions and recovers after a validation failure', async () => {
-    const showSnackbar = jest.fn();
-    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const showSnackbar = vi.fn();
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     let resolveRequest;
     register.mockReturnValueOnce(
       new Promise((resolve) => {
         resolveRequest = resolve;
       }),
     );
-    renderWithProviders(<Register showSnackbar={showSnackbar} />, { routeEntries: ['/register'] });
+    renderWithProviders(<Register showSnackbar={showSnackbar} />, {
+      routeEntries: ['/register'],
+    });
     await userEvent.type(screen.getByLabelText('Email'), 'mapper@example.com');
     await userEvent.type(screen.getByLabelText('Password'), 'secret');
     await userEvent.type(screen.getByLabelText('Confirm Password'), 'secret');
-    await userEvent.click(screen.getByRole('button', { name: 'Register' }));
-    const pendingButton = screen.getByRole('button', { name: 'Registering...' });
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: 'Register',
+      }),
+    );
+    const pendingButton = screen.getByRole('button', {
+      name: 'Registering...',
+    });
     expect(pendingButton).toBeDisabled();
     fireEvent.click(pendingButton);
     expect(register).toHaveBeenCalledTimes(1);
     resolveRequest({
       ok: false,
       status: 400,
-      json: async () => ({ password: ['Validation failed.'] }),
+      json: async () => ({
+        password: ['Validation failed.'],
+      }),
     });
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Register' })).toBeEnabled());
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {
+          name: 'Register',
+        }),
+      ).toBeEnabled(),
+    );
     expect(showSnackbar).toHaveBeenCalledWith('error', 'Validation failed.');
     consoleError.mockRestore();
   });

@@ -3,7 +3,7 @@
 Production release ownership: use the [app-only release/recovery guide](../deploy/production/README.md).
 
 The Notoli frontend is a Vite single-page app with React Router and Material UI.
-Standalone Jest and Babel run the existing tests; ESLint 10 uses
+Vitest and jsdom run the existing tests; ESLint 10 uses
 `eslint.config.mjs` and compatible React, hooks, accessibility, and Testing Library
 plugins. Create React App and its incompatible ESLint 8 peer graph are removed.
 
@@ -148,7 +148,7 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart f
 
 ```bash
 cd frontend
-npm test -- --watchAll=false
+npm test
 npm run build
 npm run lint
 npm run format
@@ -156,7 +156,7 @@ npm run format
 
 `npm start` runs Vite on port 3000. `npm run build` first runs strict lint,
 then generates `build/` for the existing Nginx image. CI runs both the full
-Jest suite and this production build. JSX-bearing source files use `.jsx`;
+Vitest suite and this production build. JSX-bearing source files use `.jsx`;
 extensionless imports continue to resolve normally. Local `.env` API settings
 are loaded by Vite, and Docker's `HOST`/`CHOKIDAR_USEPOLLING` settings retain
 the existing development bind and polling behavior.
@@ -189,13 +189,7 @@ versions, regenerate the lockfile and repeat those checks. Canonical rollout:
 
 Notoli also overrides `glob@>=9 <14.0.2` to `^14.0.2` for
 [GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4).
-The lockfile resolves glob 14.0.3 for Jest and Babel's test-exclude, eliminating
-both glob 13 and nested glob 10 without downgrading Jest/Babel. Glob 14 retains
-the sync/async traversal calls used here and adopts minimatch 11. Run Jest with
-`npm test -- --watchAll=false --runInBand --coverage` to exercise test-exclude
-and coverage file discovery. GitHub's runtime classification for minimatch
-reflects the existing dependency placement; production serves the built static
-assets. The fixed follow-redirects dependency remains unchanged.
+Jest/Babel and their glob/deepmerge test-only graph were removed by the Vitest migration. Keep lockfile updates coupled to supported lint/test dependencies.
 
 ## Authentication and notification reliability
 
@@ -211,3 +205,45 @@ remain application-specific.
 Notifications expose Retry and retain failed actions. Item/bulk controls disable
 overlapping actions through response parsing. Failed/malformed mark-read responses
 keep the inbox open instead of navigating. See [the audit](../docs/AUTH-PARITY.md).
+
+## Development dependency reproducibility
+
+Development images pin reviewed multi-platform Node 26 and Miniforge 26.9.4-0
+registry digests. Production Dockerfiles and the independent release engine are
+unchanged by this development-image policy. Refresh tags/digests together after
+registry verification and a disposable build/configuration check.
+
+The frontend development entrypoint hashes both `package.json` and
+`package-lock.json` inside its persistent `node_modules` volume. Fresh volumes
+install with `npm ci`; unchanged restarts reuse dependencies; changing either
+manifest reinstalls. Missing manifests or a failed installation stop startup and
+retry on the next invocation. Use one volume per checkout and restart after edits.
+Run `node --test tests/dev-dependencies.test.cjs` from the repository root for the
+credential-free mocked lifecycle/exit-status regression. Compose configuration
+checks do not deploy or touch application data.
+
+## Vitest and React Router acceptance
+
+`npm test` runs all existing frontend assertions in Vitest 5/jsdom. JSX test files
+use `.jsx`, mocks use the runner's native ESM API, and Jest/Babel test-only packages
+are removed. This eliminates Jest's unpatched deepmerge path and allows supported
+React Router 7.18.5 (both reported Router advisories are fixed in >=7.18.0).
+Vite development/build was already present; its `build/` output and legacy
+`REACT_APP_API_BASE_URL` behavior are retained. No SSR server is used here.
+
+Use `npm ci`, `npm run lint:strict`, `npm run format:check`, `npm test`, and
+`npm run build` from frontend. CI bounds test workers to two; use
+`npm test -- --maxWorkers=1 --reporter=json --outputFile=vitest-results.json`
+for serial profiling. Keep isolated test environments and every domain/auth
+assertion. The ESLint configuration regression now imports ESLint directly in a
+Node test environment instead of launching a second Node runtime.
+
+Independent pre-change VM baseline at 7f1db4c: backend 190 tests (one existing
+skip), 24.256s Django total; frontend 32 suites/301 tests, 72.746s Jest time.
+Both used 0.75 CPU/768 MiB, synthetic settings, no production mounts/network
+and cold test caches; dependency install time was recorded separately. Comparable
+post-change measurements are required before claiming a performance improvement.
+Backend already uses a test-scoped fast password hasher; production hashing stays
+unchanged. Slow settings subprocess/MCP tests remain meaningful integration coverage.
+
+Supported test/build runtimes are Node24.15+ within24.x or Node26.x. jsdom30 explicitly excludes the end-of-life Node25 line; do not treat >=24 as universal support. Use the same supported runtime for before/after timings.

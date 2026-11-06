@@ -2,6 +2,15 @@
 
 ## 2026-11-05
 ### Added
+- Shared development dependency lifecycle regression for fresh, unchanged, changed and failed installs.
+### Fixed
+- Upgrade React Router past both reported advisories and remove the unpatched Jest/deepmerge dependency path.
+### Changed
+- Complete frontend Vitest migration with all existing assertions preserved; retain Vite routing/build compatibility.
+- Pin development Node/Miniforge multi-platform image digests and refresh frontend dependencies only when manifests change.
+
+## 2026-11-05
+### Added
 - Immutable workflow-policy and bounded changed-version malware regression coverage.
 - Evidence-based Python malware scanning decision and shared release upgrade regression.
 ### Fixed
