@@ -15,6 +15,10 @@ Firefox 121, and Safari 17. The migration follows MacroMapper PRs #103 and #130.
 
 UI styling conventions live in [`STYLE_GUIDE.md`](STYLE_GUIDE.md).
 
+Menu dismissal and mobile refresh lifecycle/regression details are documented in
+[`docs/UI-BUG-BATCH-915-847.md`](../docs/UI-BUG-BATCH-915-847.md). The browser visual
+journeys use synthetic intercepted API responses and never customer accounts.
+
 ## 🧭 App Routes
 
 - `/` redirects authenticated users to their first board when one exists
