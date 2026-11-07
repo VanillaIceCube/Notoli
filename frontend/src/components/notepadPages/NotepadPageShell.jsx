@@ -11,10 +11,11 @@ export default function NotepadPageShell({
   pullDistance,
   refreshReady,
   isRefreshing,
+  pullContentOffset,
   children,
 }) {
-  const showLoading = loading && !hasContent && !isRefreshing;
-  const showContent = hasContent || isRefreshing || (!loading && !error);
+  const showLoading = loading && !hasContent;
+  const showContent = hasContent || (!loading && !error);
 
   return (
     <Container
@@ -26,12 +27,17 @@ export default function NotepadPageShell({
         sx={{
           px: 1.5,
           pt: 1.5,
-          pb: 1.5,
+          pb: `calc(12px + ${pullContentOffset}px)`,
           width: '100%',
           background: 'var(--secondary-background-color)',
         }}
       >
-        <Box>
+        <Box
+          sx={{
+            transform: `translateY(${pullContentOffset}px)`,
+            transition: pullDistance > 0 ? 'none' : 'transform 180ms ease-out',
+          }}
+        >
           <PullToRefreshIndicator
             pullDistance={pullDistance}
             refreshReady={refreshReady}

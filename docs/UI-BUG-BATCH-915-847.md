@@ -1,3 +1,5 @@
+> **Historical / rejected acceptance:** The owner reported site-wide regressions after this batch and requested its product changes be reverted. This document records the original implementation and limited test evidence; it does not establish current acceptance or causation. Do not automatically reapply the batch. The original minor defects may return.
+
 # Menu dismissal and pull-to-refresh
 
 ## Scope and causes

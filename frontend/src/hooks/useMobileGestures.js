@@ -33,21 +33,9 @@ function isInteractiveTarget(target) {
   );
 }
 
-function isInsideScrolledContainer(target) {
-  for (
-    let element = target;
-    element && element !== document.body;
-    element = element.parentElement
-  ) {
-    if (element.scrollTop > 0) return true;
-  }
-  return false;
-}
-
-export function usePullToRefresh({ enabled = true, active = true, onRefresh }) {
+export function usePullToRefresh({ enabled = true, onRefresh }) {
   const touchStartRef = useRef(null);
   const pullDistanceRef = useRef(0);
-  const refreshingRef = useRef(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -60,26 +48,14 @@ export function usePullToRefresh({ enabled = true, active = true, onRefresh }) {
 
   const onTouchStart = useCallback(
     (event) => {
-      if (
-        !enabled ||
-        !active ||
-        refreshingRef.current ||
-        !onRefresh ||
-        !isMobileTouchViewport() ||
-        isInteractiveTarget(event.target)
-      ) {
+      if (!enabled || !onRefresh || !isMobileTouchViewport() || isInteractiveTarget(event.target)) {
         touchStartRef.current = null;
         resetPull();
         return;
       }
 
       const touch = event.touches?.[0];
-      if (
-        !touch ||
-        event.touches.length !== 1 ||
-        window.scrollY > 0 ||
-        isInsideScrolledContainer(event.target)
-      ) {
+      if (!touch || window.scrollY > 0) {
         touchStartRef.current = null;
         resetPull();
         return;
@@ -87,7 +63,7 @@ export function usePullToRefresh({ enabled = true, active = true, onRefresh }) {
 
       touchStartRef.current = { x: touch.clientX, y: touch.clientY };
     },
-    [active, enabled, onRefresh, resetPull],
+    [enabled, onRefresh, resetPull],
   );
 
   const onTouchMove = useCallback(
@@ -98,15 +74,7 @@ export function usePullToRefresh({ enabled = true, active = true, onRefresh }) {
 
       const deltaX = touch.clientX - start.x;
       const deltaY = touch.clientY - start.y;
-      if (
-        !enabled ||
-        !active ||
-        event.touches.length !== 1 ||
-        window.scrollY > 0 ||
-        deltaY <= 0 ||
-        Math.abs(deltaX) > MAX_HORIZONTAL_DRIFT_PX
-      ) {
-        touchStartRef.current = null;
+      if (deltaY <= 0 || Math.abs(deltaX) > MAX_HORIZONTAL_DRIFT_PX) {
         resetPull();
         return;
       }
@@ -114,66 +82,33 @@ export function usePullToRefresh({ enabled = true, active = true, onRefresh }) {
       event.preventDefault?.();
       updatePullDistance(Math.min(deltaY, PULL_REFRESH_PX));
     },
-    [active, enabled, resetPull, updatePullDistance],
+    [resetPull, updatePullDistance],
   );
 
-  const onTouchCancel = useCallback(() => {
-    touchStartRef.current = null;
-    resetPull();
-  }, [resetPull]);
-
   const onTouchEnd = useCallback(() => {
-    const shouldRefresh =
-      active && enabled && !refreshingRef.current && pullDistanceRef.current >= PULL_REFRESH_PX;
+    const shouldRefresh = pullDistanceRef.current >= PULL_REFRESH_PX;
     touchStartRef.current = null;
     resetPull();
 
     if (shouldRefresh) {
-      refreshingRef.current = true;
       setIsRefreshing(true);
-      // Pages own their error UI; always settle the gesture, even on a throw.
-      const refresh = async () => {
-        try {
-          await onRefresh();
-        } catch {
-          // The refresh callback reports its own failure to the page.
-        } finally {
-          refreshingRef.current = false;
-          setIsRefreshing(false);
-        }
-      };
-      void refresh();
+      Promise.resolve(onRefresh()).finally(() => setIsRefreshing(false));
     }
-  }, [active, enabled, onRefresh, resetPull]);
-
-  useEffect(() => {
-    if (!active || !enabled) onTouchCancel();
-  }, [active, enabled, onTouchCancel]);
-
-  useEffect(() => {
-    if (!active || (!enabled && !isRefreshing) || !isMobileTouchViewport()) return;
-    // The custom indicator owns refresh; prevent the browser's competing bounce.
-    const root = document.documentElement;
-    const previous = root.style.overscrollBehaviorY;
-    root.style.overscrollBehaviorY = 'none';
-    return () => {
-      root.style.overscrollBehaviorY = previous;
-    };
-  }, [active, enabled, isRefreshing]);
+  }, [onRefresh, resetPull]);
 
   useEffect(() => {
     window.addEventListener('touchstart', onTouchStart, { passive: true });
     window.addEventListener('touchmove', onTouchMove, { passive: false });
     window.addEventListener('touchend', onTouchEnd, { passive: true });
-    window.addEventListener('touchcancel', onTouchCancel, { passive: true });
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true });
 
     return () => {
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchmove', onTouchMove);
       window.removeEventListener('touchend', onTouchEnd);
-      window.removeEventListener('touchcancel', onTouchCancel);
+      window.removeEventListener('touchcancel', onTouchEnd);
     };
-  }, [onTouchCancel, onTouchEnd, onTouchMove, onTouchStart]);
+  }, [onTouchEnd, onTouchMove, onTouchStart]);
 
   return {
     isRefreshing,

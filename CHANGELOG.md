@@ -1,3 +1,9 @@
+## 2026-11-07
+
+### Changed
+
+- Revert the product changes from PR #1019 at the owner's request after reported site-wide regressions. Restore the previous menu, gesture, scrolling and navigation behavior while preserving the security-alert repair and current user data. The following original batch entry is historical and its acceptance is withdrawn; do not automatically reapply it.
+
 # Changelog
 
 ## 2026-11-06

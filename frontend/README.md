@@ -15,10 +15,6 @@ Firefox 121, and Safari 17. The migration follows MacroMapper PRs #103 and #130.
 
 UI styling conventions live in [`STYLE_GUIDE.md`](STYLE_GUIDE.md).
 
-Menu dismissal and mobile refresh lifecycle/regression details are documented in
-[`docs/UI-BUG-BATCH-915-847.md`](../docs/UI-BUG-BATCH-915-847.md). The browser visual
-journeys use synthetic intercepted API responses and never customer accounts.
-
 ## 🧭 App Routes
 
 - `/` redirects authenticated users to their first board when one exists
@@ -300,3 +296,7 @@ Add product journeys under `e2e/` using these isolated users and existing APIs.
 Keep authentication journeys shared; domain fixtures belong to their app. Do not
 add real customer accounts, external email or paid-model requests. Infrastructure
 has no browser application and retains its ingress/Docker protocol suites.
+
+## Product-batch rollback
+
+The product changes from PR #1019 were reverted at the owner's request after reported site-wide regressions. Menu dismissal, gestures, scrolling and route behavior return to the previously accepted implementation. The original minor visual defects may recur. [Original batch evidence](../docs/UI-BUG-BATCH-915-847.md) is retained as historical, rejected acceptance; future work must reproduce the issues and validate broader app behavior before another rollout. Security and release safeguards are unchanged.

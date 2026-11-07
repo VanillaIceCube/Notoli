@@ -38,10 +38,9 @@ function touchEvent(type, { target = document.body, x = 0, y = 0 } = {}) {
   event.preventDefault = vi.fn();
   return event;
 }
-function PullHarness({ enabled = true, active = true, onRefresh = vi.fn() }) {
+function PullHarness({ enabled = true, onRefresh = vi.fn() }) {
   const { isRefreshing, pullDistance, refreshReady } = usePullToRefresh({
     enabled,
-    active,
     onRefresh,
   });
   return (
@@ -60,118 +59,6 @@ describe('usePullToRefresh', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setTouchViewport();
-  });
-  function pull(type = 'touchend') {
-    window.dispatchEvent(touchEvent('touchstart'));
-    window.dispatchEvent(touchEvent('touchmove', { y: 90 }));
-    window.dispatchEvent(touchEvent(type));
-  }
-
-  test('cancelled gestures never refresh and restore the indicator', () => {
-    const onRefresh = vi.fn();
-    render(<PullHarness onRefresh={onRefresh} />);
-    act(() => pull('touchcancel'));
-    expect(onRefresh).not.toHaveBeenCalled();
-    expect(screen.getByTestId('distance')).toHaveTextContent('0');
-  });
-
-  test.each(['reject', 'throw'])(
-    'settles a refresh that fails via %s, and allows retry',
-    async (failure) => {
-      const onRefresh = vi.fn(() => {
-        if (failure === 'throw') throw new Error('fixture');
-        return Promise.reject(new Error('fixture'));
-      });
-      render(<PullHarness onRefresh={onRefresh} />);
-      await act(async () => pull());
-      expect(screen.getByTestId('refreshing')).toHaveTextContent('idle');
-      await act(async () => pull());
-      expect(onRefresh).toHaveBeenCalledTimes(2);
-    },
-  );
-
-  test('ignores another pull while a refresh is pending', async () => {
-    let resolve;
-    const onRefresh = vi.fn(
-      () =>
-        new Promise((done) => {
-          resolve = done;
-        }),
-    );
-    render(<PullHarness onRefresh={onRefresh} />);
-    act(() => {
-      pull();
-      pull();
-    });
-    expect(onRefresh).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('distance')).toHaveTextContent('0');
-    await act(async () => resolve());
-  });
-
-  test('loading keeps native overscroll suppressed until refresh settles', async () => {
-    let resolve;
-    const onRefresh = vi.fn(
-      () =>
-        new Promise((done) => {
-          resolve = done;
-        }),
-    );
-    const previous = document.documentElement.style.overscrollBehaviorY;
-    const view = render(<PullHarness onRefresh={onRefresh} />);
-    act(() => pull());
-    view.rerender(<PullHarness enabled={false} onRefresh={onRefresh} />);
-    expect(document.documentElement.style.overscrollBehaviorY).toBe('none');
-    await act(async () => resolve());
-    expect(document.documentElement.style.overscrollBehaviorY).toBe(previous);
-  });
-
-  test('leaving a route restores overscroll even if its refresh is pending', async () => {
-    let resolve;
-    const onRefresh = vi.fn(
-      () =>
-        new Promise((done) => {
-          resolve = done;
-        }),
-    );
-    const previous = document.documentElement.style.overscrollBehaviorY;
-    const view = render(<PullHarness onRefresh={onRefresh} />);
-    act(() => pull());
-    view.rerender(<PullHarness active={false} onRefresh={onRefresh} />);
-    expect(document.documentElement.style.overscrollBehaviorY).toBe(previous);
-    act(() => pull());
-    expect(onRefresh).toHaveBeenCalledTimes(1);
-    await act(async () => resolve());
-  });
-
-  test('leaves regular scrolling in a nested scroller alone', () => {
-    const onRefresh = vi.fn();
-    render(<PullHarness onRefresh={onRefresh} />);
-    const target = screen.getByTestId('distance');
-    target.scrollTop = 10;
-    const move = touchEvent('touchmove', { target, y: 90 });
-    act(() => {
-      window.dispatchEvent(touchEvent('touchstart', { target }));
-      window.dispatchEvent(move);
-      window.dispatchEvent(touchEvent('touchend'));
-    });
-    expect(move.preventDefault).not.toHaveBeenCalled();
-    expect(onRefresh).not.toHaveBeenCalled();
-  });
-
-  test('disabling mid-gesture cancels it and restores native overscroll policy', () => {
-    const onRefresh = vi.fn();
-    const previous = document.documentElement.style.overscrollBehaviorY;
-    const view = render(<PullHarness onRefresh={onRefresh} />);
-    expect(document.documentElement.style.overscrollBehaviorY).toBe('none');
-    act(() => {
-      window.dispatchEvent(touchEvent('touchstart'));
-      window.dispatchEvent(touchEvent('touchmove', { y: 90 }));
-    });
-    view.rerender(<PullHarness enabled={false} onRefresh={onRefresh} />);
-    act(() => window.dispatchEvent(touchEvent('touchend')));
-    expect(onRefresh).not.toHaveBeenCalled();
-    expect(screen.getByTestId('distance')).toHaveTextContent('0');
-    expect(document.documentElement.style.overscrollBehaviorY).toBe(previous);
   });
   test('tracks pull distance and refreshes after the threshold is reached', async () => {
     let resolveRefresh;
