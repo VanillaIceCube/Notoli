@@ -300,3 +300,7 @@ Add product journeys under `e2e/` using these isolated users and existing APIs.
 Keep authentication journeys shared; domain fixtures belong to their app. Do not
 add real customer accounts, external email or paid-model requests. Infrastructure
 has no browser application and retains its ingress/Docker protocol suites.
+
+## Navigation readiness
+
+Loaded board/list pages may report readiness again when their parent renders. The route coordinator keeps an already active single-page state unchanged, preventing a render feedback loop that can make controls unresponsive. Unit tests exercise automatic and repeated readiness; desktop/mobile browser menu and refresh journeys also reject render-loop messages and uncaught page errors. See issue #1022.
