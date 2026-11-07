@@ -584,3 +584,31 @@ Observed area counts are separate from inferred risks. The workflow loads truste
 main code, never PR code/prose or secret values, and does not change review,
 merge, release or recovery authorization. Infrastructure uses gateway-specific
 wording. FullStackTemplate's inactive target is not created for symmetry.
+
+## Security-alert configuration contract
+
+The three `alert-codeql.yml`, `alert-vulnerability.yml`, and `alert-malware.yml`
+workflows resolve `AI_REVIEW_MODEL`, `AI_REVIEW_REASONING_EFFORT`, and
+`AI_REVIEW_MAX_OUTPUT_TOKENS` in their supported workflow `vars` context. They
+pass explicit `model`, `reasoning-effort`, and `max-output-tokens` inputs to the
+security-alert composite. Do not reference repository `vars` inside composite
+manifests: GitHub rejects that metadata before alert fetching starts (#300).
+
+Absent or empty values deliberately preserve `gpt-6-luna`, `medium`, and `16000`.
+Nonempty overrides pass through the existing Responses policy. Configuration is
+validated before source reads or issue/Project writes, including empty feeds;
+invalid models, efforts or token limits fail visibly without a provider call.
+No model migration, credential/project consolidation, retry or spending policy
+change is implied. Infrastructure retains its additional Project-schema preflight,
+all-severity vulnerability feed and distinct token/Project permissions.
+
+`node --test .github/actions/custom-regressions/security-alert-contract.test.js`
+checks actual YAML inputs/callers, audits local composites for unsupported `vars`,
+and executes manifest-derived configuration, fetching, nested Responses shell,
+validation and reconciliation code using synthetic feeds and mocked provider/API
+writes. Existing lifecycle tests still cover complete accounting, partial-progress
+recovery and the exact concurrent-close HTTP 422 case. These fixtures are not a
+GitHub runner. After a reviewed repair, run one fresh controlled dispatch of each
+alert workflow from corrected `main`, after checking managed labels/Project side
+effects. Record runner loading/empty-feed evidence separately from nonempty mock
+coverage; never rerun an old failed revision as proof of the new source.
