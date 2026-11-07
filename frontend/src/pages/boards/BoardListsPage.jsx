@@ -186,10 +186,9 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
   const pullToRefreshDisabled =
     loading || isReordering || isAdding || Boolean(editingListId) || actionMenuOpen;
   const { isRefreshing, pullDistance, refreshReady } = usePullToRefresh({
-    enabled: !pullToRefreshDisabled,
+    enabled: active && !pullToRefreshDisabled,
     onRefresh: fetchLists,
   });
-  const pullContentOffset = isRefreshing ? 0 : Math.min(pullDistance / 2.5, 36);
 
   const onDelete = async (id) => {
     setError(null);
@@ -324,7 +323,6 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
         pullDistance={pullDistance}
         refreshReady={refreshReady}
         isRefreshing={isRefreshing}
-        pullContentOffset={pullContentOffset}
       >
         <SortableNotepadItems
           items={lists}

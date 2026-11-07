@@ -12,9 +12,27 @@ describe('PullToRefreshIndicator', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(screen.getByTestId('pull-to-refresh-indicator')).toHaveStyle({
       height: '0px',
-      marginBottom: '0px',
     });
     expect(screen.getByTestId('RefreshIcon')).toBeInTheDocument();
+  });
+
+  test('the gesture uses one proportional spacer and holds its space while refreshing', () => {
+    const view = renderWithProviders(
+      <PullToRefreshIndicator pullDistance={50} refreshReady={false} isRefreshing={false} />,
+    );
+    expect(screen.getByTestId('pull-to-refresh-indicator')).toHaveStyle({
+      height: '20px',
+      transition: 'none',
+    });
+    view.rerender(<PullToRefreshIndicator pullDistance={0} refreshReady={false} isRefreshing />);
+    expect(screen.getByTestId('pull-to-refresh-indicator')).toHaveStyle({
+      height: '40px',
+      transition: 'height 180ms ease-out',
+    });
+    view.rerender(
+      <PullToRefreshIndicator pullDistance={0} refreshReady={false} isRefreshing={false} />,
+    );
+    expect(screen.getByTestId('pull-to-refresh-indicator')).toHaveStyle({ height: '0px' });
   });
 
   test('when pulling below the threshold, it shows a partially rotated refresh icon', () => {

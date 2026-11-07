@@ -2,6 +2,17 @@
 
 ## 2026-11-06
 
+### Added
+
+- Focused real-transition, gesture lifecycle, and desktop/mobile browser regression coverage for menu dismissal and refresh stability.
+
+### Fixed
+
+- Keep all board overflow actions mounted through menu dismissal and preserve keyboard navigation and restored focus (#915).
+- Use one proportional pull-to-refresh spacer and handle cancelled, overlapping, failed, and inactive-page gestures without competing layout animations (#847).
+
+## 2026-11-06
+
 ### Fixed
 
 - Restore security-alert action loading by resolving repository variables in caller workflows and passing validated explicit composite inputs.
