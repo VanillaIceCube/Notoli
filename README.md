@@ -139,3 +139,6 @@ Shared adoption and justified differences are recorded in [Batch 3 parity](docs/
 
 Transactional mail failure categories, finite timeouts and password-reset recovery
 are documented in [backend/README.md](backend/README.md#transactional-email-failure-handling).
+
+Security-alert model overrides are resolved by the three caller workflows and passed
+through validated composite inputs; see the [configuration contract](.github/README-WORKFLOWS.md#security-alert-configuration-contract).

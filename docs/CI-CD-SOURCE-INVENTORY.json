@@ -61,8 +61,11 @@
       },
       "name": "CodeQL Alert",
       "permissions": {},
-      "source_sha256": "1feb2f0df97f76957f939b9a66c8e48e5f54608013e43f45ed217d991af41a24",
+      "source_sha256": "a3b1a6290ab7ebcba903dc29623353f121d53f9a691ae79ce0bc3fbad6535136",
       "variable_names": [
+        "AI_REVIEW_MAX_OUTPUT_TOKENS",
+        "AI_REVIEW_MODEL",
+        "AI_REVIEW_REASONING_EFFORT",
         "OPENAI_REVIEWERS_PROJECT_ID",
         "ROBOCOP_APP_ID",
         "SECURITY_ALERTS_PROJECT_ID"
@@ -91,8 +94,11 @@
       },
       "name": "Malware Alert",
       "permissions": {},
-      "source_sha256": "dd3b46b6cbcc5fef891443dd590514b274518dc7a10c08b46ffddaabc140de2a",
+      "source_sha256": "bcc7923fe65e0a7847a2198d4dbbbb4e85db630539ecff9190b3d4148b504564",
       "variable_names": [
+        "AI_REVIEW_MAX_OUTPUT_TOKENS",
+        "AI_REVIEW_MODEL",
+        "AI_REVIEW_REASONING_EFFORT",
         "OPENAI_REVIEWERS_PROJECT_ID",
         "ROBOCOP_APP_ID",
         "SECURITY_ALERTS_PROJECT_ID"
@@ -121,8 +127,11 @@
       },
       "name": "Vulnerability Alert",
       "permissions": {},
-      "source_sha256": "6b6a05b1f9ab7dd65422449b87cd0395fe980421e2d73acc93b8685833c0f637",
+      "source_sha256": "1bf46185df14bb28a4da4289533f1bd6fb6cec5426dee162281174747b50ca04",
       "variable_names": [
+        "AI_REVIEW_MAX_OUTPUT_TOKENS",
+        "AI_REVIEW_MODEL",
+        "AI_REVIEW_REASONING_EFFORT",
         "OPENAI_REVIEWERS_PROJECT_ID",
         "ROBOCOP_APP_ID",
         "SECURITY_ALERTS_PROJECT_ID"
