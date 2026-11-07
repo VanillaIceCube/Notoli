@@ -1,3 +1,9 @@
+## 2026-11-07
+
+### Fixed
+
+- Stop repeated page-readiness notifications from causing a routing render loop and intermittent unresponsive navigation/buttons. Retain the menu and pull-to-refresh behavior from PR #1019, with regression coverage for repeated readiness and browser interaction errors.
+
 # Changelog
 
 ## 2026-11-06

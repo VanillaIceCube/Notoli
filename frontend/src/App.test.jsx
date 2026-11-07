@@ -70,6 +70,13 @@ vi.mock('./pages/lists/ListTasksPage', async () => {
     default: function MockListTasksPage({ active, onPageReady }) {
       React.useEffect(() => {
         globalThis.__notoliListPageReady = onPageReady;
+        if (globalThis.__notoliAutoReady) {
+          globalThis.__notoliReadyCalls = (globalThis.__notoliReadyCalls ?? 0) + 1;
+          if (globalThis.__notoliReadyCalls > 10) {
+            throw new Error('Page readiness keeps rerendering an already active route');
+          }
+          onPageReady();
+        }
         return () => {
           delete globalThis.__notoliListPageReady;
         };
@@ -98,6 +105,8 @@ describe('App', () => {
   beforeEach(() => {
     sessionStorage.clear();
     delete globalThis.__notoliListPageReady;
+    delete globalThis.__notoliAutoReady;
+    delete globalThis.__notoliReadyCalls;
   });
   test('when the route is /login, it renders Login', () => {
     renderApp('/login');
@@ -168,5 +177,29 @@ describe('App', () => {
     });
     expect(await screen.findByTestId('active-list-page')).toBeInTheDocument();
     expect(screen.queryByTestId('active-board-page')).not.toBeInTheDocument();
+  });
+  test('a loaded page can report readiness without creating a render feedback loop', () => {
+    sessionStorage.setItem('accessToken', 'token');
+    globalThis.__notoliAutoReady = true;
+    renderApp('/board/1/list/2');
+    expect(screen.getByTestId('active-list-page')).toBeInTheDocument();
+    expect(globalThis.__notoliReadyCalls).toBe(1);
+    act(() => {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        globalThis.__notoliListPageReady();
+      }
+    });
+    expect(globalThis.__notoliReadyCalls).toBe(1);
+  });
+  test('automatic readiness settles a navigation transition and controls stay responsive', async () => {
+    sessionStorage.setItem('accessToken', 'token');
+    globalThis.__notoliAutoReady = true;
+    renderApp('/board/1');
+    await userEvent.click(screen.getByRole('button', { name: /openlist/i }));
+    expect(screen.getByTestId('active-list-page')).toBeInTheDocument();
+    expect(screen.queryByTestId('active-board-page')).not.toBeInTheDocument();
+    expect(globalThis.__notoliReadyCalls).toBeLessThanOrEqual(2);
+    await userEvent.click(screen.getByRole('button', { name: /toggledrawer/i }));
+    expect(screen.getByTestId('drawer')).toHaveTextContent('DrawerOpen');
   });
 });

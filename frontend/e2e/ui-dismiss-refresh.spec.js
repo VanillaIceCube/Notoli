@@ -1,6 +1,19 @@
 import { test, expect } from '@playwright/test';
 
+const renderErrors = new WeakMap();
+
 test.beforeEach(async ({ page, hasTouch, browserName }) => {
+  const errors = [];
+  renderErrors.set(page, errors);
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
+    if (
+      message.type() === 'error' &&
+      /maximum update depth|too many re-renders/i.test(message.text())
+    ) {
+      errors.push(message.text());
+    }
+  });
   if (hasTouch && browserName === 'webkit') {
     // Windows WebKit reports zero even with Playwright's hasTouch emulation.
     // Supply the mobile capability for these layout/gesture fixtures only.
@@ -8,6 +21,13 @@ test.beforeEach(async ({ page, hasTouch, browserName }) => {
       Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 1 });
     });
   }
+});
+
+test.afterEach(({ page }) => {
+  expect(
+    renderErrors.get(page),
+    'page interactions must not cause render loops or uncaught errors',
+  ).toEqual([]);
 });
 
 // Synthetic authenticated API responses keep this visual journey read-only. The
