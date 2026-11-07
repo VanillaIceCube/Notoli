@@ -38,9 +38,10 @@ function touchEvent(type, { target = document.body, x = 0, y = 0 } = {}) {
   event.preventDefault = vi.fn();
   return event;
 }
-function PullHarness({ enabled = true, onRefresh = vi.fn() }) {
+function PullHarness({ enabled = true, active = true, onRefresh = vi.fn() }) {
   const { isRefreshing, pullDistance, refreshReady } = usePullToRefresh({
     enabled,
+    active,
     onRefresh,
   });
   return (
@@ -104,6 +105,41 @@ describe('usePullToRefresh', () => {
     });
     expect(onRefresh).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('distance')).toHaveTextContent('0');
+    await act(async () => resolve());
+  });
+
+  test('loading keeps native overscroll suppressed until refresh settles', async () => {
+    let resolve;
+    const onRefresh = vi.fn(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    );
+    const previous = document.documentElement.style.overscrollBehaviorY;
+    const view = render(<PullHarness onRefresh={onRefresh} />);
+    act(() => pull());
+    view.rerender(<PullHarness enabled={false} onRefresh={onRefresh} />);
+    expect(document.documentElement.style.overscrollBehaviorY).toBe('none');
+    await act(async () => resolve());
+    expect(document.documentElement.style.overscrollBehaviorY).toBe(previous);
+  });
+
+  test('leaving a route restores overscroll even if its refresh is pending', async () => {
+    let resolve;
+    const onRefresh = vi.fn(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    );
+    const previous = document.documentElement.style.overscrollBehaviorY;
+    const view = render(<PullHarness onRefresh={onRefresh} />);
+    act(() => pull());
+    view.rerender(<PullHarness active={false} onRefresh={onRefresh} />);
+    expect(document.documentElement.style.overscrollBehaviorY).toBe(previous);
+    act(() => pull());
+    expect(onRefresh).toHaveBeenCalledTimes(1);
     await act(async () => resolve());
   });
 

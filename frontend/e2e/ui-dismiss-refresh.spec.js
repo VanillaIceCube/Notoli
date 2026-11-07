@@ -1,5 +1,15 @@
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ page, hasTouch, browserName }) => {
+  if (hasTouch && browserName === 'webkit') {
+    // Windows WebKit reports zero even with Playwright's hasTouch emulation.
+    // Supply the mobile capability for these layout/gesture fixtures only.
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 1 });
+    });
+  }
+});
+
 // Synthetic authenticated API responses keep this visual journey read-only. The
 // same fixtures can exercise a deployed immutable frontend without customer data.
 async function fixture(page) {
@@ -131,6 +141,9 @@ for (const colorScheme of ['light', 'dark']) {
         });
         await pull('touchend');
         await expect(page.getByRole('status', { name: 'Refreshing' })).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.style.overscrollBehaviorY)).toBe(
+          'none',
+        );
         await expect
           .poll(async () => (await title.boundingBox()).y - originalY)
           .toBeCloseTo(33.6, 0);

@@ -19,7 +19,9 @@ The existing touch hook and request callbacks remain in use. Cancellation cannot
 trigger refresh; overlapping refreshes are ignored; thrown/rejected callbacks
 settle; nested/document scrolling is respected; inactive route slots cannot
 refresh. Mobile custom refresh temporarily suppresses competing native root
-overscroll and restores the previous policy when disabled/unmounted.
+overscroll through the pending request, even though loading disables new
+gestures. Route activity is separate: leaving the page or unmounting restores
+the prior policy immediately; a settled disabled hook also restores it.
 
 ## Shared implementation comparison
 
@@ -48,6 +50,9 @@ MacroMapper changes are appropriate.
   on desktop/mobile, checks task actions, and measures one proportional refresh
   displacement with pending/success/failure/cancel paths under light/dark browser
   preferences. The app's existing palette is preserved; no theme switch is added.
+  Chromium and Windows WebKit journeys are available; WebKit's mobile fixture
+  explicitly supplies `maxTouchPoints` because Windows WebKit reports zero even
+  with Playwright touch emulation. This does not emulate physical iOS overscroll.
 - Visual fixtures intercept API requests and supply a synthetic session. They
   may be used against deployed frontend assets without accessing customer data;
   they do not prove authenticated production backend journeys or physical iOS

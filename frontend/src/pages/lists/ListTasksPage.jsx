@@ -253,7 +253,8 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
   const pullToRefreshDisabled =
     loading || isReordering || isAdding || Boolean(editingTaskId) || actionMenuOpen;
   const { isRefreshing, pullDistance, refreshReady } = usePullToRefresh({
-    enabled: active && !pullToRefreshDisabled,
+    enabled: !pullToRefreshDisabled,
+    active,
     onRefresh: fetchTasks,
   });
 

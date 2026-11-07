@@ -44,7 +44,7 @@ function isInsideScrolledContainer(target) {
   return false;
 }
 
-export function usePullToRefresh({ enabled = true, onRefresh }) {
+export function usePullToRefresh({ enabled = true, active = true, onRefresh }) {
   const touchStartRef = useRef(null);
   const pullDistanceRef = useRef(0);
   const refreshingRef = useRef(false);
@@ -62,6 +62,7 @@ export function usePullToRefresh({ enabled = true, onRefresh }) {
     (event) => {
       if (
         !enabled ||
+        !active ||
         refreshingRef.current ||
         !onRefresh ||
         !isMobileTouchViewport() ||
@@ -86,7 +87,7 @@ export function usePullToRefresh({ enabled = true, onRefresh }) {
 
       touchStartRef.current = { x: touch.clientX, y: touch.clientY };
     },
-    [enabled, onRefresh, resetPull],
+    [active, enabled, onRefresh, resetPull],
   );
 
   const onTouchMove = useCallback(
@@ -99,6 +100,7 @@ export function usePullToRefresh({ enabled = true, onRefresh }) {
       const deltaY = touch.clientY - start.y;
       if (
         !enabled ||
+        !active ||
         event.touches.length !== 1 ||
         window.scrollY > 0 ||
         deltaY <= 0 ||
@@ -112,7 +114,7 @@ export function usePullToRefresh({ enabled = true, onRefresh }) {
       event.preventDefault?.();
       updatePullDistance(Math.min(deltaY, PULL_REFRESH_PX));
     },
-    [enabled, resetPull, updatePullDistance],
+    [active, enabled, resetPull, updatePullDistance],
   );
 
   const onTouchCancel = useCallback(() => {
@@ -122,7 +124,7 @@ export function usePullToRefresh({ enabled = true, onRefresh }) {
 
   const onTouchEnd = useCallback(() => {
     const shouldRefresh =
-      enabled && !refreshingRef.current && pullDistanceRef.current >= PULL_REFRESH_PX;
+      active && enabled && !refreshingRef.current && pullDistanceRef.current >= PULL_REFRESH_PX;
     touchStartRef.current = null;
     resetPull();
 
@@ -142,14 +144,14 @@ export function usePullToRefresh({ enabled = true, onRefresh }) {
       };
       void refresh();
     }
-  }, [enabled, onRefresh, resetPull]);
+  }, [active, enabled, onRefresh, resetPull]);
 
   useEffect(() => {
-    if (!enabled) onTouchCancel();
-  }, [enabled, onTouchCancel]);
+    if (!active || !enabled) onTouchCancel();
+  }, [active, enabled, onTouchCancel]);
 
   useEffect(() => {
-    if (!enabled || !isMobileTouchViewport()) return;
+    if (!active || (!enabled && !isRefreshing) || !isMobileTouchViewport()) return;
     // The custom indicator owns refresh; prevent the browser's competing bounce.
     const root = document.documentElement;
     const previous = root.style.overscrollBehaviorY;
@@ -157,7 +159,7 @@ export function usePullToRefresh({ enabled = true, onRefresh }) {
     return () => {
       root.style.overscrollBehaviorY = previous;
     };
-  }, [enabled]);
+  }, [active, enabled, isRefreshing]);
 
   useEffect(() => {
     window.addEventListener('touchstart', onTouchStart, { passive: true });

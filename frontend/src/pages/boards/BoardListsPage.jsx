@@ -186,7 +186,8 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
   const pullToRefreshDisabled =
     loading || isReordering || isAdding || Boolean(editingListId) || actionMenuOpen;
   const { isRefreshing, pullDistance, refreshReady } = usePullToRefresh({
-    enabled: active && !pullToRefreshDisabled,
+    enabled: !pullToRefreshDisabled,
+    active,
     onRefresh: fetchLists,
   });
 
