@@ -24,9 +24,11 @@ describe('PullToRefreshIndicator', () => {
       height: '20px',
       transition: 'none',
     });
+    view.rerender(<PullToRefreshIndicator pullDistance={84} refreshReady isRefreshing={false} />);
+    expect(screen.getByTestId('pull-to-refresh-indicator')).toHaveStyle({ height: '33.6px' });
     view.rerender(<PullToRefreshIndicator pullDistance={0} refreshReady={false} isRefreshing />);
     expect(screen.getByTestId('pull-to-refresh-indicator')).toHaveStyle({
-      height: '40px',
+      height: '33.6px',
       transition: 'height 180ms ease-out',
     });
     view.rerender(

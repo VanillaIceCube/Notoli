@@ -37,6 +37,10 @@ MacroMapper changes are appropriate.
   Against pre-change `7a3a15a`, both dismissal regressions fail because the exiting
   menu no longer contains its original owner actions. The proportional spacer
   and cancellation regressions also fail against that exact source.
+  Read-only intercepted fixtures against the deployed pre-release frontend
+  reproduce excessive displacement in both light/dark browser preferences.
+  The reviewer follow-up holds the full-pull and pending spacer at the same
+  33.6px, avoiding an additional release-time movement.
 - Hook tests cover cancellation, nested scrolling, failure/retry, duplicate pulls,
   and disable/overscroll cleanup. Existing board/task page tests cover successful
   and failed refreshes while retaining content.

@@ -131,6 +131,9 @@ for (const colorScheme of ['light', 'dark']) {
         });
         await pull('touchend');
         await expect(page.getByRole('status', { name: 'Refreshing' })).toBeVisible();
+        await expect
+          .poll(async () => (await title.boundingBox()).y - originalY)
+          .toBeCloseTo(33.6, 0);
         await expect(page.getByText('Visual task', { exact: true })).toBeVisible();
         finish();
         await expect(page.getByRole('status')).toHaveCount(0);
