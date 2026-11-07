@@ -36,6 +36,9 @@ jobs:
         uses: ./.github/actions/security-alerts
         with:
           feed: codeql
+          model: ${{ vars.AI_REVIEW_MODEL || 'gpt-6-luna' }}
+          reasoning-effort: ${{ vars.AI_REVIEW_REASONING_EFFORT || 'medium' }}
+          max-output-tokens: ${{ vars.AI_REVIEW_MAX_OUTPUT_TOKENS || '16000' }}
           robocop-token: ${{ steps.robocop-token.outputs.token }}
           project-token: ${{ secrets.SECURITY_ALERTS_TOKEN }}
           openai-api-key: ${{ secrets.ROBOCOP_OPENAI_API_KEY }}

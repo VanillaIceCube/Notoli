@@ -259,3 +259,8 @@ are informational; preserve existing release/check authorization and secret boun
 Resend timeout supports `0 < seconds <= 30` with safe 10-second fallback; preserve original
 fail_silently behavior and generic reset responses. Never log delivery exception
 text/tracebacks or recipient/token data. See backend/README.md.
+
+Security-alert repository variables must resolve in the three caller workflows, not
+inside local composite metadata. Pass explicit model/effort/token inputs and run
+`.github/actions/custom-regressions/security-alert-contract.test.js` after edits;
+actual loading acceptance uses fresh controlled dispatches on corrected main.
