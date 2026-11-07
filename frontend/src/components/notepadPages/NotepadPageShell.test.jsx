@@ -1,3 +1,4 @@
+/* eslint-disable testing-library/no-node-access -- Assert the surrounding paper/wrapper do not add a second displacement. */
 import { screen } from '@testing-library/react';
 
 import NotepadPageShell from './NotepadPageShell';
@@ -12,7 +13,6 @@ function renderShell(props = {}) {
       pullDistance={0}
       refreshReady={false}
       isRefreshing={false}
-      pullContentOffset={0}
       {...props}
     >
       <div>Rows go here</div>
@@ -21,6 +21,13 @@ function renderShell(props = {}) {
 }
 
 describe('NotepadPageShell', () => {
+  test('pull displacement does not also translate content or grow paper padding', () => {
+    renderShell({ pullDistance: 84, refreshReady: true });
+    const indicator = screen.getByTestId('pull-to-refresh-indicator');
+    expect(indicator).toHaveStyle({ height: '33.6px' });
+    expect(indicator.parentElement).not.toHaveStyle({ transform: 'translateY(33.6px)' });
+    expect(indicator.closest('.MuiPaper-root')).toHaveStyle({ paddingBottom: '12px' });
+  });
   test('when ready, it renders the title and child content', () => {
     renderShell();
 
@@ -38,6 +45,12 @@ describe('NotepadPageShell', () => {
   test('when refreshing existing content, it keeps child content visible', () => {
     renderShell({ loading: true, hasContent: true });
 
+    expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Rows go here')).toBeInTheDocument();
+  });
+
+  test('refreshing an empty page retains its empty state instead of flashing initial loading', () => {
+    renderShell({ loading: true, isRefreshing: true });
     expect(screen.queryByText(/loading/i)).not.toBeInTheDocument();
     expect(screen.getByText('Rows go here')).toBeInTheDocument();
   });

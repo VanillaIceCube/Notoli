@@ -2,6 +2,7 @@ import { Box } from '@mui/material';
 import Refresh from '@mui/icons-material/Refresh';
 
 const FULL_PULL_DISTANCE = 84;
+const FULL_INDICATOR_HEIGHT = FULL_PULL_DISTANCE / 2.5;
 const ACTIVE_SPIN_DURATION_MS = 1400;
 const ACTIVE_SPIN_START_DELAY_MS = -(ACTIVE_SPIN_DURATION_MS * 0.75);
 
@@ -14,6 +15,11 @@ export default function PullToRefreshIndicator({ pullDistance, refreshReady, isR
       : 'Pull to refresh';
   const pullProgress = Math.min(pullDistance / FULL_PULL_DISTANCE, 1);
   const pullRotation = Math.round(pullProgress * 270);
+  // One in-flow spacer owns the entire pull displacement. Do not also translate
+  // the page or change its padding: those independent motions jump on release.
+  const height = isRefreshing
+    ? FULL_INDICATOR_HEIGHT
+    : Math.min(pullDistance / 2.5, FULL_INDICATOR_HEIGHT);
 
   return (
     <Box
@@ -25,16 +31,17 @@ export default function PullToRefreshIndicator({ pullDistance, refreshReady, isR
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        height: active ? 32 : 0,
-        mb: active ? 1 : 0,
+        height,
+        flexShrink: 0,
         overflow: 'hidden',
-        transition: 'height 120ms ease, margin-bottom 120ms ease',
+        transition: pullDistance > 0 ? 'none' : 'height 180ms ease-out',
       }}
     >
       <Box
         sx={{
           width: 30,
           height: 30,
+          flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

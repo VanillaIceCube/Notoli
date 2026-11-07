@@ -254,9 +254,9 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
     loading || isReordering || isAdding || Boolean(editingTaskId) || actionMenuOpen;
   const { isRefreshing, pullDistance, refreshReady } = usePullToRefresh({
     enabled: !pullToRefreshDisabled,
+    active,
     onRefresh: fetchTasks,
   });
-  const pullContentOffset = isRefreshing ? 0 : Math.min(pullDistance / 2.5, 36);
 
   const onDelete = async (id) => {
     setError(null);
@@ -384,7 +384,6 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
         pullDistance={pullDistance}
         refreshReady={refreshReady}
         isRefreshing={isRefreshing}
-        pullContentOffset={pullContentOffset}
       >
         <SortableNotepadItems
           items={tasks}
