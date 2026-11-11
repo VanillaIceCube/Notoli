@@ -1,3 +1,11 @@
+## 2026-11-11
+
+### Changed
+
+- Upgrade Docker login to immutable v4.8.0 through Infrastructure's shared release template, synchronize its contract regression, and regenerate the CI architecture inventory.
+- Align all CodeQL entry points on the immutable v4.39.3 revision and regenerate the CI architecture inventory; preserve scanner scope and merge gates.
+- Upgrade the frontend test environment to jsdom 31 and verify pull-to-refresh transition and animation longhands against its normalized computed CSS.
+
 ## 2026-11-07
 
 ### Fixed
@@ -5,6 +13,12 @@
 - Stop repeated page-readiness notifications from causing a routing render loop and intermittent unresponsive navigation/buttons. Retain the menu and pull-to-refresh behavior from PR #1019, with regression coverage for repeated readiness and browser interaction errors.
 
 # Changelog
+
+## 2026-11-11
+
+### Fixed
+
+- Handle non-JSON Connections API responses with safe HTTP status errors, preserve structured OAuth errors, and reject invalid success payloads without exposing response bodies. Reuse the existing safe parser and cover consent, listing, revocation and session recovery regressions ([shared rollout](https://github.com/VanillaIceCube/FullStackTemplate/issues/311)).
 
 ## 2026-11-06
 

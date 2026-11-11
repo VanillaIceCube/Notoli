@@ -317,8 +317,8 @@ acceptance in #612 or #587.
 
 ## 🔄 Shared deployment action update
 
-Docker login v4.7.0 is rendered from Infrastructure commit
-`f3f049830fcd5e5869d1ae120c57d9ccb6c99200`. Keep `deploy/shared-source.json` and
+Docker login v4.8.0 (`8aa5831fb8d48d8f76594c7ddde61ae58019f550`) is rendered from Infrastructure commit
+`d9ab394bb38d2bdce38088ac952c53704c5bae5a`. Keep `deploy/shared-source.json` and
 the generated workflow synchronized; deployment parity remains mandatory.
 
 ## 🤖 Reviewer model
@@ -337,10 +337,15 @@ keep their immutable revisions aligned, and preserve normal CI/reviewer gates.
 
 The applications retain daily updates. Infrastructure retains weekly updates,
 its owner/labels/PR limits, general Actions group for non-CodeQL updates, and
-separate Compose updates. The template aligns its mutable CodeQL tag with the other repositories'
-immutable v4.39.1 revision. Scanner scope, permissions and merge/deployment
+separate Compose updates. All application CodeQL entry points use the aligned
+immutable v4.39.3 revision (`33d7b85da1a04171e211befe2c739303b9a4c066`).
+Regenerate `docs/CI-CD-SOURCE-INVENTORY.json` with
+`python scripts/ci_architecture.py` after workflow pin changes and verify it with
+`--check`. Scanner scope, permissions and merge/deployment
 gates remain unchanged. Canonical rollout:
 [FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271).
+The November maintenance sweep tracks the aligned upgrade and generated inventory
+in [FullStackTemplate #309](https://github.com/VanillaIceCube/FullStackTemplate/issues/309).
 
 ## 🔒 Protected Dependabot auto-merge
 
