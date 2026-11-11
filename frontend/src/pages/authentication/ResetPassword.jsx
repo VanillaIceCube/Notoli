@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { resetPassword } from '../../services/notoliApiClient';
 import { readOkJson } from '../../services/authSession';
 
@@ -113,13 +113,15 @@ export default function ResetPassword({ showSnackbar }) {
             sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
           >
             Back to{' '}
-            <Box
-              component="span"
-              sx={{ textDecoration: 'underline', cursor: 'pointer' }}
-              onClick={() => navigate('/login')}
+            <Link
+              component={RouterLink}
+              variant="caption"
+              underline="always"
+              to="/login"
+              sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
             >
               Login
-            </Box>
+            </Link>
           </Typography>
         </Box>
       </Paper>

@@ -34,6 +34,11 @@ journeys use synthetic intercepted API responses and never customer accounts.
 - `/connections` lists and revokes Connected Apps (also available in the profile menu)
 - Everything else requires auth
 
+Authentication-page navigation uses Material UI `Link` with React Router `Link`,
+so each destination has a real `href`, Tab/Enter access, and native new-tab
+behavior without submitting its form. Regression tests cover all five links
+with the real router; browser tests also check new-tab navigation.
+
 Navigation utilities accept `/board/` and `/boards/` inputs, strip query strings,
 fragments, and a trailing slash, and ignore invalid paths or navigators. Public
 React routes and generated links use `/board/`; `/boards/` is a helper input
