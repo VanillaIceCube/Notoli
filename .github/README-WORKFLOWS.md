@@ -344,6 +344,8 @@ Regenerate `docs/CI-CD-SOURCE-INVENTORY.json` with
 `--check`. Scanner scope, permissions and merge/deployment
 gates remain unchanged. Canonical rollout:
 [FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271).
+The November maintenance sweep tracks the aligned upgrade and generated inventory
+in [FullStackTemplate #309](https://github.com/VanillaIceCube/FullStackTemplate/issues/309).
 
 ## 🔒 Protected Dependabot auto-merge
 
