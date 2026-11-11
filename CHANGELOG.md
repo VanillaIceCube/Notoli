@@ -3,6 +3,7 @@
 ### Changed
 
 - Upgrade Docker login to immutable v4.8.0 through Infrastructure's shared release template, synchronize its contract regression, and regenerate the CI architecture inventory.
+- Upgrade the frontend test environment to jsdom 31 and verify pull-to-refresh transition and animation longhands against its normalized computed CSS.
 
 ## 2026-11-07
 
