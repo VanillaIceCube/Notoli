@@ -29,7 +29,9 @@ describe('PullToRefreshIndicator', () => {
     view.rerender(<PullToRefreshIndicator pullDistance={0} refreshReady={false} isRefreshing />);
     expect(screen.getByTestId('pull-to-refresh-indicator')).toHaveStyle({
       height: '33.6px',
-      transition: 'height 180ms ease-out',
+      transitionProperty: 'height',
+      transitionDuration: '0.18s',
+      transitionTimingFunction: 'ease-out',
     });
     view.rerender(
       <PullToRefreshIndicator pullDistance={0} refreshReady={false} isRefreshing={false} />,
@@ -62,8 +64,12 @@ describe('PullToRefreshIndicator', () => {
 
     expect(screen.getByRole('status', { name: /refreshing/i })).toBeInTheDocument();
     expect(screen.getByTestId('RefreshIcon')).toBeInTheDocument();
-    expect(screen.getByTestId('RefreshIcon')).toHaveStyle(
-      'animation: notoliRefreshSpin 1400ms linear infinite -1050ms',
-    );
+    expect(screen.getByTestId('RefreshIcon')).toHaveStyle({
+      animationName: 'notoliRefreshSpin',
+      animationDuration: '1.4s',
+      animationTimingFunction: 'linear',
+      animationIterationCount: 'infinite',
+      animationDelay: '-1.05s',
+    });
   });
 });

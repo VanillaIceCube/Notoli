@@ -1,4 +1,4 @@
-async function safeReadJson(response) {
+export async function safeReadJson(response) {
   try {
     return await response.json();
   } catch (_err) {
