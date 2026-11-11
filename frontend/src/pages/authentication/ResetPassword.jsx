@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { resetPassword } from '../../services/notoliApiClient';
 import { readOkJson } from '../../services/authSession';
 
 export default function ResetPassword({ showSnackbar }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export default function ResetPassword({ showSnackbar }) {
   const missingResetParams = !uid || !token;
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
     if (missingResetParams) {
       showSnackbar('error', 'Invalid or expired reset link.');
       return;
@@ -26,6 +28,7 @@ export default function ResetPassword({ showSnackbar }) {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const response = await resetPassword({ uid, token, password });
       const data = await readOkJson(response, 'Password reset failed :(');
@@ -40,6 +43,8 @@ export default function ResetPassword({ showSnackbar }) {
         isNetworkError ? 'Network error :(' : err?.message || 'Password reset failed :(',
       );
       console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -96,10 +101,11 @@ export default function ResetPassword({ showSnackbar }) {
             fullWidth
             sx={{ backgroundColor: 'var(--secondary-color)' }}
             type="submit"
+            disabled={isSubmitting}
             variant="contained"
           >
             <Typography variant="h6" align="center">
-              Reset Password
+              {isSubmitting ? 'Resetting...' : 'Reset Password'}
             </Typography>
           </Button>
           <Typography
@@ -108,11 +114,10 @@ export default function ResetPassword({ showSnackbar }) {
           >
             Back to{' '}
             <Link
-              component="button"
-              type="button"
+              component={RouterLink}
               variant="caption"
               underline="always"
-              onClick={() => navigate('/login')}
+              to="/login"
               sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
             >
               Login

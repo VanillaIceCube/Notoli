@@ -5,6 +5,8 @@ For shared-host configuration, deployment and recovery, use the
 local development only. Host-owned gateway and certificate operations belong to
 the infrastructure repository.
 
+Production serves the frontend through the shared HTTPS gateway and publishes no host port 3000. See the [production guide](production/README.md).
+
 ## Local Docker with `notoli.localhost`
 
 From the repository root, initialize only missing local files:
@@ -98,3 +100,42 @@ local hosts file.
 ## 🔌 Shared MCP framework
 
 The [MCP framework guide](../docs/MCP-FRAMEWORK.md) defines opt-in ASGI/proxy/readiness requirements. Local development can call the backend directly; do not treat a local/legacy proxy as production MCP onboarding.
+
+## Development dependency reproducibility
+
+Development images pin reviewed multi-platform Node 26 and Miniforge 26.9.4-0
+registry digests. Production Dockerfiles and the independent release engine are
+unchanged by this development-image policy. Refresh tags/digests together after
+registry verification and a disposable build/configuration check.
+
+The frontend development entrypoint hashes both `package.json` and
+`package-lock.json` inside its persistent `node_modules` volume. Fresh volumes
+install with `npm ci`; unchanged restarts reuse dependencies; changing either
+manifest reinstalls. Missing manifests or a failed installation stop startup and
+retry on the next invocation. Use one volume per checkout and restart after edits.
+Run `node --test tests/dev-dependencies.test.cjs` from the repository root for the
+credential-free mocked lifecycle/exit-status regression. Compose configuration
+checks do not deploy or touch application data.
+
+## Non-deploying repository validation
+
+CI runs `python scripts/validate_repository.py` from the repository root with
+Actionlint, pinned PyYAML 6.0.3, Git Bash/Bash, PowerShell 7 and Docker Compose
+installed. `scripts/install_actionlint.sh` installs the checksum-verified Linux
+validator; other platforms can install the same Actionlint 1.7.12 release.
+The validator parses maintained scripts, checks workflow/composite syntax and
+renders development/local/production Compose using temporary synthetic env files.
+It starts no containers and reads no private `.env`, database or certificate.
+Actionlint's only compatibility exception is its unrecognized GitHub
+`vulnerability-alerts` permission; other findings fail normally.
+
+Browser checks use separate loopback ports and disposable settings, not the
+production release path. The Infrastructure-owned release source pin and parity
+enforcement stay authoritative; see docs/BATCH2-PARITY.md. Documentation/workflow
+changes alone do not justify restarting the application or shared gateway.
+
+
+Production-promotion PRs receive a managed impact summary derived from their
+current env-prod comparison. It informs review; release authorization, migration
+guards and data-safe recovery still follow the [production guide](production/README.md).
+See [CI/CD architecture](../docs/CI-CD-ARCHITECTURE.md).

@@ -35,6 +35,7 @@ concurrency:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
   changes:
@@ -52,7 +53,7 @@ jobs:
       - name: Detect relevant changes
         id: filter
         continue-on-error: true
-        uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
+        uses: dorny/paths-filter@f3360c560367c9daf72b88c0e6164162034c5721 # v4
         with:
           filters: |
             frontend:

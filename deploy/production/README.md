@@ -1,16 +1,49 @@
 # App-only production release and recovery
 
-This is the implementation of approved architecture v2. Every PR merge and
-every production release still requires separate explicit owner authorization.
-Only the operator designated in coordination #4 may perform production actions
-under its separately approved plan. For the coordinated ingress migration, the
-owner designated Agent 3 as the sole production operator; source approval does
-not authorize any agent to operate the host. Shared decisions:
+Notoli owns MCP OAuth, consent, token validation, connections and all 31 tools.
+The unreleased central issuer migration in #973 has been withdrawn; no shared
+introspection credential or YNAB acceptance is required. Ordinary accounts and
+website/REST login remain app-owned. Merging `main` alone does not deploy.
+
+## Main-first promotion
+
+Follow the canonical policy in
+[FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262)
+and the local reconciliation in
+[Notoli #975](https://github.com/VanillaIceCube/Notoli/issues/975).
+Develop and review changes through PRs targeting `main`; promote that exact reviewed source through
+an `env-prod` PR, preserving all CI, reviewer and owner/operator gates. A promotion
+merge may have a different commit ID, but its source tree must match the reviewed
+`main` commit. Do not add deployment fixes only to the promotion branch.
+An exceptional owner-authorized deployment iteration must return promptly through
+a reviewed `main` PR before the next promotion.
+
+The #975 audit reconciled historical production promotion merges without reverting
+reviewed source. Intentional unreleased changes may remain on `main` until their
+release prerequisites are complete; history parity alone does not prove live
+acceptance or authorize deployment.
+
+## Current production boundary
+
+The app policy retains the original three shared route networks and Notoli's exact
+trusted proxy `172.30.88.2`. Notoli does not depend on YNAB or shared-issuer networks.
+Infrastructure must restore that accepted gateway baseline before promoting this
+app policy; app releases never alter shared ingress or create/delete networks.
+Preserve existing Notoli OAuth registrations, grants, database and signing secret.
+No account linking, client reconnection or grant retirement is required for this
+withdrawal because the central migration was never deployed.
+
+This is the implementation of approved architecture v2. Main merges and
+production promotions require owner authorization within the current mission
+and the existing protected-branch/release gates. An explicitly authorized mission
+may cover both stages; source review alone does not authorize host operations.
+Use the owner-designated operator and its scoped plan. Agent 3 was designated for
+the historical ingress migration, not as a permanent operator identity. Shared decisions:
 [Infrastructure #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 
 ## Shared implementation and app configuration
 
-Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/b56d8a9f88088122555e275549afa8b86fc10be5/docs/app-release-standard.md).
+Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/a82888c83975de486b27ec0d0dc787fb5b167301/docs/app-release-standard.md).
 `app.json` contains this app's service/container/domain/environment/network/DB
 and readiness policy; `compose.yml` defines its services. Common release and
 bundle code has no application-name branches. `deploy/shared-source.json` pins
@@ -43,9 +76,38 @@ Nginx, runs a whole-project down/remove-orphans, or prunes host images.
 The owner-approved sequence is gateway transfer, Notoli release and independent
 repeat verification, then MacroMapper release and repeat verification.
 Notoli preserves proxy `172.30.88.2`, backend `.3`, ASGI exact-peer trust and
-Uvicorn `--no-proxy-headers`. Port 3000 is preserved pending the separate owner
-consumer/disposition decision. Certificates remain host-administered in the
-legacy path and are excluded from every app release.
+Uvicorn `--no-proxy-headers`. Production publishes no host ports for either
+service. The gateway connects to `notoli-frontend:80` on `notoli_default`. The
+port 3000 consumer inventory found no direct operational dependency, so
+the Compose file and app policy remove both wildcard bindings. Verify Docker
+bindings, IPv4/IPv6 reachability from outside the VM, HTTPS, API auth responses,
+OAuth discovery and MCP readiness after the app release. See
+[Infrastructure #23](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/23).
+Certificates remain host-administered in the legacy path and are excluded
+from every app release.
+
+
+### Port-policy transition prerequisite
+
+The port-removal release requires a healthy accepted Notoli release record
+(current.json) whose checksummed app policy permits the existing bindings.
+A recovered release can use its retained previous-release app.json and
+manifest. When those records are absent, preflight checks the running
+ports against the incoming policy and rejects a direct transition from
+legacy port 3000 to no host ports.
+
+For an unrecorded legacy deployment or a recovered release without a saved
+app policy, first use the existing app adoption process. Review a baseline
+release that keeps the live approved bindings in both Compose and app.json,
+and deploy it through env-prod with the current database. Once that release
+records its healthy policy, promote the separate port-removal change.
+The production baseline for Infrastructure #23 already has a healthy,
+checksum-verified release record.
+
+If the post-start port check fails, the controller stops the candidate frontend
+explicitly. The outer failure handler stops the backend and any management
+writers by app and service labels, verifies that each writer has stopped, and
+retains the failed release record for operator review.
 
 ## CI inputs and private host preparation
 
@@ -309,4 +371,4 @@ source-pin PRs do not authorize merging, promotion, or deployment.
 
 ## 🔌 Shared MCP framework
 
-Follow the [MCP framework contract](../../docs/MCP-FRAMEWORK.md) before activating an optional app. Notoli keeps its current MCP profile; MacroMapper ships the framework with MCP disabled. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.
+Follow the [MCP framework contract](../../docs/MCP-FRAMEWORK.md) before activating an optional app. Notoli and MacroMapper retain their app-owned production MCP profiles and readiness contracts; consult each app's policy and release evidence for the accepted state. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.

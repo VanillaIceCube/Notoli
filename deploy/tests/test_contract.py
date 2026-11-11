@@ -3,6 +3,7 @@
 import hashlib
 import importlib.util
 import json
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -49,6 +50,9 @@ class ContractTests(unittest.TestCase):
         self.assertLessEqual(set(policy["addresses"]), set(policy["networks"]))
         self.assertEqual(release.DB_TARGET, "/backend/db.sqlite3")
         self.assertEqual(release.DB_FILE, "db.sqlite3")
+        if release.APP in {"notoli", "macromapper"}:
+            self.assertEqual(set(policy["networks"]),
+                             {"notoli_backend_private", "notoli_default", "macromapper-ingress"})
         if release.APP == "notoli":
             self.assertEqual(
                 policy["addresses"], {"notoli_backend_private": "172.30.88.2"}
@@ -61,25 +65,45 @@ class ContractTests(unittest.TestCase):
                 release.CONFIG["backend_required_env"],
                 ["DJANGO_TRUSTED_PROXY_IPS=172.30.88.2"],
             )
+            self.assertEqual(release.CONFIG["frontend_port_bindings"], [[]])
             self.assertNotIn("MACROMAPPER_OPENAI_API_KEY", builder.REQUIRED)
         elif release.APP == "macromapper":
-            self.assertEqual(
-                policy["addresses"], {"notoli_backend_private": "172.30.88.2"}
-            )
+            addresses = {"notoli_backend_private": "172.30.88.2"}
+            if builder.FIXED.get("DJANGO_MCP_ENABLED") == "1":
+                addresses["macromapper-ingress"] = "172.20.0.3"
+                self.assertEqual(builder.FIXED["DJANGO_MCP_BASE_URL"],
+                                 "https://" + release.CONFIG["domain"])
+                self.assertEqual(builder.FIXED["DJANGO_TRUSTED_PROXY_IPS"], "172.20.0.3")
+            else:
+                self.assertIn(builder.FIXED.get("DJANGO_MCP_ENABLED"), (None, "0"))
+                self.assertNotIn("DJANGO_MCP_BASE_URL", builder.FIXED)
+            self.assertEqual(policy["addresses"], addresses)
             self.assertEqual(release.CONFIG["frontend_port_bindings"], [[]])
             self.assertIn("MACROMAPPER_OPENAI_API_KEY", builder.REQUIRED)
-            self.assertNotIn("DJANGO_MCP_BASE_URL", builder.FIXED)
 
     def test_app_readiness_rejects_wrong_origin_content_and_missing_challenge(self):
         rules = {rule["path"]: rule for rule in release.CONFIG["readiness"]["public"]}
         expected = {"/", "/api/notifications/"}
-        if release.APP == "notoli":
+        mcp_enabled = release.APP == "notoli" or builder.FIXED.get("DJANGO_MCP_ENABLED") == "1"
+        if mcp_enabled:
             expected |= {
                 "/.well-known/oauth-authorization-server",
                 "/.well-known/oauth-protected-resource/mcp",
                 "/mcp",
             }
         self.assertEqual(set(rules), expected)
+        if mcp_enabled:
+            origin = "https://" + release.CONFIG["domain"]
+            self.assertEqual(rules["/.well-known/oauth-authorization-server"]["json_equals"],
+                             {"issuer": origin})
+            self.assertEqual(rules["/.well-known/oauth-protected-resource/mcp"]["json_equals"],
+                             {"resource": origin + "/mcp"})
+            if release.APP == "macromapper":
+                for path in ("/.well-known/oauth-authorization-server",
+                             "/.well-known/oauth-protected-resource/mcp"):
+                    self.assertEqual(rules[path]["content_type"], "application/json")
+                self.assertEqual(rules["/mcp"]["header_contains"]["WWW-Authenticate"],
+                                 'resource_metadata="' + origin + '/.well-known/oauth-protected-resource/mcp"')
         self.assertTrue(release.response_matches(rules["/"], {}, b"<HTML>app</HTML>"))
         self.assertFalse(release.response_matches(rules["/"], {}, b"upstream error"))
         self.assertFalse(
@@ -89,15 +113,19 @@ class ContractTests(unittest.TestCase):
         )
         for rule in rules.values():
             if "json_equals" in rule:
+                headers = {"Content-Type": rule.get("content_type", "application/json")}
                 self.assertTrue(
                     release.response_matches(
-                        rule, {}, json.dumps(rule["json_equals"]).encode()
+                        rule, headers, json.dumps(rule["json_equals"]).encode()
                     )
                 )
                 wrong = {key: "https://wrong.invalid" for key in rule["json_equals"]}
                 self.assertFalse(
-                    release.response_matches(rule, {}, json.dumps(wrong).encode())
+                    release.response_matches(rule, headers, json.dumps(wrong).encode())
                 )
+                if "content_type" in rule:
+                    self.assertFalse(release.response_matches(
+                        rule, {"Content-Type": "text/html"}, json.dumps(rule["json_equals"]).encode()))
             if "header_contains" in rule:
                 self.assertTrue(
                     release.response_matches(rule, rule["header_contains"], b"")
@@ -142,3 +170,35 @@ class ContractTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     parity.verify(root, manifest, workflow)
                 path.write_bytes(original)
+
+    def test_action_upgrade_requires_the_approved_shared_template(self):
+        spec = importlib.util.spec_from_file_location(
+            "parity_upgrade", ROOT / "deploy/check_parity.py"
+        )
+        parity = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(parity)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in (*parity.FILES, "deploy/production/app.json",
+                         ".github/workflows/ci-deploy.yml"):
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / name, target)
+            manifest = {"contract_version": 1, "files": {
+                name: parity.digest((root / name).read_bytes()) for name in parity.FILES
+            }}
+            path = root / ".github/workflows/ci-deploy.yml"
+            previous = path.read_text(encoding="utf-8")
+            # This fixture models a reviewed source upgrade, not an allowlist
+            # for arbitrary workflow edits or mutable Action tags.
+            references = re.findall(r"docker/login-action@[0-9a-f]{40}\b", previous)
+            self.assertEqual(len(references), 1)
+            old = references[0]
+            approved = previous.replace(old, "docker/login-action@" + "a" * 40)
+            path.write_text(approved, encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "workflow differs"):
+                parity.verify(root, manifest, previous)
+            parity.verify(root, manifest, approved)
+            path.write_text(approved + "\n# unrelated deployment drift\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "workflow differs"):
+                parity.verify(root, manifest, approved)

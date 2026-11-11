@@ -35,8 +35,8 @@ jobs:
           if not re.fullmatch(r'/[A-Za-z0-9_/-]+', path) or '..' in path.split('/') or path == '/':
               raise SystemExit('Invalid application directory')
           PY
-      - uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003
-      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+      - uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -48,14 +48,14 @@ jobs:
           echo "frontend=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/notoli-frontend" >> "$GITHUB_OUTPUT"
       - name: Build backend
         id: backend
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: ./backend
           push: true
           tags: ${{ steps.images.outputs.backend }}:sha-${{ github.sha }}
       - name: Build frontend
         id: frontend
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: ./frontend
           push: true
@@ -81,7 +81,7 @@ jobs:
           release_id="$(python3 deploy/production/build_bundle.py release_bundle)"
           echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
       - name: Reserve private incoming directory
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         env:
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
           RELEASE_ID: ${{ steps.bundle.outputs.release_id }}
@@ -101,7 +101,7 @@ jobs:
             test ! -L "$DEPLOY_PATH/incoming"
             mkdir "$DEPLOY_PATH/incoming/$RELEASE_ID"
       - name: Upload into reserved attempt
-        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1
         with:
           host: ${{ vars.DEPLOY_HOST }}
           username: ${{ vars.DEPLOY_USER }}
@@ -112,7 +112,7 @@ jobs:
           target: ${{ vars.DEPLOY_PATH }}/incoming/${{ steps.bundle.outputs.release_id }}
           strip_components: 2
       - name: Activate only notoli
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1
         env:
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
           RELEASE_ID: ${{ steps.bundle.outputs.release_id }}

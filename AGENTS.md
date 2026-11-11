@@ -6,6 +6,18 @@ release standard. Update the shared source, then synchronize both applications;
 CI's parity check rejects independent vendor edits. App policy lives in
 `deploy/production/app.json`; preserve its intentional network/readiness differences.
 
+Branch ownership: follow the main-first policy in
+[FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262)
+and [Notoli #975](https://github.com/VanillaIceCube/Notoli/issues/975).
+Implement and review source through PRs targeting `main`, then promote its exact reviewed source
+through an `env-prod` PR with existing review and CI gates. Exceptional deployment
+iteration requires explicit owner authorization and must return promptly through
+a reviewed `main` PR before the next promotion. History reconciliation alone
+does not authorize deployment. Intentional release lag is not source drift.
+Notoli owns its MCP OAuth issuer, consent, grants and tools. The abandoned central
+issuer migration (#973) is not a deployment prerequisite; no YNAB or shared
+introspection service is required. Preserve the existing Notoli MCP connection.
+
 
 This repo uses manual setup steps so Codex does not assume Django or Node are installed.
 Follow one of the setup paths below before running the app.
@@ -174,11 +186,11 @@ and Django static assets use `/static/`.
 
 ## Maintenance
 - Deployments must not run host-wide Docker pruning. Retain prior release images for rollback; cleanup requires a host operator to review disk usage and explicitly select unused app images. Production releases use immutable digests and manage only Notoli's backend/frontend through `deploy/production/release.py`. Shared ingress/certificates belong to the infrastructure repository under approved architecture v2. See `deploy/production/README.md` and `.github/README-WORKFLOWS.md`.
-- Frontend builds use Vite and tests use standalone Jest/Babel. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite explicitly maps the existing `REACT_APP_API_BASE_URL`/`PUBLIC_URL` settings, keeps port 3000 and `build/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
+- Frontend builds use Vite and tests use Vitest/jsdom. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite explicitly maps the existing `REACT_APP_API_BASE_URL`/`PUBLIC_URL` settings, keeps port 3000 and `build/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
 - Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for the browser baseline.
 - ChatGPT listing metadata: `plugins/notoli/plugin.json` is the canonical branding source, but personal custom-MCP plugins use a separate generated compatibility manifest. Download the installed plugin ZIP and use `plugins/notoli/build_listing.py` to apply branding while preserving its exported name and `.app.json`; upload a new version to the same plugin. Keep account-specific exports/build ZIPs out of Git. Listing publication is separate from Docker deployment and MCP tool refresh. Privacy/terms pages and verified publisher identity remain prerequisites for public submission. See `plugins/notoli/README.md`.
 - MCP review regressions: Connected Apps must include the current user's unexpired grants before token exchange, exclude expired/foreign grants, and deduplicate apps across grants/tokens. Read consent must explicitly disclose owner/collaborator IDs, usernames, and emails. The shared REST/MCP collaborator resolver must reject multiple matching identities before membership or notification writes; never choose a recipient with `.first()`.
-- MCP deployment: install requirements, apply Django OAuth Toolkit's supplied migrations with `migrate`, and run `python manage.py check --deploy` under production settings. Serve `app.asgi:application` using Uvicorn with `--no-proxy-headers` (one worker for SQLite); WSGI does not serve MCP. Production publishes no backend port. Only Nginx shares `backend_private` with the backend (`172.30.88.0/29`, Nginx `172.30.88.2`, backend `172.30.88.3`); `backend_egress` is backend-only for outbound email. ASGI accepts forwarded scheme/client only from the configured exact proxy IP, strips all other forwarded metadata, and Django ignores forwarded host/proto headers. If changing the subnet, update IPAM, both fixed IPs, and trusted IP together, then recreate services.
+- MCP deployment: install requirements, apply Django OAuth Toolkit's supplied migrations with `migrate`, and run `python manage.py check --deploy` under production settings. Serve `app.asgi:application` using Uvicorn with `--no-proxy-headers` (one worker for SQLite); WSGI does not serve MCP. Production publishes no frontend or backend host port. The gateway reaches the frontend through `notoli_default`. Only Nginx shares `backend_private` with the backend (`172.30.88.0/29`, Nginx `172.30.88.2`, backend `172.30.88.3`); `backend_egress` is backend-only for outbound email. ASGI accepts forwarded scheme/client only from the configured exact proxy IP, strips all other forwarded metadata, and Django ignores forwarded host/proto headers. If changing the subnet, update IPAM, both fixed IPs, and trusted IP together, then recreate services.
 - Register the predefined public ChatGPT OAuth client once: `python manage.py register_mcp_client --redirect-uri "<exact ChatGPT callback URI>"`. Copy the callback from ChatGPT's management page; use S256 PKCE and token auth method `none`. No client secret, password grant, dynamic registration, or unverified OIDC email claims are exposed. Existing registrations must be edited explicitly in Django admin.
 - MCP product coverage: 31 explicit tools cover boards, lists, items (including board-only items), ordering, membership, sharing, and notifications. `notoli:read` includes board-scoped owner/collaborator discovery; `notoli:write` permits item creation/edits; `notoli:share` permits owner-only collaborator add/remove; `notoli:organize` permits board/list creation/edits, order, and list membership; `notoli:notifications` permits recipient-only activity reads/read flags; `notoli:delete` permits permanent deletion (notification deletion also needs notifications). Sharing covers all lists/items in a board. Delete tools require `confirm: true` after explaining cascade impact; this is a caller assertion, not independent human verification. Arrays are capped at 1000 IDs, and reordering requires the complete current set. Preserve REST validation, owner checks, live membership checks, immutable boards, and notifications via shared services. Existing connections must reconnect for new scopes; refresh cannot escalate. Keep metadata/challenges aligned. No raw HTTP, global user directory, ownership transfer, or credential/admin tools are exposed. Full catalog/evaluations: `plugins/notoli/README.md`.
 - Browser `GET /auth/mcp/authorize/` redirects to React `/connections/authorize` using `DJANGO_FRONTEND_BASE_URL` and the original query. React reuses the existing JWT login (no second Django session). JSON GET consent and POST ticket/decision require a verified JWT header; signed tickets bind the displayed request to the account for 10 minutes. Allow/Cancel returns Django's validated callback URL. React `/connections` calls JWT-only `GET/POST /auth/mcp/connections/` to list/revoke the current user's tokens and pending grants. Cookies and posted user IDs cannot authorize these endpoints. Keep JWTs out of URLs and retain PKCE/resource/scope checks in Django. Schedule token cleanup only through the approved production maintenance plan; keep access/refresh tokens, consent tickets, and authorization codes out of logs.
@@ -221,3 +233,34 @@ Dependency-review and alert-lifecycle behavior follows the shared parity contrac
 `.github/README-WORKFLOWS.md`: missing evidence fails, reports stay bounded, and
 concurrent closure requires verified final state. Keep CodeQL scope outputs and
 RoboCop baseline evidence connected without changing full default-branch coverage.
+
+## 🤖 Reviewer model policy
+
+Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-alert grouping. Preserve each reviewer’s existing key/project isolation, budgets and blocking gates. Application AI model selection remains app-owned.
+
+Batch 2 workflow controls and bounded npm malware review are documented in `.github/README-WORKFLOWS.md`; Python malware coverage follows `docs/PYTHON-MALWARE-DECISION.md`. Shared deployment changes require the pinned Infrastructure source.
+
+Frontend testing now uses Vitest (`npm test`, optional `-- --maxWorkers=2`) with jsdom; Vite retains the documented REACT_APP_API_BASE_URL compatibility and build/ output. Jest/Babel test tooling is removed. Development images use reviewed digest pins and manifest-aware dependency startup. See frontend/README.md and deploy/README.md.
+
+Browser checks: activate an isolated Python environment with backend requirements,
+then `cd frontend`, `npx playwright install chromium`, `npm run test:e2e`. Ports
+8001/3001 must be free. Tests use disposable SQLite/file mail and no real accounts.
+Vitest projects isolate pure Node files from VM DOM forks; do not override the
+configured pool for timing. See frontend/README.md and docs/BATCH2-PARITY.md.
+
+Reviewer configuration and safe follow-up rules now follow `.github/AI-REVIEWERS.md`;
+keep validated optional AI_REVIEW_* variables, per-persona identity, serialized
+writers and existing blocking checks aligned when editing CI.
+
+Maintain CI architecture diagrams and regenerate `docs/CI-CD-SOURCE-INVENTORY.json`
+with `python scripts/ci_architecture.py` after workflow edits. Promotion summaries
+are informational; preserve existing release/check authorization and secret boundaries.
+
+Resend timeout supports `0 < seconds <= 30` with safe 10-second fallback; preserve original
+fail_silently behavior and generic reset responses. Never log delivery exception
+text/tracebacks or recipient/token data. See backend/README.md.
+
+Security-alert repository variables must resolve in the three caller workflows, not
+inside local composite metadata. Pass explicit model/effort/token inputs and run
+`.github/actions/custom-regressions/security-alert-contract.test.js` after edits;
+actual loading acceptance uses fresh controlled dispatches on corrected main.

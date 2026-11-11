@@ -1,6 +1,5 @@
-# Miniforge 24.04, pinned for reproducible development builds. Update this
-# digest only after an explicit image-version and security review.
-FROM condaforge/miniforge3@sha256:7851b835559a6abb4aca37f5203bc48cc320894b17723498b1408266cdea1cd6
+# Reviewed multi-platform development image; production image is independent.
+FROM condaforge/miniforge3:26.9.4-2@sha256:dfb274710eee2bb062c87b15c10fde6ea91f71b763796b5de489df87b08cf678
 
 WORKDIR /backend
 

@@ -15,7 +15,7 @@ export default [
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {
-      globals: { ...globals.browser, ...globals.node, ...globals.jest },
+      globals: { ...globals.browser, ...globals.node, ...globals.vitest },
     },
     rules: {
       // Preserve the existing lint policy while migrating the supported plugin family.

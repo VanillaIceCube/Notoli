@@ -18,6 +18,7 @@ function createGitHubMock({
 } = {}) {
   const createdReviews = [];
   const pulls = {
+    async get() { return { data: { head: { sha: "abc123" } } }; },
     listFiles() {},
     listReviews() {},
     listReviewComments() {},
@@ -470,6 +471,7 @@ test("keeps approval and comment verdict checks successful", async () => {
   }
 });
 
+
 test("keeps the model-authored summary when it declares no new material", async () => {
   const { createdReviews, github } = createGitHubMock({
     priorReviews: [
@@ -683,15 +685,17 @@ test("OpenAI review requests reserve a bounded output budget", () => {
     action,
     /MAX_OUTPUT_TOKENS: \$\{\{ inputs\.max_output_tokens \}\}/,
   );
-  assert.match(action, /max_output_tokens: \$max_output_tokens/);
+  assert.match(action, /policy.cjs" payload/);
+  const policy = fs.readFileSync(path.resolve(__dirname, "../openai-chat/policy.cjs"), "utf8");
+  assert.match(policy, /max_output_tokens: budget/);
   assert.match(action, /enable_web_search:[\s\S]*?default: "false"/);
   assert.match(
     action,
     /ENABLE_WEB_SEARCH: \$\{\{ inputs\.enable_web_search \}\}/,
   );
-  assert.match(action, /type: "web_search"/);
-  assert.match(action, /search_context_size: "medium"/);
-  assert.match(action, /tool_choice: "required"/);
+  assert.match(policy, /type: "web_search"/);
+  assert.match(policy, /search_context_size: "medium"/);
+  assert.match(policy, /tool_choice: "required"/);
 });
 
 test("Obi-Wan collects bounded external evidence for Dependabot major updates", () => {
@@ -798,4 +802,92 @@ test("keeps the visually inspectable Markdown examples synchronized", () => {
   const fixture = fs.readFileSync(fixturePath, "utf8").replaceAll("\r\n", "\n");
 
   assert.equal(fixture, examples);
+});
+
+test("retains independent body findings for duplicate inline comments and unchanged verdicts", async () => {
+  for (const duplicate of [true, false]) {
+    const bot = { login: "obi-wan-code-nobi-reviewer[bot]" };
+    const inline = { path: "src/example.js", line: 1, body: "Already reported inline" };
+    const { createdReviews, github } = createGitHubMock({
+      priorReviews: [{
+        id: 42, state: "CHANGES_REQUESTED", submitted_at: "2026-07-12T00:00:00Z",
+        body: "Previous blocking review", user: bot,
+      }],
+      priorComments: [{ ...inline, pull_request_review_id: 42, diff_hunk: "@@ -1,2 +1,2 @@", user: bot }],
+    });
+    const { core, failures } = createCore();
+
+    await publishAiReview({
+      github, context: context(), core, personaName: "Obi-Wan Code-nobi",
+      raw: JSON.stringify(review({
+        event: "REQUEST_CHANGES",
+        unchanged: !duplicate,
+        findings: ["Independent actionable body finding"],
+        comments: duplicate ? [inline] : [],
+      })),
+    });
+
+    assert.deepEqual(failures, ["Obi-Wan Code-nobi requested changes."]);
+    assert.equal(createdReviews.length, 1);
+    assert.equal(createdReviews[0].event, "REQUEST_CHANGES");
+    assert.equal(createdReviews[0].comments, undefined);
+    assert.match(createdReviews[0].body, /Independent actionable body finding/);
+    assert.doesNotMatch(createdReviews[0].body, /Already reported inline/);
+  }
+});
+
+test("requires valid HTTP(S) source strings for an otherwise complete major-upgrade brief", async () => {
+  const invalid = [{}, "arbitrary prose", "https://", "https:/example.test", "https:///example.test",
+    "https://[invalid]", "https://example.test/with spaces", "https://example.test/%GG",
+    "ftp://example.test/release", "javascript:alert(1)", "",
+    "https://user@example.test/release", "https://:fixture-password@example.test/release"];
+  const valid = ["http://example.test/notes", "https://example.test/release?q=v2%20notes"];
+  for (const sources of [[], invalid, [...invalid, ...valid]]) {
+    const { createdReviews, github } = createGitHubMock();
+    const { core, failures } = createCore();
+
+    await publishAiReview({
+      github, context: context(), core, personaName: "Obi-Wan Code-nobi", requireMajorUpgradeBrief: true,
+      raw: JSON.stringify(review({
+        major_upgrade_brief: {
+          dependency: "example 1 to 2",
+          upgrade_story: "The upstream project removed a deprecated API.",
+          repository_impact: "The application uses its replacement.",
+          recommendation: "Merge after the required checks pass.",
+          sources,
+        },
+      })),
+    });
+
+    assert.equal(createdReviews.length, 1);
+    if (sources.includes(valid[0])) {
+      assert.deepEqual(failures, []);
+      assert.equal(createdReviews[0].event, "APPROVE");
+      assert.ok(createdReviews[0].body.includes("**Sources:** " + valid.join(", ")));
+      assert.doesNotMatch(createdReviews[0].body, /\[object Object\]|arbitrary prose|ftp:|%GG|user@|fixture-password/);
+    } else {
+      assert.equal(failures.length, 1);
+      assert.match(failures[0], /missing sources/);
+      assert.equal(createdReviews[0].event, "COMMENT");
+      assert.match(createdReviews[0].body, /Review unavailable/);
+    }
+  }
+});
+
+test("a changed PR head cannot receive an obsolete model verdict", async () => {
+  const { github, createdReviews } = createGitHubMock();
+  const { core, failures } = createCore();
+  await publishAiReview({ github, context: context({ sha: "obsolete-head" }), core,
+    raw: JSON.stringify(review()), personaName: "Obi-Wan Code-nobi" });
+  assert.equal(createdReviews.length, 0);
+  assert.match(failures[0], /PR head changed/);
+});
+test("unavailable notices identify the reviewed event commit without claiming approval", async () => {
+  const { github, createdReviews } = createGitHubMock();
+  const { core, failures } = createCore();
+  await publishAiReview({ github, context: context({ sha: "reviewed-head" }), core,
+    raw: "OpenAI response unavailable", personaName: "Obi-Wan Code-nobi" });
+  assert.equal(createdReviews[0].commit_id, "reviewed-head");
+  assert.equal(createdReviews[0].event, "COMMENT");
+  assert.equal(failures.length, 1);
 });

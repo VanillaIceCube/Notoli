@@ -1,4 +1,178 @@
+## 2026-11-11
+
+### Fixed
+
+- Make authentication-page navigation semantic links with keyboard access and native new-tab behavior while preserving form submission, routing, and styling (#972).
+
+## 2026-11-11
+
+### Changed
+
+- Upgrade Docker login to immutable v4.8.0 through Infrastructure's shared release template, synchronize its contract regression, and regenerate the CI architecture inventory.
+- Align all CodeQL entry points on the immutable v4.39.3 revision and regenerate the CI architecture inventory; preserve scanner scope and merge gates.
+- Upgrade the frontend test environment to jsdom 31 and verify pull-to-refresh transition and animation longhands against its normalized computed CSS.
+
+## 2026-11-07
+
+### Fixed
+
+- Stop repeated page-readiness notifications from causing a routing render loop and intermittent unresponsive navigation/buttons. Retain the menu and pull-to-refresh behavior from PR #1019, with regression coverage for repeated readiness and browser interaction errors.
+
 # Changelog
+
+## 2026-11-06
+
+### Added
+
+- Focused real-transition, gesture lifecycle, and desktop/mobile browser regression coverage for menu dismissal and refresh stability.
+
+### Fixed
+
+- Keep all board overflow actions mounted through menu dismissal and preserve keyboard navigation and restored focus (#915).
+- Use one proportional pull-to-refresh spacer and handle cancelled, overlapping, failed, and inactive-page gestures without competing layout animations (#847).
+
+## 2026-11-06
+
+### Fixed
+
+- Restore security-alert action loading by resolving repository variables in caller workflows and passing validated explicit composite inputs.
+- Cover default, empty, explicit and invalid configuration plus empty/nonempty mocked alert pipelines and all three caller contracts.
+
+## 2026-11-06
+
+### Fixed
+
+- Transactional email failures now expose safe categories/status codes without exception payloads, tracebacks or recipient/token data; reset responses remain generic.
+- Resend requests use a finite bounded timeout, with explicit safe fallback and mocked coverage for failure policy and both fail_silently modes.
+
+## 2026-11-06
+
+### Added
+
+- Managed production-promotion impact summaries from the actual current target comparison, with bounded metadata, owned-comment updates and race/permission coverage.
+- Source-linked Mermaid CI/CD architecture and checked per-repository workflow/action inventories, preserving application and gateway trust differences.
+
+### Fixed
+
+- Architecture guidance no longer presents completed reviewer credential migration or obsolete test/runtime assumptions as future work.
+
+## 2026-11-06
+
+### Added
+
+- Bounded, attributed human discussion context and conservative App-owned reviewer follow-ups, with adversarial, stale-head, idempotency and permission regressions.
+- Safe Responses token/latency evidence, dated partial cost estimates and validated owner configuration/recovery controls; existing Luna model selection is preserved.
+
+### Fixed
+
+- Reviewer ownership no longer falls back to persona-name matching; old-head verdicts are rejected and writer runs serialize.
+
+## 2026-11-05
+### Added
+- Shared isolated authentication browser tests with disposable data and local-only reset mail.
+- Repository syntax/Compose validation and mocked request/history/lint attribution coverage.
+### Fixed
+- Preserve early, failing and late CI diagnostics within bounded reviewer context and failure artifacts.
+### Changed
+- Use bulk form setup for validation/API unit cases while retaining typed happy paths and assertions.
+- Separate pure Node tests and isolated VM DOM workers; prebundle UI dependencies for the full 301-test suite.
+
+## 2026-11-05
+### Added
+- Shared development dependency lifecycle regression for fresh, unchanged, changed and failed installs.
+### Fixed
+- Upgrade React Router past both reported advisories and remove the unpatched Jest/deepmerge dependency path.
+### Changed
+- Complete frontend Vitest migration with all existing assertions preserved; retain Vite routing/build compatibility.
+- Pin development Node/Miniforge multi-platform image digests and refresh frontend dependencies only when manifests change.
+
+## 2026-11-05
+### Added
+- Immutable workflow-policy and bounded changed-version malware regression coverage.
+- Evidence-based Python malware scanning decision and shared release upgrade regression.
+### Fixed
+- Missing or invalid dependency evidence now fails PR malware review visibly.
+### Changed
+- Explicit scanner/path-filter grants support read-only repository defaults; unused orchestration issue writes removed.
+- Adopt the reviewed Infrastructure release template/test contract with readable Action versions.
+
+## 2026-11-05
+
+### Fixed
+- Bound malware classification to repository source advisories instead of scanning the global catalogue.
+- Recover the exact structured concurrent-close response only after verifying saved lifecycle state and body.
+- Recover omitted alert refs deterministically and interrupted Project synchronization without duplicate issues or resetting planning.
+- Retry inconsistent exact-head Dependabot check readiness safely and route signed SHA-only Action updates to manual review.
+
+
+## 2026-11-03
+
+### Fixed
+
+- Collect usage evidence for every Dependabot dependency and use each major update's own versions and ecosystem for upstream release evidence.
+- Preserve independent AI review findings during duplicate suppression and require valid HTTP(S) sources in major-upgrade briefs.
+
+### Removed
+
+- Remove Notoli's production host port 3000 on IPv4 and IPv6. The frontend remains available through the shared HTTPS gateway (Infrastructure #23).
+
+## 2026-11-02
+
+### Fixed
+
+- Enforce configured password validators before registration, including similarity to the final username/email; reject non-string passwords without creating users.
+- Prevent concurrent auth submissions, preserve request headers through JWT refresh, and remove stale/blank session profile fields.
+- Make notification loads retryable, preserve failed actions for retry, and disable overlapping item/bulk actions through response parsing. Bulk operations use explicit transactions.
+
+## 2026-11-02
+
+### Fixed
+
+- Hold native Dependabot auto-merge behind a required policy result for each head; validate signed group metadata, paginate all open dependency alerts and support configured reviewer bot identities.
+
+- Adopt FullStackTemplate protected Dependabot auto-merge and atomic CodeQL regressions, requiring current-head approvals, live protected-branch checks and idempotent native activation; remove the PR-token merge path (FullStackTemplate #240).
+
+- Resolve the transitive minimatch advisory with a scoped modern-version override and regenerated frontend lockfile; document parent API compatibility and removal checks ([FullStackTemplate #267](https://github.com/VanillaIceCube/FullStackTemplate/issues/267)).
+- Resolve Jest/Babel glob cancellation and nested minimatch advisories without downgrading the test toolchain (#984).
+
+### Changed
+
+- Group all CodeQL action entry points in coordinated Dependabot version and security updates while preserving existing schedules and review gates ([FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271)).
+
+## 2026-10-30
+
+### Changed
+
+- Synchronize canonical release-contract regressions for app-owned MacroMapper MCP, preserving this application’s existing runtime, framework and OAuth policy.
+- Use GPT-6 Luna for all OpenAI PR reviewers and security-alert grouping while preserving existing review gates, isolated credentials and token budgets.
+
+- Reconcile production promotion ancestry without runtime changes and document main-first review, exact-source promotion and prompt reconciliation of owner-authorized deployment iterations under [Notoli #975](https://github.com/VanillaIceCube/Notoli/issues/975) and [FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262). Keep the central MCP cutover held under #973 pending its acceptance and operator checkpoints.
+
+### Removed
+
+- Remove the unreleased central MCP issuer migration (#973). Notoli continues to own MCP OAuth, consent, grants and all 31 tools; ordinary app accounts and login remain unchanged. Restore the original three-network release policy and remove the shared introspection credential requirement.
+
+## 2026-10-29
+
+### Added
+
+- Add an MCP-only central authorization-service consumer with bounded authenticated introspection, strict issuer/resource/client/scope/lifetime checks, explicit links to existing accounts and real SDK HTTP authorization regressions.
+- Document the YNAB-first cutover, separate ChatGPT/Codex acceptance, privileged credential delivery, old-grant retirement and deliberate rollback.
+
+### Fixed
+
+- Adopt the same reviewed Infrastructure release fixture pin `ee9c0d40421a8b3f4886340b188a21e86c6429cf` across all consumers, including exact app-mode topology and metadata content-type checks.
+
+- Synchronize Infrastructure's canonical release fixture so additional required app settings receive synthetic test values while missing, empty and multiline production settings still fail.
+- Synchronize canonical gateway-address/readiness regressions for the reviewed optional MCP peers while retaining exact proxy-trust and drift rejection.
+
+### Changed
+
+- Require the accepted five-network gateway baseline in Notoli's central app policy, preserve existing Notoli memberships/trust, and document explicit disabled-profile sequencing before original three-network legacy recovery.
+- Pin the audited existing MacroMapper gateway peer `172.20.0.3` in release validation without adding it to Notoli's trusted proxies or changing network identities.
+- Select central MCP in the app-owned production policy and deliver its introspection-only secret through the existing private environment/workflow contract; preserve ordinary login, REST JWTs, local permissions and deployment networks.
+- Link central Connected Apps to shared grant management, disable local issuance in central mode and prepare plugin v0.4.0 for separate post-cutover publication.
+- Synchronize the canonical FullStackTemplate verifier/issuer hook at source commit `5a9294d550ec946a51b34bb2438a6c04ecc13461`.
 
 ## 2026-10-28
 

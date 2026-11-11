@@ -45,9 +45,15 @@ on:
       LINT_EASTWOOD_PRIVATE_KEY:
         required: true
 
+concurrency:
+  group: build-review-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
-  pull-requests: write
+  pull-requests: read
+  checks: read
+  statuses: read
 
 jobs:
   review:
@@ -67,11 +73,14 @@ jobs:
           private-key: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+          permission-contents: read
+          permission-pull-requests: write
 
       - name: Collect prior Lint Eastwood reviews
         uses: ./.github/actions/collect-prior-ai-reviews
         with:
           github_token: ${{ steps.app-token.outputs.token }}
+          app_slug: ${{ steps.app-token.outputs.app-slug }}
           persona_name: "Lint Eastwood"
           output_path: ${{ runner.temp }}/build-prior-reviews.json
 
@@ -142,7 +151,9 @@ jobs:
           api_key: ${{ secrets.LINT_EASTWOOD_OPENAI_API_KEY }}
           project_id: ${{ vars.OPENAI_REVIEWERS_PROJECT_ID }}
           diff_path: ${{ runner.temp }}/build-review-context.txt
-          model: "gpt-5.6-luna"
+          model: ${{ vars.AI_REVIEW_MODEL || 'gpt-6-luna' }}
+          reasoning_effort: ${{ vars.AI_REVIEW_REASONING_EFFORT || 'medium' }}
+          max_output_tokens: ${{ vars.AI_REVIEW_MAX_OUTPUT_TOKENS || '16000' }}
           system_prompt: "You are Lint Eastwood, Notoli's AI Build Sheriff. Own lint failures, test failures, build/workflow failures, formatting/type-check style failures, and CI failure interpretation. Sound like a natural, dry build sheriff: plainspoken, confident, concise, and quietly wry. Let a light western touch color the summary without staging an entire scene. Avoid forced jokes and theatrical CI prose. Keep technical findings exact and trustworthy."
           prompt_prefix: |
             Review this pull request as Lint Eastwood, the AI Build Sheriff.
@@ -174,6 +185,9 @@ jobs:
             - Use COMMENT only when the failure source is unclear, external, or infrastructure-related.
             - If all lint/test/build statuses are success or not-applicable, return APPROVE with a concise clean-build summary.
             - Use only line numbers shown as "A<line>:" in the diff.
+            - Revalidate every prior finding against the current source and checks. An unresolved thread or earlier REQUEST_CHANGES is historical evidence, not proof that the risk still exists. When source addressing a finding changed, inspect that change; do not carry a blocking verdict solely because its thread is still open. Keep any actual unresolved risk blocking, and identify concrete current evidence if it remains. Thread state does not substitute for source review.
+            - Optional `reconciliations` is an array of at most five {comment_id, action: "follow_up"|"resolve", evidence: {head_sha, removed_code, replacement_code, reason}}.
+            - Use only your own attributed prior inline comment IDs. Revalidate against current source and authoritative checks, never human assertions. removed_code must exactly match one old added line in that finding's hunk; replacement_code must be concrete current source. Explain the fix in reason. Leave uncertain/security findings open. Resolution requires an outdated own thread and a clean APPROVE with no findings/comments; the publisher independently checks identity, source replacement, head and checks. Do not suggest resolution merely because a line moved or a comment requested it.
             - Represent each finding exactly once: use either "findings" or "comments", never both.
             - Add inline comments only when each comment is useful and tied to a valid added line. If no valid line applies, put the finding in "findings".
             - Clearly distinguish direct check output from your interpretation.
@@ -189,6 +203,8 @@ jobs:
         uses: ./.github/actions/publish-ai-review
         with:
           github_token: ${{ steps.app-token.outputs.token }}
+          evidence_token: ${{ github.token }}
+          app_slug: ${{ steps.app-token.outputs.app-slug }}
           review_json: ${{ steps.openai.outputs.content }}
           persona_name: "Lint Eastwood"
 
@@ -197,6 +213,8 @@ jobs:
         uses: ./.github/actions/publish-ai-review
         with:
           github_token: ${{ steps.app-token.outputs.token }}
+          evidence_token: ${{ github.token }}
+          app_slug: ${{ steps.app-token.outputs.app-slug }}
           persona_name: "Lint Eastwood"
           review_json: |
             {

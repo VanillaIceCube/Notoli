@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { register } from '../../services/notoliApiClient';
 import { persistAuthSession, readOkJson } from '../../services/authSession';
 
 export default function Register({ showSnackbar }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -13,11 +14,13 @@ export default function Register({ showSnackbar }) {
   const navigate = useNavigate();
 
   const handleRegister = async () => {
+    if (isSubmitting) return;
     if (!password || password !== confirmPassword) {
       showSnackbar('error', 'Passwords do not match.');
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const response = await register({ email, username, password });
       const data = await readOkJson(response, 'Registration failed :(');
@@ -38,6 +41,8 @@ export default function Register({ showSnackbar }) {
         isNetworkError ? 'Network error :(' : err?.message || 'Registration failed :(',
       );
       console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -104,10 +109,11 @@ export default function Register({ showSnackbar }) {
             fullWidth
             sx={{ backgroundColor: 'var(--secondary-color)' }}
             type="submit"
+            disabled={isSubmitting}
             variant="contained"
           >
             <Typography variant="h5" align="center">
-              Register
+              {isSubmitting ? 'Registering...' : 'Register'}
             </Typography>
           </Button>
           <Box
@@ -124,11 +130,10 @@ export default function Register({ showSnackbar }) {
             >
               Already have an account?{' '}
               <Link
-                component="button"
-                type="button"
+                component={RouterLink}
                 variant="caption"
                 underline="always"
-                onClick={() => navigate('/login')}
+                to="/login"
                 sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
               >
                 Sign in now!

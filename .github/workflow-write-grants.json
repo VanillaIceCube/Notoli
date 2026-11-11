@@ -1,0 +1,62 @@
+{
+  ".github/workflows/ci-auto-merge.yml": {
+    "jobs.dependabot-auto-merge.permissions": [
+      "checks",
+      "contents",
+      "pull-requests"
+    ]
+  },
+  ".github/workflows/ci-deploy.yml": {
+    "permissions": [
+      "packages"
+    ]
+  },
+  ".github/workflows/ci-orchestrator.yml": {
+    "permissions": [
+      "pull-requests"
+    ],
+    "jobs.codeql.permissions": [
+      "security-events"
+    ],
+    "jobs.build-review.permissions": [
+      "pull-requests"
+    ],
+    "jobs.security-review.permissions": [
+      "pull-requests"
+    ]
+  },
+  ".github/workflows/gate-codeql.yml": {
+    "permissions": [
+      "security-events"
+    ],
+    "jobs.analyze-python.permissions": [
+      "security-events"
+    ],
+    "jobs.analyze-javascript.permissions": [
+      "security-events"
+    ],
+    "jobs.analyze-actions.permissions": [
+      "security-events"
+    ]
+  },
+  ".github/workflows/review-build.yml": {
+    "permissions": [
+      "pull-requests"
+    ]
+  },
+  ".github/workflows/review-code.yml": {
+    "permissions": [
+      "pull-requests"
+    ]
+  },
+  ".github/workflows/review-security.yml": {
+    "permissions": [
+      "pull-requests"
+    ]
+  },
+  ".github/workflows/promotion-summary.yml": {
+    "permissions": [
+      "pull-requests"
+    ]
+  }
+}

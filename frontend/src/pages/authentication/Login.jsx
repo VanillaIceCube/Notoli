@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { fetchBoards as fetchBoardsApi, login } from '../../services/notoliApiClient';
 import { persistAuthSession, readOkJson } from '../../services/authSession';
 import { getPreferredBoardId } from '../../services/lastBoard';
@@ -8,6 +8,7 @@ import { connectionReturnTo } from '../../services/authRedirect';
 
 export default function Login({ showSnackbar }) {
   // Basics
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -54,6 +55,8 @@ export default function Login({ showSnackbar }) {
 
   // Login function
   const handleLogin = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const response = await login({ email: email.trim(), password });
 
@@ -88,6 +91,8 @@ export default function Login({ showSnackbar }) {
         (typeof err?.message === 'string' && err.message.toLowerCase().includes('network'));
       showSnackbar('error', isNetworkError ? 'Network error :(' : 'Login failed :(');
       console.error(err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -144,10 +149,11 @@ export default function Login({ showSnackbar }) {
             fullWidth
             sx={{ backgroundColor: 'var(--secondary-color)' }}
             type="submit"
+            disabled={isSubmitting}
             variant="contained"
           >
             <Typography variant="h5" align="center">
-              Login
+              {isSubmitting ? 'Logging in...' : 'Login'}
             </Typography>
           </Button>
           <Box
@@ -166,22 +172,20 @@ export default function Login({ showSnackbar }) {
               }}
             >
               <Link
-                component="button"
-                type="button"
+                component={RouterLink}
                 variant="caption"
                 underline="always"
-                onClick={() => navigate('/forgot-password')}
+                to="/forgot-password"
                 sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
               >
                 Forgot Password?
               </Link>
               {' | '}
               <Link
-                component="button"
-                type="button"
+                component={RouterLink}
                 variant="caption"
                 underline="always"
-                onClick={() => navigate('/register')}
+                to="/register"
                 sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
               >
                 Create Account!

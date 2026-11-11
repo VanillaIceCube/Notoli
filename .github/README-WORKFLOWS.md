@@ -1,6 +1,17 @@
 # 🤖 GitHub Automation
 This repo uses GitHub Actions for CI and deployments, plus Dependabot for dependency updates.
 
+## Major-upgrade review evidence
+
+Obi-Wan uses Dependabot's per-dependency metadata for grouped upgrades.
+Release lookups use each major update's own ecosystem and target version.
+Repository usage searches cover every listed dependency and retain the
+tracked-file exclusions and 30,000-byte limit. Numeric Actions references
+such as 7 and v7 can match a full release tag such as v7.0.0. Opaque refs
+leave a visible evidence gap. Required briefs need at least one valid HTTP(S)
+source URL. The publisher keeps independent body findings when it suppresses
+duplicate inline comments or sees an unchanged verdict.
+
 ## ✅ Flow 1: CI (`.github/workflows/ci-orchestrator.yml`)
 Trigger:
 - Pull requests (opened/synchronize/reopened/ready_for_review)
@@ -15,14 +26,14 @@ What it does:
   - The shared [`.github/actions/prepare-lint-commit`](actions/prepare-lint-commit/action.yml) action validates that identity, configures the token only as the Git remote's push URL, and the lint job restores the unauthenticated push URL immediately after the commit step.
   - Auto-fix is enabled only for non-Dependabot pull requests whose head branch belongs to this repository. Those jobs explicitly check out the writable head branch. Fork and Dependabot pull requests use GitHub's standard pull-request checkout, skip mutating lint steps, and still run strict formatting/lint checks against the submitted code. The lint workflow does not receive an App secret from forks; Dependabot review credentials are handled separately below.
 - Runs the reusable test gate: [`.github/workflows/gate-test.yml`](workflows/gate-test.yml)
-  - Frontend: standalone Jest via `npm test` (CI mode), then `npm run build` (strict ESLint 10 and Vite production build). Build failures fail the existing frontend test gate and remain in its captured diagnostics.
+  - Frontend: Vitest via `npm test` (CI mode), then `npm run build` (strict ESLint 10 and Vite production build). Build failures fail the existing frontend test gate and remain in its captured diagnostics.
   - Backend: `python manage.py test`
   - Repository automation: Node's built-in test runner executes colocated behavioral tests for upstream major-upgrade evidence, the AI review publisher, the security-alert reconciler, and large dependency-review report transport. Changes to the report helper or vulnerability workflow also select this test job.
 - Lint and test jobs use the same change filters:
   - Frontend checks run for `frontend/**` changes.
   - Backend checks run for `backend/**` changes.
   - Changes to `.github/actions/read-versions/**` or `.github/actions/prepare-lint-commit/**` run both frontend and backend checks because those actions are shared by both lint jobs.
-  - Changes to the AI review publisher, prior-review and upstream-evidence collectors, OpenAI/diff actions, CI orchestrator, persona review workflows, repository automation test workflow, or security-alert reconciler run the dedicated repository automation test job without coupling GitHub Action behavior to the frontend Jest suite.
+  - Changes to the AI review publisher, prior-review and upstream-evidence collectors, OpenAI/diff actions, CI orchestrator, persona review workflows, repository automation test workflow, or security-alert reconciler run the dedicated repository automation test job without coupling GitHub Action behavior to the frontend unit suite.
   - Other workflow/action changes are validated by Actionlint and CodeQL Actions analysis without forcing application test suites to run.
   - Jobs skipped because their paths are not relevant report `not-applicable` to downstream review workflows.
   - Lint, test, and CodeQL change detection uses the pinned `dorny/paths-filter` action. If its GitHub API request fails, the detector remains failed but adds a titled error annotation and workflow summary explaining that no scope was evaluated and the workflow should be rerun.
@@ -49,7 +60,7 @@ What it does:
   - Consumes explicit gate results, vulnerability/malware reports, security check summaries, check annotations, prior RoboCop reviews on the PR, and the line-numbered PR diff before publishing one native PR review.
   - Requests changes for actionable security findings; approves clean security evidence.
   - Dependency Review, malware scanning, and CodeQL remain independent required checks; RoboCop does not replace them.
-- All three AI persona workflows run for trusted same-repository pull requests, including Dependabot. Fork PRs remain excluded from secret-dependent reviews and rely on the independent lint, test, CodeQL, vulnerability, and malware gates. Dependabot lint auto-fixes remain disabled; eligible patch/minor updates retain their existing independent-gate auto-merge policy.
+- All three AI persona workflows run for trusted same-repository pull requests, including Dependabot. Fork PRs remain excluded from secret-dependent reviews and rely on the independent lint, test, CodeQL, vulnerability, and malware gates. Dependabot lint auto-fixes remain disabled; eligible patch/minor updates use the per-head protected policy described below.
 
 ### Dependabot major upgrade briefs
 
@@ -70,7 +81,7 @@ OpenAI and GitHub App inputs:
 - `OBI_WAN_CODE_NOBI_APP_ID` repository variable and `OBI_WAN_CODE_NOBI_PRIVATE_KEY` repository secret authenticate the Obi-Wan Code-nobi GitHub App. Install it with `Contents: read` and `Pull requests: write`.
 - `LINT_EASTWOOD_APP_ID` repository variable and `LINT_EASTWOOD_PRIVATE_KEY` repository secret authenticate the Lint Eastwood GitHub App. Install it on this repository with `Contents: write` so lint auto-fix commits can be pushed, and `Pull requests: write` so build reviews can be published. The CI orchestrator passes only `LINT_EASTWOOD_PRIVATE_KEY` into the reusable lint workflow. The secret is optional so untrusted/fork and Dependabot pull requests can take the strict-check-only path; when auto-fix is enabled, a missing secret, invalid app identity, or insufficient app permission fails the auto-fix job instead of falling back to `GITHUB_TOKEN` attribution.
 - `ROBOCOP_APP_ID` repository variable and `ROBOCOP_PRIVATE_KEY` repository secret authenticate the RoboCop GitHub App. Install it with `Contents: read`, `Pull requests: write`, `Checks: read`, `Actions: read`, `Code scanning alerts: read`, `Dependabot alerts: read`, and `Issues: write`. The CodeQL alert workflow narrows its short-lived installation token to `Code scanning alerts: read` and `Issues: write`; the vulnerability and malware workflows additionally request `Dependabot alerts: read` through the token action's `vulnerability-alerts` input. The other permissions remain available only to RoboCop's PR-review workflow.
-- AI reviews use `gpt-5.6-luna` through the local OpenAI Responses API action.
+- AI reviews use `gpt-6-luna` through the local OpenAI Responses API action.
 - AI personas do not post standalone PR comments. Any bot comments are submitted as part of their native PR review.
 - If OpenAI quota or tokens are exhausted, credentials are invalid, the service is unavailable, or the model response is unusable, the affected persona publishes one native `COMMENT` review per commit explaining that no AI approval or finding was produced. The workflow remains failed until it can be rerun successfully; independent lint, test, CodeQL, vulnerability, and malware gates remain authoritative.
 - AI personas return one shared structured contract: native review event, characterful summary, unchanged status, body findings, material evidence, author actions, and inline comments. The model authors the complete verdict prose, while the shared publisher owns canonical GitHub Markdown, renders every visible identity or group label as an underlined `##` heading, and omits empty groups.
@@ -181,7 +192,7 @@ Auto-merge behavior:
 - Dependabot PRs receive the three required same-repository AI reviews using Dependabot secrets. Major updates additionally receive Obi-Wan's upgrade brief and remain a human merge decision. [#656](https://github.com/VanillaIceCube/Notoli/issues/656) owns the existing Dependabot eligibility implementation; [#946](https://github.com/VanillaIceCube/Notoli/issues/946) adds the missing reviewer requirements. Independent lint, test, CodeQL, vulnerability, and malware gates continue to block auto-merge when any gate fails.
 - Auto-merge is restricted to patch/minor updates.
 - If a security alert is present, the workflow requires CVSS <= 6.9.
-- The workflow uses `dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98` (`v3.1.0`) and can optionally use `DEPENDABOT_PAT` for metadata/alert lookup.
+- The workflow uses `dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98` (`v3.1.0`) using the follow-up workflow token for metadata/alert lookup.
 
 AI review context includes bounded recent owner/collaborator reviews and replies to prior findings as discussion evidence. Prior bot verdicts must be rechecked against current source/scanners; the diff legend distinguishes active added/context lines from deleted old code. This does not change reviewer verdict rules or authorize merges/deployments.
 
@@ -205,9 +216,11 @@ source-pin PRs do not authorize merging, promotion, or deployment.
 
 ## 🔑 Separate OpenAI reviewer credentials
 
-Credential provisioning is a separate operator step. Configure the new secrets
-and project variable before activating these workflows. Missing keys fail
-visibly; there is no fallback to the old shared `OPENAI_API_KEY`.
+The four existing repositories already use the accepted persona-specific
+credentials and reviewer projects. The following is an onboarding/operator
+reference, not a pending model or credential migration. Configure these names
+before activating a new installation; missing keys fail visibly and there is
+no fallback to a shared `OPENAI_API_KEY`.
 
 Use a dedicated **Notoli · AI Reviewers** OpenAI project (or the
 repository's existing reviewer-only project). Never share credentials between
@@ -246,21 +259,19 @@ stores as well (six review secrets total).
 5. In OpenAI Usage, filter by the reviewer project and individual API key to
    confirm each persona's attribution. An empty alert feed may make no model
    call; record that outcome rather than assuming usage was verified.
-6. Stage the new secrets and `OPENAI_REVIEWERS_PROJECT_ID` while leaving the
-   legacy `OPENAI_API_KEY` and `OPENAI_PROJECT_ID` unchanged. Existing default-
-   branch jobs can continue using the legacy pair until the source is merged.
-   Keep old keys valid until every affected consumer has verified the new keys;
-   retain any Default-project key still used elsewhere. To reverse the source
-   change, revert the workflow change; the retained legacy pair remains usable.
-   Do not place a shared legacy key into the three new secret slots or expose
-   key values in logs/issues.
+6. For configuration recovery, restore the last accepted persona-specific key/
+   project bindings and validated reviewer variables, then rerun the latest head.
+   Any source revert must use ordinary protected review and retain its matching
+   credential contract. A legacy key used elsewhere is not an active reviewer
+   fallback; never copy it into all three persona slots or expose key values.
+   This reference does not rotate or provision credentials during Batch 3.
 
 See [OpenAI key security, expiration and usage guidance](https://developers.openai.com/api/docs/guides/production-best-practices#api-keys).
 
 
 ## 🔌 Shared MCP framework
 
-The backend test gate checks the pinned MCP framework manifest. Template/MacroMapper run both ordinary tests and an isolated MCP-enabled sample profile; production remains disabled there. Notoli runs its existing enabled protocol/domain suite. See [the framework guide](../docs/MCP-FRAMEWORK.md).
+The backend test gate checks the pinned MCP framework manifest and each repository's documented ordinary/MCP-enabled profiles. Template sample fixtures do not create a production target; Notoli and MacroMapper retain their app-owned enabled protocol/domain acceptance. See [the framework guide](../docs/MCP-FRAMEWORK.md) and the application MCP guide where present.
 
 ## 🛡️ Dependency evidence and alert lifecycle parity
 
@@ -306,6 +317,303 @@ acceptance in #612 or #587.
 
 ## 🔄 Shared deployment action update
 
-Docker login v4.7.0 is rendered from Infrastructure commit
-`f3f049830fcd5e5869d1ae120c57d9ccb6c99200`. Keep `deploy/shared-source.json` and
+Docker login v4.8.0 (`8aa5831fb8d48d8f76594c7ddde61ae58019f550`) is rendered from Infrastructure commit
+`d9ab394bb38d2bdce38088ac952c53704c5bae5a`. Keep `deploy/shared-source.json` and
 the generated workflow synchronized; deployment parity remains mandatory.
+
+## 🤖 Reviewer model
+
+Code, build and security reviewers and security-alert grouping use `gpt-6-luna` through the existing Responses API action. Per-reviewer credentials, project isolation, output budgets, triggers and failure gates are preserved. See [the model documentation](https://developers.openai.com/api/docs/models/gpt-6-luna) and [shared tracking #241](https://github.com/VanillaIceCube/FullStackTemplate/issues/241). Application AI models and Jules schedules are independent of this setting.
+
+## 📦 Compatible CodeQL updates
+
+Dependabot groups all `github/codeql-action` entry points (including `init`,
+`analyze`, `autobuild` and `upload-sarif`) in `codeql` version-update PRs.
+A separate `codeql-security` group applies the same matching to security updates;
+GitHub does not combine version and security updates in one group. Keep both
+patterns (`github/codeql-action` and `github/codeql-action/*`) so repository and
+entry-point dependency names match. Review every CodeQL entry point together,
+keep their immutable revisions aligned, and preserve normal CI/reviewer gates.
+
+The applications retain daily updates. Infrastructure retains weekly updates,
+its owner/labels/PR limits, general Actions group for non-CodeQL updates, and
+separate Compose updates. All application CodeQL entry points use the aligned
+immutable v4.39.3 revision (`33d7b85da1a04171e211befe2c739303b9a4c066`).
+Regenerate `docs/CI-CD-SOURCE-INVENTORY.json` with
+`python scripts/ci_architecture.py` after workflow pin changes and verify it with
+`--check`. Scanner scope, permissions and merge/deployment
+gates remain unchanged. Canonical rollout:
+[FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271).
+The November maintenance sweep tracks the aligned upgrade and generated inventory
+in [FullStackTemplate #309](https://github.com/VanillaIceCube/FullStackTemplate/issues/309).
+
+## 🔒 Protected Dependabot auto-merge
+
+FullStackTemplate (#240) owns the canonical application policy. After successful
+PR CI, `ci-auto-merge.yml` runs only reviewed main code, with no PR checkout,
+artifacts, caches, PAT, reviewer keys or production secrets. The API resolves the
+successful CI workflow and its exact open main PR; rerun actor identity is not
+used as PR authorship. Forks and non-Dependabot PRs receive a nonblocking policy
+result without any automatic merge or secret-dependent review.
+
+Each application main ruleset must require **Dependabot Policy**, pinned to the
+GitHub Actions integration (15368). The follow-up creates this check in progress
+on the PR head. All other required checks and all three current-head persona
+approvals must pass. The check stays pending while native auto-merge is enabled
+with `expectedHeadOid`, then succeeds only after validation/activation succeeds.
+Failures leave it failing or pending. A later push has no policy result and
+cannot inherit the preceding head's approval. This also avoids trying to enable
+native auto-merge on an already-clean PR. No direct merge fallback exists.
+
+Automatic eligibility requires exactly one verified Dependabot-authored commit
+matching the current head. Explicit update types are parsed from its signed YAML
+metadata with pinned PyYAML safe loading, without overriding runner event paths
+or trusting PR descriptions. Every grouped member must be patch/minor; missing
+metadata fails visibly and major updates stay manual. Before allowing a manual
+major update, the policy disables an existing native auto-merge request.
+
+All open Dependabot alerts are paginated with the built-in token's explicit
+`vulnerability-alerts: read` permission. Every matching updated dependency must
+have a known CVSS score at most 6.9. Dismissed/fixed alerts cannot hide another
+open alert, and neither later group members nor alerts beyond the first page are
+ignored. The workflow publishes only the policy outcome, not alert details.
+
+The guard reads active branch rules using API 2026-03-10 (Metadata: read), checks
+required contexts and integration identities, rejects requested changes and
+checks every persona's current-head approval. Scoped CodeQL skips must also
+match authoritative API diff paths, including previous paths on renames. Null or
+unknown mergeability and propagation of the pending policy check are polled at
+most six times with two-second waits; unstable/conflicting states fail closed.
+Repeated events are idempotent and genuine API failures remain visible. GitHub
+retains final enforcement of review-thread resolution and all branch rules.
+
+Generated repositories that install their own reviewer Apps can set optional
+`OBI_WAN_REVIEWER_LOGIN`, `LINT_EASTWOOD_REVIEWER_LOGIN`, and
+`ROBOCOP_REVIEWER_LOGIN` repository variables to their actual bot logins, including
+`[bot]`. Defaults match the existing shared persona Apps. All three must be
+distinct bot identities. Existing per-persona credentials and fork exclusions
+remain unchanged. Repository writers who can alter workflows remain privileged;
+helper checks do not constrain arbitrary workflow writers.
+
+For activation, merge reviewed source first, then add Dependabot Policy to the
+main ruleset without removing any existing requirement or bypass restriction.
+The new rule requires a fresh successful CI completion to publish policy evidence;
+existing open PRs may need a CI rerun. Do not require the follow-up workflow's
+nested job name, which starts only after CI. No production branch is involved.
+The first eligible real default-branch Dependabot follow-up remains separate
+runtime acceptance in #240; a human implementation PR does not establish it.
+
+CI supplies read-only live branch-rule/schema evidence to Obi-Wan when reviewing
+auto-merge/orchestration changes. This confirms actual token access and current
+GraphQL input fields without changing reviewer verdict requirements.
+
+## 🧪 Atomic CodeQL regression guard
+
+Before required scope detection, all CodeQL action entry points in workflow and
+composite-action YAML must share one full immutable SHA. Structural safe parsing
+covers flow mappings, quoted/escaped keys, folded values, aliases and mixed-case
+owner/repository names. Negative regressions reject drift, mutable pins and
+missing analysis. The existing version/security update groups and daily cadence
+remain unchanged. Infrastructure adopts this guard and reviewer eligibility,
+retaining weekly updates, independent Required CI and owner merge.
+
+```sh
+python -m pip install PyYAML==6.0.3
+node --test .github/actions/check-codeql-pins/*.test.js .github/actions/dependabot-auto-merge/*.test.js
+```
+
+The local actionlint 1.7.12 schema predates GitHub's documented
+`vulnerability-alerts: read` scope. Its other diagnostics remain enforced; GitHub
+validates the new permission and CI must pass before merge.
+
+The reviewer API evidence step uses direct read-only API calls and executes no
+PR-workspace module with its GitHub client.
+
+Every skipped lint, test or analyzer check is now verified against the actual
+reviewed detector filters, with original and renamed API diff paths. Unknown
+filter forms refuse skip authorization. GitHub Action subpaths also match their
+repository-level package alerts when enforcing the CVSS ceiling.
+
+
+## Security-alert recovery
+
+Each feed serializes scheduled and manual reconciliation. Before issue writes,
+source coverage must be complete and unique. A valid model draft that omits refs
+gets deterministic source-linked work items and an explicit warning; malformed
+JSON, invalid schemas, unknown refs and duplicate memberships fail before writes.
+Existing managed source refs select the canonical issue even when wording changes.
+
+Project attachment retries transient failures at most three times, reading back
+possibly committed writes before retrying. Unresolved attachments identify the
+saved issue; rerun the same feed to reuse it. Interrupted field initialization fills
+only missing fields, preserving human planning. All active groups synchronize before
+superseded issues can close. Closure saves source history and End date before Done.
+Only the observed empty-error or exact Issue/custom concurrent-close HTTP 422 may
+recover, and only after readback proves closed/completed with the exact saved body.
+All other errors remain failures. A successful empty feed does not exercise the race.
+
+Dependabot check readiness is re-read at most six times with two-second delays.
+A success conclusion and completion timestamp do not override an in-progress
+status. Persistent inconsistency fails visibly; rerun CI for the current head.
+Only signed exact-head patch/minor metadata can enable native auto-merge. Signed
+SHA-only Action updates without update-type, restricted to Action YAML diffs,
+pass policy for manual review after all checks and current-head approvals pass;
+they never infer semver or activate auto-merge. Missing ordinary/group metadata fails.
+
+Malware classification fetches each unique GHSA referenced by this repository's
+open Dependabot alerts, rather than enumerating the global malware catalogue.
+Empty feeds make no advisory requests. Failed or unverifiable classification
+stops before source checkpoint or issue writes; it never implies no malware.
+
+## Batch 2 security baseline
+
+External Actions use verified immutable commits with readable version comments.
+The shared `check-workflow-security` tests reject mutable references, broad grants
+and privileged PR-target triggers. Automation tests run for all `.github/**`
+changes. Forks retain credential isolation and all configured reviewers remain
+required. Repository settings are audited independently of source; stage read-only
+defaults/disabled workflow-token approvals and SHA enforcement after source CI
+passes. Reviewer App tokens and scoped auto-merge/deployment grants remain explicit.
+
+The PR npm malware gate scans only added/changed exact package versions, at most
+25 per request, 200 requests total and 20 pages per batch, with 30-second timeouts.
+A missing base lock scans the complete head; a missing head lock while a frontend
+manifest remains fails. Invalid refs, unsupported/malformed locks, unverifiable
+versions, API/range evidence failures and known malware fail visibly. Removing the
+whole frontend has no remaining npm graph. This gate is distinct from the scheduled
+repository-alert feed. Mocked regressions make no API writes or model calls.
+
+Python malware coverage follows [the canonical decision](../docs/PYTHON-MALWARE-DECISION.md).
+Shared deployment files are synchronized to the Infrastructure source pin, including
+the approved Action-upgrade/unauthorized-drift regression. Update the source before
+consumers; never edit a vendored workflow or test independently.
+
+Repository Actions secrets are not branch-scoped: writers able to install arbitrary
+workflows remain privileged. This helper validates checked-in policy but cannot
+constrain a workflow that bypasses it. GitHub rulesets and independent review
+remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
+forms, rejects aliases, duplicate and merge keys, and requires pinned PyYAML 6.0.3.
+
+Mapping-form writes are checked against `.github/workflow-write-grants.json`,
+which records reviewed per-workflow/job grants. Unknown scopes/grant levels and
+new writes fail. Changes to that policy require review with the workflow; it does
+not grant GitHub permissions itself or replace branch protection.
+
+On pull requests, grant authority comes from the platform event base SHA, never
+from the proposed policy file. Bootstrap derives existing writes from that exact
+base when no manifest exists. To add a grant, first merge a separately reviewed
+policy-only PR under the existing protected review gates; a later workflow PR
+can consume it. Fetch the base commit before local PR-policy audits. This detects
+self-authorizing policy/workflow changes; it does not make PR-owned code a sandbox
+or remove repository-writer privileges.
+
+## Vitest and React Router acceptance
+
+`npm test` runs all existing frontend assertions in Vitest 5/jsdom. JSX test files
+use `.jsx`, mocks use the runner's native ESM API, and Jest/Babel test-only packages
+are removed. This eliminates Jest's unpatched deepmerge path and allows supported
+React Router 7.18.5 (both reported Router advisories are fixed in >=7.18.0).
+Vite development/build was already present; its `build/` output and legacy
+`REACT_APP_API_BASE_URL` behavior are retained. No SSR server is used here.
+
+Use `npm ci`, `npm run lint:strict`, `npm run format:check`, `npm test`, and
+`npm run build` from frontend. CI bounds test workers to two; use
+`npm test -- --maxWorkers=1 --reporter=json --outputFile=vitest-results.json`
+for serial profiling. Keep isolated test environments and every domain/auth
+assertion. The ESLint configuration regression now imports ESLint directly in a
+Node test environment instead of launching a second Node runtime.
+
+Independent pre-change VM baseline at 7f1db4c: backend 190 tests (one existing
+skip), 24.256s Django total; frontend 32 suites/301 tests, 72.746s Jest time.
+Both used 0.75 CPU/768 MiB, synthetic settings, no production mounts/network
+and cold test caches; dependency install time was recorded separately. Comparable
+post-change measurements are required before claiming a performance improvement.
+Backend already uses a test-scoped fast password hasher; production hashing stays
+unchanged. Slow settings subprocess/MCP tests remain meaningful integration coverage.
+
+## Repository validation and browser diagnostics
+
+The path-aware test gate includes `.github/**`, `scripts/**`, `deploy/**`,
+`tests/**` and maintained docs in automation validation. It runs workflow and
+composite syntax, parser-only script checks and synthetic Compose configuration
+plus the existing Batch 1 suites and focused mocked composite regressions.
+[Coverage and external boundaries](../docs/AUTOMATION-COVERAGE.md) are explicit.
+
+`scripts/bounded_log.py` retains early, sampled failing and late context within
+16,000 characters for reviewers. Full output is streamed with `tee`; failed
+logs have roughly 1 MiB capped artifacts retained seven days. Random delimiters
+protect multiline outputs and the original command status still determines the
+gate. An unavailable check cannot become success through log summarization.
+
+Relevant app/harness changes also require the isolated Chromium job; its failure
+or an applicable development-image failure fails Test Results. Browser traces
+and screenshots use a 20 MiB/file, 50 MiB/run cap and seven-day retention.
+See frontend/README.md for setup and local commands. No job uses real accounts,
+production data, live email or paid AI requests for these tests.
+
+
+## Reviewer context, follow-ups and usage
+
+See [the reviewer contract](AI-REVIEWERS.md) for bounded untrusted human discussion,
+verified App ownership, conservative self-owned thread reconciliation, serialized
+writers, dated usage estimates and configuration recovery. The owner-selected
+`gpt-6-luna` model, per-persona keys/projects and blocking native checks remain.
+Repository variables `AI_REVIEW_MODEL`, `AI_REVIEW_REASONING_EFFORT` and
+`AI_REVIEW_MAX_OUTPUT_TOKENS` are validated; unset values retain Luna/medium/16000.
+
+The reviewed `workflow-write-grants.json` grants only `pull-requests: write`
+to the deterministic promotion-summary workflow. That policy merged before the
+workflow was introduced; proposed workflows cannot authorize their own new grants.
+Summary publication does not authorize releases or change gates.
+
+Reviewer evidence reads use the existing read-only workflow token, explicitly
+limited to contents/pull-requests/checks/statuses read (plus existing security
+evidence reads for RoboCop). Native review/follow-up/thread writes use the
+separate persona App token; its existing contents-read/pull-requests-write
+installation capabilities are not expanded.
+
+
+## Architecture and production summaries
+
+The [canonical architecture reference](../docs/CI-CD-ARCHITECTURE.md) maps PR/fork/
+Dependabot paths, required checks, reviewer interactions, scheduled alerts,
+main-to-env-prod/manual release paths and credential trust boundaries to source.
+Its per-repository source inventory is checked against actual workflow YAML.
+
+`promotion-summary-request.yml` is a read-only PR/target-push signal with no checkout or
+artifact/cache handoff. Its default-branch `workflow_run` consumer
+`promotion-summary.yml` maintains one GitHub Actions-owned comment for each open
+same-repository `env-prod` PR using the actual current target comparison. Reruns
+update the same comment; stale/incomplete/denied evidence is reported visibly.
+Observed area counts are separate from inferred risks. The workflow loads trusted
+main code, never PR code/prose or secret values, and does not change review,
+merge, release or recovery authorization. Infrastructure uses gateway-specific
+wording. FullStackTemplate's inactive target is not created for symmetry.
+
+## Security-alert configuration contract
+
+The three `alert-codeql.yml`, `alert-vulnerability.yml`, and `alert-malware.yml`
+workflows resolve `AI_REVIEW_MODEL`, `AI_REVIEW_REASONING_EFFORT`, and
+`AI_REVIEW_MAX_OUTPUT_TOKENS` in their supported workflow `vars` context. They
+pass explicit `model`, `reasoning-effort`, and `max-output-tokens` inputs to the
+security-alert composite. Do not reference repository `vars` inside composite
+manifests: GitHub rejects that metadata before alert fetching starts (#300).
+
+Absent or empty values deliberately preserve `gpt-6-luna`, `medium`, and `16000`.
+Nonempty overrides pass through the existing Responses policy. Configuration is
+validated before source reads or issue/Project writes, including empty feeds;
+invalid models, efforts or token limits fail visibly without a provider call.
+No model migration, credential/project consolidation, retry or spending policy
+change is implied. Infrastructure retains its additional Project-schema preflight,
+all-severity vulnerability feed and distinct token/Project permissions.
+
+`node --test .github/actions/custom-regressions/security-alert-contract.test.js`
+checks actual YAML inputs/callers, audits local composites for unsupported `vars`,
+and executes manifest-derived configuration, fetching, nested Responses shell,
+validation and reconciliation code using synthetic feeds and mocked provider/API
+writes. Existing lifecycle tests still cover complete accounting, partial-progress
+recovery and the exact concurrent-close HTTP 422 case. These fixtures are not a
+GitHub runner. After a reviewed repair, run one fresh controlled dispatch of each
+alert workflow from corrected `main`, after checking managed labels/Project side
+effects. Record runner loading/empty-feed evidence separately from nonempty mock
+coverage; never rerun an old failed revision as proof of the new source.

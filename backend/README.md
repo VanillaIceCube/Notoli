@@ -195,7 +195,7 @@ The development Compose configuration supplies a local-only fallback when
 `DJANGO_SECRET_KEY` is blank, so a freshly copied `deploy/.env` can issue JWTs
 without manual configuration. Provide a unique `DJANGO_SECRET_KEY` before
 using the production-shaped stack. `backend/Dockerfile.dev` pins Miniforge
-24.04 to a reviewed digest; update that digest only through an explicit
+26.9.4-0 to a reviewed multi-platform digest; update that digest only through an explicit
 image-version and security review.
 
 Run tests:
@@ -280,3 +280,82 @@ Static files:
 ## 🔌 Shared MCP framework
 
 See [the MCP framework guide](../docs/MCP-FRAMEWORK.md) for opt-in settings, ASGI startup, OAuth migrations/client registration, consent, scope/ownership requirements and disabled-profile tests.
+
+## Authentication and notification parity
+
+Registration validates passwords with Django's configured validators against the
+candidate user's final username/email before account creation. Validation failures
+return HTTP 400 with a human-readable `error`; non-string passwords also return
+400. Password reset already validates against the existing user. Notification
+bulk mark-read/clear operations are transactional and remain recipient-scoped.
+See [the adoption audit](../docs/AUTH-PARITY.md) for evidence and boundaries.
+
+## Development dependency reproducibility
+
+Development images pin reviewed multi-platform Node 26 and Miniforge 26.9.4-0
+registry digests. Production Dockerfiles and the independent release engine are
+unchanged by this development-image policy. Refresh tags/digests together after
+registry verification and a disposable build/configuration check.
+
+The frontend development entrypoint hashes both `package.json` and
+`package-lock.json` inside its persistent `node_modules` volume. Fresh volumes
+install with `npm ci`; unchanged restarts reuse dependencies; changing either
+manifest reinstalls. Missing manifests or a failed installation stop startup and
+retry on the next invocation. Use one volume per checkout and restart after edits.
+Run `node --test tests/dev-dependencies.test.cjs` from the repository root for the
+credential-free mocked lifecycle/exit-status regression. Compose configuration
+checks do not deploy or touch application data.
+
+## Disposable browser-test backend
+
+The frontend `npm run test:e2e` wrapper runs `scripts/e2e_backend.py` with
+`scripts/e2e_settings.py`: synthetic secret, fresh temporary SQLite, local file
+email, test-only fast hashing, disabled MCP and loopback-only binding. It refuses
+state directories without the wrapper marker and prevents dotenv loading.
+Install `backend/requirements.txt` in your activated Python environment first.
+This harness never reads the developer database or production settings and does
+not change the normal server/test-runner hashing policy. See frontend/README.md.
+
+
+## Transactional email failure handling
+
+`ResendApiEmailBackend` sends once per message. An HTTP 2xx means provider
+acceptance, not confirmed inbox delivery. `EMAIL_TIMEOUT` is a finite socket
+operation timeout: default 10 seconds, supported `0 < seconds <= 30`. Invalid, nonfinite,
+bool or larger runtime values produce a safe warning and use 10 seconds. The
+`DJANGO_EMAIL_TIMEOUT` environment setting is parsed as an integer at startup;
+malformed text fails configuration visibly rather than changing delivery policy.
+
+The backend preserves `fail_silently`: false re-raises the original exception;
+true logs the failure, continues the batch and returns only successful sends.
+Missing credentials log `configuration` and return 0 only in silent mode. The
+password-reset caller deliberately uses false, catches failures, emits a safe
+caller event and returns the same generic 200 response for known and unknown
+accounts. No recipient/user ID, exception text/traceback, reset URL/token, key or
+message content is included in these logs.
+
+Logger `authentication.email_backends` emits ERROR records with
+`delivery_provider=resend`, `delivery_category` and numeric `delivery_status`
+(or unknown). Categories: `configuration`, `request` (HTTP 4xx except 429),
+`rate_limit` (429), `provider` (HTTP 5xx), `timeout`, `network`, `unexpected`.
+The text formatter includes category/status even when structured fields are not
+configured. Provider bodies and error strings are untrusted and never read for
+logging. Template's established HTML/reply-to support and app sender identities
+are preserved; generic failure behavior is equivalent across all three apps.
+
+Operator recovery: check these safe categories and the existing Resend dashboard
+using the existing account. Missing key/401/403 calls for credential selection,
+permissions or sender-domain verification; fix deployment configuration through
+the documented release path without logging/rotating keys.400/422 means inspect
+payload rules using synthetic data. 429/5xx/network/timeouts indicate capacity or
+provider availability; check status/rate limits before asking for a fresh reset.
+Repeated configuration/auth failures or a sustained outage warrant operator
+attention through existing channels. This adds logs, not a monitoring service.
+
+There is no automatic retry, queue or resend: a timeout may occur after provider
+acceptance, so a blind retry could duplicate a reset email. Idempotency/backoff
+and durable delivery tracking would need their own bounded design. No production
+mail is sent by tests; mocks cover success, credentials, network/timeouts,
+400/401/403/422/429/500/503, both silent modes, partial batches, safe fallback and
+the real reset caller's generic response/redacted logs. Production public
+readiness cannot establish authenticated password-reset inbox delivery.

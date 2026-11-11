@@ -1,6 +1,7 @@
 """Boundary and transient-failure regressions for app-independent releases."""
 
 import copy
+import hashlib
 import io
 import json
 import os
@@ -63,11 +64,90 @@ class ReadinessTests(unittest.TestCase):
             release.readiness(Path("fixture"))
         self.assertEqual(probes, [500, 401])
         sleep.assert_called_once_with(2)
-        self.assertEqual(public.call_count, 5 if release.APP == "notoli" else 2)
+        self.assertEqual(public.call_count, len(release.CONFIG["readiness"]["public"]))
+
+
+class CandidatePortTests(unittest.TestCase):
+    def test_candidate_compose_uses_its_own_policy(self):
+        ipv4 = {
+            "target": 80,
+            "published": "3000",
+            "host_ip": "0.0.0.0",
+            "protocol": "tcp",
+        }
+        ipv6 = {**ipv4, "host_ip": "::"}
+        services = {release.BACKEND: {}, release.FRONTEND: {}}
+        with (
+            patch.dict(release.CONFIG, {"frontend_port_bindings": [[]]}),
+            patch.object(
+                release,
+                "compose",
+                side_effect=lambda *args: json.dumps({"services": services}),
+            ),
+        ):
+            release.validate_candidate_ports(Path("candidate"))
+            for bindings in ([ipv4], [ipv6], [ipv4, ipv6]):
+                services[release.FRONTEND]["ports"] = bindings
+                with (
+                    self.subTest(bindings=bindings),
+                    self.assertRaisesRegex(
+                        release.ReleaseError, "Frontend published-port boundary changed"
+                    ),
+                ):
+                    release.validate_candidate_ports(Path("candidate"))
+            services[release.FRONTEND] = {"network_mode": "host"}
+            with self.assertRaisesRegex(release.ReleaseError, "Host networking"):
+                release.validate_candidate_ports(Path("candidate"))
+            services[release.FRONTEND] = {}
+            services[release.BACKEND]["ports"] = [ipv4]
+            with self.assertRaisesRegex(
+                release.ReleaseError, "Backend unexpectedly publishes"
+            ):
+                release.validate_candidate_ports(Path("candidate"))
 
 
 @unittest.skipUnless(os.name == "posix", "Host preflight requires Linux")
 class PreflightTests(unittest.TestCase):
+    def test_preflight_port_policy_comes_from_the_accepted_release(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            identity = "a" * 40 + "-100-1"
+            accepted = root / "releases" / identity
+            accepted.parent.mkdir(mode=0o700)
+            accepted.mkdir(mode=0o700)
+            old_ports = {("80/tcp", "0.0.0.0", "3000"), ("80/tcp", "::", "3000")}
+            policy = {**release.CONFIG, "frontend_port_bindings": [sorted(old_ports)]}
+            app = accepted / "app.json"
+            app.write_text(json.dumps(policy))
+            (accepted / "manifest.json").write_text(
+                json.dumps({"app.json": hashlib.sha256(app.read_bytes()).hexdigest()})
+            )
+            (root / "current.json").write_text(
+                json.dumps(
+                    {"id": identity, "directory": str(accepted), "healthy": True}
+                )
+            )
+            with patch.dict(release.CONFIG, {"frontend_port_bindings": [[]]}):
+                allowed = release.current_frontend_port_policy(root)
+                release.require_frontend_ports(old_ports, allowed)
+                with self.assertRaisesRegex(
+                    release.ReleaseError, "published-port boundary"
+                ):
+                    release.require_frontend_ports(
+                        old_ports | {("80/tcp", "::", "8080")}, allowed
+                    )
+                with self.assertRaisesRegex(
+                    release.ReleaseError, "published-port boundary"
+                ):
+                    release.require_frontend_ports(
+                        old_ports, release.CONFIG["frontend_port_bindings"]
+                    )
+                app.write_text(json.dumps({**policy, "frontend_port_bindings": [[]]}))
+                with self.assertRaisesRegex(
+                    release.ReleaseError, "policy checksum mismatch"
+                ):
+                    release.current_frontend_port_policy(root)
+
     def test_companion_absence_allowed_but_own_or_trust_drift_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

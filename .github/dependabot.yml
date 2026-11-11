@@ -17,6 +17,13 @@ updates:
     schedule:
       interval: "daily"
       time: "00:00"
+    groups:
+      codeql:
+        applies-to: version-updates
+        patterns: ["github/codeql-action", "github/codeql-action/*"]
+      codeql-security:
+        applies-to: security-updates
+        patterns: ["github/codeql-action", "github/codeql-action/*"]
 
   - package-ecosystem: "docker"
     directory: "/backend"

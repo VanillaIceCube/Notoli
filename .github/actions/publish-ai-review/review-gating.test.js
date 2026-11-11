@@ -135,6 +135,7 @@ function harness(personaName, priorReviews = []) {
   const created = [];
   const failures = [];
   const pulls = {
+    async get() { return { data: { head: { sha: "current-head" } } }; },
     listFiles() {},
     listReviews() {},
     listReviewComments() {},

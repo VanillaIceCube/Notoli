@@ -60,6 +60,10 @@ function NotepadRoutes({ setAppBarHeader }) {
       setRouteSlots((slots) => {
         const readySlot = slots.find((slot) => slot.signature === readySignature);
         if (!readySlot) return slots;
+        // Loaded pages may report readiness again after a parent render. Keep
+        // the settled state referentially stable so the page effect cannot
+        // feed another route update back into itself.
+        if (slots.length === 1 && readySlot.active) return slots;
 
         return slots
           .map((slot) => ({ ...slot, active: slot.signature === readySignature }))
