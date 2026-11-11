@@ -3,9 +3,14 @@
 Production release ownership: use the [app-only release/recovery guide](../deploy/production/README.md).
 
 The Notoli frontend is a Vite single-page app with React Router and Material UI.
-Vitest and jsdom run the existing tests; ESLint 10 uses
+Vitest and jsdom 31 run the existing tests; ESLint 10 uses
 `eslint.config.mjs` and compatible React, hooks, accessibility, and Testing Library
 plugins. Create React App and its incompatible ESLint 8 peer graph are removed.
+
+jsdom 31 normalizes computed CSS shorthands and time units. Assert computed
+transition/animation longhands (including duration, easing, repetition and delay)
+instead of comparing authored shorthand strings. This preserves behavior checks
+across CSS serialization changes without altering application styling.
 
 Material UI and its icons use the compatible v9 package family. Upgrade them
 together and regenerate the lockfile; isolated major bumps fail peer resolution.
