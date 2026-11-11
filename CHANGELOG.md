@@ -1,3 +1,9 @@
+## 2026-11-11
+
+### Changed
+
+- Upgrade the frontend test environment to jsdom 31 and verify pull-to-refresh transition and animation longhands against its normalized computed CSS.
+
 ## 2026-11-07
 
 ### Fixed
