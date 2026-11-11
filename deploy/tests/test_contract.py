@@ -3,6 +3,7 @@
 import hashlib
 import importlib.util
 import json
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -190,8 +191,9 @@ class ContractTests(unittest.TestCase):
             previous = path.read_text(encoding="utf-8")
             # This fixture models a reviewed source upgrade, not an allowlist
             # for arbitrary workflow edits or mutable Action tags.
-            old = "docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6"
-            self.assertIn(old, previous)
+            references = re.findall(r"docker/login-action@[0-9a-f]{40}\b", previous)
+            self.assertEqual(len(references), 1)
+            old = references[0]
             approved = previous.replace(old, "docker/login-action@" + "a" * 40)
             path.write_text(approved, encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "workflow differs"):
