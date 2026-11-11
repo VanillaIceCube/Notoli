@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
-import { TextField, Button, Typography, Box, Paper, Stack } from '@mui/material';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { fetchBoards as fetchBoardsApi, login } from '../../services/notoliApiClient';
 import { persistAuthSession, readOkJson } from '../../services/authSession';
 import { getPreferredBoardId } from '../../services/lastBoard';
@@ -171,21 +171,25 @@ export default function Login({ showSnackbar }) {
                 width: '100%',
               }}
             >
-              <Box
-                component="span"
-                sx={{ textDecoration: 'underline', cursor: 'pointer' }}
-                onClick={() => navigate('/forgot-password')}
+              <Link
+                component={RouterLink}
+                variant="caption"
+                underline="always"
+                to="/forgot-password"
+                sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
               >
                 Forgot Password?
-              </Box>
+              </Link>
               {' | '}
-              <Box
-                component="span"
-                sx={{ textDecoration: 'underline', cursor: 'pointer' }}
-                onClick={() => navigate('/register')}
+              <Link
+                component={RouterLink}
+                variant="caption"
+                underline="always"
+                to="/register"
+                sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
               >
                 Create Account!
-              </Box>
+              </Link>
             </Typography>
           </Box>
         </Box>

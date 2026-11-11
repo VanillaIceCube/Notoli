@@ -1,5 +1,11 @@
 ## 2026-11-11
 
+### Fixed
+
+- Make authentication-page navigation semantic links with keyboard access and native new-tab behavior while preserving form submission, routing, and styling (#972).
+
+## 2026-11-11
+
 ### Changed
 
 - Upgrade Docker login to immutable v4.8.0 through Infrastructure's shared release template, synchronize its contract regression, and regenerate the CI architecture inventory.
