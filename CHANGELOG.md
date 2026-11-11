@@ -1,3 +1,9 @@
+## 2026-11-11
+
+### Changed
+
+- Upgrade Docker login to immutable v4.8.0 through Infrastructure's shared release template, synchronize its contract regression, and regenerate the CI architecture inventory.
+
 ## 2026-11-07
 
 ### Fixed

@@ -317,8 +317,8 @@ acceptance in #612 or #587.
 
 ## 🔄 Shared deployment action update
 
-Docker login v4.7.0 is rendered from Infrastructure commit
-`f3f049830fcd5e5869d1ae120c57d9ccb6c99200`. Keep `deploy/shared-source.json` and
+Docker login v4.8.0 (`8aa5831fb8d48d8f76594c7ddde61ae58019f550`) is rendered from Infrastructure commit
+`d9ab394bb38d2bdce38088ac952c53704c5bae5a`. Keep `deploy/shared-source.json` and
 the generated workflow synchronized; deployment parity remains mandatory.
 
 ## 🤖 Reviewer model
