@@ -1,3 +1,9 @@
+## 2026-11-11
+
+### Changed
+
+- Align all CodeQL entry points on the immutable v4.39.3 revision and regenerate the CI architecture inventory; preserve scanner scope and merge gates.
+
 ## 2026-11-07
 
 ### Fixed

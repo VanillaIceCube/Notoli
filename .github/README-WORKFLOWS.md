@@ -338,7 +338,10 @@ keep their immutable revisions aligned, and preserve normal CI/reviewer gates.
 The applications retain daily updates. Infrastructure retains weekly updates,
 its owner/labels/PR limits, general Actions group for non-CodeQL updates, and
 separate Compose updates. The template aligns its mutable CodeQL tag with the other repositories'
-immutable v4.39.1 revision. Scanner scope, permissions and merge/deployment
+immutable v4.39.3 revision (`33d7b85da1a04171e211befe2c739303b9a4c066`).
+Regenerate `docs/CI-CD-SOURCE-INVENTORY.json` with
+`python scripts/ci_architecture.py` after workflow pin changes and verify it with
+`--check`. Scanner scope, permissions and merge/deployment
 gates remain unchanged. Canonical rollout:
 [FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271).
 
