@@ -2,6 +2,7 @@
 
 ### Changed
 
+- Align all CodeQL entry points on the immutable v4.39.3 revision and regenerate the CI architecture inventory; preserve scanner scope and merge gates.
 - Upgrade the frontend test environment to jsdom 31 and verify pull-to-refresh transition and animation longhands against its normalized computed CSS.
 
 ## 2026-11-07
