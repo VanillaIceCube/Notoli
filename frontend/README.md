@@ -314,3 +314,11 @@ has no browser application and retains its ingress/Docker protocol suites.
 ## Navigation readiness
 
 Loaded board/list pages may report readiness again when their parent renders. The route coordinator keeps an already active single-page state unchanged, preventing a render feedback loop that can make controls unresponsive. Unit tests exercise automatic and repeated readiness; desktop/mobile browser menu and refresh journeys also reject render-loop messages and uncaught page errors. See issue #1022.
+
+## Navigation maintenance
+
+Use semantic links for destinations and buttons for actions; retain keyboard
+and native new-tab coverage. Drawer mutations use the shared structured-error
+helper and snackbar feedback, guard missing tokens, and navigate away after
+deleting the active board. Keep routing helper invalid-input coverage alongside
+the documented singular/plural compatibility behavior.
