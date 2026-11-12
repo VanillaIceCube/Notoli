@@ -5,8 +5,8 @@ FullStackTemplate owns reusable application/reviewer patterns; Infrastructure ow
 the gateway and versioned app release engine. The repository-specific
 [workflow guide](../.github/README-WORKFLOWS.md) supplies configuration names and
 operational details. Workflow YAML and protected-branch rules remain authoritative.
-Historical Jules notes are history, not a future orchestration dependency; their
-separately scoped cleanup is not part of this architecture.
+Retired agent notebooks are not an orchestration dependency. Historical
+provenance remains in Git, issues, PRs and dated changelog entries.
 
 ## PR paths and required evidence
 
