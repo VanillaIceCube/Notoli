@@ -1,5 +1,11 @@
 ## 2026-11-11
 
+### Removed
+
+- Remove retired Jules notebooks, persona prompts and active operating instructions after the linked PRs merged and a fresh open-PR inventory passed (#1009); preserve general maintenance guidance, historical evidence and independent CI/security/release controls.
+
+## 2026-11-11
+
 ### Fixed
 
 - Make authentication-page navigation semantic links with keyboard access and native new-tab behavior while preserving form submission, routing, and styling (#972).

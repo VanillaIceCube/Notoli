@@ -323,7 +323,7 @@ the generated workflow synchronized; deployment parity remains mandatory.
 
 ## 🤖 Reviewer model
 
-Code, build and security reviewers and security-alert grouping use `gpt-6-luna` through the existing Responses API action. Per-reviewer credentials, project isolation, output budgets, triggers and failure gates are preserved. See [the model documentation](https://developers.openai.com/api/docs/models/gpt-6-luna) and [shared tracking #241](https://github.com/VanillaIceCube/FullStackTemplate/issues/241). Application AI models and Jules schedules are independent of this setting.
+Code, build and security reviewers and security-alert grouping use `gpt-6-luna` through the existing Responses API action. Per-reviewer credentials, project isolation, output budgets, triggers and failure gates are preserved. See [the model documentation](https://developers.openai.com/api/docs/models/gpt-6-luna) and [shared tracking #241](https://github.com/VanillaIceCube/FullStackTemplate/issues/241). Application AI models are independent of this setting.
 
 ## 📦 Compatible CodeQL updates
 
@@ -617,3 +617,36 @@ GitHub runner. After a reviewed repair, run one fresh controlled dispatch of eac
 alert workflow from corrected `main`, after checking managed labels/Project side
 effects. Record runner loading/empty-feed evidence separately from nonempty mock
 coverage; never rerun an old failed revision as proof of the new source.
+
+## 🧹 Retired agent cleanup
+
+The [pre-cleanup inventory](https://github.com/VanillaIceCube/Notoli/issues/1009#issuecomment-6810498467)
+records the merged prerequisites and zero open PRs, including drafts, before
+removing `.jules/` (README.md, kira.md, marty.md, nora.md and otto.md) and its operating instructions.
+Historical changelog entries, merged improvements and Git/PR/issue provenance
+remain. No active setup or workflow requires a notebook or persona prompt.
+
+Retirement parity checklist:
+
+- Notoli [#1009](https://github.com/VanillaIceCube/Notoli/issues/1009):
+  independently gated application cleanup.
+- MacroMapper [#368](https://github.com/VanillaIceCube/MacroMapper/issues/368):
+  independently gated application cleanup.
+- FullStackTemplate [#286](https://github.com/VanillaIceCube/FullStackTemplate/issues/286):
+  remove template defaults too; verify the existing initializer in a disposable copy.
+- Infrastructure [#117](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/117):
+  preserve the shared release source and gateway controls.
+
+The existing `jules` label exclusions remain defensive protection for legacy
+work in promotion summaries and review reconciliation; they do not schedule or
+invoke Jules. Codex, Dependabot, the three independent AI reviewers, scanner
+gates and release machinery retain their existing behavior.
+
+External retirement inventory: no repository-local Jules workflow, schedule,
+setup script or credential consumer was found. The removed operating rules
+described external Nora/Marty schedules; older records also described Otto and
+the already deleted Kris/Kira schedules. Their current provider-side state and
+the Jules GitHub App installation are not observable through repository files.
+An owner must separately inspect remaining external schedules and app access
+and authorize any disable/uninstall/credential changes. Source cleanup and a
+production promotion do not perform those external operations.
