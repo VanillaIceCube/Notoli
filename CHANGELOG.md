@@ -1,3 +1,13 @@
+## 2026-11-12
+
+### Fixed
+
+- Opening a list now loads its tasks, list name and board name once, even when the previous page stays visible during loading.
+
+### Removed
+
+- Remove the unused board-access helper and the unused queryset argument from the board filter check.
+
 ## 2026-11-11
 
 ### Removed

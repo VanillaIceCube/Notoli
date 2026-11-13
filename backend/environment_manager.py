@@ -26,7 +26,7 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import Iterable, List, Optional, Sequence
 
 # ruamel.yaml is used because we want consistent formatting and we want to
 # reliably include comments in the resulting file.
@@ -213,54 +213,6 @@ def _resolve_paths(
 # ----------------------------
 # YAML writing
 # ----------------------------
-
-
-def _build_env_yaml(
-    *,
-    env_name: str,
-    python_version: str,
-    channels: List[str],
-    requirements_filename: str,
-) -> Tuple[str, str]:
-    """
-    Returns: (yaml_text_without_footer_comments, footer_comment_block)
-    """
-    y = YAML()
-    y.indent(mapping=2, sequence=4, offset=2)
-    y.width = 4096  # avoid line wrapping surprises
-
-    root = CommentedMap()
-    root["name"] = env_name
-
-    ch = CommentedSeq()
-    for c in channels:
-        ch.append(c)
-    root["channels"] = ch
-
-    deps = CommentedSeq()
-    deps.append(f"python={python_version}")
-    deps.append("pip")
-    deps.append(CommentedMap({"pip": CommentedSeq([f"-r {requirements_filename}"])}))
-    root["dependencies"] = deps
-
-    # Dump to string
-    import io
-
-    buf = io.StringIO()
-    y.dump(root, buf)
-    yaml_text = buf.getvalue().rstrip() + "\n"
-
-    footer = (
-        "\n"
-        "# Update env + requirements.txt (pip packages go into requirements.txt)\n"
-        f"# `python {str(pathlib.Path(__file__).as_posix())} export --from-history --use-versions -o {requirements_filename and ''}`\n"
-        "# Overwrite environment from yaml\n"
-        "# `conda env update --file backend/environment.yml --prune`\n"
-    )
-
-    # The footer includes a command line placeholder above; we’ll overwrite it
-    # with the real one in the caller where we know the output path.
-    return yaml_text, footer
 
 
 def _write_text(path: pathlib.Path, content: str) -> None:

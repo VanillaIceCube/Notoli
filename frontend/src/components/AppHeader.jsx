@@ -104,63 +104,48 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
     loadNotifications();
   }, [loadNotifications]);
 
-  const updateNotification = async (
-    notificationId,
-    operation,
-    errorMessage,
-    readUpdated = false,
-  ) => {
-    setNotificationError('');
-    setPendingIds((prev) => new Set(prev).add(notificationId));
-    try {
-      const response = await operation(notificationId, accessToken);
-      if (!response?.ok) throw new Error(errorMessage);
-      if (readUpdated) {
-        const updated = await response.json();
-        if (!updated || updated.id !== notificationId || updated.is_read !== true) {
-          throw new Error(errorMessage);
-        }
-        return updated;
-      }
-      return response;
-    } catch (_error) {
-      setNotificationError(errorMessage);
-      return null;
-    } finally {
-      setPendingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(notificationId);
-        return next;
-      });
-    }
+  const finishItemAction = (notificationId) => {
+    setPendingIds((current) => {
+      const remaining = new Set(current);
+      remaining.delete(notificationId);
+      return remaining;
+    });
   };
 
   const handleClearNotification = async (notificationId) => {
     if (pendingIds.has(notificationId) || actionPending) return;
-    const response = await updateNotification(
-      notificationId,
-      clearNotification,
-      'Could not clear that notification.',
-    );
-    if (!response) return;
-    setNotifications((current) =>
-      current.filter((notification) => notification.id !== notificationId),
-    );
+    setNotificationError('');
+    setPendingIds((current) => new Set(current).add(notificationId));
+    try {
+      const response = await clearNotification(notificationId, accessToken);
+      if (!response?.ok) throw new Error();
+      setNotifications((current) => current.filter((item) => item.id !== notificationId));
+    } catch (_error) {
+      setNotificationError('Could not clear that notification.');
+    } finally {
+      finishItemAction(notificationId);
+    }
   };
 
   const handleOpenNotification = async (notification) => {
     if (pendingIds.has(notification.id) || actionPending) return;
     if (!notification.is_read) {
-      const updated = await updateNotification(
-        notification.id,
-        markNotificationRead,
-        'Could not update that notification.',
-        true,
-      );
-      if (!updated) return;
-      setNotifications((current) =>
-        current.map((item) => (item.id === updated.id ? updated : item)),
-      );
+      setNotificationError('');
+      setPendingIds((current) => new Set(current).add(notification.id));
+      try {
+        const response = await markNotificationRead(notification.id, accessToken);
+        if (!response?.ok) throw new Error();
+        const updated = await response.json();
+        if (updated?.id !== notification.id || updated?.is_read !== true) throw new Error();
+        setNotifications((current) =>
+          current.map((item) => (item.id === updated.id ? updated : item)),
+        );
+      } catch (_error) {
+        setNotificationError('Could not update that notification.');
+        return;
+      } finally {
+        finishItemAction(notification.id);
+      }
     }
     if (notification.target_path) {
       setNotificationAnchorEl(null);

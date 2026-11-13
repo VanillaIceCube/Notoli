@@ -119,45 +119,32 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
     }
   }, [listId, token]);
 
-  const fetchBoardName = useCallback(
-    async (isActive = () => true) => {
-      if (!boardId) return;
+  useEffect(() => {
+    if (!listId) return;
+    let cancelled = false;
 
+    async function loadBoardName() {
+      if (!boardId) return;
       try {
         const response = await fetchBoardApi(boardId, token);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const boardData = await response.json();
-        if (isActive()) {
-          setBoardName(boardData?.name ?? '');
-          if (active) {
-            setAppBarHeader(boardData?.name ?? '');
-          }
-        }
+        if (!cancelled) setBoardName(boardData?.name ?? '');
       } catch (err) {
-        if (isActive()) {
-          setBoardName('');
-          if (active) {
-            setAppBarHeader('');
-          }
-        }
+        if (cancelled) return;
+        setBoardName('');
         setError(err.toString());
       }
-    },
-    [active, boardId, token, setAppBarHeader],
-  );
-
-  useEffect(() => {
-    let active = true;
-    if (listId) {
-      rememberLastBoard(boardId);
-      fetchTasks();
-      fetchListName();
-      fetchBoardName(() => active);
     }
+
+    rememberLastBoard(boardId);
+    fetchTasks();
+    fetchListName();
+    loadBoardName();
     return () => {
-      active = false;
+      cancelled = true;
     };
-  }, [boardId, listId, fetchTasks, fetchListName, fetchBoardName]);
+  }, [boardId, listId, token, fetchTasks, fetchListName]);
 
   const closeActionMenu = () => {
     setActionMenuAnchorEl(null);
