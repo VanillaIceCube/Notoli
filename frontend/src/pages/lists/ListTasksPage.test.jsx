@@ -1,6 +1,6 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import ListTasksPage from './ListTasksPage';
 import { noteFixtures, boardFixtures } from '../../test-support/fixtures';
 import { collectRowStartPixels } from '../../test-support/layout';
@@ -111,6 +111,24 @@ describe('ListTasksPage', () => {
       json: async () => [],
     });
     expect(await screen.findByText(/no notes found/i)).toBeInTheDocument();
+  });
+  test('activating a loaded list updates the header without fetching its data again', async () => {
+    const setAppBarHeader = vi.fn();
+    const { rerender } = render(
+      <ListTasksPage active={false} setAppBarHeader={setAppBarHeader} />,
+      {
+        wrapper: MemoryRouter,
+      },
+    );
+
+    await screen.findByText('test_note_01');
+    expect(setAppBarHeader).not.toHaveBeenCalled();
+    rerender(<ListTasksPage active setAppBarHeader={setAppBarHeader} />);
+
+    expect(setAppBarHeader).toHaveBeenLastCalledWith('test_board_01');
+    expect(fetchNotesApi).toHaveBeenCalledTimes(1);
+    expect(fetchListApi).toHaveBeenCalledTimes(1);
+    expect(fetchBoardApi).toHaveBeenCalledTimes(1);
   });
   test('when the list fetch succeeds, it shows the list name as the page title', async () => {
     await renderNotes();

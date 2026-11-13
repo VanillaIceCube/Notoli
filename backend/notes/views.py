@@ -27,22 +27,7 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
-def _require_board_access(user, board_id):
-    try:
-        board_id = int(board_id)
-    except (TypeError, ValueError):
-        raise NotFound("Board not found.")
-
-    # Prefer 404 for non-existent boards and 403 for existing-but-inaccessible boards.
-    if not Board.objects.filter(pk=board_id).exists():
-        raise NotFound("Board not found.")
-
-    accessible_boards = Board.objects.accessible_to(user)
-    if not accessible_boards.filter(pk=board_id).exists():
-        raise PermissionDenied("You do not have access to this board.")
-
-
-def _require_board_filter_access(user, board_id, _base_queryset=None):
+def _require_board_filter_access(user, board_id):
     """
     Allow `?board=` only when the board exists and the user is a
     board-level member.
@@ -251,7 +236,7 @@ class ListViewSet(viewsets.ModelViewSet):
         # Adding additional querying capabilities by ?board=ID
         board_id = self.request.query_params.get("board")
         if board_id:
-            _require_board_filter_access(user, board_id, queryset)
+            _require_board_filter_access(user, board_id)
             queryset = queryset.filter(board_id=board_id)
 
         return queryset.distinct().order_by("position", "created_at", "id")
@@ -337,7 +322,7 @@ class ListViewSet(viewsets.ModelViewSet):
             return error_response
 
         accessible_queryset = self.get_queryset()
-        _require_board_filter_access(request.user, board_id, accessible_queryset)
+        _require_board_filter_access(request.user, board_id)
         scoped_queryset = accessible_queryset.filter(board_id=board_id)
         current_ids = list(scoped_queryset.values_list("id", flat=True))
 
@@ -380,7 +365,7 @@ class NoteViewSet(viewsets.ModelViewSet):
         # Adding additional querying capabilities by ?board=ID
         board_id = self.request.query_params.get("board")
         if board_id:
-            _require_board_filter_access(user, board_id, queryset)
+            _require_board_filter_access(user, board_id)
             queryset = queryset.filter(board_id=board_id)
 
         # Adding additional querying capabilities by ?list=ID
