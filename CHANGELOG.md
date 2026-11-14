@@ -13,10 +13,6 @@
 
 ### Removed
 
-- Remove obsolete documentation reports, snapshots, and redundant indexes; leave surviving guides in their original locations for review.
-
-- Remove superseded MCP documentation redirects and update references to the backend-owned guides.
-
 - Remove obsolete third-party Conda export attribution from the license and environment helper documentation.
 
 ## 2026-11-12

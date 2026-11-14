@@ -27,6 +27,7 @@ interface to a more structured view.
 - [Frontend](frontend/README.md) — setup, pages, components, and browser tests.
 - [Deployment](deploy/README.md) — local Docker, configuration, and live-server guides.
 - [GitHub setup and workflows](.github/README-WORKFLOWS.md) — first-PR setup and automation.
+- [Additional documentation](docs/README.md) — architecture, maintenance, scripts, and testing.
 - [Changelog](CHANGELOG.md) — project updates.
 
 ## 📜 License

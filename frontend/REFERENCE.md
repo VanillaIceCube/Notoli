@@ -20,7 +20,8 @@ Firefox 121, and Safari 17. The migration follows MacroMapper PRs #103 and #130.
 
 UI styling conventions live in [`STYLE_GUIDE.md`](STYLE_GUIDE.md).
 
-The browser visual
+Menu dismissal and mobile refresh lifecycle/regression details are documented in
+[`docs/UI-BUG-BATCH-915-847.md`](../docs/UI-BUG-BATCH-915-847.md). The browser visual
 journeys use synthetic intercepted API responses and never customer accounts.
 
 ## 🧭 App Routes
@@ -180,7 +181,7 @@ CI reads the Node version from `frontend/package.json` (`engines.node`).
 
 ## 🔌 Shared MCP framework
 
-See [the MCP framework guide](../backend/app_mcp/README.md). Optional consent and Connected Apps routes require `VITE_MCP_ENABLED=1` in the template/MacroMapper; Notoli keeps its existing enabled UI. Preserve JWT-only consent and validated connection return paths.
+See [the MCP framework guide](../docs/MCP-FRAMEWORK.md). Optional consent and Connected Apps routes require `VITE_MCP_ENABLED=1` in the template/MacroMapper; Notoli keeps its existing enabled UI. Preserve JWT-only consent and validated connection return paths.
 
 ## 🔒 Transitive dependency maintenance
 
@@ -217,7 +218,7 @@ remain application-specific.
 
 Notifications expose Retry and retain failed actions. Item/bulk controls disable
 overlapping actions through response parsing. Failed/malformed mark-read responses
-keep the inbox open instead of navigating.
+keep the inbox open instead of navigating. See [the audit](../docs/AUTH-PARITY.md).
 
 ## Development dependency reproducibility
 

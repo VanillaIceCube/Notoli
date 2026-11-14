@@ -49,5 +49,6 @@ guide for dependencies, ports, and reports. Production rollout is separate.
 
 ## 📚 Further reading
 
+- [Automation coverage](../docs/AUTOMATION-COVERAGE.md).
 - [Workflow reference](../.github/WORKFLOW-REFERENCE.md).
 - [Repository scripts](../scripts/README.md).
