@@ -8,7 +8,7 @@ repository root with the dependencies required by the relevant guide.
 | Script | Purpose |
 | --- | --- |
 | [bounded_log.py](bounded_log.py) | Bound reviewer logs while retaining early, failing, and late evidence. |
-| [check_mcp_framework.py](check_mcp_framework.py) | Verify shared Python framework hashes against the canonical source pin. |
+| [check_app_mcp.py](check_app_mcp.py) | Verify shared Python framework hashes against the canonical source pin. |
 | [ci_architecture.py](ci_architecture.py) | Validate documented CI contracts and regenerate the source inventory. |
 | [collect_browser_artifacts.py](collect_browser_artifacts.py) | Collect a bounded set of generated browser failure artifacts. |
 | [e2e_backend.py](e2e_backend.py) | Start only the isolated loopback backend used by browser tests. |
@@ -20,7 +20,7 @@ repository root with the dependencies required by the relevant guide.
 
 ## 🔌 MCP maintenance
 
-See the [framework README](../backend/mcp_framework/README.md) for canonical
+See the [framework README](../backend/app_mcp/README.md) for canonical
 source ownership, manifests, and the local `--source-root` verification option.
 
 ## 📚 Further reading

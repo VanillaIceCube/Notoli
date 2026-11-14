@@ -101,7 +101,7 @@ read/unread changes. `notoli:delete` permits deletion of accessible lists/items 
 owned boards; deleting notifications also requires `notoli:notifications`.
 Existing connections must reconnect and approve new permissions; refresh cannot
 upgrade their scope. Membership reads are board-scoped, not a user directory.
-There are 31 tools; see the complete [tool catalog](../plugins/notoli/README.md).
+There are 31 tools; see the complete [tool catalog](../backend/app_mcp/chatgpt/README.md).
 Read pagination defaults to 50 and is capped at 100. Write titles are capped at
 255 characters, descriptions at 10,000. Membership/order arrays contain at most
 1000 positive IDs. Reordering requires the complete current ID set without duplicates.
@@ -126,7 +126,7 @@ list/item. All deletion tools require literal `confirm: true`, checked again at 
 service boundary, and instruct the client to explain impact and obtain explicit user
 confirmation. This records the caller's assertion, not an independently verified
 human approval. Normal auth/account/admin flows remain outside the MCP tool surface.
-See [plugin tools and evaluation prompts](../plugins/notoli/README.md).
+See [plugin tools and evaluation prompts](../backend/app_mcp/chatgpt/README.md).
 
 Run the OAuth and HTTP protocol tests with `python manage.py test integrations`.
 Their ASGI HTTP client, `httpx2==2.13.1`, is pinned directly in requirements

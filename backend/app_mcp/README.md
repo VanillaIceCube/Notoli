@@ -1,12 +1,13 @@
-# 🔌 MCP framework
+# 🔌 Application MCP
 
-`backend/mcp_framework` provides shared OAuth consent, discovery, token verification,
+`backend/app_mcp` provides shared OAuth consent, discovery, token verification,
 Streamable HTTP transport and ASGI lifecycle. Application registries own their
 models, permissions and tools. FullStackTemplate is the canonical source;
-`mcp-framework-source.json` pins its immutable source and
-`backend/mcp-framework-manifest.json` hashes every Python source file. Edit the
+`backend/app_mcp/source.json` pins its immutable source and
+`backend/app_mcp/manifest.json` hashes shared runtime Python files (application-specific
+`chatgpt/` packaging is excluded). Edit the
 canonical package, regenerate its manifest with
-`python scripts/check_mcp_framework.py --write-manifest`, commit it, then copy
+`python scripts/check_app_mcp.py --write-manifest`, commit it, then copy
 the package/manifest/checker and pin the same commit in every consumer. Never
 brand or independently patch the shared package. CI checks the remote pin;
 `--source-root ../FullStackTemplate` is a local development override only.
@@ -20,6 +21,8 @@ Accounts, client registrations, grants and tool permissions remain application
 owned. Ordinary website login/REST JWTs retain their existing local behavior.
 The previous external-issuer extension and centralized rollout are withdrawn;
 template scaffolding remains disabled until an app implements its own tools.
+
+Client setup and packaging live in [chatgpt/](chatgpt/README.md).
 
 ## 🧭 Structure
 
@@ -57,7 +60,7 @@ registration. The command refuses to overwrite an existing registration. Configu
 frontend together. The template production build leaves this flag off; enabled applications
 configure their own reviewed build and runtime profiles. No template instance is provisioned by merging this framework.
 
-The template defaults to `mcp_framework.server.sample_server`: its sole tool,
+The template defaults to `app_mcp.server.sample_server`: its sole tool,
 `connection_status`, returns `{"connected": true}` after authentication and
 reads no application data. Derived applications select their own registry with
 `DJANGO_MCP_SERVER_FACTORY`; the sample is a transport test, not a domain tool
@@ -140,7 +143,7 @@ profile against an isolated test database:
 
 ```sh
 python manage.py test
-DJANGO_MCP_ENABLED=1 DJANGO_MCP_SERVER_FACTORY=mcp_framework.server.sample_server python manage.py test mcp_framework
+DJANGO_MCP_ENABLED=1 DJANGO_MCP_SERVER_FACTORY=app_mcp.server.sample_server python manage.py test app_mcp
 ```
 
 The framework tests cover discovery/initialization/sample calls, absent/invalid

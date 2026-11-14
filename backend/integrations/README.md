@@ -1,7 +1,7 @@
 # 🔌 Notoli MCP integration
 
 This Django app owns Notoli's authenticated MCP tools, OAuth permissions, and
-account-bound consent. The [shared framework](../mcp_framework/README.md)
+account-bound consent. The [shared framework](../app_mcp/README.md)
 supplies transport and common OAuth plumbing.
 
 ## 🧭 Structure
@@ -23,8 +23,8 @@ establish authorization.
 ## 📚 Guides
 
 - [Backend API and authentication reference](../REFERENCE.md).
-- [Shared framework configuration and verification](../mcp_framework/README.md).
-- [Plugin connection, tool catalog, branding, and evaluation prompts](../../plugins/notoli/README.md).
+- [Shared framework configuration and verification](../app_mcp/README.md).
+- [Plugin connection, tool catalog, branding, and evaluation prompts](../../backend/app_mcp/chatgpt/README.md).
 - [Deployment and client registration](../../deploy/production/README.md#chatgpt-mcp-deployment).
 
 The backend runs under Uvicorn ASGI. Follow the deployment guide for exact

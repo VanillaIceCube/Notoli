@@ -27,6 +27,14 @@ CHALLENGE = (
 
 
 class ProfileTests(SimpleTestCase):
+    def test_renamed_package_preserves_django_application_identity(self):
+        self.assertEqual(apps.get_app_config("mcp_framework").name, "app_mcp")
+
+    def test_sdk_server_import_remains_distinct_from_application_package(self):
+        from mcp.server import MCPServer
+
+        self.assertTrue(MCPServer.__module__.startswith("mcp."))
+
     def test_disabled_profile_does_not_publish_discovery_or_auth(self):
         if settings.MCP_ENABLED:
             self.skipTest(

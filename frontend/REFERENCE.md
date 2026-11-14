@@ -70,7 +70,7 @@ exchange. Read consent names the board owner/collaborator IDs, usernames, and em
 addresses that the app can access. There is no separate
 Django session login, and JWTs never travel through OAuth URLs. MCP item results link
 back to `/board/:boardId/list/:listId`. See the
-[plugin connection instructions](../plugins/notoli/README.md).
+[plugin connection instructions](../backend/app_mcp/chatgpt/README.md).
 
 Authentication tokens are stored in `sessionStorage` (`accessToken` and `refreshToken`).
 The request client retries a `401` once after refreshing an expired access token.

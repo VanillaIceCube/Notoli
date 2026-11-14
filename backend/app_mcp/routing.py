@@ -11,5 +11,5 @@ def urlpatterns():
         path(".well-known/oauth-authorization-server", authorization_metadata),
         path(".well-known/oauth-protected-resource", resource_metadata),
         path(".well-known/oauth-protected-resource/mcp", resource_metadata),
-        path("auth/mcp/", include("mcp_framework.urls")),
+        path("auth/mcp/", include("app_mcp.urls")),
     ]

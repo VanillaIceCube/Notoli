@@ -8,8 +8,9 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PACKAGE = Path("backend/mcp_framework")
-MANIFEST = Path("backend/mcp-framework-manifest.json")
+PACKAGE = Path("backend/app_mcp")
+MANIFEST = PACKAGE / "manifest.json"
+SOURCE_PIN = PACKAGE / "source.json"
 REPOSITORY = "VanillaIceCube/FullStackTemplate"
 
 
@@ -20,6 +21,7 @@ def inventory(root):
         ).hexdigest()
         for path in sorted((root / PACKAGE).rglob("*.py"))
         if "__pycache__" not in path.parts
+        and "chatgpt" not in path.relative_to(root / PACKAGE).parts
     }
 
 
@@ -41,7 +43,7 @@ def main():
             json.dumps(inventory(ROOT), indent=2) + "\n", encoding="utf-8"
         )
         return
-    pin = json.loads((ROOT / "mcp-framework-source.json").read_text(encoding="utf-8"))
+    pin = json.loads((ROOT / SOURCE_PIN).read_text(encoding="utf-8"))
     if pin.get("repository") != REPOSITORY or not re.fullmatch(
         r"[0-9a-f]{40}", pin.get("commit", "")
     ):

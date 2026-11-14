@@ -36,7 +36,7 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart f
 Local MCP discovery uses the backend origin and no trusted proxy. ChatGPT
 connection testing requires a reachable HTTPS origin or secure tunnel with
 consistent issuer, allowed host and CSRF origin. See the
-[connection walkthrough](../plugins/notoli/README.md).
+[connection walkthrough](../backend/app_mcp/chatgpt/README.md).
 
 <a id="standalone-https-and-image-checks"></a>
 

@@ -50,7 +50,7 @@ Track those pages and public-submission prerequisites in
 3. Build a new ZIP from the fresh export using Python's standard library:
 
    ```powershell
-   python plugins/notoli/build_listing.py `
+   python backend/app_mcp/chatgpt/build_listing.py `
      --export "$env:USERPROFILE/Downloads/plugin.zip" `
      --output "$env:USERPROFILE/Downloads/notoli-listing-1.0.1.zip" `
      --version 1.0.1
@@ -98,7 +98,7 @@ Official references: [connection and refresh](https://developers.openai.com/plug
 ## 🔗 Connect your personal ChatGPT account
 
 1. Deploy the frontend and backend, apply migrations, and update Compose/Nginx using the
-   [deployment instructions](../../deploy/production/README.md#chatgpt-mcp-deployment).
+   [deployment instructions](../../../deploy/production/README.md#chatgpt-mcp-deployment).
 2. Open [ChatGPT Plugins](https://chatgpt.com/plugins), select **Add custom MCP
    server**, and enter `https://notoli.judeandrewalaba.com/mcp`.
 3. Select OAuth with a predefined/provided client. Set client ID to
