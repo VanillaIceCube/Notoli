@@ -239,3 +239,37 @@ Record tool selection, arguments, result, and write confirmation when testing
 in ChatGPT. Refresh connection metadata and start a new chat after tool changes.
 See [official connection guidance](https://developers.openai.com/plugins/deploy/connect-chatgpt)
 and [OAuth guidance](https://developers.openai.com/plugins/build/auth).
+
+
+## 🧰 Build and validate packages
+
+Run the offline regression suite from the repository root:
+
+```powershell
+python -m unittest discover -s backend/app_mcp/chatgpt -p "test_*.py" -v
+```
+
+To build a portable ZIP containing only `plugin.json`, `mcp.json`, and referenced
+artwork, write the output outside the source directory:
+
+```powershell
+python backend/app_mcp/chatgpt/build_package.py --output "$env:TEMP/application-chatgpt.zip"
+```
+
+The portable archive contains no account-specific `.app.json`, source code,
+test files, or exported account credentials. Building it does not install,
+register, publish, or deploy the integration.
+
+For an existing personal listing, download that plugin's export first and run:
+
+```powershell
+python backend/app_mcp/chatgpt/build_listing.py `
+  --export "$env:USERPROFILE/Downloads/plugin.zip" `
+  --output "$env:TEMP/application-listing.zip" `
+  --version 1.0.1
+```
+
+Choose a version greater than the export's current version. The overlay verifies
+the expected display name and preserves the exported plugin name, app mapping,
+and other exported files. Upload through the existing plugin's update flow
+when authorized. No registered app ID is stored or invented in this repository.

@@ -8,6 +8,9 @@ from zipfile import ZipFile
 
 from build_listing import build_listing
 
+SOURCE = json.loads((Path(__file__).parent / "plugin.json").read_text(encoding="utf-8"))
+INTERFACE = SOURCE["extensions"]["com.openai"]["interface"]
+
 
 class ListingBuildTests(unittest.TestCase):
     def setUp(self):
@@ -17,10 +20,13 @@ class ListingBuildTests(unittest.TestCase):
         self.export = self.directory / "export.zip"
         self.output = self.directory / "release.zip"
         self.manifest = {
-            "name": "dev-existing-notoli",
+            "name": f"dev-existing-{SOURCE['name']}",
             "version": "1.0.0",
             "apps": "./.app.json",
-            "interface": {"displayName": "Notoli", "developerName": "App developer"},
+            "interface": {
+                "displayName": INTERFACE["displayName"],
+                "developerName": "App developer",
+            },
             "existingSetting": {"preserve": True},
         }
         self.mapping = b'{"apps":{"existing":{"id":"asdk_app_existing"}}}\n'
@@ -36,7 +42,7 @@ class ListingBuildTests(unittest.TestCase):
         build_listing(self.export, self.output, "1.0.1")
         with ZipFile(self.output) as release, ZipFile(self.export) as original:
             manifest = json.loads(release.read(".codex-plugin/plugin.json"))
-            self.assertEqual(manifest["name"], "dev-existing-notoli")
+            self.assertEqual(manifest["name"], f"dev-existing-{SOURCE['name']}")
             self.assertEqual(manifest["apps"], "./.app.json")
             self.assertEqual(manifest["existingSetting"], {"preserve": True})
             self.assertEqual(release.read(".app.json"), self.mapping)
@@ -44,18 +50,20 @@ class ListingBuildTests(unittest.TestCase):
                 release.read("existing.txt"), original.read("existing.txt")
             )
             self.assertEqual(manifest["version"], "1.0.1")
-            self.assertEqual(manifest["interface"]["category"], "Productivity")
+            self.assertEqual(manifest["interface"]["category"], INTERFACE["category"])
             self.assertEqual(
-                manifest["interface"]["developerName"], "Jude Andrew Alaba"
+                manifest["interface"]["developerName"], INTERFACE["developerName"]
             )
             self.assertEqual(
                 manifest["interface"]["websiteURL"],
-                "https://notoli.judeandrewalaba.com",
+                INTERFACE["websiteURL"],
             )
             self.assertLessEqual(len(manifest["interface"]["shortDescription"]), 30)
             for icon in ("logo", "composerIcon"):
                 path = manifest["interface"][icon].removeprefix("./")
-                self.assertTrue(release.read(path).startswith(b"<svg"))
+                self.assertEqual(
+                    release.read(path), (Path(__file__).parent / path).read_bytes()
+                )
 
     def assert_rejected(self, version="1.0.1"):
         with self.assertRaises(ValueError):

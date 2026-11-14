@@ -20,8 +20,9 @@ def build_listing(export: Path, output: Path, version: str) -> None:
 
     manifest_path = ".codex-plugin/plugin.json"
     manifest = json.loads(files[manifest_path])
-    if manifest.get("interface", {}).get("displayName") != "Notoli":
-        raise ValueError("Expected an export of the installed Notoli plugin.")
+    expected_name = source["extensions"]["com.openai"]["interface"]["displayName"]
+    if manifest.get("interface", {}).get("displayName") != expected_name:
+        raise ValueError(f"Expected an export of the installed {expected_name} plugin.")
     if manifest.get("apps") != "./.app.json":
         raise ValueError("Expected a ChatGPT export with apps mapped by .app.json.")
     apps = json.loads(files[".app.json"]).get("apps", {})

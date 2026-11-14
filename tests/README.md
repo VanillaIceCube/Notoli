@@ -9,6 +9,7 @@ remain beside their backend and frontend code.
 | --- | --- |
 | Bounded diagnostic logs | `tests/bounded-log.test.cjs` |
 | GitHub action regressions | `.github/actions/` |
+| ChatGPT manifests and package builders | [Package guide](../backend/app_mcp/chatgpt/README.md) |
 | Development dependencies and repository validation | `tests/dev-dependencies.test.cjs`, `tests/repository-validation.test.cjs` |
 | Backend application tests | [Backend README](../backend/README.md#-checks) |
 | Frontend and browser tests | [Frontend README](../frontend/README.md#-checks) |

@@ -9,7 +9,7 @@ integration contracts, maintenance, and recorded verification.
 - [Frontend](../frontend/README.md).
 - [Deployment](../deploy/README.md).
 - [GitHub setup and workflows](../.github/README-WORKFLOWS.md).
-- [Plugins and client connections](../backend/app_mcp/README.md).
+- [MCP integration and ChatGPT connection](../backend/app_mcp/README.md).
 - [Scripts](../scripts/README.md).
 - [Tests](../tests/README.md).
 
@@ -19,7 +19,6 @@ integration contracts, maintenance, and recorded verification.
 
 ## 🧰 Maintenance and integration
 
-- [MCP framework](../backend/app_mcp/README.md).
 - [Authentication/frontend adoption audit](AUTH-PARITY.md).
 - [Automation coverage and failure diagnostics](AUTOMATION-COVERAGE.md).
 - [Connections API response handling](CONNECTIONS-ERROR-HANDLING.md).
