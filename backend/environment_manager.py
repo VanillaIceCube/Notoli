@@ -10,11 +10,6 @@
 #       (not the full dependency tree)
 #     - avoids the weird `package @ file:///...` style lines by default
 #
-# Inspiration / credit:
-#   This script was inspired by ideas from conda export helper scripts such as
-#   Andres Berejnoi's `conda_export.py` gist and derivative variants.
-#   This implementation is a fresh rewrite with a different output contract:
-#   it *always* emits a minimal conda env + pip -r requirements.txt layout.
 # =============================================================
 
 from __future__ import annotations

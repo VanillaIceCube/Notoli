@@ -85,10 +85,6 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart f
 This project is licensed under a **Modified MIT License (Non-Commercial Use Only)**.
 See the [LICENSE](./LICENSE.md) file for full details.
 
-## 🙏 Acknowledgments
-This project includes code from [`conda_export.py`](https://github.com/andresberejnoi/Conda-Tools) by **Andres Berejnoi**,
-used under the terms of the original [MIT License](https://opensource.org/licenses/MIT).
-
 ## 🔑 AI reviewer credentials
 
 Obi-Wan, Lint Eastwood, and RoboCop use separate OpenAI keys scoped to this

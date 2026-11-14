@@ -1,3 +1,13 @@
+## 2026-11-13
+
+### Changed
+
+- Align the license text, formatting, and 2025-2026 copyright with FullStackTemplate and the other application repositories.
+
+### Removed
+
+- Remove obsolete third-party Conda export attribution from the license and environment helper documentation.
+
 ## 2026-11-12
 
 ### Fixed
@@ -1181,7 +1191,7 @@ All notable changes to this project are documented in this file.
 ### Fixed
 - Corrected model naming conventions in admin files.
 ### Changed
-- Updated LICENSE and README to credit `conda_export.py` by Andres Berejnoi.
+- Updated LICENSE and README with third-party Conda export attribution.
 ### Removed
 - Temporary `users` app.
 
