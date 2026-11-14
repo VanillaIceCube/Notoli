@@ -19,13 +19,10 @@ integration contracts, maintenance, and recorded verification.
 
 ## 🧰 Maintenance and integration
 
-- [Authentication/frontend adoption audit](AUTH-PARITY.md).
 - [Automation coverage and failure diagnostics](AUTOMATION-COVERAGE.md).
 - [Connections API response handling](CONNECTIONS-ERROR-HANDLING.md).
 - [Python dependency malware decision — 2026-11-05](PYTHON-MALWARE-DECISION.md).
 
 ## 🗂️ Verification and history
 
-- [Batch 2 adoption and acceptance record](BATCH2-PARITY.md).
-- [Batch 3 shared capability parity](BATCH3-PARITY.md).
 - [Menu dismissal and pull-to-refresh](UI-BUG-BATCH-915-847.md).

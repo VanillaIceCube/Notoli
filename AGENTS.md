@@ -240,7 +240,7 @@ Browser checks: activate an isolated Python environment with backend requirement
 then `cd frontend`, `npx playwright install chromium`, `npm run test:e2e`. Ports
 8001/3001 must be free. Tests use disposable SQLite/file mail and no real accounts.
 Vitest projects isolate pure Node files from VM DOM forks; do not override the
-configured pool for timing. See frontend/README.md and docs/BATCH2-PARITY.md.
+configured pool for timing. See frontend/README.md.
 
 Reviewer configuration and safe follow-up rules now follow `.github/AI-REVIEWERS.md`;
 keep validated optional AI_REVIEW_* variables, per-persona identity, serialized

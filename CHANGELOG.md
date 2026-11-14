@@ -13,6 +13,8 @@
 
 ### Removed
 
+- Delete historical Batch 2/3 parity reports and hash snapshots, completed authentication adoption audits; remove obsolete links without moving or consolidating documentation.
+
 - Remove obsolete third-party Conda export attribution from the license and environment helper documentation.
 
 ## 2026-11-12

@@ -218,7 +218,7 @@ remain application-specific.
 
 Notifications expose Retry and retain failed actions. Item/bulk controls disable
 overlapping actions through response parsing. Failed/malformed mark-read responses
-keep the inbox open instead of navigating. See [the audit](../docs/AUTH-PARITY.md).
+keep the inbox open instead of navigating.
 
 ## Development dependency reproducibility
 
@@ -246,7 +246,7 @@ Jest at 63.391s (65.044s container wall) before and the initial unoptimized
 Vitest migration at 151.839s (154.103s container wall). Both passed all 301
 tests; this initial migration was 137% slower, not a performance improvement.
 Dependency installs were separate: 36.021s versus 33.019s. Final tuned C outer wall is54.236s (16.616% lower than65.044s baseline),
-all301 cases pass with no OOM; details/limits are in docs/BATCH2-PARITY.md.
+all301 cases pass with no OOM.
 Backend Django time was 24.256s before and 25.723s after (190 tests, one existing
 skip); no backend speedup is claimed. The existing test-scoped fast password
 hasher remains. Settings subprocess and MCP protocol tests retain their useful

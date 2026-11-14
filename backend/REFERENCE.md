@@ -288,7 +288,6 @@ candidate user's final username/email before account creation. Validation failur
 return HTTP 400 with a human-readable `error`; non-string passwords also return
 400. Password reset already validates against the existing user. Notification
 bulk mark-read/clear operations are transactional and remain recipient-scoped.
-See [the adoption audit](../docs/AUTH-PARITY.md) for evidence and boundaries.
 
 ## Development dependency reproducibility
 
