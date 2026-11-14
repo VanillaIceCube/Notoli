@@ -221,7 +221,7 @@ cutover steps in `.github/README-WORKFLOWS.md`.
 
 ## 🔌 Shared MCP framework
 
-MCP framework changes follow [docs/MCP-FRAMEWORK.md](backend/app_mcp/README.md). FullStackTemplate owns the canonical Python package; keep all consumer hashes/pins aligned. Derived applications own enablement and their business tools. Preserve Notoli credentials, scopes, tool permissions and exact proxy trust.
+MCP framework changes follow [backend/app_mcp/README.md](backend/app_mcp/README.md). FullStackTemplate owns the canonical Python package; keep all consumer hashes/pins aligned. Derived applications own enablement and their business tools. Preserve Notoli credentials, scopes, tool permissions and exact proxy trust.
 
 Dependency-review and alert-lifecycle behavior follows the shared parity contract in
 `.github/README-WORKFLOWS.md`: missing evidence fails, reports stay bounded, and

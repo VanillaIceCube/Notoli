@@ -271,7 +271,7 @@ See [OpenAI key security, expiration and usage guidance](https://developers.open
 
 ## 🔌 Shared MCP framework
 
-The backend test gate checks the pinned MCP framework manifest and each repository's documented ordinary/MCP-enabled profiles. Template sample fixtures do not create a production target; Notoli and MacroMapper retain their app-owned enabled protocol/domain acceptance. See [the framework guide](../docs/MCP-FRAMEWORK.md) and the application MCP guide where present.
+The backend test gate checks the pinned MCP framework manifest and each repository's documented ordinary/MCP-enabled profiles. Template sample fixtures do not create a production target; Notoli and MacroMapper retain their app-owned enabled protocol/domain acceptance. See [the framework guide](../backend/app_mcp/README.md) and the application MCP guide where present.
 
 ## 🛡️ Dependency evidence and alert lifecycle parity
 
