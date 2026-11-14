@@ -25,7 +25,7 @@ node --test tests/*.test.cjs
 
 The template initializer suite also requires PowerShell 7 (`pwsh`). CI runs
 action-specific JavaScript tests documented in the
-[workflow reference](../.github/WORKFLOW-REFERENCE.md).
+[workflow reference](../.github/workflows/README.md).
 
 ## ⚙️ Configuration validation
 
@@ -50,5 +50,5 @@ guide for dependencies, ports, and reports. Production rollout is separate.
 ## 📚 Further reading
 
 - [Automation coverage](../docs/AUTOMATION-COVERAGE.md).
-- [Workflow reference](../.github/WORKFLOW-REFERENCE.md).
+- [Workflow reference](../.github/workflows/README.md).
 - [Repository scripts](../scripts/README.md).

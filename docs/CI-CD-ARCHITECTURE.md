@@ -3,7 +3,7 @@
 This is the shared reference for the implementation after Batch 2 and Batch 3.
 FullStackTemplate owns reusable application/reviewer patterns; Infrastructure owns
 the gateway and versioned app release engine. The repository-specific
-[workflow guide](../.github/README-WORKFLOWS.md) supplies configuration names and
+[workflow guide](../.github/README.md) supplies configuration names and
 operational details. Workflow YAML and protected-branch rules remain authoritative.
 Retired agent notebooks are not an orchestration dependency. Historical
 provenance remains in Git, issues, PRs and dated changelog entries.
@@ -80,7 +80,7 @@ flowchart LR
   Luna --> Usage
 ```
 
-The [reviewer contract](../.github/AI-REVIEWERS.md) defines exact byte/page/count
+The [reviewer contract](../.github/actions/README.md) defines exact byte/page/count
 limits, API-specific bot identity, conservative single-line replacement proof,
 serialized writers, permission diagnostics, configuration recovery and pricing
 limitations. Discussion and tool output cannot override system policy, execute
@@ -110,7 +110,7 @@ No extra live model experiment or analytics platform is required.
 | Gateway deployment | `DEPLOY_SSH_KEY`, gateway owner/branch/source/destination/fingerprint variables | Credential-free authorization precedes key loading; independent gateway controls and host lock remain |
 
 The exact names, installation permissions and Actions/Dependabot provisioning
-are in [the workflow guide](../.github/README-WORKFLOWS.md). Reviewer OpenAI keys
+are in [the workflow guide](../.github/README.md). Reviewer OpenAI keys
 and App private keys required by Dependabot are provisioned in both secret stores;
 production/Project secrets are not added to Dependabot. Source-linked guides list
 names, never secret values. Repository Actions secrets are not branch-scoped:

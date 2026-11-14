@@ -8,7 +8,7 @@ integration contracts, maintenance, and recorded verification.
 - [Backend](../backend/README.md).
 - [Frontend](../frontend/README.md).
 - [Deployment](../deploy/README.md).
-- [GitHub setup and workflows](../.github/README-WORKFLOWS.md).
+- [GitHub setup and workflows](../.github/README.md).
 - [MCP integration and ChatGPT connection](../backend/app_mcp/README.md).
 - [Scripts](../scripts/README.md).
 - [Tests](../tests/README.md).

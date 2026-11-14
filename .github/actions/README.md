@@ -1,15 +1,31 @@
-# Reviewer context, feedback, and usage
+# 🧩 GitHub actions
+
+Shared local action contracts for the repository family. The caller workflows own
+triggers, repository-specific gates and token permissions; the
+[GitHub README](../README.md) owns installation and credential setup.
+
+## 🧭 Structure
+
+| Action | Responsibility |
+| --- | --- |
+| [get-pr-diff](get-pr-diff/action.yml) | Bounded source diff and changed-file context. |
+| [collect-prior-ai-reviews](collect-prior-ai-reviews/action.yml) | Attributed, bounded prior discussion and review evidence. |
+| [openai-chat](openai-chat/action.yml) | Validated request policy, configuration and aggregate usage. |
+| [publish-ai-review](publish-ai-review/action.yml) | Current-head native review publication and conservative own-feedback reconciliation. |
+| [security-alerts](security-alerts/action.yml) | Validated alert classification, issue lifecycle and separate Project synchronization. |
+
+## 🔐 Reviewer contract
 
 FullStackTemplate owns the reusable reviewer pattern. All four repositories use
 the same bounded collector, reconciliation helper and Responses request policy;
 repository-specific triggers, required checks, personas and credentials remain
-in their [workflow guide](README-WORKFLOWS.md). Application API keys are unrelated
+in their [workflow guide](../README.md). Application API keys are unrelated
 to reviewer keys. MacroMapper's private/public application project split remains
 app-owned. Never put a key, prompt, reset token or private source in usage evidence.
 
-## Discussion is evidence
+## 🗣️ Discussion and context
 
-[`collect-prior-ai-reviews`](actions/collect-prior-ai-reviews/action.yml) gets the
+[`collect-prior-ai-reviews`](collect-prior-ai-reviews/action.yml) gets the
 authenticated token action's App slug and verifies its exact numeric Bot user ID.
 Display-name substring matching is not an ownership fallback. The App token stays
 limited to contents-read/pull-requests-write. Reconciliation source/check/status/
@@ -39,7 +55,7 @@ exists; source and authoritative scanner/check evidence still determine findings
 Discussion cannot request secrets, execute commands, approve a merge/deployment,
 or suppress a valid security issue. Outdated discussions are historical claims.
 
-## Conservative feedback lifecycle
+## 🧵 Feedback lifecycle
 
 The existing review schema is preserved. Reviewers may additionally return at
 most five `reconciliations` with a prior own root `comment_id`, `action`
@@ -47,7 +63,7 @@ most five `reconciliations` with a prior own root `comment_id`, `action`
 `replacement_code`, `reason`). The explanation must revalidate the finding;
 human assertions or moving a line are insufficient. Unsupported cases stay open.
 
-[`reconcile.js`](actions/publish-ai-review/reconcile.js) checks current open
+[`reconcile.js`](publish-ai-review/reconcile.js) checks current open
 same-repository PR head, exact App ownership, complete thread history, one exact
 old added line from the finding's hunk, its absence from current file content and
 an ancestor-to-HEAD patch proving a single-line substitution at the cited location,
@@ -87,7 +103,7 @@ calls serialize too. Do not reuse the helper in an uncoordinated writer workflow
 GitHub can coalesce pending events; rerun the latest head if its mandatory check
 is missing. No old-head verdict is accepted as current-head review evidence.
 
-## Accepted configuration and safe usage evidence
+## ⚙️ Configuration and usage
 
 The owner-selected model stays **`gpt-6-luna`**. Explicit `medium` effort preserves
 its documented default. [Official model documentation](https://developers.openai.com/api/docs/models/gpt-6-luna),
@@ -110,7 +126,7 @@ Disabling a workflow or weakening required checks is not recovery.
 
 Each request appends aggregate usage and request latency to its existing job
 summary. Missing usage is `null`/unknown. The dated Standard token-price table in
-[`policy.cjs`](actions/openai-chat/policy.cjs) is configurable through a reviewed
+[`policy.cjs`](openai-chat/policy.cjs) is configurable through a reviewed
 source change with official URL/date; verified rates are $0.10 input, $0.01 cached
 input, $0.50 output per million tokens. Estimate only when model/tier and relevant
 counters match within the verified short-context band (up to272000 input tokens).
@@ -125,3 +141,19 @@ collector bounds, adversarial discussion, unavailable context, identity, ownersh
 stale heads, source evidence, denied/uncertain mutations, idempotency and races.
 Normal scoped PR reviewer runs provide live configuration/usage acceptance;
 no additional billable model experiment is required.
+
+## 🧪 Checks
+
+Commands run from the repository root. Execute tests beside changed actions,
+including request policy, context collection, publication and reconciliation:
+
+```sh
+node --test .github/actions/publish-ai-review/*.test.js
+node --test .github/actions/collect-prior-ai-reviews/*.test.js
+node --test .github/actions/promotion-summary/*.test.js
+```
+
+Keep [review-output-examples.md](publish-ai-review/review-output-examples.md)
+beside the publisher tests: it is an exact expected-output fixture, not a setup
+guide. Tests mock provider/GitHub responses; they do not prove live credentials,
+current-head reviews, branch-rule acceptance, billing, or deployment readiness.

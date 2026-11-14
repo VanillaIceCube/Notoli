@@ -26,5 +26,5 @@ source ownership, manifests, and the local `--source-root` verification option.
 ## 📚 Further reading
 
 - [Tests and validation](../tests/README.md).
-- [GitHub setup and workflows](../.github/README-WORKFLOWS.md).
+- [GitHub setup and workflows](../.github/README.md).
 - [Documentation index](../docs/README.md).

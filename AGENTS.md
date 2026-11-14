@@ -28,18 +28,18 @@ Also update the relevant README(s):
 - Backend/API/auth: `backend/README.md`
 - Frontend/routing/API base URL: `frontend/README.md`
 - Deployment/Docker/Nginx: `deploy/README.md`
-- CI/CD, Dependabot, workflows: `.github/README-WORKFLOWS.md`
+- CI/CD, Dependabot, workflows: `.github/README.md`
 Also update `CHANGELOG.md`.
 
-GitHub security-alert aggregation: The daily/manual CodeQL and Dependabot aggregation workflows require the `ROBOCOP_OPENAI_API_KEY`, `ROBOCOP_PRIVATE_KEY`, and `SECURITY_ALERTS_TOKEN` secrets; the `ROBOCOP_APP_ID`, `OPENAI_REVIEWERS_PROJECT_ID`, and `SECURITY_ALERTS_PROJECT_ID` repository variables; and a RoboCop installation with `Issues: write`, `Code scanning alerts: read`, and `Dependabot alerts: read`. RoboCop's short-lived token reads alerts and authors every issue mutation, while `SECURITY_ALERTS_TOKEN` is isolated to personal GitHub Project v2 synchronization. Keep their field/permission setup and fail-closed credential separation documented in `.github/README-WORKFLOWS.md` when changing these workflows.
+GitHub security-alert aggregation: The daily/manual CodeQL and Dependabot aggregation workflows require the `ROBOCOP_OPENAI_API_KEY`, `ROBOCOP_PRIVATE_KEY`, and `SECURITY_ALERTS_TOKEN` secrets; the `ROBOCOP_APP_ID`, `OPENAI_REVIEWERS_PROJECT_ID`, and `SECURITY_ALERTS_PROJECT_ID` repository variables; and a RoboCop installation with `Issues: write`, `Code scanning alerts: read`, and `Dependabot alerts: read`. RoboCop's short-lived token reads alerts and authors every issue mutation, while `SECURITY_ALERTS_TOKEN` is isolated to personal GitHub Project v2 synchronization. Keep their field/permission setup and fail-closed credential separation documented in `.github/README.md` when changing these workflows.
 
-GitHub AI PR reviews: The three persona workflows require `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, `ROBOCOP_OPENAI_API_KEY`, `OPENAI_REVIEWERS_PROJECT_ID`, and separate GitHub App credentials for RoboCop, Lint Eastwood, and Obi-Wan Code-nobi. Keep the app IDs, private-key secrets, permissions, trigger policy, and failure behavior documented in `.github/README-WORKFLOWS.md` when changing these workflows.
+GitHub AI PR reviews: The three persona workflows require `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, `ROBOCOP_OPENAI_API_KEY`, `OPENAI_REVIEWERS_PROJECT_ID`, and separate GitHub App credentials for RoboCop, Lint Eastwood, and Obi-Wan Code-nobi. Keep the app IDs, private-key secrets, permissions, trigger policy, and failure behavior documented in `.github/README.md` when changing these workflows.
 
-GitHub Dependabot reviews: All three personas run for same-repository Dependabot PRs; forks remain excluded and Dependabot lint auto-fixes remain disabled. Store `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, `ROBOCOP_OPENAI_API_KEY`, and the three reviewer private-key secrets in both Actions and Dependabot. Semver-major updates require Obi-Wan's complete, primary-source major-upgrade brief; web search is enabled only for that review type. Preserve visible failures for missing credentials, incomplete briefs, request-changes verdicts, and oversized diffs for every persona. The shared diff budget is 512 KiB, matching MacroMapper; keep dependency-usage loop fixes coordinated with #890. See `.github/README-WORKFLOWS.md` for evidence limits and the remaining branch-policy work in #656.
+GitHub Dependabot reviews: All three personas run for same-repository Dependabot PRs; forks remain excluded and Dependabot lint auto-fixes remain disabled. Store `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, `ROBOCOP_OPENAI_API_KEY`, and the three reviewer private-key secrets in both Actions and Dependabot. Semver-major updates require Obi-Wan's complete, primary-source major-upgrade brief; web search is enabled only for that review type. Preserve visible failures for missing credentials, incomplete briefs, request-changes verdicts, and oversized diffs for every persona. The shared diff budget is 512 KiB, matching MacroMapper; keep dependency-usage loop fixes coordinated with #890. See `.github/README.md` for evidence limits and the remaining branch-policy work in #656.
 
-GitHub branch protection: Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs listed in `.github/README-WORKFLOWS.md`. Do not require the standalone `CodeQL` Code Scanning results context: documentation-only PRs skip all analyzers and never emit it. Preserve the scope and analyzer requirements when editing or recreating the main ruleset; skipped analyzer jobs satisfy required checks, while detector or analyzer failures block merging.
+GitHub branch protection: Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs listed in `.github/README.md`. Do not require the standalone `CodeQL` Code Scanning results context: documentation-only PRs skip all analyzers and never emit it. Preserve the scope and analyzer requirements when editing or recreating the main ruleset; skipped analyzer jobs satisfy required checks, while detector or analyzer failures block merging.
 
-GitHub AI merge gates: Main also requires `AI Code Review / Obi-Wan Code-nobi code review`, `AI Build Sheriff Review / Lint Eastwood build sheriff review`, and `AI Security Review / RoboCop security review`. Preserve the existing 14 scanner/lint/test requirements and all other ruleset settings. Reviewer `REQUEST_CHANGES` and unavailable/invalid output fail; valid `APPROVE`/`COMMENT` pass. Keep same-repository human/Dependabot eligibility and fork secret isolation; run both publisher test files and Actionlint after workflow changes. The read-only `verify-gates.js` audit requires actual successful reviewer results, including after cancelled or skipped runs. See `.github/README-WORKFLOWS.md` and `.github/review-gating-evidence.json`.
+GitHub AI merge gates: Main also requires `AI Code Review / Obi-Wan Code-nobi code review`, `AI Build Sheriff Review / Lint Eastwood build sheriff review`, and `AI Security Review / RoboCop security review`. Preserve the existing 14 scanner/lint/test requirements and all other ruleset settings. Reviewer `REQUEST_CHANGES` and unavailable/invalid output fail; valid `APPROVE`/`COMMENT` pass. Keep same-repository human/Dependabot eligibility and fork secret isolation; run both publisher test files and Actionlint after workflow changes. The read-only `verify-gates.js` audit requires actual successful reviewer results, including after cancelled or skipped runs. See `.github/README.md` and `.github/review-gating-evidence.json`.
 
 GitHub dependency-review evidence: Keep full dependency-change JSON in the `dependency-review-evidence` artifact, pass it through a file instead of environment variables, and bound the report sent to RoboCop to 16 KiB plus summary metadata. Large lockfile migrations can exceed Linux's per-environment-variable limit. The independent gate must still fail for every non-success review outcome; report truncation must disclose omitted entries and never change the verdict.
 
@@ -185,7 +185,7 @@ and Django static assets use `/static/`.
     - `POST /auth/reset-password/` accepts `uid`, `token`, and `password`.
 
 ## Maintenance
-- Deployments must not run host-wide Docker pruning. Retain prior release images for rollback; cleanup requires a host operator to review disk usage and explicitly select unused app images. Production releases use immutable digests and manage only Notoli's backend/frontend through `deploy/production/release.py`. Shared ingress/certificates belong to the infrastructure repository under approved architecture v2. See `deploy/production/README.md` and `.github/README-WORKFLOWS.md`.
+- Deployments must not run host-wide Docker pruning. Retain prior release images for rollback; cleanup requires a host operator to review disk usage and explicitly select unused app images. Production releases use immutable digests and manage only Notoli's backend/frontend through `deploy/production/release.py`. Shared ingress/certificates belong to the infrastructure repository under approved architecture v2. See `deploy/production/README.md` and `.github/README.md`.
 - Frontend builds use Vite and tests use Vitest/jsdom. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite explicitly maps the existing `REACT_APP_API_BASE_URL`/`PUBLIC_URL` settings, keeps port 3000 and `build/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
 - Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for the browser baseline.
 - ChatGPT listing metadata: `backend/app_mcp/chatgpt/plugin.json` is the canonical branding source, but personal custom-MCP plugins use a separate generated compatibility manifest. Download the installed plugin ZIP and use `backend/app_mcp/chatgpt/build_listing.py` to apply branding while preserving its exported name and `.app.json`; upload a new version to the same plugin. Keep account-specific exports/build ZIPs out of Git. Listing publication is separate from Docker deployment and MCP tool refresh. Privacy/terms pages and verified publisher identity remain prerequisites for public submission. See `backend/app_mcp/chatgpt/README.md`.
@@ -216,7 +216,7 @@ Use `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, and
 all security-alert model calls. `OPENAI_REVIEWERS_PROJECT_ID` identifies this repository's
 reviewer project. Keep credentials separate across repositories and application
 environments, preserve visible missing-key failures, and follow the deferred
-cutover steps in `.github/README-WORKFLOWS.md`.
+cutover steps in `.github/README.md`.
 
 
 ## 🔌 Shared MCP framework
@@ -224,7 +224,7 @@ cutover steps in `.github/README-WORKFLOWS.md`.
 MCP framework changes follow [docs/MCP-FRAMEWORK.md](backend/app_mcp/README.md). FullStackTemplate owns the canonical Python package; keep all consumer hashes/pins aligned. Derived applications own enablement and their business tools. Preserve Notoli credentials, scopes, tool permissions and exact proxy trust.
 
 Dependency-review and alert-lifecycle behavior follows the shared parity contract in
-`.github/README-WORKFLOWS.md`: missing evidence fails, reports stay bounded, and
+`.github/README.md`: missing evidence fails, reports stay bounded, and
 concurrent closure requires verified final state. Keep CodeQL scope outputs and
 RoboCop baseline evidence connected without changing full default-branch coverage.
 
@@ -232,7 +232,7 @@ RoboCop baseline evidence connected without changing full default-branch coverag
 
 Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-alert grouping. Preserve each reviewer’s existing key/project isolation, budgets and blocking gates. Application AI model selection remains app-owned.
 
-Batch 2 workflow controls and bounded npm malware review are documented in `.github/README-WORKFLOWS.md`; Python malware coverage follows `docs/PYTHON-MALWARE-DECISION.md`. Shared deployment changes require the pinned Infrastructure source.
+Batch 2 workflow controls and bounded npm malware review are documented in `.github/README.md`; Python malware coverage follows `docs/PYTHON-MALWARE-DECISION.md`. Shared deployment changes require the pinned Infrastructure source.
 
 Frontend testing now uses Vitest (`npm test`, optional `-- --maxWorkers=2`) with jsdom; Vite retains the documented REACT_APP_API_BASE_URL compatibility and build/ output. Jest/Babel test tooling is removed. Development images use reviewed digest pins and manifest-aware dependency startup. See frontend/README.md and deploy/README.md.
 
@@ -242,7 +242,7 @@ then `cd frontend`, `npx playwright install chromium`, `npm run test:e2e`. Ports
 Vitest projects isolate pure Node files from VM DOM forks; do not override the
 configured pool for timing. See frontend/README.md.
 
-Reviewer configuration and safe follow-up rules now follow `.github/AI-REVIEWERS.md`;
+Reviewer configuration and safe follow-up rules now follow `.github/actions/README.md`;
 keep validated optional AI_REVIEW_* variables, per-persona identity, serialized
 writers and existing blocking checks aligned when editing CI.
 

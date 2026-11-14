@@ -2,6 +2,10 @@
 
 ### Changed
 
+- Standardize GitHub documentation across the four repositories: setup in `.github/README.md`, workflow behavior in `.github/workflows/README.md`, and shared reviewer/action contracts in `.github/actions/README.md`.
+
+- Consolidate current backend, frontend, and style guidance into the existing folder READMEs; remove separate reference/style files and historical duplication.
+
 - Standardize ChatGPT package metadata, artwork, offline validation, portable archives, and existing-listing overlays under `backend/app_mcp/chatgpt/` ([FullStackTemplate #324](https://github.com/VanillaIceCube/FullStackTemplate/issues/324)).
 
 - Rename the shared MCP Python package to `app_mcp`, consolidate source pins and hashes beside it, and retain its existing Django app label and OAuth behavior ([FullStackTemplate #324](https://github.com/VanillaIceCube/FullStackTemplate/issues/324)).

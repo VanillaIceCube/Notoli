@@ -22,7 +22,7 @@ establish authorization.
 
 ## 📚 Guides
 
-- [Backend API and authentication reference](../REFERENCE.md).
+- [Backend API and authentication reference](../README.md).
 - [Shared framework configuration and verification](../app_mcp/README.md).
 - [Plugin connection, tool catalog, branding, and evaluation prompts](../../backend/app_mcp/chatgpt/README.md).
 - [Deployment and client registration](../../deploy/production/README.md#chatgpt-mcp-deployment).
