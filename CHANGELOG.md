@@ -13,6 +13,8 @@
 
 ### Removed
 
+- Remove historical audit reports, batch/hash snapshots, completed writeups, and redundant documentation indexes; consolidate current guidance into the owning READMEs and relocate CI references into `.github/`.
+
 - Remove superseded MCP documentation redirects and update references to the backend-owned guides.
 
 - Remove obsolete third-party Conda export attribution from the license and environment helper documentation.

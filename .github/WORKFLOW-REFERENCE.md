@@ -339,7 +339,7 @@ The applications retain daily updates. Infrastructure retains weekly updates,
 its owner/labels/PR limits, general Actions group for non-CodeQL updates, and
 separate Compose updates. All application CodeQL entry points use the aligned
 immutable v4.39.3 revision (`33d7b85da1a04171e211befe2c739303b9a4c066`).
-Regenerate `docs/CI-CD-SOURCE-INVENTORY.json` with
+Regenerate `.github/CI-CD-SOURCE-INVENTORY.json` with
 `python scripts/ci_architecture.py` after workflow pin changes and verify it with
 `--check`. Scanner scope, permissions and merge/deployment
 gates remain unchanged. Canonical rollout:
@@ -483,7 +483,7 @@ versions, API/range evidence failures and known malware fail visibly. Removing t
 whole frontend has no remaining npm graph. This gate is distinct from the scheduled
 repository-alert feed. Mocked regressions make no API writes or model calls.
 
-Python malware coverage follows [the canonical decision](../docs/PYTHON-MALWARE-DECISION.md).
+Python malware coverage follows [the canonical decision](WORKFLOW-REFERENCE.md#-python-dependency-review).
 Shared deployment files are synchronized to the Infrastructure source pin, including
 the approved Action-upgrade/unauthorized-drift regression. Update the source before
 consumers; never edit a vendored workflow or test independently.
@@ -537,7 +537,7 @@ The path-aware test gate includes `.github/**`, `scripts/**`, `deploy/**`,
 `tests/**` and maintained docs in automation validation. It runs workflow and
 composite syntax, parser-only script checks and synthetic Compose configuration
 plus the existing Batch 1 suites and focused mocked composite regressions.
-[Coverage and external boundaries](../docs/AUTOMATION-COVERAGE.md) are explicit.
+[Coverage and external boundaries](../tests/README.md#-coverage-and-limitations) are explicit.
 
 `scripts/bounded_log.py` retains early, sampled failing and late context within
 16,000 characters for reviewers. Full output is streamed with `tee`; failed
@@ -575,7 +575,7 @@ installation capabilities are not expanded.
 
 ## Architecture and production summaries
 
-The [canonical architecture reference](../docs/CI-CD-ARCHITECTURE.md) maps PR/fork/
+The [canonical architecture reference](CI-CD-ARCHITECTURE.md) maps PR/fork/
 Dependabot paths, required checks, reviewer interactions, scheduled alerts,
 main-to-env-prod/manual release paths and credential trust boundaries to source.
 Its per-repository source inventory is checked against actual workflow YAML.
@@ -650,3 +650,13 @@ the Jules GitHub App installation are not observable through repository files.
 An owner must separately inspect remaining external schedules and app access
 and authorize any disable/uninstall/credential changes. Source cleanup and a
 production promotion do not perform those external operations.
+
+## 🐍 Python dependency review
+
+Retain the configured vulnerability review and independent blocking checks.
+Vulnerability audits, publishing attestations, and known-malware reports have
+different coverage; none establishes that an arbitrary package is safe.
+The existing npm malware review does not imply complete Python malware coverage.
+Adding a Python malware gate requires a complete resolved dependency graph,
+freshness/error handling, reviewed permissions, and a maintenance owner. This
+documentation cleanup introduces no scanner, credentials, spend, or gate waiver.
