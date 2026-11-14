@@ -346,11 +346,3 @@ mail is sent by tests; mocks cover success, credentials, network/timeouts,
 400/401/403/422/429/500/503, both silent modes, partial batches, safe fallback and
 the real reset caller's generic response/redacted logs. Production public
 readiness cannot establish authenticated password-reset inbox delivery.
-
-## 🔐 Authentication maintenance
-
-Validate registration passwords against the prospective user and reset passwords
-against the existing user. Preserve password whitespace, generic recovery
-responses, recipient-scoped notifications, and atomic bulk operations. Keep
-pending/error handling and JWT retry behavior aligned with the frontend.
-Regression suites, rather than old adoption reports, are the current contract.

@@ -1,9 +1,9 @@
 # CI/CD architecture and trust boundaries
 
-This is the shared reference for the current CI/CD architecture.
+This is the shared reference for the implementation after Batch 2 and Batch 3.
 FullStackTemplate owns reusable application/reviewer patterns; Infrastructure owns
 the gateway and versioned app release engine. The repository-specific
-[workflow guide](README-WORKFLOWS.md) supplies configuration names and
+[workflow guide](../.github/README-WORKFLOWS.md) supplies configuration names and
 operational details. Workflow YAML and protected-branch rules remain authoritative.
 Retired agent notebooks are not an orchestration dependency. Historical
 provenance remains in Git, issues, PRs and dated changelog entries.
@@ -36,7 +36,7 @@ flowchart TD
   Auto --> Platform[GitHub protected auto-merge]
 ```
 
-[`ci-orchestrator.yml`](workflows/ci-orchestrator.yml) accepts opened,
+[`ci-orchestrator.yml`](../.github/workflows/ci-orchestrator.yml) accepts opened,
 synchronized, reopened and ready-for-review PRs. Applications exclude `env-prod`;
 Infrastructure restricts this orchestrator to `main` PRs. Same-repo
 human and Dependabot PRs receive the three configured reviewers. Fork PRs do not
@@ -80,7 +80,7 @@ flowchart LR
   Luna --> Usage
 ```
 
-The [reviewer contract](AI-REVIEWERS.md) defines exact byte/page/count
+The [reviewer contract](../.github/AI-REVIEWERS.md) defines exact byte/page/count
 limits, API-specific bot identity, conservative single-line replacement proof,
 serialized writers, permission diagnostics, configuration recovery and pricing
 limitations. Discussion and tool output cannot override system policy, execute
@@ -110,7 +110,7 @@ No extra live model experiment or analytics platform is required.
 | Gateway deployment | `DEPLOY_SSH_KEY`, gateway owner/branch/source/destination/fingerprint variables | Credential-free authorization precedes key loading; independent gateway controls and host lock remain |
 
 The exact names, installation permissions and Actions/Dependabot provisioning
-are in [the workflow guide](README-WORKFLOWS.md). Reviewer OpenAI keys
+are in [the workflow guide](../.github/README-WORKFLOWS.md). Reviewer OpenAI keys
 and App private keys required by Dependabot are provisioned in both secret stores;
 production/Project secrets are not added to Dependabot. Source-linked guides list
 names, never secret values. Repository Actions secrets are not branch-scoped:
@@ -134,9 +134,9 @@ flowchart LR
   Issues --> Project[Separately credentialed Project synchronization and recovery]
 ```
 
-The [`alert-codeql`](workflows/alert-codeql.yml),
-[`alert-vulnerability`](workflows/alert-vulnerability.yml) and
-[`alert-malware`](workflows/alert-malware.yml) workflows invoke the
+The [`alert-codeql`](../.github/workflows/alert-codeql.yml),
+[`alert-vulnerability`](../.github/workflows/alert-vulnerability.yml) and
+[`alert-malware`](../.github/workflows/alert-malware.yml) workflows invoke the
 shared security-alert action on their configured daily cron or manual dispatch.
 Malformed/incomplete source/model evidence fails before unsafe lifecycle writes;
 concurrent issue closure and Project recovery retain Batch1 safeguards. Scheduled
@@ -171,9 +171,9 @@ flowchart TD
   RecoveryGuard --> Verify
 ```
 
-The [promotion-summary workflow](workflows/promotion-summary.yml)
+The [promotion-summary workflow](../.github/workflows/promotion-summary.yml)
 uses a trusted default-branch `workflow_run` definition and reviewed `main` code,
-never a proposed PR workflow or checkout. The [read-only PR/target-push listener](workflows/promotion-summary-request.yml)
+never a proposed PR workflow or checkout. The [read-only PR/target-push listener](../.github/workflows/promotion-summary-request.yml)
 only emits a fixed signal; it has no checkout, artifact/cache handoff, secrets or
 write token. The consumer independently fetches current metadata and does not
 trust producer conclusions or supplied PR identities. Fork producer events are
@@ -213,10 +213,10 @@ documented owner/operator authorization and data-generation barriers.
 
 | Repository | CI / checks | Production procedure / intentional difference |
 | --- | --- | --- |
-| FullStackTemplate | [CI](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/workflows/ci-orchestrator.yml), [tests](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/workflows/gate-test.yml) | [Main-first policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/AGENTS.md#shared-rollout-acceptance); no active production target |
+| FullStackTemplate | [CI](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/workflows/ci-orchestrator.yml), [tests](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/workflows/gate-test.yml) | [Main-first policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/docs/SHARED-ROLLOUT-POLICY.md); no active production target |
 | Notoli | [CI](https://github.com/VanillaIceCube/Notoli/blob/main/.github/workflows/ci-orchestrator.yml), [tests](https://github.com/VanillaIceCube/Notoli/blob/main/.github/workflows/gate-test.yml) | [App release/recovery](https://github.com/VanillaIceCube/Notoli/blob/main/deploy/production/README.md); app-owned OAuth/tools and exact proxy trust |
 | MacroMapper | [CI](https://github.com/VanillaIceCube/MacroMapper/blob/main/.github/workflows/ci-orchestrator.yml), [tests](https://github.com/VanillaIceCube/MacroMapper/blob/main/.github/workflows/gate-test.yml) | [App release/recovery](https://github.com/VanillaIceCube/MacroMapper/blob/main/deploy/production/README.md); app-owned AI credentials and OAuth/tools |
-| Infrastructure | [Required CI](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/main/.github/workflows/ci-orchestrator.yml), [secret scan](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/main/.github/workflows/gate-secrets.yml), [validation](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/main/.github/workflows/validate.yml) | [Gateway releases](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/main/nginx/RELEASES.md), [shared app standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/main/app-release/REFERENCE.md) |
+| Infrastructure | [Required CI](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/main/.github/workflows/ci-orchestrator.yml), [secret scan](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/main/.github/workflows/gate-secrets.yml), [validation](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/main/.github/workflows/validate.yml) | [Gateway releases](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/main/docs/gateway-releases.md), [shared app standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/main/docs/app-release-standard.md) |
 
 ## Shared custom actions and consumers
 

@@ -13,7 +13,7 @@
 
 ### Removed
 
-- Remove historical audit reports, batch/hash snapshots, completed writeups, and redundant documentation indexes; consolidate current guidance into the owning READMEs and relocate CI references into `.github/`.
+- Remove obsolete documentation reports, snapshots, and redundant indexes; leave surviving guides in their original locations for review.
 
 - Remove superseded MCP documentation redirects and update references to the backend-owned guides.
 

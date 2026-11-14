@@ -49,17 +49,5 @@ guide for dependencies, ports, and reports. Production rollout is separate.
 
 ## 📚 Further reading
 
-- [Automation coverage](README.md#-coverage-and-limitations).
 - [Workflow reference](../.github/WORKFLOW-REFERENCE.md).
 - [Repository scripts](../scripts/README.md).
-
-## 🔍 Coverage and limitations
-
-Run the relevant unit, integration, and configuration checks for changed code.
-Review exact test/check results rather than treating a source match or issue
-status as acceptance. Configuration validation does not deploy services.
-Use disposable fixtures for Docker and browser tests; keep real user data,
-credentials, mail delivery, paid model calls, and production recovery outside
-those fixtures. Mocked provider tests do not prove live delivery or billing.
-Current CI requirements and diagnostic retention belong to the
-[workflow reference](../.github/WORKFLOW-REFERENCE.md).

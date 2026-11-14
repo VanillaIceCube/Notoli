@@ -20,8 +20,7 @@ Firefox 121, and Safari 17. The migration follows MacroMapper PRs #103 and #130.
 
 UI styling conventions live in [`STYLE_GUIDE.md`](STYLE_GUIDE.md).
 
-Menu dismissal and mobile refresh behavior follow the
-[menu and refresh guidance](#-menu-and-refresh-behavior). The browser visual
+The browser visual
 journeys use synthetic intercepted API responses and never customer accounts.
 
 ## 🧭 App Routes
@@ -218,7 +217,7 @@ remain application-specific.
 
 Notifications expose Retry and retain failed actions. Item/bulk controls disable
 overlapping actions through response parsing. Failed/malformed mark-read responses
-keep the inbox open instead of navigating. Preserve these invariants in frontend regression tests.
+keep the inbox open instead of navigating.
 
 ## Development dependency reproducibility
 
@@ -239,6 +238,18 @@ Use `npm ci`, `npm run lint:strict`, `npm run format:check`, `npm test`, and
 for serial profiling. Keep isolated test environments and every domain/auth
 assertion. The ESLint configuration regression now imports ESLint directly in a
 Node test environment instead of launching a second Node runtime.
+
+The supported-runtime VM comparison (Node 24.22.2, npm 11.19.1, 0.75 CPU,
+768 MiB, 512 MiB V8 heap, cold caches, network disabled during tests) measured
+Jest at 63.391s (65.044s container wall) before and the initial unoptimized
+Vitest migration at 151.839s (154.103s container wall). Both passed all 301
+tests; this initial migration was 137% slower, not a performance improvement.
+Dependency installs were separate: 36.021s versus 33.019s. Final tuned C outer wall is54.236s (16.616% lower than65.044s baseline),
+all301 cases pass with no OOM; details/limits are in docs/BATCH2-PARITY.md.
+Backend Django time was 24.256s before and 25.723s after (190 tests, one existing
+skip); no backend speedup is claimed. The existing test-scoped fast password
+hasher remains. Settings subprocess and MCP protocol tests retain their useful
+integration coverage rather than being skipped to improve timing.
 
 The tuned configuration uses native forks for six non-DOM files and fresh
 VM fork environments for DOM tests, recycling at 384 MiB. UI dependencies are
@@ -298,29 +309,3 @@ and native new-tab coverage. Drawer mutations use the shared structured-error
 helper and snackbar feedback, guard missing tokens, and navigate away after
 deleting the active board. Keep routing helper invalid-input coverage alongside
 the documented singular/plural compatibility behavior.
-
-## 🔌 Connection response handling
-
-Connection API successes must contain JSON objects; empty, unreadable, null,
-scalar, and array success bodies fail safely. Error messages use the first
-nonblank `error_description`, `detail`, or `error`, then an HTTP-status fallback.
-Never display raw HTML, parser errors, or unrelated response fields. Preserve
-JWT refresh/retry, validated return paths, consent, and revocation behavior;
-cover these paths with mocked-fetch service and integration tests.
-
-## 🔄 Toolchain maintenance
-
-Keep React/React DOM and Material UI/icons on compatible versions. Use the
-Node range in `package.json`, the checked-in lockfile, and this app's Vite
-configuration. Preserve its API variable and build-output conventions. After
-dependency changes, verify a clean install, strict lint, formatting, tests, and
-production build; extend browser journeys with disposable application fixtures.
-
-## 🧭 Menu and refresh behavior
-
-Retain a board menu's selected object through its exit transition so owner-only
-actions remain present and focus returns correctly. A single proportional
-spacer owns pull-to-refresh displacement. Cancellation, repeated pulls,
-failure, route deactivation, and unmount must settle cleanly and restore the
-prior overscroll policy. Test real menu/keyboard transitions and isolated
-desktop/mobile browser journeys with synthetic accounts and intercepted data.

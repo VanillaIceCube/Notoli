@@ -30,7 +30,7 @@ local Docker instructions live in the [deployment README](../deploy/README.md).
 ## 🧪 Checks and diagnostics
 
 See the [repository test guide](../tests/README.md) for local commands and
-prerequisites. The [CI/CD architecture](CI-CD-ARCHITECTURE.md) maps
+prerequisites. The [CI/CD architecture](../docs/CI-CD-ARCHITECTURE.md) maps
 workflow events and trust boundaries.
 
 ## 📚 Detailed workflow reference

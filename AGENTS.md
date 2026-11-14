@@ -232,7 +232,7 @@ RoboCop baseline evidence connected without changing full default-branch coverag
 
 Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-alert grouping. Preserve each reviewer’s existing key/project isolation, budgets and blocking gates. Application AI model selection remains app-owned.
 
-Batch 2 workflow controls and bounded npm malware review are documented in `.github/README-WORKFLOWS.md`; Python malware coverage follows `.github/WORKFLOW-REFERENCE.md`. Shared deployment changes require the pinned Infrastructure source.
+Batch 2 workflow controls and bounded npm malware review are documented in `.github/README-WORKFLOWS.md`; Python malware coverage follows `docs/PYTHON-MALWARE-DECISION.md`. Shared deployment changes require the pinned Infrastructure source.
 
 Frontend testing now uses Vitest (`npm test`, optional `-- --maxWorkers=2`) with jsdom; Vite retains the documented REACT_APP_API_BASE_URL compatibility and build/ output. Jest/Babel test tooling is removed. Development images use reviewed digest pins and manifest-aware dependency startup. See frontend/README.md and deploy/README.md.
 
@@ -240,13 +240,13 @@ Browser checks: activate an isolated Python environment with backend requirement
 then `cd frontend`, `npx playwright install chromium`, `npm run test:e2e`. Ports
 8001/3001 must be free. Tests use disposable SQLite/file mail and no real accounts.
 Vitest projects isolate pure Node files from VM DOM forks; do not override the
-configured pool for timing. See frontend/README.md and tests/README.md.
+configured pool for timing. See frontend/README.md and docs/BATCH2-PARITY.md.
 
 Reviewer configuration and safe follow-up rules now follow `.github/AI-REVIEWERS.md`;
 keep validated optional AI_REVIEW_* variables, per-persona identity, serialized
 writers and existing blocking checks aligned when editing CI.
 
-Maintain CI architecture diagrams and regenerate `.github/CI-CD-SOURCE-INVENTORY.json`
+Maintain CI architecture diagrams and regenerate `docs/CI-CD-SOURCE-INVENTORY.json`
 with `python scripts/ci_architecture.py` after workflow edits. Promotion summaries
 are informational; preserve existing release/check authorization and secret boundaries.
 
@@ -265,4 +265,3 @@ The main README introduces the repository. Keep setup, commands, configuration,
 and maintenance details in the owning folder README and its linked references.
 Use consistent headings: 🧭 Structure, 💻 Local development, ⚙️ Configuration,
 🧪 Checks, 🔌 MCP integration, and 📚 Reference where applicable.
-Use the folder READMEs linked from the [main README](README.md#-documentation) for scripts, tests, and other guides.
