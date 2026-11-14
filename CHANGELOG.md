@@ -2,6 +2,9 @@
 
 ### Changed
 
+- Reorganize the main README as a project introduction with folder guides; consolidate setup, API/workflow references, scripts, tests, and documentation indexes with consistent emoji headings.
+- Move shared MCP documentation beside the framework, retain legacy guide links, and make application MCP and plugin guides discoverable from the backend.
+
 - Align the license text, formatting, and 2025-2026 copyright with FullStackTemplate and the other application repositories.
 
 ### Removed

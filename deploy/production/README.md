@@ -1,4 +1,6 @@
-# App-only production release and recovery
+# 🚀 Production releases and recovery
+
+For local development, use the [deployment README](../README.md).
 
 Notoli owns MCP OAuth, consent, token validation, connections and all 31 tools.
 The unreleased central issuer migration in #973 has been withdrawn; no shared

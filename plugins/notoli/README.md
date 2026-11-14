@@ -1,10 +1,12 @@
-# Notoli ChatGPT plugin
+# 🔌 Notoli ChatGPT plugin
 
 This package points to the MCP server hosted in Notoli's Django backend. The
 endpoint and OAuth client must be deployed and registered before connecting.
 It does not create a custom GPT or publish to the public plugin directory.
 
-## Listing metadata and updates
+<a id="listing-metadata-and-updates"></a>
+
+## 📦 Listing metadata and updates
 
 Notoli currently uses a **personal cloud plugin created from a custom MCP
 connection**, not a publicly submitted package. On October 10, 2026, its ChatGPT
@@ -91,7 +93,9 @@ Official references: [connection and refresh](https://developers.openai.com/plug
 [portable and compatibility packaging](https://developers.openai.com/plugins/build/plugins),
 [listing fields and public submission](https://developers.openai.com/plugins/deploy/submission).
 
-## Connect your personal ChatGPT account
+<a id="connect-your-personal-chatgpt-account"></a>
+
+## 🔗 Connect your personal ChatGPT account
 
 1. Deploy the frontend and backend, apply migrations, and update Compose/Nginx using the
    [deployment instructions](../../deploy/production/README.md#chatgpt-mcp-deployment).
@@ -131,7 +135,9 @@ For ChatGPT, test the custom MCP connection first. A future packaged plugin can
 map its registered `plugin_asdk_app...` ID after ChatGPT creates the connection;
 no registration ID or directory publication is included in this source package.
 
-## Tools
+<a id="tools"></a>
+
+## 🧰 Tools
 
 | Tool | Behavior | Scope |
 | --- | --- | --- |
@@ -200,7 +206,9 @@ records the caller's confirmation; it is not a separate server-side human approv
 mechanism. Account credentials, OAuth administration, ownership transfers, and
 arbitrary HTTP requests remain outside the product tools.
 
-## Evaluation prompts
+<a id="evaluation-prompts"></a>
+
+## 🧪 Evaluation prompts
 
 | Prompt or scenario | Expected behavior |
 | --- | --- |
