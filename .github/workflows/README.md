@@ -198,7 +198,7 @@ Dependabot configuration:
   - npm (`/frontend`)
   - pip (`/backend`)
   - GitHub Actions (`/`)
-  - Docker (`/backend`, `/frontend`)
+  - Docker (`/backend`, `/frontend/docker`)
 
 Auto-merge behavior:
 - Dependabot PRs go through CI (`ci-orchestrator.yml`), and if all gates pass, `ci-auto-merge.yml` can enable auto-merge.
@@ -517,10 +517,10 @@ wording. FullStackTemplate's inactive target is not created for symmetry.
 
 ## 🧪 Checks and diagnostics
 
-### Repository validation and browser diagnostics
+### Repository validation and failure diagnostics
 
-The path-aware test gate includes `.github/**`, `frontend/e2e/**`, `deploy/**`,
-and maintained docs in automation validation. It runs workflow and
+The path-aware test gate includes `.github/**`, `deploy/**`, and maintained docs
+in automation validation. It runs workflow and
 composite syntax, parser-only script checks and synthetic Compose configuration
 plus the existing Batch 1 suites and focused mocked composite regressions.
 [Coverage and external boundaries](README.md#-coverage-boundaries) are explicit.
@@ -531,11 +531,9 @@ logs have roughly 1 MiB capped artifacts retained seven days. Random delimiters
 protect multiline outputs and the original command status still determines the
 gate. An unavailable check cannot become success through log summarization.
 
-Relevant app/harness changes also require the isolated Chromium job; its failure
-or an applicable development-image failure fails Test Results. Browser traces
-and screenshots use a 20 MiB/file, 50 MiB/run cap and seven-day retention.
-See frontend/README.md for setup and local commands. No job uses real accounts,
-production data, live email or paid AI requests for these tests.
+Test Results fails when scope detection or an applicable development-image
+validation fails. Frontend and backend test failures remain independent gates.
+See frontend/README.md for setup and local commands.
 
 Validate syntax and relevant behavioral tests after automation changes. Preserve
 original check failures and bounded/redacted diagnostics. Update the existing

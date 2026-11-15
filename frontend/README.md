@@ -5,10 +5,13 @@ authentication, and the application shell.
 
 ## 🧭 Structure
 
+- `docker/`: production/development Dockerfiles and Nginx configuration.
+  Docker builds keep `frontend/` as their context; `.dockerignore` stays at the
+  frontend root.
 - `src/components/`: reusable interface components.
 - `src/pages/`: application pages and routes.
 - `src/services/`: API requests and session handling.
-- `src/__tests__/`, `e2e/`: component and isolated browser tests.
+- `src/__tests__/`: component tests.
 
 ## 💻 Local development
 
@@ -48,7 +51,7 @@ uses subdomain-root routing and Nginx's SPA fallback for deep links.
 Authentication-page navigation uses Material UI `Link` with React Router `Link`,
 so each destination has a real `href`, Tab/Enter access, and native new-tab
 behavior without submitting its form. Regression tests cover all five links
-with the real router; browser tests also check new-tab navigation.
+with the real router.
 
 Navigation utilities accept `/board/` and `/boards/` inputs, strip query strings,
 fragments, and a trailing slash, and ignore invalid paths or navigators. Public
@@ -94,7 +97,7 @@ The app bar notification icon opens a popover with the newest notifications firs
 
 List and note pages include a top-right page action menu for entering reorder mode. Reorder mode hides row action menus, shows right-side drag handles, hides Add New, and exits through Done. Dragging only starts from the handle and persists the final order through the reorder API after drop.
 
-Loaded board/list pages may report readiness again when their parent renders. The route coordinator keeps an already active single-page state unchanged, preventing a render feedback loop that can make controls unresponsive. Unit tests exercise automatic and repeated readiness; desktop/mobile browser menu and refresh journeys also reject render-loop messages and uncaught page errors. See issue #1022.
+Loaded board/list pages may report readiness again when their parent renders. The route coordinator keeps an already active single-page state unchanged, preventing a render feedback loop that can make controls unresponsive. Unit tests exercise automatic and repeated readiness. See issue #1022.
 
 Use semantic links for destinations and buttons for actions; retain keyboard
 and native new-tab coverage. Drawer mutations use the shared structured-error
@@ -130,37 +133,6 @@ npm run format:check
 npm run build
 ```
 
-## 🌐 Browser tests
-
-`frontend/e2e/` owns the browser journeys and their helpers: `run_e2e.cjs` creates
-and cleans up disposable state, `e2e_backend.py` starts the isolated loopback
-backend, `e2e_settings.py` suppresses developer dotenv loading and selects temporary
-SQLite/file mail, and `collect_browser_artifacts.py` collects bounded failure
-evidence. `npm run test:e2e` invokes the runner from `frontend/`; CI collects reports
-with `python e2e/collect_browser_artifacts.py` from the same directory.
-
-Install backend requirements in an activated Python environment. From `frontend/`:
-
-```powershell
-npx playwright install chromium
-npm run test:e2e
-```
-
-Ports 8001 and 3001 must be free. The wrapper starts Django and Vite with fresh,
-marked temporary state and stops both before deleting that state. It uses synthetic
-users, temporary SQLite and file mail; it does not load developer `.env` files,
-reuse running servers, send external email, or make paid AI calls. The shared auth
-journeys cover registration, session isolation, logout, protected routing, invalid
-credentials, JWT expiry, and password reset. Product journeys belong under `e2e/`.
-
-The suite uses one Chromium worker, no retries, and a ten-minute global timeout.
-Linux CI installs Chromium with `--with-deps`. Failure artifacts are written to
-`test-results/` and `playwright-report/`; CI retains bounded evidence for seven
-days. Reports may include disposable tokens, so do not publish them in issues.
-
-The board/menu and mobile refresh journeys retain render-loop and uncaught-error
-checks. See [menu and refresh behavior](README.md#menu-exit-and-refresh-behavior).
-
 ## 🛠️ Maintenance
 
 The frontend temporarily overrides `minimatch@>=9 <11.0.1` to `^11.0.1` for
@@ -184,8 +156,8 @@ Jest/Babel and their glob/deepmerge test-only graph were removed by the Vitest m
 
 Keep Material UI and icons on compatible versions and regenerate the lockfile
 together. Prefer `sx` and `slotProps`; preserve accessible control labels. For
-jsdom CSS assertions, check computed transition/animation longhands and use real
-browser tests for responsive geometry. Follow the Node range in `package.json`,
+jsdom CSS assertions, check computed transition/animation longhands; inspect
+responsive geometry in a browser. Follow the Node range in `package.json`,
 and verify clean installs, strict lint, formatting, tests and production builds.
 See [Docker dependency maintenance](../deploy/README.md#development-dependency-reproducibility).
 

@@ -101,6 +101,9 @@ Use the same script as the Codex maintenance script so cached containers refresh
 
 ### Docker setup
 
+Frontend image definitions and Nginx configuration live in `frontend/docker/`;
+keep `frontend/` as the Docker build context.
+
 Use the [local Docker guide](deploy/README.md) for hot reload at
 `notoli.localhost` and optional standalone HTTPS. Initialize only missing local
 env/database files; never truncate an existing SQLite file. Development Compose
@@ -153,13 +156,6 @@ npm run lint:strict
 npm run format:check
 npm run build
 ```
-
-For browser checks, install backend requirements in an isolated Python environment,
-then run `npx playwright install chromium` and `npm run test:e2e` from `frontend/`.
-Ports 8001/3001 must be free. Preserve disposable SQLite/file mail, synthetic
-accounts and isolation from developer dotenv files and databases; do not use real
-accounts, external email or paid AI calls. Follow `frontend/README.md` for the
-configured test pools and browser evidence limits.
 
 For shared release changes, run `python deploy/check_parity.py` and
 `python -m unittest discover -s deploy/tests -v` with a disposable local/CI Docker
@@ -343,7 +339,7 @@ Follow the [app MCP contract](backend/app_mcp/README.md) and
 ## 🧩 Repository-specific contracts
 
 - Frontend builds use Vite and tests use Vitest/jsdom. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite explicitly maps the existing `REACT_APP_API_BASE_URL`/`PUBLIC_URL` settings, keeps port 3000 and `build/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
-- Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for the browser baseline.
+- Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for frontend checks.
 - ChatGPT listing metadata: `backend/app_mcp/chatgpt/plugin.json` is the canonical branding source, but personal custom-MCP plugins use a separate generated compatibility manifest. Download the installed plugin ZIP and use `backend/app_mcp/chatgpt/build_listing.py` to apply branding while preserving its exported name and `.app.json`; upload a new version to the same plugin. Keep account-specific exports/build ZIPs out of Git. Listing publication is separate from Docker deployment and MCP tool refresh. Privacy/terms pages and verified publisher identity remain prerequisites for public submission. See `backend/app_mcp/chatgpt/README.md`.
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
 - Backend tests: `cd backend` then `python manage.py test`. The configured Django test runner scopes the fast password hasher to the test run and restores settings on exit; `DJANGO_TESTING`, command-line inspection, and imported pytest modules do not change normal password hashing.
@@ -355,7 +351,7 @@ Follow the [app MCP contract](backend/app_mcp/README.md) and
   and resolved from `requirements.txt` (never via conda).
 
 Vitest projects isolate pure Node files from VM DOM forks; do not override the configured pool
-for timing. Browser checks use the disposable setup described above.
+for timing.
 
 Resend timeout supports `0 < seconds <= 30` with a safe 10-second fallback.
 Preserve original `fail_silently` behavior and generic reset responses. Never log

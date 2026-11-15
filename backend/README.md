@@ -171,10 +171,6 @@ Maintain the Python version in `environment.yml` and pip dependencies in
 hasher applies only during tests; normal settings retain secure hashing.
 See [Docker dependency maintenance](../deploy/README.md#development-dependency-reproducibility).
 
-The browser-test backend uses disposable SQLite, synthetic users, local file mail,
-and loopback binding. It does not load developer dotenv files or use the developer
-database. Install backend requirements before running the frontend browser suite.
-
 ## 🚀 Production
 
 Use the [production release and recovery guide](../deploy/production/README.md)

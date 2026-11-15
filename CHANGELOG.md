@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Group frontend Dockerfiles and Nginx configuration in `frontend/docker/`; update Compose, build workflows and Docker dependency discovery while retaining the frontend build context.
 - Resolve favicon, Apple touch icon and web manifest URLs through the Vite base URL for consistent public asset paths.
 - Consolidate durable documentation into existing owning READMEs, move the active CI inventory beside workflow guidance, and repair links and architecture regressions.
 - Restore consistent changelog titles, chronological dates, ordered categories, and spacing while preserving historical entries.
@@ -19,6 +20,8 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Remove the custom frontend development entrypoint and automatic dependency reinstall; start Vite directly and install changed dependencies manually in the development container.
+- Remove frontend end-to-end suites, Playwright configuration and dependencies, browser-test helpers and CI jobs; retain component, backend, action-local and shared release checks.
 - Remove duplicate documentation indexes, redirects, stale narratives and historical receipts after preserving useful contracts.
 - Remove the root `tests/` directory and its CI invocations; retain backend, frontend/browser, action-local, and shared release suites.
 

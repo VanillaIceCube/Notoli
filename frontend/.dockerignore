@@ -4,15 +4,5 @@ build/
 coverage/
 
 # Docker configuration files
-Dockerfile
+docker/Dockerfile
 .dockerignore
-
-e2e
-
-playwright-report
-
-test-results
-
-playwright.config.mjs
-
-browser-evidence/

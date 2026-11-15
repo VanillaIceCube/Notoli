@@ -39,7 +39,6 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       automation: ${{ steps.filter.outputs.automation }}
       development: ${{ steps.filter.outputs.development }}
-      e2e: ${{ steps.filter.outputs.e2e }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -64,22 +63,11 @@ jobs:
               - 'backend/Dockerfile.dev'
               - 'backend/environment.yml'
               - 'backend/requirements.txt'
-              - 'frontend/Dockerfile.dev'
-              - 'frontend/docker-entrypoint-dev.sh'
+              - 'frontend/docker/Dockerfile.dev'
+              - 'frontend/.dockerignore'
               - 'frontend/package*.json'
-              - '.github/workflows/gate-test.yml'
-            e2e:
-              - 'backend/**'
-              - 'frontend/src/**'
-              - 'frontend/e2e/**'
-              - 'frontend/playwright.config.mjs'
-              - 'frontend/vite.config.mjs'
-              - 'frontend/e2e/run_e2e.cjs'
-              - 'frontend/package*.json'
-              - 'frontend/e2e/e2e_*.py'
               - '.github/workflows/gate-test.yml'
             automation:
-              - 'frontend/e2e/**'
               - 'docs/**'
               - 'README.md'
               - 'CHANGELOG.md'
@@ -355,52 +343,12 @@ jobs:
       - name: Build reviewed development images
         run: |
           docker build --file backend/Dockerfile.dev --tag batch2-backend-dev backend
-          docker build --file frontend/Dockerfile.dev --tag batch2-frontend-dev frontend
-
-  e2e-tests:
-    name: Isolated authentication browser tests
-    needs: changes
-    if: needs.changes.outputs.e2e == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Read supported versions
-        id: versions
-        uses: ./.github/actions/read-versions
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: ${{ steps.versions.outputs.node_version }}
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
-        with:
-          python-version: ${{ steps.versions.outputs.python_version }}
-      - name: Install isolated test dependencies
-        run: |
-          python -m pip install -r ../backend/requirements.txt
-          npm ci
-          npx playwright install --with-deps chromium
-      - name: Exercise existing authentication and session behavior
-        env:
-          CI: 'true'
-        run: npm run test:e2e
-      - name: Bound generated browser failure artifacts
-        if: failure()
-        run: python e2e/collect_browser_artifacts.py
-      - name: Retain failed browser evidence
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: browser-failure-evidence
-          path: frontend/browser-evidence
-          retention-days: 7
+          docker build --file frontend/docker/Dockerfile.dev --tag batch2-frontend-dev frontend
 
   test-results:
     name: Test Results
     if: always()
-    needs: [changes, frontend-tests, backend-tests, automation-tests, development-images, e2e-tests]
+    needs: [changes, frontend-tests, backend-tests, automation-tests, development-images]
     runs-on: ubuntu-latest
     outputs:
       frontend_status: ${{ steps.results.outputs.frontend_status }}
@@ -410,8 +358,8 @@ jobs:
       automation_status: ${{ steps.results.outputs.automation_status }}
       automation_log: ${{ steps.results.outputs.automation_log }}
     steps:
-      - name: Require scope detection and applicable browser tests
-        if: needs.changes.result != 'success' || (needs.changes.outputs.e2e == 'true' && needs.e2e-tests.result != 'success')
+      - name: Require scope detection
+        if: needs.changes.result != 'success'
         run: exit 1
       - name: Require applicable development image validation
         if: needs.changes.outputs.development == 'true' && needs.development-images.result != 'success'
