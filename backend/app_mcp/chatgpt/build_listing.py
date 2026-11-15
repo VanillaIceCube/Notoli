@@ -3,8 +3,54 @@
 import argparse
 import json
 import re
+import stat
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
+
+MAX_ARCHIVE_BYTES = 50 * 1024 * 1024
+MAX_MEMBER_BYTES = 10 * 1024 * 1024
+MAX_ARCHIVE_MEMBERS = 1000
+
+
+def read_export(export: Path) -> dict[str, bytes]:
+    if export.stat().st_size > MAX_ARCHIVE_BYTES:
+        raise ValueError("Plugin export exceeds the archive size limit.")
+    files = {}
+    seen = set()
+    total = 0
+    with ZipFile(export) as archive:
+        entries = archive.infolist()
+        if len(entries) > MAX_ARCHIVE_MEMBERS:
+            raise ValueError("Plugin export contains too many members.")
+        for entry in entries:
+            name = entry.filename
+            path = name[:-1] if entry.is_dir() else name
+            if (
+                entry.orig_filename != name
+                or not path
+                or "\\" in path
+                or ":" in path
+                or any(part in {"", ".", ".."} for part in path.split("/"))
+                or stat.S_IFMT(entry.external_attr >> 16)
+                not in {0, stat.S_IFREG, stat.S_IFDIR}
+            ):
+                raise ValueError(
+                    "Plugin export contains an unsafe member path or type."
+                )
+            key = path.casefold()
+            if key in seen:
+                raise ValueError("Plugin export contains duplicate member paths.")
+            seen.add(key)
+            total += entry.file_size
+            if entry.file_size > MAX_MEMBER_BYTES or total > MAX_ARCHIVE_BYTES:
+                raise ValueError("Plugin export exceeds the expanded size limit.")
+        for entry in entries:
+            with archive.open(entry) as member:
+                content = member.read(MAX_MEMBER_BYTES + 1)
+            if len(content) > MAX_MEMBER_BYTES:
+                raise ValueError("Plugin export member exceeds the size limit.")
+            files[entry.filename] = content
+    return files
 
 
 def build_listing(export: Path, output: Path, version: str) -> None:
@@ -15,8 +61,7 @@ def build_listing(export: Path, output: Path, version: str) -> None:
 
     package = Path(__file__).resolve().parent
     source = json.loads((package / "plugin.json").read_text(encoding="utf-8"))
-    with ZipFile(export) as archive:
-        files = {entry.filename: archive.read(entry) for entry in archive.infolist()}
+    files = read_export(export)
 
     manifest_path = ".codex-plugin/plugin.json"
     manifest = json.loads(files[manifest_path])
