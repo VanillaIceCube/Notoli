@@ -127,20 +127,45 @@ test('uv bootstrap enforces its reviewed runner and cleans requirements on succe
   });
 });
 
-test('uv bootstrap pip options accept a verified wheel and reject altered bytes offline', () => {
+test('Docker uv bootstraps pass reviewed requirements through stdin and preserve pip failures', () => {
+  let canonical;
+  for (const name of ['Dockerfile', 'Dockerfile.dev']) {
+    const text = fs.readFileSync(path.join(root, 'backend/docker', name), 'utf8').replace(/\\\r?\n/g, ' ');
+    const run = text.split('\n').find(line => line.startsWith('RUN ') && line.includes('python -m pip')).slice(4);
+    if (canonical) assert.equal(run, canonical);
+    canonical = run;
+    const stubs = { python: 'printf "%s\\n" "$@" > "$MOCK_CWD/pip.args"; cat > "$MOCK_CWD/requirements"; exit "${PIP_EXIT:-0}"' };
+    for (const status of [0, 1]) fixture(run, { PIP_EXIT: String(status) }, stubs, (result, dir) => {
+      assert.equal(result.status, status, result.stderr);
+      const args = fs.readFileSync(path.join(dir, 'pip.args'), 'utf8').trim().split('\n');
+      for (const flag of ['--isolated', '--no-cache-dir', '--force-reinstall', '--no-deps', '--only-binary=:all:', '--require-hashes']) assert.ok(args.includes(flag), flag);
+      assert.equal(args[args.indexOf('--index-url') + 1], 'https://pypi.org/simple');
+      assert.equal(args[args.indexOf('--requirement') + 1], '/dev/stdin');
+      const requirements = fs.readFileSync(path.join(dir, 'requirements'), 'utf8');
+      assert.match(requirements, /^uv==0\.13\.8(?:\s+--hash=sha256:[a-f0-9]{64}){7}\s*$/);
+    });
+  }
+});
+
+test('CI and Docker uv pip options accept verified wheels and reject tampering and sources offline', () => {
   const program = String.raw`
 import hashlib
+import io
 import os
 from pathlib import Path
 import shlex
 import subprocess
+import tarfile
 import tempfile
 import venv
 import zipfile
 import yaml
 steps = yaml.safe_load(Path('.github/actions/setup-uv/action.yml').read_text())['runs']['steps']
 run = next(step['run'] for step in steps if step.get('name') == 'Install uv')
-args = shlex.split(run[run.index('python -m pip'):].replace('\\\n', ' '))[1:]
+runs = [('CI', run)]
+for name in ('Dockerfile', 'Dockerfile.dev'):
+    source = (Path('backend/docker') / name).read_text().replace('\\\n', ' ')
+    runs.append((name, next(line for line in source.splitlines() if line.startswith('RUN ') and 'python -m pip' in line)))
 with tempfile.TemporaryDirectory() as directory:
     root = Path(directory)
     # Locked uv environments need not include pip; keep ensurepip outside the repo.
@@ -153,24 +178,36 @@ with tempfile.TemporaryDirectory() as directory:
         archive.writestr('uv-0.13.8.dist-info/METADATA', 'Metadata-Version: 2.1\nName: uv\nVersion: 0.13.8\n')
         archive.writestr('uv-0.13.8.dist-info/WHEEL', 'Wheel-Version: 1.0\nGenerator: fixture\nRoot-Is-Purelib: true\nTag: py3-none-any\n')
         archive.writestr('uv-0.13.8.dist-info/RECORD', '')
+    original = wheel.read_bytes()
+    sources = root / 'sources'
+    sources.mkdir()
+    source = sources / 'uv-0.13.8.tar.gz'
+    with tarfile.open(source, 'w:gz') as archive:
+        code = b'raise RuntimeError("Source distribution must never execute")\n'
+        info = tarfile.TarInfo('uv-0.13.8/setup.py')
+        info.size = len(code)
+        archive.addfile(info, io.BytesIO(code))
     requirements = root / 'requirements.txt'
-    requirements.write_text('uv==0.13.8 --hash=sha256:' + hashlib.sha256(wheel.read_bytes()).hexdigest() + '\n')
-    args[args.index('--requirement') + 1] = str(requirements)
-    index = args.index('--index-url')
-    args[index:index + 2] = ['--no-index', '--find-links', str(root)]
-    for tampered in (False, True):
-        target = root / ('rejected' if tampered else 'accepted')
-        if tampered:
-            with wheel.open('ab') as output:
-                output.write(b'changed after approval')
-        result = subprocess.run([str(interpreter), *args, '--target', str(target)], capture_output=True, text=True)
-        if tampered:
-            assert result.returncode != 0, result.stdout
-            assert 'DO NOT MATCH THE HASHES' in result.stderr, result.stderr
-            assert not (target / 'uv').exists()
-        else:
-            assert result.returncode == 0, result.stderr
-            assert (target / 'uv/__init__.py').exists()
+    for name, run in runs:
+        args = shlex.split(run[run.index('python -m pip'):].replace('\\\n', ' '))[1:]
+        args[args.index('--requirement') + 1] = str(requirements)
+        index = args.index('--index-url')
+        args[index:index + 2] = ['--no-index', '--find-links', str(root)]
+        for mode in ('accepted', 'tampered', 'source-only'):
+            target = root / (name + '-' + mode)
+            wheel.write_bytes(original + (b'changed after approval' if mode == 'tampered' else b''))
+            artifact = source.read_bytes() if mode == 'source-only' else original
+            requirements.write_text('uv==0.13.8 --hash=sha256:' + hashlib.sha256(artifact).hexdigest() + '\n')
+            args[args.index('--find-links') + 1] = str(sources if mode == 'source-only' else root)
+            result = subprocess.run([str(interpreter), *args, '--target', str(target)], capture_output=True, text=True)
+            if mode == 'accepted':
+                assert result.returncode == 0, result.stderr
+                assert (target / 'uv/__init__.py').exists()
+            else:
+                assert result.returncode != 0, result.stdout
+                expected = 'DO NOT MATCH THE HASHES' if mode == 'tampered' else 'No matching distribution found'
+                assert expected in result.stderr, result.stderr
+                assert not (target / 'uv').exists()
 `;
   execFileSync(python, ['-c', program], { stdio: 'pipe', timeout: 30000 });
 });

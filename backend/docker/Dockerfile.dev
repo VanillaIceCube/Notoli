@@ -3,7 +3,19 @@ FROM python:3.12-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf22
 
 WORKDIR /backend
 
-RUN python -m pip install --no-cache-dir uv==0.13.8
+# Reviewed PyPI wheels for every platform in the pinned base image (2026-11-15).
+# https://pypi.org/pypi/uv/0.13.8/json — amd64, arm/v7, arm64/v8, 386, ppc64le.
+RUN printf '%s\n' 'uv==0.13.8 \
+    --hash=sha256:e18a57b8b352eb7c8feb317b9f6f533c8f0ad9673fd6cf34bbe3cf1a9f6a8984 \
+    --hash=sha256:0b3e8b1a4f5e405e31e2ff33de8af4744831e9f7338539671efbd8c3c94e791d \
+    --hash=sha256:5337c30bb893b4f9ce0ceb921ba2da0d13f649da644f40ad3bef84083bef0203 \
+    --hash=sha256:9cf0b7b12f13da6ab1c85694ab618d97a2bbd0c904cdea7f0172fb1dd768b9d5 \
+    --hash=sha256:86f1319f851e645bc295bb921e6be19beae7e69216c75ae809010ca7817393aa \
+    --hash=sha256:5ace7ec339798aca31be51a75fa7c1544fe84e02fadd17a9fa3324813bbaf237 \
+    --hash=sha256:6999618363d03a0a085a9491db319e00b461dbda205db06ef1fd55dfcbf6472b' \
+    | python -m pip --isolated install --disable-pip-version-check \
+      --no-cache-dir --force-reinstall --no-deps --only-binary=:all: \
+      --require-hashes --index-url https://pypi.org/simple --requirement /dev/stdin
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_PYTHON_DOWNLOADS=never \
     PATH="/opt/venv/bin:$PATH" \
