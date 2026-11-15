@@ -8,6 +8,12 @@ import testingLibrary from 'eslint-plugin-testing-library';
 export default [
   { ignores: ['build/**', 'coverage/**', 'node_modules/**'] },
   js.configs.recommended,
+  {
+    files: ['e2e/run_e2e.cjs'],
+    languageOptions: { sourceType: 'commonjs', globals: globals.node },
+    // The runner must refuse an unsafe cleanup even when Playwright has failed.
+    rules: { 'no-unsafe-finally': 'off' },
+  },
   eslintReact.configs.recommended,
   reactHooks.configs.flat.recommended,
   jsxA11y.configs.recommended,

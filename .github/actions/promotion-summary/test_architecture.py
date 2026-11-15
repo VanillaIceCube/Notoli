@@ -6,14 +6,14 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
-SPEC = importlib.util.spec_from_file_location("ci_architecture", ROOT / "scripts/ci_architecture.py")
+SPEC = importlib.util.spec_from_file_location("ci_architecture", ROOT / ".github/tools/ci_architecture.py")
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 
 
 class ArchitectureTests(unittest.TestCase):
     def test_diagram_only_dependency_change_fails(self):
-        target = ROOT / "docs/CI-CD-ARCHITECTURE.md"
+        target = ROOT / ".github/workflows/README.md"
         original = Path.read_text
         document = target.read_text(encoding="utf-8")
         self.assertIn("LintTest --> Lint[", document)
