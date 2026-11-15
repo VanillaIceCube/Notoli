@@ -42,6 +42,7 @@
     "build": "npm run lint:strict && vite build",
     "test": "vitest run",
     "lint": "eslint \"src/**/*.{js,jsx}\"",
+    "lint:fix": "eslint \"src/**/*.{js,jsx}\" --fix",
     "lint:strict": "eslint \"src/**/*.{js,jsx}\" --max-warnings=0",
     "format": "prettier . --write",
     "format:check": "prettier . --check",

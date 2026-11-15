@@ -36,10 +36,16 @@ Open `http://notoli.localhost:3000`. For Docker hot reload, follow the
 requests; client-side settings must contain no secrets. The build output is
 `build/`.
 
-An unset API origin defaults to localhost:8000 during development and same-origin
-in production; an explicit blank uses same-origin. Vite retains `PUBLIC_URL` as
-the router/asset base and exposes only those legacy client variables. Production
-uses subdomain-root routing and Nginx's SPA fallback for deep links.
+Development Compose supplies `REACT_APP_API_BASE_URL` through its `environment`
+settings. Production Docker builds pass the matching build argument, which is
+compiled into the static assets; a blank value selects same-origin requests.
+Local `.env` files are excluded from Docker build contexts.
+
+For direct `npm` development, an unset API origin uses `http://localhost:8000`.
+An explicit shell value overrides that default; an explicit blank uses same-origin.
+Vite retains `PUBLIC_URL` as the router/asset base and exposes only those legacy
+client variables. Production uses subdomain-root routing and Nginx's SPA fallback
+for deep links.
 
 ## 🗺️ Routes and behavior
 
@@ -132,6 +138,9 @@ jsdom, then checks the signed-out login route and usable form without private AP
 requests or uncaught startup errors. It unmounts the real root and restores test
 state afterward. Existing Material UI test shims still apply; browser layout and
 built HTML are outside this test's scope.
+
+`npm run build` runs strict lint before Vite's production build. Use
+`npm run lint:fix` to apply available lint fixes.
 
 From `frontend/`:
 
