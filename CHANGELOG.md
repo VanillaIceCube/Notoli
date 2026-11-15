@@ -16,6 +16,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Standardize README heading emojis, sentence case, reference labels and Markdown spacing while preserving substantive content, code examples and existing anchors.
 - Move frontend connection contracts into session guidance and menu/refresh behavior into board/list guidance; keep related guides as final navigation.
 - Align frontend npm commands: production builds run strict lint first and `lint:fix` applies available lint fixes.
 - Document frontend API configuration through development Compose and production build arguments, and exclude local frontend env files from Docker build contexts.

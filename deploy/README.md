@@ -142,14 +142,18 @@ checks do not deploy or touch application data.
 
 <a id="non-deploying-repository-validation"></a>
 
-## 🧪 Repository validation
+<a id="-repository-validation"></a>
+
+## 🧪 Checks
 
 See [workflow checks and validation](../.github/workflows/README.md#-checks-and-diagnostics).
 
 
-## 📚 Further reading
+<a id="-further-reading"></a>
+
+## 📚 Reference
 
 - [Live-server releases and recovery](production/README.md).
 - [Backend configuration](../backend/README.md).
 - [Frontend development](../frontend/README.md).
-- [CI tools and validation](../.github/README.md#-verification).
+- [CI tools and validation](../.github/README.md#-checks).

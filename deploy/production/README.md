@@ -7,7 +7,9 @@ The unreleased central issuer migration in #973 has been withdrawn; no shared
 introspection credential or YNAB acceptance is required. Ordinary accounts and
 website/REST login remain app-owned. Merging `main` alone does not deploy.
 
-## Main-first promotion
+<a id="main-first-promotion"></a>
+
+## 🌿 Main-first promotion
 
 Follow the canonical policy in
 [FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262)
@@ -25,7 +27,9 @@ reviewed source. Intentional unreleased changes may remain on `main` until their
 release prerequisites are complete; history parity alone does not prove live
 acceptance or authorize deployment.
 
-## Current production boundary
+<a id="current-production-boundary"></a>
+
+## 🧭 Current production boundary
 
 The app policy retains the original three shared route networks and Notoli's exact
 trusted proxy `172.30.88.2`. Notoli does not depend on YNAB or shared-issuer networks.
@@ -43,7 +47,9 @@ Use the owner-designated operator and its scoped plan. Agent 3 was designated fo
 the historical ingress migration, not as a permanent operator identity. Shared decisions:
 [Infrastructure #4](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/issues/4).
 
-## Shared implementation and app configuration
+<a id="shared-implementation-and-app-configuration"></a>
+
+## ⚙️ Shared implementation and app configuration
 
 Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/a82888c83975de486b27ec0d0dc787fb5b167301/app-release/README.md).
 `app.json` contains this app's service/container/domain/environment/network/DB
@@ -63,7 +69,9 @@ and rollback never download code or depend on an Infrastructure checkout.
 One transaction file keeps failure ordering and crash barriers reviewable;
 application policy and declarative readiness are separated from that state machine.
 
-## Boundary and activation order
+<a id="boundary-and-activation-order"></a>
+
+## 🧭 Boundary and activation order
 
 The infrastructure gateway must already own ingress and pass its cutover
 acceptance before this pipeline is activated. Production Compose contains only
@@ -111,7 +119,9 @@ explicitly. The outer failure handler stops the backend and any management
 writers by app and service labels, verifies that each writer has stopped, and
 retains the failed release record for operator review.
 
-## CI inputs and private host preparation
+<a id="ci-inputs-and-private-host-preparation"></a>
+
+## 🔑 CI inputs and private host preparation
 
 The workflow runs only on reviewed `env-prod` pushes or a manually authorized
 dispatch selecting that branch. Pushing `main` or this feature branch does not
@@ -156,7 +166,9 @@ Staging and releases must be on the same app filesystem. Unique attempts may
 not be reused. No first-install/empty-DB bootstrap is performed: this migration
 requires the existing nonempty SQLite bind file.
 
-## Transaction and failure states
+<a id="transaction-and-failure-states"></a>
+
+## 🔄 Transaction and failure states
 
 `release.py deploy` acquires shared maintenance then exclusive app lock,
 rejecting conflicts rather than waiting indefinitely. The host operator uses
@@ -216,7 +228,9 @@ private and out of logs/tickets. Retained management containers also contain raw
 environment and possible DB journals; treat them as private recovery evidence. Command errors intentionally withhold captured
 output; diagnose privately using the saved configuration.
 
-## Operator commands after separate authorization
+<a id="operator-commands-after-separate-authorization"></a>
+
+## 🛠️ Operator commands after separate authorization
 
 CI invokes the equivalent of:
 
@@ -257,7 +271,9 @@ a specifically approved recovery plan; do not fabricate a success record.
 Rollback is not a substitute for off-host backups and a full functional restore
 drill. Both remain deployment acceptance gates.
 
-## Validation and remaining acceptance
+<a id="validation-and-remaining-acceptance"></a>
+
+## 🧪 Validation and remaining acceptance
 
 Run `python -m unittest discover -s deploy/tests -v` with Docker.
 Tests use synthetic credentials, real Compose/container env parsing, real SQLite
@@ -280,7 +296,9 @@ reboot, off-host restores, monitoring and resource evidence are operator
 acceptance work, not inferred from these tests. Keep the implementation issues
 open until that evidence exists.
 
-## ChatGPT MCP deployment
+<a id="chatgpt-mcp-deployment"></a>
+
+## 🔌 ChatGPT MCP deployment
 
 MCP runs at the canonical `/mcp` endpoint inside the existing ASGI backend.
 Keep the backend private, its address `.3`, trusted gateway `.2`, separate

@@ -85,7 +85,9 @@ See [OpenAI key security, expiration and usage guidance](https://developers.open
 
 Preserve the existing main ruleset, including all independent scanner/lint/test contexts and the three AI reviewers. Exclude the standalone `CodeQL` context; require the scope detector and all three analyzer contexts. Validate the current platform rules and fresh human/Dependabot results before changing settings.
 
-## 🧪 Verification
+<a id="-verification"></a>
+
+## 🧪 Checks
 
 Repository CI helpers live in `.github/tools/`: `bounded_log.py` retains bounded
 reviewer diagnostics; `install_actionlint.sh` installs the pinned, checksum-verified
@@ -102,11 +104,13 @@ alert-workflow side effects before fresh manual dispatches. A successful human P
 does not prove access to the separate Dependabot secret store. Source review does
 not authorize merging, branch promotion, production deployment, or key rotation.
 
-### 🔑 Exact settings and verification
+<a id="-exact-settings-and-verification"></a>
+
+### Exact settings and verification
 
 - [Reviewer keys, App identities, and deferred migration](README.md#-credential-ownership).
 - [Required main-branch checks](workflows/README.md#main-branch-required-checks).
-- [Dependabot isolation and auto-merge policy](workflows/README.md#-protected-dependabot-auto-merge).
+- [Dependabot isolation and auto-merge policy](workflows/README.md#protected-dependabot-auto-merge).
 - [Security-alert credential and input contract](workflows/README.md#security-alert-configuration-contract).
 - [Reviewer feedback and recovery](actions/README.md).
 
@@ -114,7 +118,9 @@ Deployment credentials and production client registration belong to the
 [production guide](../deploy/production/README.md). They are separate from
 local application setup and reviewer configuration.
 
-## 📚 Related guides
+<a id="-related-guides"></a>
+
+## 📚 Reference
 
 - [Workflow behavior and maintenance](workflows/README.md).
 - [Shared action and reviewer contracts](actions/README.md).

@@ -105,19 +105,21 @@ retains its extra post-refresh 401 handling and legacy API-base compatibility.
 
 ## 🧩 Board and list behavior
 
-### 🤝 Board Sharing
+<a id="-board-sharing"></a>
+
+### Board sharing
 
 Board management lives in the right sidebar. Open the Board list, use a board row's action menu, and choose Share. The Share dialog displays the board owner and collaborators. Owners can add collaborators by username/email and remove collaborators; non-owners can view access in read-only mode.
 
-### Notes Checklist Items
+### Notes checklist items
 
 Notes in a list render as checklist rows. Checking a note updates its `status` to `Complete` through the notes API, immediately reflects the change in the UI, and shows complete note text with a strikethrough. Unchecked notes use `Not Started`, and the API also supports `In Progress`.
 
-### In-App Notifications
+### In-app notifications
 
 The app bar notification icon opens a popover with the newest notifications first. Unread notifications show a badge count and can be marked read all at once. Clicking a notification opens its target board or list when the backend provides `target_path`, and each notification can be cleared individually. Notification API failures are shown inside the popover and do not block the rest of the page.
 
-### Drag-and-Drop Reordering
+### Drag-and-drop reordering
 
 List and note pages include a top-right page action menu for entering reorder mode. Reorder mode hides row action menus, shows right-side drag handles, hides Add New, and exits through Done. Dragging only starts from the handle and persists the final order through the reorder API after drop.
 
@@ -149,7 +151,7 @@ immediately on route exit/unmount and once a disabled hook has settled.
 - Avoid full-bleed divider lines inside dialogs unless the surrounding surface also uses full-bleed sectioning.
 - Use the app divider color (`var(--secondary-color)`) and a visible weight (`borderBottomWidth: 2`) for consistency with sidebar and list surfaces.
 
-### Dialog Density
+### Dialog density
 
 - Keep dialogs focused on the current task and avoid repeating identity fields.
 - Prefer compact sections or responsive two-column layouts when a dialog compares two related groups, such as owner and collaborators.
@@ -208,7 +210,9 @@ Keep Vitest projects isolated. Do not override the configured pool; use
 `--maxWorkers=1` for serial profiling. The DOM worker memory limit and recycling
 keep test environments independent without dropping authentication or domain assertions.
 
-## 📚 Related guides
+<a id="-related-guides"></a>
+
+## 📚 Reference
 
 - [Backend and MCP integration](../backend/README.md).
 - [Local Docker and production releases](../deploy/README.md).
