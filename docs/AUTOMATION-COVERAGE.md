@@ -15,19 +15,18 @@ live GitHub writes, or a paid model request.
 | Prior reviewer identity/history and untrusted discussion (medium) | Execute the actual github-script body with mocked reads/writes; verify persona history, ordering, human association/body caps, reply caps and visible API failure. Human text is evidence, never authority. |
 | Lint attribution/push credentials (high) | Execute the composite with mocked gh/git: valid identity, missing slug and invalid numeric ID. Infrastructure N/A: it has no lint autofix/push action. |
 | PR diff acquisition (high) | Existing Python fixture tests retain full/oversized/failure behavior; live credential/read API availability remains an integration boundary. |
-| Shared release parity and recovery (high) | Infrastructure-owned manifest, source-pinned app suites, approved template-upgrade positive test, unauthorized drift negatives, disposable Docker profiles. Never edit vendored copies independently. |
-| Development entrypoint (medium) | Mocked failed install/reverted manifests and command status; actual CI images plus fresh/unchanged/changed named-volume cases. |
-| Early/middle/late diagnostics (medium) | Synthetic long-output regression retains all three failure positions, random output delimiters and bounded artifacts. Existing pipeline exit codes still determine success. |
+| Shared release parity and recovery (high) | Infrastructure-owned manifest, source-pinned app suites, approved template-upgrade positive test, unauthorized drift negatives; the former root release-profile matrix has been removed. Never edit vendored copies independently. |
+| Development entrypoint (medium) | CI still builds the development images; the former root dependency-startup and volume-lifecycle regression suites have been removed. |
+| Early/middle/late diagnostics (medium) | Bounded logging remains in use; its former root regression suite has been removed. Pipeline exit codes still determine success. |
 
-Application automation runs on `.github/**`, scripts, deploy, tests and maintained
+Application automation runs on `.github/**`, `frontend/e2e/**`, deploy and maintained
 docs changes. Actionlint plus safe YAML/composite validation, Bash syntax parsing,
 PowerShell parser-only validation, Python AST parsing and synthetic Compose `config`
 run without deployments or private environment files. Infrastructure retains its
 existing stronger shellcheck/Compose/manifest/RequiredCI strategy instead of an
 application clone. Markdown whitespace uses platform PR base/head or push before/after commits
-plus local edits (`git diff --check`); a clean-checkout committed-error regression
-proves it checks submitted changes; no brittle external-link crawler
-is introduced. Actionlint's only compatibility exception is the existing newly
+plus local edits (`git diff --check`). The former root whitespace regression
+suite has been removed. Actionlint's only compatibility exception is the existing newly
 supported GitHub `vulnerability-alerts` scope, not a generic syntax waiver.
 
 Summaries retain bounded early/failing/late context (<=16000 characters). `tee`

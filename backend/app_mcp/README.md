@@ -7,7 +7,7 @@ models, permissions and tools. FullStackTemplate is the canonical source;
 `backend/app_mcp/manifest.json` hashes shared runtime Python files (application-specific
 `chatgpt/` packaging is excluded). Edit the
 canonical package, regenerate its manifest with
-`python scripts/check_app_mcp.py --write-manifest`, commit it, then copy
+`python backend/check_app_mcp.py --write-manifest`, commit it, then copy
 the package/manifest/checker and pin the same commit in every consumer. Never
 brand or independently patch the shared package. CI checks the remote pin;
 `--source-root ../FullStackTemplate` is a local development override only.
@@ -137,6 +137,11 @@ Moving framework documentation changes no application issuer, scopes, consent
 salt, client IDs, database tables, credentials, domain tools or readiness policy.
 
 ## 🧪 Verification
+
+Run `python backend/check_app_mcp.py` from the repository root to verify the
+pinned shared framework. The checker lives outside `app_mcp/` so moving repository
+tooling does not change the framework manifest. Local offline checks can supply
+`--source-root <canonical-checkout>`.
 
 Run the ordinary backend suite from `backend/`, then run a separate enabled
 profile against an isolated test database:

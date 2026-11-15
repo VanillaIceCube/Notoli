@@ -129,14 +129,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[2]
     data = inventory(root)
     contracts(data, root)
     target = root / "docs/CI-CD-SOURCE-INVENTORY.json"
     text = json.dumps(data, indent=2, sort_keys=True) + "\n"
     if args.check:
         if target.read_text(encoding="utf-8") != text:
-            raise ValueError("Workflow architecture inventory drift; review diagrams and regenerate with python scripts/ci_architecture.py")
+            raise ValueError("Workflow architecture inventory drift; review diagrams and regenerate with python .github/tools/ci_architecture.py")
         print("CI architecture source inventory and diagram contracts match")
     else:
         target.write_text(text, encoding="utf-8")

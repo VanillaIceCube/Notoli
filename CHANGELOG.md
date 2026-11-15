@@ -8,6 +8,12 @@ All notable changes to this project are documented in this file.
 
 - Restore consistent changelog titles, chronological dates, ordered categories, and spacing while preserving historical entries.
 - Align shared agent instructions across the repository family while preserving application-specific contracts and Infrastructure authorization controls.
+- Move active CI helpers into `.github/tools/`, browser helpers beside `frontend/e2e/` journeys, and the MCP checker into `backend/`; update callers, path filters, regressions, and owning guides while preserving existing checks and isolation.
+- Remove the empty root script index after moving all active helpers to their owning folders.
+
+### Removed
+
+- Remove the root `tests/` directory and its CI invocations; retain backend, frontend/browser, action-local, and shared release suites.
 
 ## 2026-11-13
 

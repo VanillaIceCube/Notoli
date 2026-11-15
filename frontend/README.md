@@ -132,6 +132,13 @@ npm run build
 
 ## 🌐 Browser tests
 
+`frontend/e2e/` owns the browser journeys and their helpers: `run_e2e.cjs` creates
+and cleans up disposable state, `e2e_backend.py` starts the isolated loopback
+backend, `e2e_settings.py` suppresses developer dotenv loading and selects temporary
+SQLite/file mail, and `collect_browser_artifacts.py` collects bounded failure
+evidence. `npm run test:e2e` invokes the runner from `frontend/`; CI collects reports
+with `python e2e/collect_browser_artifacts.py` from the same directory.
+
 Install backend requirements in an activated Python environment. From `frontend/`:
 
 ```powershell

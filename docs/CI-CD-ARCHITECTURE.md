@@ -240,8 +240,8 @@ remain ordinary scripts under their existing gates; they are not new services.
 
 The sibling `CI-CD-SOURCE-INVENTORY.json` records this repository's actual workflow
 events, jobs/needs, permissions, local custom-action consumers and credential names.
-After reviewing YAML/diagram changes, regenerate with `python scripts/ci_architecture.py`
-and verify with `python scripts/ci_architecture.py --check`. The checker parses YAML
+After reviewing YAML/diagram changes, regenerate with `python .github/tools/ci_architecture.py`
+and verify with `python .github/tools/ci_architecture.py --check`. The checker parses YAML
 without executing workflows, verifies local action references, and ties key Mermaid
 edges to the checked job/dependency/event and custom-action consumer contracts.
 Diagram-only edge drift, changed workflow dependencies and privileged PR-trigger

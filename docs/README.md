@@ -10,8 +10,7 @@ integration contracts, maintenance, and recorded verification.
 - [Deployment](../deploy/README.md).
 - [GitHub setup and workflows](../.github/README.md).
 - [MCP integration and ChatGPT connection](../backend/app_mcp/README.md).
-- [Scripts](../scripts/README.md).
-- [Tests](../tests/README.md).
+- [CI tools](../.github/README.md#-verification).
 
 ## 🧱 Product and architecture
 

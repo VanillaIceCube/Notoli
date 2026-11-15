@@ -586,7 +586,7 @@
         },
         "development-images": {
           "if": "needs.changes.outputs.development == 'true'",
-          "name": "Development images and dependency volumes",
+          "name": "Development image builds",
           "needs": "changes"
         },
         "e2e-tests": {
@@ -617,7 +617,7 @@
         "contents": "read",
         "pull-requests": "read"
       },
-      "source_sha256": "e82641b9cd33078cfe80898ca5ee813864da08313d19f6ff99caf0c5003a65ab",
+      "source_sha256": "a381eebc4724818934d52d1064c5bf5e9d47f4ae197ac68e21631f4521516a39",
       "variable_names": []
     },
     "gate-vulnerability.yml": {

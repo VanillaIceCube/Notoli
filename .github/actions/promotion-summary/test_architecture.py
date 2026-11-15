@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
-SPEC = importlib.util.spec_from_file_location("ci_architecture", ROOT / "scripts/ci_architecture.py")
+SPEC = importlib.util.spec_from_file_location("ci_architecture", ROOT / ".github/tools/ci_architecture.py")
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 

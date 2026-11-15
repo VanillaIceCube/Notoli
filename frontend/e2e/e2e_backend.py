@@ -5,7 +5,7 @@ import subprocess
 import sys
 import tempfile
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
         "PATH", "SYSTEMROOT", "WINDIR", "COMSPEC", "TEMP", "TMP", "HOME", "VIRTUAL_ENV", "CONDA_PREFIX", "PYTHONUTF8"
     }}
     env.update({"E2E_STATE_DIR": str(state), "DJANGO_SETTINGS_MODULE": "e2e_settings",
-                "PYTHONPATH": os.pathsep.join([str(ROOT / "scripts"), str(ROOT / "backend")]),
+                "PYTHONPATH": os.pathsep.join([str(ROOT / "frontend/e2e"), str(ROOT / "backend")]),
                 "DJANGO_DEBUG": "1", "DJANGO_SECRET_KEY": "isolated-browser-test-key-not-for-deployment",
                 "DJANGO_SQLITE_PATH": str(state / "db.sqlite3"), "DJANGO_MCP_ENABLED": "0",
                 "DJANGO_FRONTEND_BASE_URL": "http://127.0.0.1:3001"})

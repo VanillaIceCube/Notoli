@@ -2,7 +2,7 @@
 from pathlib import Path
 import shutil
 
-ROOT = Path(__file__).resolve().parents[1] / "frontend"
+ROOT = Path(__file__).resolve().parents[1]
 PER_FILE = 20 * 1024 * 1024
 TOTAL = 50 * 1024 * 1024
 

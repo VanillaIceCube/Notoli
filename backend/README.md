@@ -134,6 +134,11 @@ Use mocked delivery tests; production email receipt requires separate verificati
 
 ## 🔌 MCP integration
 
+The shared-framework checker lives at `backend/check_app_mcp.py`, beside the backend
+and outside the hash-verified package. Run `python backend/check_app_mcp.py` from
+the repository root; use `--source-root <canonical-checkout>` for local offline
+verification. See the [framework guide](app_mcp/README.md) for source ownership.
+
 The [MCP README](app_mcp/README.md) explains shared transport,
 OAuth, configuration, and verification.
 

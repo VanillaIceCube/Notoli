@@ -121,15 +121,14 @@ The frontend development entrypoint hashes both `package.json` and
 install with `npm ci`; unchanged restarts reuse dependencies; changing either
 manifest reinstalls. Missing manifests or a failed installation stop startup and
 retry on the next invocation. Use one volume per checkout and restart after edits.
-Run `node --test tests/dev-dependencies.test.cjs` from the repository root for the
-credential-free mocked lifecycle/exit-status regression. Compose configuration
+Compose configuration
 checks do not deploy or touch application data.
 
 <a id="non-deploying-repository-validation"></a>
 
 ## 🧪 Repository validation
 
-See the [repository tests and validation guide](../tests/README.md).
+See [workflow checks and validation](../.github/workflows/README.md#-checks-and-diagnostics).
 
 
 ## 📚 Further reading
@@ -137,4 +136,4 @@ See the [repository tests and validation guide](../tests/README.md).
 - [Live-server releases and recovery](production/README.md).
 - [Backend configuration](../backend/README.md).
 - [Frontend development](../frontend/README.md).
-- [Repository scripts](../scripts/README.md).
+- [CI tools and validation](../.github/README.md#-verification).

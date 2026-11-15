@@ -277,7 +277,7 @@ and token inputs. Run `.github/actions/custom-regressions/security-alert-contrac
 after changes; actual loading acceptance requires fresh controlled dispatches on
 corrected main. Preserve applicable bounded malware review and documented
 coverage decisions. Maintain CI architecture diagrams and regenerate
-`docs/CI-CD-SOURCE-INVENTORY.json` with `python scripts/ci_architecture.py` after
+`docs/CI-CD-SOURCE-INVENTORY.json` with `python .github/tools/ci_architecture.py` after
 workflow edits. Promotion summaries are informational.
 
 Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs

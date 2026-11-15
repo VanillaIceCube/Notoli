@@ -9,7 +9,7 @@ import tempfile
 
 import yaml
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def run(*args, **kwargs):
@@ -66,7 +66,7 @@ def main():
             continue
         if file.suffix == ".sh":
             run("bash", "-n", str(file))
-        elif file.suffix == ".py" and name.startswith(("scripts/", ".github/", "deploy/")):
+        elif file.suffix == ".py" and name.startswith(("scripts/", ".github/", "deploy/", "frontend/e2e/", "backend/check_app_mcp.py")):
             ast.parse(file.read_text(encoding="utf-8"), filename=name)
         elif file.suffix == ".ps1":
             env = {**os.environ, "CHECK_PS_FILE": str(file)}

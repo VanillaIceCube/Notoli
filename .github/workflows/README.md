@@ -346,7 +346,7 @@ its owner/labels/PR limits, general Actions group for non-CodeQL updates, and
 separate Compose updates. All application CodeQL entry points use the aligned
 immutable v4.39.3 revision (`33d7b85da1a04171e211befe2c739303b9a4c066`).
 Regenerate `docs/CI-CD-SOURCE-INVENTORY.json` with
-`python scripts/ci_architecture.py` after workflow pin changes and verify it with
+`python .github/tools/ci_architecture.py` after workflow pin changes and verify it with
 `--check`. Scanner scope, permissions and merge/deployment
 gates remain unchanged. Canonical rollout:
 [FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271).
@@ -519,13 +519,13 @@ wording. FullStackTemplate's inactive target is not created for symmetry.
 
 ### Repository validation and browser diagnostics
 
-The path-aware test gate includes `.github/**`, `scripts/**`, `deploy/**`,
-`tests/**` and maintained docs in automation validation. It runs workflow and
+The path-aware test gate includes `.github/**`, `frontend/e2e/**`, `deploy/**`,
+and maintained docs in automation validation. It runs workflow and
 composite syntax, parser-only script checks and synthetic Compose configuration
 plus the existing Batch 1 suites and focused mocked composite regressions.
 [Coverage and external boundaries](../../docs/AUTOMATION-COVERAGE.md) are explicit.
 
-`scripts/bounded_log.py` retains early, sampled failing and late context within
+`.github/tools/bounded_log.py` retains early, sampled failing and late context within
 16,000 characters for reviewers. Full output is streamed with `tee`; failed
 logs have roughly 1 MiB capped artifacts retained seven days. Random delimiters
 protect multiline outputs and the original command status still determines the
@@ -539,7 +539,7 @@ production data, live email or paid AI requests for these tests.
 
 Validate syntax and relevant behavioral tests after automation changes. Preserve
 original check failures and bounded/redacted diagnostics. Update the existing
-architecture inventory with `python scripts/ci_architecture.py` after workflow
+architecture inventory with `python .github/tools/ci_architecture.py` after workflow
 changes and verify it with `--check`. Do not use production as a test fixture.
 
 ## 📚 Related guides
