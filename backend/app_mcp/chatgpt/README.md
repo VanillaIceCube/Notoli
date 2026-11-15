@@ -273,3 +273,7 @@ Choose a version greater than the export's current version. The overlay verifies
 the expected display name and preserves the exported plugin name, app mapping,
 and other exported files. Upload through the existing plugin's update flow
 when authorized. No registered app ID is stored or invented in this repository.
+
+The listing builder rejects unsafe archive paths, symlinks and duplicate names
+before writing output. Exports are limited to 1,000 members, 10 MiB per member,
+and 50 MiB compressed or expanded. The original export remains unchanged.
