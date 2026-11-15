@@ -108,8 +108,9 @@ Use the [local Docker guide](deploy/README.md) for hot reload at
 `notoli.localhost` and optional standalone HTTPS. Initialize only missing local
 env/database files; never truncate an existing SQLite file. Development Compose
 mounts backend/frontend source, binds ports to loopback and runs Uvicorn/Vite
-reload. Restart the frontend after dependency changes so its startup check runs
-`npm ci`. Keep the reviewed development base-image digest and lockfile in sync.
+reload. After dependency changes, run `npm ci` explicitly in the frontend
+container, then restart it; follow the commands in the local Docker guide. Keep
+the reviewed development base-image digest and lockfile in sync.
 
 `deploy/docker-compose.yml` and `deploy/nginx-proxy.conf` are local/legacy-only.
 Do not use them on the shared production host. The

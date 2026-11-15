@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Align agent setup instructions with explicit frontend container dependency installation; restarting Vite does not run `npm ci`.
 - Distinguish the frontend router basename, Vite asset base and API origin in configuration guidance; retain domain-root deployment behavior.
 - Correct development dependency guidance to require an explicit container `npm ci` before restart.
 - Reject unsafe paths, symlinks and duplicate members in exported ChatGPT ZIPs, bound archive expansion, and cover hostile exports with offline regressions.
