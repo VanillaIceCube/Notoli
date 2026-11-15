@@ -90,6 +90,17 @@ revocation stay account-bound; scopes and current membership remain enforced by
 Django. See [Notoli's MCP integration](../backend/apps/mcp/README.md#application-tools) and
 [client setup](../backend/apps/mcp/README.md#chatgpt).
 
+The existing `/connections/authorize?approval_id=<opaque UUID>` screen supports
+app-owned action review. It loads the complete preview with the app JWT, renders
+untrusted text without HTML, and submits only the signed ticket plus explicit
+Approve/Cancel. It never auto-approves or puts credentials in links. Invalid/stale
+tickets clear controls and require fresh review. Framed action review is refused;
+frontend Nginx applies `frame-ancestors 'none'`, `X-Frame-Options: DENY`, no-store and
+no-referrer to the exact `/connections/authorize` page, preserving embedding policy
+elsewhere. Only MacroMapper configures the backend handler; FullStackTemplate and
+Notoli retain reusable plumbing with action approval unavailable and existing
+domain behavior unchanged.
+
 ### Connections response contract
 
 Successful consent, decision, list and revoke responses must be JSON objects.

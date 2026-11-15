@@ -314,3 +314,106 @@ class OAuthAuthorizationTests(TestCase):
         response = self.exchange(code, redirect_uri=None)
         self.assertEqual(response.status_code, 200, response.content)
         self.assertIn("access_token", response.json())
+
+
+@unittest.skipUnless(settings.MCP_ENABLED, "Run the MCP-enabled profile")
+class ActionApprovalTests(TestCase):
+    def setUp(self):
+        from uuid import uuid4
+
+        from rest_framework_simplejwt.tokens import AccessToken
+
+        self.user = get_user_model().objects.create_user("action-user")
+        self.jwt = str(AccessToken.for_user(self.user))
+        self.client.defaults["HTTP_AUTHORIZATION"] = f"Bearer {self.jwt}"
+        self.reference = str(uuid4())
+
+    def test_unconfigured_app_cannot_enable_action_approval_from_request(self):
+        with self.settings(MCP_ACTION_APPROVAL_HANDLER=None):
+            self.assertEqual(
+                self.client.get(
+                    "/auth/mcp/action-approval/",
+                    {"approval_id": self.reference, "handler": "untrusted.module"},
+                ).status_code,
+                404,
+            )
+
+    def test_signed_exact_preview_uses_verified_actor_and_atomic_explicit_decision(
+        self,
+    ):
+        from unittest.mock import patch
+
+        from django.db import connection
+        from django.test import Client
+
+        decisions = []
+        state = {
+            "status": "prepared",
+            "action": "sample.change",
+            "changes": {"name": "Original"},
+        }
+
+        def handler(user, reference, decision=None):
+            self.assertTrue(connection.in_atomic_block)
+            self.assertEqual(user.pk, self.user.pk)
+            self.assertEqual(reference, self.reference)
+            if decision is not None:
+                decisions.append(decision)
+                state["status"] = "approved" if decision == "allow" else "cancelled"
+            return dict(state)
+
+        with (
+            self.settings(MCP_ACTION_APPROVAL_HANDLER="configured.handler"),
+            patch("apps.mcp.framework.views.import_string", return_value=handler),
+        ):
+            preview = self.client.get(
+                "/auth/mcp/action-approval/", {"approval_id": self.reference}
+            )
+            self.assertEqual(preview.status_code, 200)
+            self.assertEqual(decisions, [])
+            ticket = preview.json()["ticket"]
+            app = make_application()
+            token = make_token(self.user, app)
+            bearer = Client(HTTP_AUTHORIZATION=f"Bearer {token.token}")
+            self.assertEqual(
+                bearer.post(
+                    "/auth/mcp/action-approval/",
+                    {"ticket": ticket, "decision": "allow"},
+                ).status_code,
+                401,
+            )
+            self.assertEqual(
+                self.client.post(
+                    "/auth/mcp/action-approval/",
+                    {"ticket": ticket + "tampered", "decision": "allow"},
+                ).status_code,
+                400,
+            )
+            self.assertEqual(decisions, [])
+            state["changes"] = {"name": "Changed"}
+            self.assertEqual(
+                self.client.post(
+                    "/auth/mcp/action-approval/",
+                    {"ticket": ticket, "decision": "allow"},
+                ).status_code,
+                409,
+            )
+            self.assertEqual(decisions, [])
+            ticket = self.client.get(
+                "/auth/mcp/action-approval/", {"approval_id": self.reference}
+            ).json()["ticket"]
+            approved = self.client.post(
+                "/auth/mcp/action-approval/",
+                {"ticket": ticket, "decision": "allow", "user_id": 999},
+            )
+            self.assertEqual(approved.status_code, 200)
+            self.assertEqual(approved.json()["approval"]["status"], "approved")
+            self.assertEqual(decisions, ["allow"])
+            self.assertEqual(
+                self.client.post(
+                    "/auth/mcp/action-approval/",
+                    {"ticket": ticket, "decision": "allow"},
+                ).status_code,
+                409,
+            )
+            self.assertEqual(decisions, ["allow"])

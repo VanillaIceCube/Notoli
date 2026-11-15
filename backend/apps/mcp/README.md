@@ -138,6 +138,17 @@ configured `MCP_REQUIRED_SCOPES` entry; it never skips scope authorization. An
 explicit scope must be present in the live grant. The transport also requires
 every configured baseline scope before accepting an MCP request.
 
+Applications may configure `MCP_ACTION_APPROVAL_HANDLER` with an app-owned callable
+`(user, reference, decision=None)` in an existing service module. It must return a
+complete JSON preview and lock/check actor, preparation, live grant and exact state
+inside the framework transaction before applying `allow`/`cancel`.
+`GET/POST /auth/mcp/action-approval/` accepts only the app user's JWT. Signed tickets
+bind user, opaque reference and exact preview digest for five minutes; POST
+rechecks under the same transaction. Unconfigured applications return 404.
+MacroMapper configures this hook; FullStackTemplate and Notoli do not, preserving
+their domain policies. The existing React action mode renders complete safe-text
+previews and explicit decisions; credentials/tickets never enter URLs.
+
 OAuth tokens are distinct from REST JWTs. The provider requires the exact `/mcp`
 resource, S256 PKCE and state; authorization codes expire in 120 seconds, access
 tokens in one hour, and refresh tokens in 30 days. Refresh rotates with reuse

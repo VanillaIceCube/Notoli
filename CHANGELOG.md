@@ -14,6 +14,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Add optional JWT-only signed-preview action approval to the canonical MCP framework and existing Connections screen, with framing protection; the handler remains unconfigured here and domain behavior is unchanged.
 - Clarify and regression-test MCP token scope resolution: omitted or blank scope continues to require the application's baseline scope, with identical framework coverage across applications.
 - Raise the complete source-diff limit for all three AI reviewers to 2 MB (2,000,000 bytes) across all four repositories; preserve fail-closed incomplete reviews and all other context, token and model settings.
 - Standardize MCP permissions, authenticated invocation, read queries, mutation dispatch and result-formatting modules; create a fresh 31-tool registry per factory call and retain the `integrations` app label.

@@ -1,13 +1,17 @@
+import hashlib
+import json
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from uuid import UUID
 
 from django.conf import settings
 from django.core import signing
 from django.db import transaction
 from django.db.models import Q
-from django.http import JsonResponse, QueryDict
+from django.http import Http404, JsonResponse, QueryDict
 from django.shortcuts import redirect
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.utils.module_loading import import_string
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.debug import sensitive_post_parameters
@@ -237,3 +241,61 @@ def connections(request):
             )
         }
     )
+
+
+@never_cache
+@api_view(["GET", "POST"])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def action_approval(request):
+    """Optional app-owned actions; MCP OAuth bearers cannot approve them."""
+    handler_path = getattr(settings, "MCP_ACTION_APPROVAL_HANDLER", None)
+    if not handler_path:
+        raise Http404
+    handler = import_string(handler_path)
+    salt = settings.MCP_CONSENT_SALT + ".action-approval"
+    decision = None
+    ticket = None
+    if request.method == "POST":
+        try:
+            value = request.data.get("ticket")
+            if not isinstance(value, str) or len(value) > 4096:
+                raise signing.BadSignature
+            ticket = signing.loads(value, salt=salt, max_age=300)
+            if ticket["user_id"] != request.user.pk:
+                raise signing.BadSignature
+            reference = ticket["reference"]
+            decision = request.data.get("decision")
+            if decision not in {"allow", "cancel"}:
+                raise signing.BadSignature
+        except (signing.BadSignature, KeyError, TypeError):
+            return invalid_consent()
+    else:
+        reference = request.query_params.get("approval_id")
+    try:
+        reference = str(UUID(reference))
+    except (ValueError, TypeError, AttributeError):
+        return JsonResponse({"error": "Invalid action reference."}, status=400)
+
+    # The handler locks its action/actor while returning the exact preview.
+    # Hold those locks through ticket comparison and the explicit decision.
+    with transaction.atomic():
+        details = handler(request.user, reference)
+        digest = hashlib.sha256(
+            json.dumps(details, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        if ticket is not None:
+            if ticket.get("digest") != digest:
+                return JsonResponse(
+                    {"error": "Action changed or expired. Reload to review it again."},
+                    status=409,
+                )
+            details = handler(request.user, reference, decision)
+        response = {"approval": details}
+        if request.method == "GET" and details["status"] in {"prepared", "approved"}:
+            response["ticket"] = signing.dumps(
+                {"user_id": request.user.pk, "reference": reference, "digest": digest},
+                salt=salt,
+                compress=True,
+            )
+    return JsonResponse(response)

@@ -75,3 +75,21 @@ test('a transient non-JSON refresh failure retains the session and reports HTTP 
   expect(sessionStorage.getItem('accessToken')).toBe('OLD-ACCESS');
   expect(sessionStorage.getItem('refreshToken')).toBe('REFRESH');
 });
+
+test('action approval JWT recovery preserves the signed decision and sends no cookies', async () => {
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(response(401, '<html>Expired access</html>'))
+    .mockResolvedValueOnce(response(200, '{"access":"NEW-ACCESS"}'))
+    .mockResolvedValueOnce(response(200, '{"approval":{"status":"approved"}}'));
+  vi.stubGlobal('fetch', fetchMock);
+  const { decideActionApproval } = await import('./connectionsClient');
+  await expect(decideActionApproval('SIGNED-ACTION', 'allow', '?approval_id=ref')).resolves.toEqual(
+    { approval: { status: 'approved' } },
+  );
+  const [url, options] = fetchMock.mock.calls[2];
+  expect(url).toBe('/auth/mcp/action-approval/');
+  expect(options.headers.Authorization).toBe('Bearer NEW-ACCESS');
+  expect(options.credentials).toBe('omit');
+  expect(options.body).toBe('ticket=SIGNED-ACTION&decision=allow');
+});
