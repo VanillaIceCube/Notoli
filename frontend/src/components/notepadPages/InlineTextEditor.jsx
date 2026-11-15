@@ -12,7 +12,6 @@ const textFieldSx = {
 
 const inputSx = {
   color: 'var(--secondary-color)',
-  '&:after': { borderBottomColor: 'var(--secondary-color)' },
 };
 
 export default function InlineTextEditor({

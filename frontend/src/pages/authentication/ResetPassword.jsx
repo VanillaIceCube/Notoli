@@ -64,10 +64,7 @@ export default function ResetPassword({ showSnackbar }) {
       <Typography variant="h3" sx={{ mt: 2, fontWeight: 'bold', color: 'white' }}>
         notoli
       </Typography>
-      <Paper
-        elevation={3}
-        sx={{ p: 4, pb: 2, width: '100%', background: 'var(--secondary-background-color)' }}
-      >
+      <Paper elevation={3} sx={{ p: 4, pb: 2, width: '100%' }}>
         <Box
           component="form"
           autoComplete="on"
@@ -79,7 +76,6 @@ export default function ResetPassword({ showSnackbar }) {
         >
           <TextField
             fullWidth
-            sx={{ background: 'white' }}
             label="New Password"
             type="password"
             name="new-password"
@@ -89,7 +85,6 @@ export default function ResetPassword({ showSnackbar }) {
           />
           <TextField
             fullWidth
-            sx={{ background: 'white' }}
             label="Confirm Password"
             type="password"
             name="confirm-password"
@@ -97,13 +92,7 @@ export default function ResetPassword({ showSnackbar }) {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
           />
-          <Button
-            fullWidth
-            sx={{ backgroundColor: 'var(--secondary-color)' }}
-            type="submit"
-            disabled={isSubmitting}
-            variant="contained"
-          >
+          <Button fullWidth type="submit" disabled={isSubmitting} variant="contained">
             <Typography variant="h6" align="center">
               {isSubmitting ? 'Resetting...' : 'Reset Password'}
             </Typography>

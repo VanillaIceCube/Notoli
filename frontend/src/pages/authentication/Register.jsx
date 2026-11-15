@@ -62,10 +62,7 @@ export default function Register({ showSnackbar }) {
       <Typography variant="h3" sx={{ mt: 2, fontWeight: 'bold', color: 'white' }}>
         notoli
       </Typography>
-      <Paper
-        elevation={3}
-        sx={{ p: 4, pb: 2, width: '100%', background: 'var(--secondary-background-color)' }}
-      >
+      <Paper elevation={3} sx={{ p: 4, pb: 2, width: '100%' }}>
         <Box
           component="form"
           sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
@@ -76,7 +73,6 @@ export default function Register({ showSnackbar }) {
         >
           <TextField
             fullWidth
-            sx={{ background: 'white' }}
             label="Email"
             type="email"
             value={email}
@@ -84,14 +80,12 @@ export default function Register({ showSnackbar }) {
           />
           <TextField
             fullWidth
-            sx={{ background: 'white' }}
             label="Username (optional)"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
           />
           <TextField
             fullWidth
-            sx={{ background: 'white' }}
             label="Password"
             type="password"
             value={password}
@@ -99,19 +93,12 @@ export default function Register({ showSnackbar }) {
           />
           <TextField
             fullWidth
-            sx={{ background: 'white' }}
             label="Confirm Password"
             type="password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
           />
-          <Button
-            fullWidth
-            sx={{ backgroundColor: 'var(--secondary-color)' }}
-            type="submit"
-            disabled={isSubmitting}
-            variant="contained"
-          >
+          <Button fullWidth type="submit" disabled={isSubmitting} variant="contained">
             <Typography variant="h5" align="center">
               {isSubmitting ? 'Registering...' : 'Register'}
             </Typography>

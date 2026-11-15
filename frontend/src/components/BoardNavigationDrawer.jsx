@@ -332,8 +332,6 @@ export default function BoardNavigationDrawer({
       ModalProps={{ keepMounted: true }}
       sx={{
         '& .MuiDrawer-paper': {
-          bgcolor: 'var(--secondary-background-color)',
-          color: 'var(--secondary-color)',
           borderTopLeftRadius: 15,
           borderBottomLeftRadius: 15,
         },
@@ -446,7 +444,6 @@ export default function BoardNavigationDrawer({
                                 input: {
                                   sx: {
                                     color: 'var(--secondary-color)',
-                                    '&:after': { borderBottomColor: 'var(--secondary-color)' },
                                   },
                                 },
                               }}
@@ -543,7 +540,6 @@ export default function BoardNavigationDrawer({
                       input: {
                         sx: {
                           color: 'var(--secondary-color)',
-                          '&:after': { borderBottomColor: 'var(--secondary-color)' },
                         },
                       },
                     }}
@@ -576,15 +572,6 @@ export default function BoardNavigationDrawer({
           transition: {
             onExited: () => {
               if (!tripleDotOpen) setSelectedBoard(null);
-            },
-          },
-          paper: {
-            sx: {
-              backgroundColor: 'var(--secondary-background-color)',
-              color: 'var(--secondary-color)',
-              boxShadow: 3,
-              border: '2.5px solid var(--background-color)',
-              borderRadius: 1.5,
             },
           },
         }}

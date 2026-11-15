@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { CssBaseline, ThemeProvider } from '@mui/material';
+import notoliTheme from './theme';
+import { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router';
 import AuthenticatedRoute from './components/AuthenticatedRoute';
 import Login from './pages/authentication/Login';
@@ -141,7 +143,8 @@ function App() {
   const routerBasename = import.meta.env.BASE_URL;
 
   return (
-    <React.Fragment>
+    <ThemeProvider theme={notoliTheme}>
+      <CssBaseline />
       <Router basename={routerBasename}>
         <NavigationBridge />
         <AppHeader appBarHeader={appBarHeader} setDrawerOpen={setDrawerOpen} />
@@ -183,7 +186,7 @@ function App() {
         message={snackbarMessage}
         onClose={handleSnackbarClose}
       />
-    </React.Fragment>
+    </ThemeProvider>
   );
 }
 

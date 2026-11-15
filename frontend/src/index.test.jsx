@@ -1,4 +1,5 @@
 import { act, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 const { roots } = vi.hoisted(() => ({ roots: [] }));
 
@@ -64,6 +65,19 @@ describe('application startup', () => {
     expect(app.getByRole('textbox', { name: 'Email' })).toBeVisible();
     expect(app.getByLabelText('Password')).toBeVisible();
     expect(app.getByRole('button', { name: 'Login' })).toBeEnabled();
+    const email = app.getByRole('textbox', { name: 'Email' });
+    const user = userEvent.setup();
+    await user.type(email, 'reader@example.com');
+    expect(email).toHaveFocus();
+    expect(email).toHaveValue('reader@example.com');
+    const focusedLabel = app.getByText('Email', { selector: 'label' });
+    expect(getComputedStyle(focusedLabel).color).toBe(
+      getComputedStyle(app.getByRole('button', { name: 'Login' })).backgroundColor,
+    );
+    // The shared baseline must preserve page sizing and the distinct document/control fonts.
+    expect(getComputedStyle(document.body).boxSizing).toBe('content-box');
+    expect(getComputedStyle(document.body).fontFamily).toContain('-apple-system');
+    expect(getComputedStyle(email).fontFamily).toContain('Roboto');
     expect(window.location.pathname).toBe('/login');
     expect(startupErrors).toEqual([]);
     expect(fetch).not.toHaveBeenCalled();

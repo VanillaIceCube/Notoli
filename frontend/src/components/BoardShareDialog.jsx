@@ -28,6 +28,7 @@ const userInitials = (user) => {
 };
 
 const textFieldStyles = {
+  backgroundColor: 'transparent',
   '& .MuiInputBase-root': {
     color: 'var(--secondary-color)',
     bgcolor: 'rgba(255, 255, 255, 0.22)',

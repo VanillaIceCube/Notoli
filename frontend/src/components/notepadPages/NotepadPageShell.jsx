@@ -28,7 +28,6 @@ export default function NotepadPageShell({
           pt: 1.5,
           pb: 1.5,
           width: '100%',
-          background: 'var(--secondary-background-color)',
         }}
       >
         <Box>

@@ -112,10 +112,7 @@ export default function Login({ showSnackbar }) {
       <Typography variant="h3" sx={{ mt: 2, fontWeight: 'bold', color: 'white' }}>
         notoli
       </Typography>
-      <Paper
-        elevation={3}
-        sx={{ p: 4, pb: 2, width: '100%', background: 'var(--secondary-background-color)' }}
-      >
+      <Paper elevation={3} sx={{ p: 4, pb: 2, width: '100%' }}>
         <Box
           component="form"
           autoComplete="on"
@@ -127,7 +124,6 @@ export default function Login({ showSnackbar }) {
         >
           <TextField
             fullWidth
-            sx={{ background: 'white' }}
             label="Email"
             type="email"
             name="email"
@@ -137,7 +133,6 @@ export default function Login({ showSnackbar }) {
           />
           <TextField
             fullWidth
-            sx={{ background: 'white' }}
             label="Password"
             type="password"
             name="password"
@@ -145,13 +140,7 @@ export default function Login({ showSnackbar }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button
-            fullWidth
-            sx={{ backgroundColor: 'var(--secondary-color)' }}
-            type="submit"
-            disabled={isSubmitting}
-            variant="contained"
-          >
+          <Button fullWidth type="submit" disabled={isSubmitting} variant="contained">
             <Typography variant="h5" align="center">
               {isSubmitting ? 'Logging in...' : 'Login'}
             </Typography>

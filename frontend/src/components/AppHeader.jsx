@@ -202,14 +202,7 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar
-        position="static"
-        sx={{
-          color: 'var(--secondary-background-color)',
-          background: 'var(--background-color)',
-          boxShadow: 'none',
-        }}
-      >
+      <AppBar position="static">
         <Toolbar>
           {
             // Don't render back button on the base page
@@ -247,11 +240,6 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
             slotProps={{
               paper: {
                 sx: {
-                  backgroundColor: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)',
-                  boxShadow: 3,
-                  border: '2.5px solid var(--background-color)',
-                  borderRadius: 1.5,
                   width: { xs: 320, sm: 380 },
                   maxWidth: 'calc(100vw - 24px)',
                 },
@@ -398,11 +386,6 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
             slotProps={{
               paper: {
                 sx: {
-                  backgroundColor: 'var(--secondary-background-color)',
-                  color: 'var(--secondary-color)',
-                  boxShadow: 3,
-                  border: '2.5px solid var(--background-color)',
-                  borderRadius: 1.5,
                   minWidth: 220,
                 },
               },
