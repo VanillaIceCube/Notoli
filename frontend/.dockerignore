@@ -6,3 +6,7 @@ coverage/
 # Docker configuration files
 docker/Dockerfile
 .dockerignore
+
+# Local frontend environment files
+.env
+.env.*

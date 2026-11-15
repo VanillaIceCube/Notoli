@@ -4,12 +4,21 @@ All notable changes to this project are documented in this file.
 
 ## 2026-11-14
 
+### Added
+
+- Add the author's original project story to the main README.
+
 ### Fixed
 
+- Distinguish the frontend router basename, Vite asset base and API origin in configuration guidance; retain domain-root deployment behavior.
+- Correct development dependency guidance to require an explicit container `npm ci` before restart.
 - Reject unsafe paths, symlinks and duplicate members in exported ChatGPT ZIPs, bound archive expansion, and cover hostile exports with offline regressions.
 
 ### Changed
 
+- Move frontend connection contracts into session guidance and menu/refresh behavior into board/list guidance; keep related guides as final navigation.
+- Align frontend npm commands: production builds run strict lint first and `lint:fix` applies available lint fixes.
+- Document frontend API configuration through development Compose and production build arguments, and exclude local frontend env files from Docker build contexts.
 - Rename shared frontend test support to `src/test-helpers/`, retain application and feature tests beside their implementation, and preserve application-specific helper behavior.
 - Consolidate shared frontend test setup, helpers and suites under `src/tests/`, update imports and discovery paths, and retain App, startup and feature tests beside their implementation.
 - Replace mocked frontend startup wiring checks with real React entry-point integration coverage for the signed-out login route, isolated state and blocked network access.
@@ -27,6 +36,7 @@ All notable changes to this project are documented in this file.
 - Remove the unused shared AI-review publisher error binding and synchronize the release builder without its unused origin constant to Infrastructure source `15b9bdfaf7530de4979dce0ee3cef6baffa814ac`.
 - Remove inactive frontend environment, browser-target and Watchpack settings, the obsolete Django static-storage setting, an override for the absent glob dependency, ignored React Router migration flags, and the unused starter code-font rule; keep live helpers private where no imports use their exports.
 - Remove unused Axios and eslint-config-prettier dependencies, the unused primary-color CSS token, and an uncalled login test helper.
+- Remove the frontend env example; retain `deploy/backend.env` for backend configuration.
 - Remove centralized frontend lint-configuration and theme-source suites; preserve shared support and all colocated application, component and service tests.
 - Remove the unreferenced legacy stylesheet mock from frontend test support.
 - Remove the custom frontend development entrypoint and automatic dependency reinstall; start Vite directly and install changed dependencies manually in the development container.

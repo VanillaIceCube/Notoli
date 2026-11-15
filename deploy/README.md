@@ -11,6 +11,11 @@ Production serves the frontend through the shared HTTPS gateway and publishes no
 
 ## 💻 Local Docker with `notoli.localhost`
 
+The development Compose `environment` sets the frontend API origin. Production
+uses the Docker build argument, which is compiled into the static assets; a blank
+value selects same-origin requests. Backend settings remain in `deploy/.env`,
+created from the committed `deploy/backend.env` example below.
+
 From the repository root, initialize only missing local files:
 
 ```powershell
@@ -26,10 +31,11 @@ Open `http://notoli.localhost:3000`; the backend is
 The stack mounts both source trees, runs Vite and Uvicorn autoreload, and needs
 no certificate or Nginx. Its blank-secret fallback is development-only.
 
-The frontend keeps a `node_modules` volume and refreshes it with `npm ci` after
-dependency-file changes when restarted:
+The frontend keeps a `node_modules` volume. After dependency-file changes, install
+explicitly in the running container, then restart it:
 
 ```powershell
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T frontend npm ci
 docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart frontend
 ```
 
