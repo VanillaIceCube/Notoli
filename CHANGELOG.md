@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## 2026-11-14
 
+### Added
+
+- Add the author's original project story to the main README.
+
 ### Fixed
 
 - Distinguish the frontend router basename, Vite asset base and API origin in configuration guidance; retain domain-root deployment behavior.
