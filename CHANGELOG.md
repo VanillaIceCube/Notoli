@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## 2026-11-14
 
+### Fixed
+
+- Reject unsafe paths, symlinks and duplicate members in exported ChatGPT ZIPs, bound archive expansion, and cover hostile exports with offline regressions.
+
 ### Changed
 
 - Consolidate durable documentation into existing owning READMEs, move the active CI inventory beside workflow guidance, and repair links and architecture regressions.

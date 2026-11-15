@@ -1,10 +1,12 @@
 """Behavioral coverage for updating an existing personal plugin export."""
 
 import json
+import stat
 import tempfile
 import unittest
 from pathlib import Path
-from zipfile import ZipFile
+from unittest.mock import patch
+from zipfile import ZipFile, ZipInfo
 
 from build_listing import build_listing
 
@@ -106,6 +108,71 @@ class ListingBuildTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             build_listing(self.export, self.export, "1.0.1")
         self.assertEqual(self.export.read_bytes(), before)
+
+    def test_unsafe_export_paths_are_rejected(self):
+        for name in (
+            "../outside",
+            "/absolute",
+            "C:/absolute",
+            "a/../outside",
+            "a\\outside",
+            "a/./outside",
+            "a//outside",
+            "file:stream",
+        ):
+            with self.subTest(name=name):
+                self.write_export()
+                with ZipFile(self.export, "a") as archive:
+                    entry = ZipInfo("placeholder")
+                    entry.filename = name
+                    entry.orig_filename = name
+                    archive.writestr(entry, b"untrusted")
+                self.assert_rejected()
+
+    def test_symlink_export_is_rejected(self):
+        link = ZipInfo("link")
+        link.create_system = 3
+        link.external_attr = (stat.S_IFLNK | 0o777) << 16
+        with ZipFile(self.export, "a") as archive:
+            archive.writestr(link, "../outside")
+        self.assert_rejected()
+
+    def test_case_colliding_export_paths_are_rejected(self):
+        with ZipFile(self.export, "a") as archive:
+            archive.writestr("EXISTING.TXT", b"ambiguous")
+        self.assert_rejected()
+
+    def test_normal_directory_entries_are_preserved(self):
+        with ZipFile(self.export, "a") as archive:
+            archive.writestr("nested/", b"")
+            archive.writestr("nested/file.txt", b"preserved")
+        build_listing(self.export, self.output, "1.0.1")
+        with ZipFile(self.output) as archive:
+            self.assertEqual(archive.read("nested/file.txt"), b"preserved")
+
+    def test_archive_byte_limit_is_enforced(self):
+        with patch("build_listing.MAX_ARCHIVE_BYTES", self.export.stat().st_size - 1):
+            self.assert_rejected()
+
+    def test_archive_member_count_is_bounded(self):
+        with patch("build_listing.MAX_ARCHIVE_MEMBERS", 2):
+            self.assert_rejected()
+
+    def test_archive_member_size_is_bounded(self):
+        with ZipFile(self.export, "a") as archive:
+            archive.writestr("large.txt", b"x" * 1025)
+        with patch("build_listing.MAX_MEMBER_BYTES", 1024):
+            self.assert_rejected()
+
+    def test_total_expanded_size_is_bounded(self):
+        from zipfile import ZIP_DEFLATED
+
+        self.write_export()
+        with ZipFile(self.export, "a", compression=ZIP_DEFLATED) as archive:
+            archive.writestr("one.txt", b"x" * 2000)
+            archive.writestr("two.txt", b"x" * 2000)
+        with patch("build_listing.MAX_ARCHIVE_BYTES", 3000):
+            self.assert_rejected()
 
 
 if __name__ == "__main__":
