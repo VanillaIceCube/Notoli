@@ -45,7 +45,7 @@ Client setup and branding live in [chatgpt/](#chatgpt).
 - `server.py`, `asgi.py`, `routing.py`: server factory, transport, and ASGI lifecycle.
 - `oauth.py`, `views.py`, `urls.py`: OAuth consent and connection management.
 - `config.py`, `proxy.py`: application settings and exact proxy trust.
-- `tests.py`: framework transport, authorization, and consent regressions.
+- `tests/`: profile, OAuth consent, and transport regressions grouped by behavior.
 
 ### ⚙️ Enabling a derived application
 
@@ -207,7 +207,7 @@ supplies transport and common OAuth plumbing.
 - `server.py`, `tools.py`, `schemas.py`: registered tools and typed contracts.
 - `oauth.py`, `views.py`, `urls.py`: application OAuth and consent policy.
 - `adapters.py`: integration with application services.
-- `coverage.py`, `tests.py`, `test_coverage.py`: tool and permission coverage.
+- `coverage.py`: product action dispatch; `tests/`: OAuth, permissions, sharing, product actions and transport checks.
 
 ### 🔐 Accounts and permissions
 

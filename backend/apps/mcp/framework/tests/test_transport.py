@@ -1,0 +1,152 @@
+"""Authenticated MCP transport and live grant revocation."""
+
+import unittest
+from datetime import timedelta
+
+from asgiref.sync import async_to_sync
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.core.exceptions import PermissionDenied
+from django.test import TransactionTestCase
+from django.utils import timezone
+
+from .helpers import make_application, make_token
+
+
+@unittest.skipUnless(
+    settings.MCP_ENABLED, "Run the separate MCP-enabled profile to exercise transport"
+)
+class MCPTransportTests(TransactionTestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            "protocol-user", email="protocol@example.test"
+        )
+        self.application = make_application()
+        self.token = make_token(self.user, self.application)
+
+    def test_authenticated_initialization_discovery_and_safe_fixture(self):
+        import httpx2
+        from django.core.asgi import get_asgi_application
+        from mcp.types import ToolAnnotations
+
+        from ..asgi import create_application
+        from ..server import create_server
+
+        server = create_server(
+            instructions="Isolated shared-framework protocol fixture."
+        )
+
+        @server.tool(
+            annotations=ToolAnnotations(readOnlyHint=True), structured_output=True
+        )
+        async def connection_status() -> dict[str, bool]:
+            return {"connected": True}
+
+        application = create_application(get_asgi_application(), server)
+
+        async def exercise():
+            async with application.router.lifespan_context(application):
+                async with httpx2.AsyncClient(
+                    transport=httpx2.ASGITransport(app=application),
+                    base_url=settings.MCP_BASE_URL,
+                ) as client:
+                    headers = {
+                        "Accept": "application/json, text/event-stream",
+                        "MCP-Protocol-Version": "2025-11-25",
+                    }
+                    payload = {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "tools/list",
+                        "params": {},
+                    }
+                    response = await client.post("/mcp", json=payload, headers=headers)
+                    self.assertEqual(response.status_code, 401, response.text)
+                    self.assertIn(
+                        "oauth-protected-resource/mcp",
+                        response.headers["www-authenticate"],
+                    )
+                    for bearer in ("invalid", "", self.jwt_token()):
+                        response = await client.post(
+                            "/mcp",
+                            json=payload,
+                            headers=headers | {"Authorization": f"Bearer {bearer}"},
+                        )
+                        self.assertEqual(response.status_code, 401, response.text)
+                    headers["Authorization"] = "Bearer framework-access"
+                    response = await client.post(
+                        "/mcp",
+                        headers=headers,
+                        json={
+                            "jsonrpc": "2.0",
+                            "id": 0,
+                            "method": "initialize",
+                            "params": {
+                                "protocolVersion": "2025-11-25",
+                                "capabilities": {},
+                                "clientInfo": {
+                                    "name": "framework-test",
+                                    "version": "1",
+                                },
+                            },
+                        },
+                    )
+                    self.assertEqual(response.status_code, 200, response.text)
+                    response = await client.post("/mcp", json=payload, headers=headers)
+                    self.assertEqual(response.status_code, 200, response.text)
+                    tools = response.json()["result"]["tools"]
+                    self.assertEqual(
+                        [tool["name"] for tool in tools], ["connection_status"]
+                    )
+                    self.assertTrue(tools[0]["annotations"]["readOnlyHint"])
+                    response = await client.post(
+                        "/mcp",
+                        headers=headers,
+                        json=payload
+                        | {
+                            "method": "tools/call",
+                            "params": {"name": "connection_status", "arguments": {}},
+                        },
+                    )
+                    self.assertEqual(response.status_code, 200, response.text)
+                    self.assertEqual(
+                        response.json()["result"]["structuredContent"],
+                        {"connected": True},
+                    )
+                    response = await client.post("/mcp/", headers=headers, json=payload)
+                    self.assertNotEqual(response.status_code, 200)
+
+        # Create REST JWT outside the async context; OAuth verifier must reject it.
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        jwt = str(RefreshToken.for_user(self.user).access_token)
+        self.jwt_token = lambda: jwt
+        async_to_sync(exercise)()
+
+    def test_database_revocation_scope_expiry_resource_and_inactive_user(self):
+        from ..oauth import resolve_token
+
+        for change in (
+            {"scope": ""},
+            {"expires": timezone.now() - timedelta(seconds=1)},
+            {"resource": ["https://other.example/mcp"]},
+        ):
+            with self.subTest(change=change):
+                original = {key: getattr(self.token, key) for key in change}
+                for key, value in change.items():
+                    setattr(self.token, key, value)
+                self.token.save()
+                with self.assertRaises(PermissionDenied):
+                    resolve_token("framework-access")
+                for key, value in original.items():
+                    setattr(self.token, key, value)
+                self.token.save()
+        self.user.is_active = False
+        self.user.save()
+        with self.assertRaises(PermissionDenied):
+            resolve_token("framework-access")
+        self.user.is_active = True
+        self.user.save()
+        self.token.delete()
+        with self.assertRaises(PermissionDenied):
+            resolve_token("framework-access")

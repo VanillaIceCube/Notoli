@@ -4,14 +4,14 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from rest_framework.exceptions import APIException
 
-from apps.mcp.framework.oauth import ConnectionPermissionDenied
+from apps.mcp.framework.oauth import ConnectionPermissionDenied, resolve_token
 from apps.notes.models import Board
 from apps.notes.serializers import UserSummarySerializer
 from apps.notes.views import BoardViewSet, ListViewSet, NoteViewSet
 
 from .adapters import accessible_list, item_result, page, view_for
 from .coverage import OPERATIONS, execute_feature
-from .oauth import required_scopes, resolve_token
+from .oauth import required_scopes
 
 
 def execute(raw_token, operation, **arguments):

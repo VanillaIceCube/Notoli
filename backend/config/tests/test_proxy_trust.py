@@ -1,3 +1,5 @@
+"""Exact proxy peers and private network boundaries."""
+
 from ipaddress import ip_address, ip_network
 from pathlib import Path
 
@@ -7,7 +9,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.handlers.asgi import ASGIRequest
 from django.test import SimpleTestCase, override_settings
 
-from .proxy import TrustedProxyHeadersMiddleware
+from apps.mcp.framework.proxy import TrustedProxyHeadersMiddleware
 
 
 class ProxyTrustTests(SimpleTestCase):
@@ -73,7 +75,7 @@ class ProxyTrustTests(SimpleTestCase):
                 TrustedProxyHeadersMiddleware(None, [value])
 
     def test_compose_and_nginx_enforce_the_proxy_boundary(self):
-        root = Path(__file__).resolve().parents[2]
+        root = Path(__file__).resolve().parents[3]
         compose = yaml.safe_load((root / "deploy/docker-compose.yml").read_text())
         backend = compose["services"]["backend"]
         proxy = compose["services"]["proxy"]
@@ -99,7 +101,7 @@ class ProxyTrustTests(SimpleTestCase):
             self.assertNotIn('"--forwarded-allow-ips"', dockerfile)
 
     def test_private_network_members_have_distinct_fixed_addresses(self):
-        root = Path(__file__).resolve().parents[2]
+        root = Path(__file__).resolve().parents[3]
         compose = yaml.safe_load((root / "deploy/docker-compose.yml").read_text())
         private_network = compose["networks"]["backend_private"]
         subnet = ip_network(private_network["ipam"]["config"][0]["subnet"])

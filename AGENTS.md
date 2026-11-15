@@ -143,6 +143,12 @@ Optional backend variables (defaults are used if unset):
 
 ## 🧪 Checks
 
+Keep backend tests in owning `tests/` packages with descriptive behavior-based
+`test_*.py` modules and empty `__init__.py` files. Shared fixture helpers must not
+define discoverable test cases or import test modules. Group modules and classes
+by behavior, preserve test discovery and assertions when splitting, and keep the
+canonical MCP framework tests aligned across applications.
+
 Run checks in proportion to the change, from the repository root:
 
 ```powershell
@@ -350,7 +356,7 @@ Follow the [app MCP contract](backend/apps/mcp/README.md#framework) and
 - Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for frontend checks.
 - ChatGPT listing metadata: `backend/apps/mcp/chatgpt/plugin.json` is the canonical branding source, but personal custom-MCP plugins use a separate generated compatibility manifest. Listing updates must preserve the installed plugin identity and registered app mapping; the repository no longer maintains local package or listing builders. Keep account-specific exports/build ZIPs out of Git. Listing publication is separate from Docker deployment and MCP tool refresh. Privacy/terms pages and verified publisher identity remain prerequisites for public submission. See `backend/apps/mcp/README.md`.
 - Backend migrations: `uv run --locked --project backend python backend/manage.py makemigrations` then `uv run --locked --project backend python backend/manage.py migrate`
-- Backend tests: `cd backend` then `uv run --locked python manage.py test`. The configured Django test runner scopes the fast password hasher to the test run and restores settings on exit; `DJANGO_TESTING`, command-line inspection, and imported pytest modules do not change normal password hashing.
+- Backend tests: `cd backend` then `uv run --locked python manage.py test`. Use Django's default test runner; focused tests may override password hashing within their own scope. `DJANGO_TESTING`, command-line inspection, and imported pytest modules do not change normal password hashing.
 - Sync the locked environment: `uv sync --locked --project backend`
 - Change dependencies with `uv add --project backend` / `uv remove --project backend`; commit `pyproject.toml` and `uv.lock` together.
 - Frontend deps: `cd frontend` then `npm install`

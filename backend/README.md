@@ -31,6 +31,9 @@ Uvicorn serves both REST and MCP. Django `runserver` serves REST/auth only.
 
 ## ⚙️ Configuration
 
+Production (`DJANGO_DEBUG=0`) requires an explicit nonblank `DJANGO_SECRET_KEY`.
+Static files use Django's default storage and the retained WhiteNoise middleware.
+
 Local runs load ignored `backend/.env`. The database defaults to
 `backend/db.sqlite3`; set `DJANGO_SQLITE_PATH` to use another local database.
 Use `config/settings.py` for current defaults.
@@ -69,6 +72,13 @@ Top-level routes (without any path prefix):
 Production serves these routes from the subdomain root at `https://notoli.judeandrewalaba.com`.
 
 ## 🔐 Authentication API
+
+Registration, login and reset preserve passwords exactly, including leading and
+trailing spaces. Request serializers reject malformed credential/link types with
+HTTP 400; email addresses are trimmed and normalized. Registration returns an
+explicit client error for duplicate identities and rolls back account creation,
+required onboarding and session creation together if any step fails. Recovery
+responses remain generic for valid email-shaped input.
 
 JWT auth is provided by `djangorestframework-simplejwt`.
 
@@ -160,10 +170,28 @@ Connection manifests and artwork live in
 
 ## 🧪 Checks
 
+Backend tests live in an owning `tests/` package beside each app or configuration
+module. Use descriptive `test_*.py` filenames and behavior-based test class names,
+keep `__init__.py` empty, and put shared setup/builders in fixture-only modules
+such as `helpers.py`. Helpers must not define test cases or import test modules.
+Split independent behavior groups when that makes failures easier to locate;
+keep related end-to-end scenarios together.
+
+Authentication packages share registration, login, password recovery/reset and
+recovery-privacy groups. Configuration owns production settings and email
+configuration/delivery. The canonical MCP framework has identical profile, OAuth
+and transport test modules in all three applications; app tools remain app-owned.
+
+Notes tests separate board/list APIs from item lifecycle, access and membership;
+`apps/notes/tests/test_ordering.py` covers both board-list and per-list item order.
+Authentication retains onboarding and HTTP-method coverage. Notification events
+and bulk actions, app-owned MCP tools and exact proxy trust retain their own
+groups. Notoli always enables its MCP profile.
+
 From the repository root:
 
 ```powershell
-uv run --locked --project backend python backend/manage.py test
+uv run --locked --project backend python backend/manage.py test backend
 uv run --locked --project backend ruff check backend
 uv run --locked --project backend ruff format backend --check
 uv run --locked --project backend python backend/manage.py makemigrations --check --dry-run
@@ -181,8 +209,8 @@ Declare runtime dependencies in `pyproject.toml` and test/lint tools in its
 locks. Add/remove dependencies with `uv add` / `uv remove` from `backend/`,
 and use `uv lock --upgrade-package <name>` for a deliberate upgrade. Keep
 `project.requires-python` aligned with Python 3.12 in CI and Docker.
-The test runner's fast password
-hasher applies only during tests; normal settings retain secure hashing.
+Django uses its default test runner and secure password hashing; focused tests may
+override hashing within their own test scope.
 See [Docker dependency maintenance](../deploy/README.md#development-dependency-reproducibility).
 
 ## 🚀 Production

@@ -4,9 +4,21 @@ All notable changes to this project are documented in this file.
 
 ## 2026-11-15
 
+### Fixed
+
+- Align authentication request validation, duplicate-registration handling and exact password preservation across applications; reject malformed reset credentials with HTTP 400 and roll back failed signup onboarding.
+- Require a nonblank production signing key consistently.
+
 ### Changed
 
+- Organize backend tests into owning `tests/` packages with descriptive behavior names and fixture-only helpers; separate item lifecycle, access, membership and scoped ordering while retaining onboarding, notifications, OAuth and exact proxy-trust coverage.
+- Use shared MCP routing, OAuth defaults and token validation directly, consolidating proxy checks into existing configuration tests.
 - Use Django OAuth Toolkit's built-in MCP client registration, remove custom management commands and document explicit public-client onboarding and validation behavior (#1060).
+
+### Removed
+
+- Remove the obsolete static-file storage selector while preserving current storage behavior.
+- Remove MCP/proxy compatibility wrappers and the custom test runner; use Django's default test runner.
 
 ## 2026-11-14
 

@@ -1,4 +1,4 @@
-"""Product coverage and authorization boundaries for the expanded MCP tools."""
+"""Board, list, item and notification tool actions preserve domain rules."""
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -10,9 +10,9 @@ from apps.notes.models import Board, ListNote, Note
 from apps.notes.models import List as NoteList
 from apps.notifications.models import Notification
 
-from .oauth import required_scopes
-from .tests import make_client, make_token
-from .tools import execute
+from ..oauth import required_scopes
+from ..tools import execute
+from .helpers import make_client, make_token
 
 
 class ProductToolTests(TestCase):

@@ -1,8 +1,5 @@
 """Notoli tool permissions layered over the shared OAuth lifecycle."""
 
-from apps.mcp.framework.oauth import MCPOAuthValidator
-from apps.mcp.framework.oauth import resolve_token as resolve_framework_token
-
 
 def required_scopes(operation):
     scopes = ["notoli:read"]
@@ -39,11 +36,3 @@ def required_scopes(operation):
     if operation in {"add_board_collaborator", "remove_board_collaborator"}:
         scopes.append("notoli:share")
     return scopes
-
-
-class NotoliOAuthValidator(MCPOAuthValidator):
-    pass
-
-
-def resolve_token(raw_token, scope="notoli:read"):
-    return resolve_framework_token(raw_token, scope)

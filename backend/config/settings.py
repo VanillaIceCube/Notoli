@@ -17,6 +17,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
 
+from apps.mcp.framework.config import oauth_settings
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -151,9 +153,9 @@ MCP_CONSENT_SALT = "notoli.mcp.consent"
 MCP_SERVER_FACTORY = "apps.mcp.tools.server.create_server"
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
-OAUTH2_PROVIDER = {
-    "OAUTH2_VALIDATOR_CLASS": "apps.mcp.tools.oauth.NotoliOAuthValidator",
-    "SCOPES": {
+OAUTH2_PROVIDER = oauth_settings(
+    MCP_BASE_URL,
+    {
         "notoli:read": "Read your accessible Notoli boards, lists, and items, including board owner and collaborator IDs, usernames, and email addresses",
         "notoli:write": "Add and update items in your accessible Notoli boards and lists",
         "notoli:share": "Add and remove collaborators on boards you own, granting access to every list and item in those boards",
@@ -161,32 +163,8 @@ OAUTH2_PROVIDER = {
         "notoli:notifications": "Read your activity notifications and mark them read or unread",
         "notoli:delete": "Permanently delete accessible items and lists, boards you own with all their contents, and your notifications",
     },
-    "DEFAULT_SCOPES": ["notoli:read"],
-    "PKCE_REQUIRED": True,
-    "COMPLIANT_BCP_RFC9700_PKCE_METHOD": True,
-    "COMPLIANT_BCP_RFC9700_IMPLICIT_GRANT": True,
-    "COMPLIANT_BCP_RFC9700_PASSWORD_GRANT": True,
-    "COMPLIANT_BCP_RFC9700_ACCESS_TOKEN_TRANSPORT": True,
-    "COMPLIANT_BCP_RFC9700_TOKEN_STORAGE": True,
-    "COMPLIANT_BCP_RFC9700_AUTHZ_RESPONSE_ISS": True,
-    "OIDC_ISS_ENDPOINT": MCP_BASE_URL,
-    "OAUTH2_RESPONSE_TYPES_SUPPORTED": ["code"],
-    "OAUTH2_GRANT_TYPES_SUPPORTED": ["authorization_code", "refresh_token"],
-    "OAUTH2_TOKEN_ENDPOINT_AUTH_METHODS_SUPPORTED": ["none"],
-    "ALLOWED_REDIRECT_URI_SCHEMES": ["https"],
-    "ALLOW_URI_WILDCARDS": False,
-    "REQUEST_APPROVAL_PROMPT": "force",
-    "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,
-    "AUTHORIZATION_CODE_EXPIRE_SECONDS": 120,
-    "REFRESH_TOKEN_EXPIRE_SECONDS": 30 * 24 * 3600,
-    "ROTATE_REFRESH_TOKEN": True,
-    "REFRESH_TOKEN_REUSE_PROTECTION": True,
-    "REFRESH_TOKEN_GRACE_PERIOD_SECONDS": 0,
-    "REQUIRE_FORM_ENCODED_REQUEST_BODY": True,
-}
-
-
-TEST_RUNNER = "config.test_runner.FastPasswordTestRunner"
+    MCP_REQUIRED_SCOPES,
+)
 
 
 # Database
@@ -234,7 +212,6 @@ STATIC_URL = "/static/"
 
 # Where collectstatic will put all static files in prod
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # Default primary key field type

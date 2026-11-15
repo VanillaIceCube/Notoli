@@ -8,7 +8,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
-from django.core.validators import validate_email
+from django.db import IntegrityError, transaction
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import status
@@ -20,14 +20,19 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from apps.notes.models import Board
 
-from .serializers import EmailTokenObtainPairSerializer
+from .serializers import (
+    EmailTokenObtainPairSerializer,
+    ForgotPasswordRequestSerializer,
+    RegistrationRequestSerializer,
+    ResetPasswordRequestSerializer,
+)
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
 def _build_unique_username(base_username):
-    base_username = base_username[:150]
+    base_username = (base_username or "").strip()[:150] or "user"
     candidate = base_username
     counter = 1
     while User.objects.filter(username=candidate).exists():
@@ -36,6 +41,11 @@ def _build_unique_username(base_username):
         candidate = f"{trimmed_base}{suffix}"
         counter += 1
     return candidate
+
+
+def _invalid_request(serializer):
+    message = next(iter(serializer.errors.values()))[0]
+    return Response({"error": str(message)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 def _build_password_reset_link(user):
@@ -49,26 +59,12 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get("email")
-        username = request.data.get("username")
-        password = request.data.get("password")
-
-        email = email.strip().lower() if isinstance(email, str) else None
-        username = username.strip() if isinstance(username, str) else None
-
-        if not email or not isinstance(password, str) or not password:
-            return Response(
-                {"error": "Email and password required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            validate_email(email)
-        except ValidationError:
-            return Response(
-                {"error": "Invalid email address."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = RegistrationRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return _invalid_request(serializer)
+        email = serializer.validated_data["email"]
+        username = serializer.validated_data.get("username")
+        password = serializer.validated_data["password"]
 
         if User.objects.filter(email__iexact=email).exists():
             return Response(
@@ -86,30 +82,38 @@ class RegisterView(APIView):
             base_username = email.split("@", 1)[0]
             username = _build_unique_username(base_username)
 
+        candidate_user = User(username=username, email=email)
         try:
-            validate_password(password, user=User(username=username, email=email))
+            validate_password(password, user=candidate_user)
         except ValidationError as exc:
             return Response(
                 {"error": exc.messages[0] if exc.messages else "Invalid password."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user = User.objects.create_user(
-            username=username, email=email, password=password
-        )
-        refresh = RefreshToken.for_user(user)
-        board = Board.objects.filter(owner=user).order_by("id").first()
-        return Response(
-            {
-                "message": "User created successfully.",
-                "username": user.username,
-                "email": user.email,
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "board_id": board.id if board else None,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        try:
+            # Include required user-save onboarding and session creation in the
+            # transaction, so a failed signup never leaves a partial account.
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=username, email=email, password=password
+                )
+                refresh = RefreshToken.for_user(user)
+                data = {
+                    "message": "User created successfully.",
+                    "username": user.username,
+                    "email": user.email,
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
+                }
+                board = Board.objects.filter(owner=user).order_by("id").first()
+                data["board_id"] = board.id if board else None
+        except IntegrityError:
+            return Response(
+                {"error": "Email or username already exists."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 class EmailTokenObtainPairView(TokenObtainPairView):
@@ -120,22 +124,10 @@ class ForgotPasswordView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get("email")
-        email = email.strip().lower() if isinstance(email, str) else None
-
-        if not email:
-            return Response(
-                {"error": "Email is required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            validate_email(email)
-        except ValidationError:
-            return Response(
-                {"error": "Invalid email address."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = ForgotPasswordRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return _invalid_request(serializer)
+        email = serializer.validated_data["email"]
 
         user = User.objects.filter(email__iexact=email, is_active=True).first()
         if user and user.has_usable_password():
@@ -168,22 +160,12 @@ class ResetPasswordView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        uid = request.data.get("uid")
-        token = request.data.get("token")
-        password = request.data.get("password")
-        password = password.strip() if isinstance(password, str) else password
-
-        if not uid or not token or not password:
-            return Response(
-                {"error": "uid, token, and password are required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        if not isinstance(uid, str):
-            return Response(
-                {"error": "Invalid or expired reset link."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = ResetPasswordRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return _invalid_request(serializer)
+        uid = serializer.validated_data["uid"]
+        token = serializer.validated_data["token"]
+        password = serializer.validated_data["password"]
 
         try:
             user_id = force_str(urlsafe_base64_decode(uid))
@@ -194,6 +176,7 @@ class ResetPasswordView(APIView):
             UnicodeDecodeError,
             ValueError,
             OverflowError,
+            ValidationError,
             User.DoesNotExist,
         ):
             user = None

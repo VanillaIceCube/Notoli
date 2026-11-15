@@ -18,13 +18,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
-from apps.mcp.tools.views import authorization_metadata, resource_metadata
+from apps.mcp.framework.routing import urlpatterns as mcp_urlpatterns
 
-urlpatterns = [
-    path(".well-known/oauth-authorization-server", authorization_metadata),
-    path(".well-known/oauth-protected-resource", resource_metadata),
-    path(".well-known/oauth-protected-resource/mcp", resource_metadata),
-    path("auth/mcp/", include("apps.mcp.tools.urls")),
+urlpatterns = mcp_urlpatterns() + [
     path("admin/", admin.site.urls),
     path("api/", include("apps.notes.urls")),
     path("api/", include("apps.notifications.urls")),
