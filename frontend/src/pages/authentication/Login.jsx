@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
-import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
 import { fetchBoards as fetchBoardsApi, login } from '../../services/notoliApiClient';
 import { persistAuthSession, readOkJson } from '../../services/authSession';
 import { getPreferredBoardId } from '../../services/lastBoard';

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { clearNavigate, setNavigate } from '../services/navigationService';
 
 export default function NavigationBridge() {

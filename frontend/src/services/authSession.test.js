@@ -1,4 +1,9 @@
-import { getResponseErrorMessage, persistAuthSession, readOkJson } from './authSession';
+import {
+  getResponseErrorMessage,
+  persistAuthSession,
+  readOkJson,
+  safeReadJson,
+} from './authSession';
 function makeResponse({ ok, status = 200, json }) {
   return {
     ok,
@@ -7,6 +12,55 @@ function makeResponse({ ok, status = 200, json }) {
   };
 }
 describe('authSession', () => {
+  test('handles non_field_errors and field array errors', async () => {
+    const nonField = makeResponse({
+      ok: false,
+      status: 400,
+      json: async () => ({ non_field_errors: ['Invalid credentials.'] }),
+    });
+    await expect(getResponseErrorMessage(nonField, 'fallback')).resolves.toBe(
+      'Invalid credentials.',
+    );
+
+    const fieldErr = makeResponse({
+      ok: false,
+      status: 400,
+      json: async () => ({ email: ['This field is required.'] }),
+    });
+    await expect(getResponseErrorMessage(fieldErr, 'fallback')).resolves.toBe(
+      'This field is required.',
+    );
+  });
+
+  describe('safeReadJson', () => {
+    test('returns parsed json on success', async () => {
+      const response = makeResponse({ ok: true, json: async () => ({ foo: 'bar' }) });
+      await expect(safeReadJson(response)).resolves.toEqual({ foo: 'bar' });
+    });
+
+    test('returns null when json parsing fails', async () => {
+      const response = makeResponse({
+        ok: false,
+        json: async () => {
+          throw new Error('bad json');
+        },
+      });
+      await expect(safeReadJson(response)).resolves.toBeNull();
+    });
+  });
+
+  test('when response json is an array of error strings, it extracts the first string', async () => {
+    const response = makeResponse({
+      ok: false,
+      status: 400,
+      json: async () => ['Accepted proposals cannot be deleted.'],
+    });
+
+    await expect(getResponseErrorMessage(response, 'fallback')).resolves.toBe(
+      'Accepted proposals cannot be deleted.',
+    );
+  });
+
   beforeEach(() => {
     sessionStorage.clear();
     vi.restoreAllMocks();

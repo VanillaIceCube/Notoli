@@ -6,7 +6,7 @@ import globals from 'globals';
 import testingLibrary from 'eslint-plugin-testing-library';
 
 export default [
-  { ignores: ['build/**', 'coverage/**', 'node_modules/**'] },
+  { ignores: ['dist/**', 'coverage/**', 'node_modules/**'] },
   js.configs.recommended,
   eslintReact.configs.recommended,
   reactHooks.configs.flat.recommended,

@@ -2,9 +2,9 @@ import App from './App';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { MemoryRouter } from 'react-router-dom';
-vi.mock('react-router-dom', async () => ({
-  ...(await vi.importActual('react-router-dom')),
+import { MemoryRouter } from 'react-router';
+vi.mock('react-router', async () => ({
+  ...(await vi.importActual('react-router')),
   BrowserRouter: ({ children }) => <>{children}</>,
 }));
 vi.mock('./components/AuthenticatedRoute', () => ({
@@ -49,7 +49,7 @@ vi.mock('./components/BoardHomeRedirect', () => ({
   default: () => <div>BoardHomeRedirect</div>,
 }));
 vi.mock('./pages/boards/BoardListsPage', async () => {
-  const { useNavigate } = await import('react-router-dom');
+  const { useNavigate } = await import('react-router');
   return {
     default: function MockBoardListsPage({ active }) {
       const navigate = useNavigate();

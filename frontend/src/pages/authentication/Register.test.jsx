@@ -3,12 +3,12 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-helpers/utils';
 import Register from './Register';
 import { register } from '../../services/notoliApiClient';
-import { useNavigate } from 'react-router-dom';
+import { Route, Routes, useNavigate } from 'react-router';
 vi.setConfig({
   testTimeout: 15000,
 });
-vi.mock('react-router-dom', async () => ({
-  ...(await vi.importActual('react-router-dom')),
+vi.mock('react-router', async () => ({
+  ...(await vi.importActual('react-router')),
   useNavigate: vi.fn(),
 }));
 vi.mock('../../services/notoliApiClient', () => ({
@@ -189,4 +189,39 @@ describe('Register', () => {
     expect(showSnackbar).toHaveBeenCalledWith('error', 'Validation failed.');
     consoleError.mockRestore();
   });
+  describe.each([{ name: 'Sign in now!', to: '/login', tabs: 6 }])(
+    'navigation to $to ($name)',
+    ({ name, to, tabs }) => {
+      test.each(['click', 'keyboard'])(
+        '%s follows a real link without submitting',
+        async (activation) => {
+          vi.clearAllMocks();
+          sessionStorage.clear();
+          const user = userEvent.setup();
+          const showSnackbar = vi.fn();
+          renderWithProviders(
+            <Routes>
+              <Route path="/register" element={<Register showSnackbar={showSnackbar} />} />
+              <Route path={to} element={<h1>Navigation destination</h1>} />
+            </Routes>,
+            { routeEntries: ['/register'] },
+          );
+          const link = screen.getByRole('link', { name, exact: true });
+          expect(link).toHaveAttribute('href', to);
+          if (activation === 'keyboard') {
+            for (let i = 0; i < tabs; i += 1) await user.tab();
+            expect(link).toHaveFocus();
+            await user.keyboard('{Enter}');
+          } else {
+            await user.click(link);
+          }
+          expect(
+            await screen.findByRole('heading', { name: 'Navigation destination' }),
+          ).toBeVisible();
+          expect(register).not.toHaveBeenCalled();
+          expect(showSnackbar).not.toHaveBeenCalled();
+        },
+      );
+    },
+  );
 });

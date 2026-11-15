@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-15
+
+### Fixed
+
+- Discard JWT refresh results after logout or a new login, align post-refresh session expiry, and preserve pending connection navigation.
+- Validate notification lists before rendering and retain usable error and retry controls.
+
+### Changed
+
+- Pair frontend tests with the owning source basename and extension, consolidate behavior and integration cases without losing coverage, and align applicable shared regression checks.
+- Use semantic authentication and Connected Apps links, align common frontend dependency ranges, and standardize Vite environment, router base and build-output configuration.
+
 ## 2026-11-14
 
 ### Added

@@ -1,6 +1,6 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router';
 import { renderWithProviders } from '../../test-helpers/utils';
 import AuthenticatedRoute from '../../components/AuthenticatedRoute';
 import ConnectedApps, { OAuthConsent } from './Connections';

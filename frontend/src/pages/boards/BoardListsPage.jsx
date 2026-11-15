@@ -5,7 +5,7 @@ import { Box, Button, IconButton, Typography } from '@mui/material';
 import Add from '@mui/icons-material/Add';
 import DragIndicator from '@mui/icons-material/DragIndicator';
 import MoreVert from '@mui/icons-material/MoreVert';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import InlineTextEditor from '../../components/notepadPages/InlineTextEditor';
 import NotepadPageShell from '../../components/notepadPages/NotepadPageShell';
 import NotepadRowActionMenu from '../../components/notepadPages/NotepadRowActionMenu';

@@ -20,7 +20,7 @@ import MoreVert from '@mui/icons-material/MoreVert';
 import Share from '@mui/icons-material/Share';
 import Divider from '@mui/material/Divider';
 import { getBoardId } from '../utils/Navigation';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';

@@ -1,10 +1,11 @@
+import { createElement } from 'react';
 import { waitFor } from '@testing-library/react';
 import { renderWithProviders } from '../test-helpers/utils';
 import BoardHomeRedirect from './BoardHomeRedirect';
 import { fetchBoards } from '../services/notoliApiClient';
-import { useNavigate } from 'react-router-dom';
-vi.mock('react-router-dom', async () => ({
-  ...(await vi.importActual('react-router-dom')),
+import { useNavigate } from 'react-router';
+vi.mock('react-router', async () => ({
+  ...(await vi.importActual('react-router')),
   useNavigate: vi.fn(),
 }));
 vi.mock('../services/notoliApiClient', () => ({
@@ -38,7 +39,7 @@ describe('BoardHomeRedirect', () => {
         },
       ],
     });
-    renderWithProviders(<BoardHomeRedirect />);
+    renderWithProviders(createElement(BoardHomeRedirect));
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/board/12', {
         replace: true,
@@ -63,7 +64,7 @@ describe('BoardHomeRedirect', () => {
         },
       ],
     });
-    renderWithProviders(<BoardHomeRedirect />);
+    renderWithProviders(createElement(BoardHomeRedirect));
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/board/3', {
         replace: true,

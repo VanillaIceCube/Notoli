@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-helpers/utils';
 import ForgotPassword from './ForgotPassword';
 import { forgotPassword } from '../../services/notoliApiClient';
-import { useNavigate } from 'react-router-dom';
-vi.mock('react-router-dom', async () => ({
-  ...(await vi.importActual('react-router-dom')),
+import { Route, Routes, useNavigate } from 'react-router';
+vi.mock('react-router', async () => ({
+  ...(await vi.importActual('react-router')),
   useNavigate: vi.fn(),
 }));
 vi.mock('../../services/notoliApiClient', () => ({
@@ -118,4 +118,42 @@ describe('ForgotPassword', () => {
     expect(showSnackbar).toHaveBeenCalledWith('error', 'Validation failed.');
     consoleError.mockRestore();
   });
+  describe.each([{ name: 'Back to Login', to: '/login', tabs: 3 }])(
+    'navigation to $to ($name)',
+    ({ name, to, tabs }) => {
+      test.each(['click', 'keyboard'])(
+        '%s follows a real link without submitting',
+        async (activation) => {
+          vi.clearAllMocks();
+          sessionStorage.clear();
+          const user = userEvent.setup();
+          const showSnackbar = vi.fn();
+          renderWithProviders(
+            <Routes>
+              <Route
+                path="/forgot-password"
+                element={<ForgotPassword showSnackbar={showSnackbar} />}
+              />
+              <Route path={to} element={<h1>Navigation destination</h1>} />
+            </Routes>,
+            { routeEntries: ['/forgot-password'] },
+          );
+          const link = screen.getByRole('link', { name, exact: true });
+          expect(link).toHaveAttribute('href', to);
+          if (activation === 'keyboard') {
+            for (let i = 0; i < tabs; i += 1) await user.tab();
+            expect(link).toHaveFocus();
+            await user.keyboard('{Enter}');
+          } else {
+            await user.click(link);
+          }
+          expect(
+            await screen.findByRole('heading', { name: 'Navigation destination' }),
+          ).toBeVisible();
+          expect(forgotPassword).not.toHaveBeenCalled();
+          expect(showSnackbar).not.toHaveBeenCalled();
+        },
+      );
+    },
+  );
 });

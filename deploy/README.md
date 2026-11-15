@@ -75,7 +75,7 @@ openssl req -x509 -newkey rsa:2048 -nodes \
   -subj "/CN=notoli.judeandrewalaba.com" \
   -addext "subjectAltName=DNS:notoli.judeandrewalaba.com,DNS:localhost,IP:127.0.0.1"
 docker build -t ghcr.io/vanillaicecube/notoli-backend:latest ./backend
-docker build --file frontend/docker/Dockerfile --build-arg REACT_APP_API_BASE_URL= -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend
+docker build --file frontend/docker/Dockerfile --build-arg VITE_API_BASE_URL= -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend
 docker compose -f deploy/docker-compose.yml up -d
 docker compose -f deploy/docker-compose.yml exec -T backend python manage.py migrate
 curl -k -I --resolve notoli.judeandrewalaba.com:443:127.0.0.1 https://notoli.judeandrewalaba.com/

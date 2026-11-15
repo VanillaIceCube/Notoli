@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { fetchBoards } from '../services/notoliApiClient';
 import { getPreferredBoardId } from '../services/lastBoard';
 

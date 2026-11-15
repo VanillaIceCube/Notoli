@@ -24,7 +24,7 @@ import AccountCircle from '@mui/icons-material/AccountCircle';
 import ClearIcon from '@mui/icons-material/Clear';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
 import { goBackToParent } from '../utils/Navigation';
 import { logout } from '../services/requestClient';
 import {
@@ -431,10 +431,9 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
             />
             <MenuItem
               sx={{ py: 0.5, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
-              onClick={() => {
-                setProfileAnchorEl(null);
-                navigate('/connections');
-              }}
+              component={RouterLink}
+              to="/connections"
+              onClick={() => setProfileAnchorEl(null)}
             >
               Connected Apps
             </MenuItem>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router';
 import { forgotPassword } from '../../services/notoliApiClient';
 import { readOkJson } from '../../services/authSession';
 

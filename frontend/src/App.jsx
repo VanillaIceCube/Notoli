@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router';
 import AuthenticatedRoute from './components/AuthenticatedRoute';
 import Login from './pages/authentication/Login';
 import Register from './pages/authentication/Register';
@@ -138,7 +138,7 @@ function App() {
     setSnackbarOpen(false);
   };
 
-  const routerBasename = process.env.PUBLIC_URL || '/';
+  const routerBasename = import.meta.env.BASE_URL;
 
   return (
     <React.Fragment>

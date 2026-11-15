@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router';
 import { loginPath } from '../services/authRedirect';
 
 export default function AuthenticatedRoute({ children }) {

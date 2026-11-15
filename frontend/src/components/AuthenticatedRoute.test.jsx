@@ -1,5 +1,5 @@
 import { screen } from '@testing-library/react';
-import { Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
+import { Route, Routes, useLocation, useNavigationType } from 'react-router';
 
 import AuthenticatedRoute from './AuthenticatedRoute';
 import { renderWithProviders } from '../test-helpers/utils';
