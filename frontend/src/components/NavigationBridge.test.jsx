@@ -1,4 +1,4 @@
-import { renderWithProviders } from '../test-support/utils';
+import { renderWithProviders } from '../tests/utils';
 import NavigationBridge from './NavigationBridge';
 import { navigate } from '../services/navigationService';
 const { mockNavigate } = vi.hoisted(() => ({

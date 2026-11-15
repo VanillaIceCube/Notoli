@@ -2,13 +2,9 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import ListTasksPage from './ListTasksPage';
-import { noteFixtures, boardFixtures } from '../../test-support/fixtures';
-import { collectRowStartPixels } from '../../test-support/layout';
-import {
-  createDeferred,
-  renderWithProviders,
-  waitForLoadingToFinish,
-} from '../../test-support/utils';
+import { noteFixtures, boardFixtures } from '../../tests/fixtures';
+import { collectRowStartPixels } from '../../tests/layout';
+import { createDeferred, renderWithProviders, waitForLoadingToFinish } from '../../tests/utils';
 import {
   createNote,
   deleteNote,

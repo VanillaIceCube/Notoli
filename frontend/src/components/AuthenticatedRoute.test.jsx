@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import { Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
 
 import AuthenticatedRoute from './AuthenticatedRoute';
-import { renderWithProviders } from '../test-support/utils';
+import { renderWithProviders } from '../tests/utils';
 
 function LocationDisplay() {
   const location = useLocation();

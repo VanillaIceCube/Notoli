@@ -1,5 +1,5 @@
 import { waitFor } from '@testing-library/react';
-import { renderWithProviders } from '../test-support/utils';
+import { renderWithProviders } from '../tests/utils';
 import BoardHomeRedirect from './BoardHomeRedirect';
 import { fetchBoards } from '../services/notoliApiClient';
 import { useNavigate } from 'react-router-dom';

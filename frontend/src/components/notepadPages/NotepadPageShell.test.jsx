@@ -2,7 +2,7 @@
 import { screen } from '@testing-library/react';
 
 import NotepadPageShell from './NotepadPageShell';
-import { renderWithProviders } from '../../test-support/utils';
+import { renderWithProviders } from '../../tests/utils';
 
 function renderShell(props = {}) {
   return renderWithProviders(

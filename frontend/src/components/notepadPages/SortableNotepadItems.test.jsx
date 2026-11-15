@@ -5,7 +5,7 @@ import SortableNotepadItems, {
   NOTEPAD_ITEM_FOOTPRINT_HEIGHT,
   NOTEPAD_ITEM_VERTICAL_GAP,
 } from './SortableNotepadItems';
-import { renderWithProviders } from '../../test-support/utils';
+import { renderWithProviders } from '../../tests/utils';
 const items = [
   {
     id: 1,

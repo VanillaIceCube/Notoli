@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 
 import PullToRefreshIndicator from './PullToRefreshIndicator';
-import { renderWithProviders } from '../test-support/utils';
+import { renderWithProviders } from '../tests/utils';
 
 describe('PullToRefreshIndicator', () => {
   test('when not pulling or refreshing, it does not reserve spacing or expose an active status', () => {

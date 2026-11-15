@@ -157,6 +157,10 @@ npm run format:check
 npm run build
 ```
 
+Shared frontend test setup, helpers and suites live in `frontend/src/tests/`.
+App, startup and feature tests stay beside their implementation. Vitest discovers
+`*.test.js` and `*.test.jsx`.
+
 For shared release changes, run `python deploy/check_parity.py` and
 `python -m unittest discover -s deploy/tests -v` with a disposable local/CI Docker
 daemon, plus all applicable consumer suites. Never test against production.

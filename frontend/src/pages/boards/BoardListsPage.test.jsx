@@ -1,13 +1,9 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import BoardListsPage from './BoardListsPage';
-import { listFixtures, boardFixtures } from '../../test-support/fixtures';
-import { collectRowStartPixels } from '../../test-support/layout';
-import {
-  createDeferred,
-  renderWithProviders,
-  waitForLoadingToFinish,
-} from '../../test-support/utils';
+import { listFixtures, boardFixtures } from '../../tests/fixtures';
+import { collectRowStartPixels } from '../../tests/layout';
+import { createDeferred, renderWithProviders, waitForLoadingToFinish } from '../../tests/utils';
 import {
   createList,
   deleteList,
