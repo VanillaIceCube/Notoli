@@ -1,78 +1,63 @@
 # AGENTS.md
 
-Production release ownership: use the [app-only release/recovery guide](deploy/production/README.md).
-Common release code/tests and workflow stages are pinned to the Infrastructure
-release standard. Update the shared source, then synchronize both applications;
-CI's parity check rejects independent vendor edits. App policy lives in
-`deploy/production/app.json`; preserve its intentional network/readiness differences.
+## 🧭 Ownership and shared rollout
 
-Branch ownership: follow the main-first policy in
-[FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262)
-and [Notoli #975](https://github.com/VanillaIceCube/Notoli/issues/975).
-Implement and review source through PRs targeting `main`, then promote its exact reviewed source
-through an `env-prod` PR with existing review and CI gates. Exceptional deployment
-iteration requires explicit owner authorization and must return promptly through
-a reviewed `main` PR before the next promotion. History reconciliation alone
-does not authorize deployment. Intentional release lag is not source drift.
-Notoli owns its MCP OAuth issuer, consent, grants and tools. The abandoned central
-issuer migration (#973) is not a deployment prerequisite; no YNAB or shared
-introspection service is required. Preserve the existing Notoli MCP connection.
+FullStackTemplate owns reusable application engineering and the canonical MCP
+Python framework. Infrastructure owns shared ingress, host operations and the
+versioned application release engine. Each application owns its domain behavior,
+credentials, OAuth issuer, consent, permissions and MCP tools; do not introduce a
+shared authorization service, cross-application account mapping or YNAB dependency.
 
+Follow the [shared rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/docs/SHARED-ROLLOUT-POLICY.md)
+for reusable framework, automation, test or security changes. One canonical
+FullStackTemplate parent must inventory all four repositories as required,
+not applicable, already satisfied or explicitly deferred with reasons and evidence.
+Infrastructure-owned deployment/host changes use an Infrastructure parent with
+linked downstream work; do not relocate source ownership.
+The parent is complete only after required downstream adoptions are merged and
+verified, or explicitly deferred with an owner, tracking issue and acceptance.
+Record final-head/main checks and exact PR/commit/evidence links; template-only
+success is insufficient. Preserve active PRs, issue history, production controls
+and non-triggering labels when consolidating work.
 
-This repo uses manual setup steps so Codex does not assume Django or Node are installed.
-Follow one of the setup paths below before running the app.
+## 📚 Documentation ownership
 
-Documentation: When you change setup, routing, env vars, or deploy steps, update `AGENTS.md`.
-Also update the relevant README(s):
-- Root overview: `README.md`
-- Backend/API/auth: `backend/README.md`
-- Frontend/routing/API base URL: `frontend/README.md`
-- Deployment/Docker/Nginx: `deploy/README.md`
-- CI/CD, Dependabot, workflows: `.github/README.md`
-Also update `CHANGELOG.md`.
+The main README introduces the repository. Keep setup, commands, configuration,
+and maintenance details in the owning folder README and its linked references.
+Use consistent headings: 🧭 Structure, 💻 Local development, ⚙️ Configuration,
+🧪 Checks, 🔌 MCP integration, and 📚 Reference where applicable.
+See the [documentation index](docs/README.md) for scripts, tests, and other guides.
+Keep this file current when its commands or constraints change, and update the
+owning README/reference when setup, routing, environment, deployment or CI changes.
+Record user-visible or operational changes in `CHANGELOG.md`.
 
-GitHub security-alert aggregation: The daily/manual CodeQL and Dependabot aggregation workflows require the `ROBOCOP_OPENAI_API_KEY`, `ROBOCOP_PRIVATE_KEY`, and `SECURITY_ALERTS_TOKEN` secrets; the `ROBOCOP_APP_ID`, `OPENAI_REVIEWERS_PROJECT_ID`, and `SECURITY_ALERTS_PROJECT_ID` repository variables; and a RoboCop installation with `Issues: write`, `Code scanning alerts: read`, and `Dependabot alerts: read`. RoboCop's short-lived token reads alerts and authors every issue mutation, while `SECURITY_ALERTS_TOKEN` is isolated to personal GitHub Project v2 synchronization. Keep their field/permission setup and fail-closed credential separation documented in `.github/README.md` when changing these workflows.
+GitHub setup belongs in [.github/README.md](.github/README.md), workflow behavior
+in [.github/workflows/README.md](.github/workflows/README.md), and the shared
+reviewer/action contract in [.github/actions/README.md](.github/actions/README.md).
 
-GitHub AI PR reviews: The three persona workflows require `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, `ROBOCOP_OPENAI_API_KEY`, `OPENAI_REVIEWERS_PROJECT_ID`, and separate GitHub App credentials for RoboCop, Lint Eastwood, and Obi-Wan Code-nobi. Keep the app IDs, private-key secrets, permissions, trigger policy, and failure behavior documented in `.github/README.md` when changing these workflows.
+Application setup/API/authentication belongs in [backend/README.md](backend/README.md),
+frontend routing/configuration/style in [frontend/README.md](frontend/README.md),
+and local Docker/deployment setup in [deploy/README.md](deploy/README.md).
 
-GitHub Dependabot reviews: All three personas run for same-repository Dependabot PRs; forks remain excluded and Dependabot lint auto-fixes remain disabled. Store `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, `ROBOCOP_OPENAI_API_KEY`, and the three reviewer private-key secrets in both Actions and Dependabot. Semver-major updates require Obi-Wan's complete, primary-source major-upgrade brief; web search is enabled only for that review type. Preserve visible failures for missing credentials, incomplete briefs, request-changes verdicts, and oversized diffs for every persona. The shared diff budget is 512 KiB, matching MacroMapper; keep dependency-usage loop fixes coordinated with #890. See `.github/README.md` for evidence limits and the remaining branch-policy work in #656.
+## 📝 Changelog format
 
-GitHub branch protection: Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs listed in `.github/README.md`. Do not require the standalone `CodeQL` Code Scanning results context: documentation-only PRs skip all analyzers and never emit it. Preserve the scope and analyzer requirements when editing or recreating the main ruleset; skipped analyzer jobs satisfy required checks, while detector or analyzer failures block merging.
+Keep the single `# Changelog` title and established introduction at the top;
+never place entries above them. Use newest-first `## YYYY-MM-DD` sections,
+reusing the existing date instead of creating a duplicate. Within each date,
+use only nonempty `### Added`, `### Fixed`, `### Changed`, `### Removed` groups,
+in that order, with no duplicate categories and entries filed under the correct
+group. Use `- ` bullets and one blank line around headings. Preserve substantive
+history and valid UTF-8 text when editing or merging entries.
 
-GitHub AI merge gates: Main also requires `AI Code Review / Obi-Wan Code-nobi code review`, `AI Build Sheriff Review / Lint Eastwood build sheriff review`, and `AI Security Review / RoboCop security review`. Preserve the existing 14 scanner/lint/test requirements and all other ruleset settings. Reviewer `REQUEST_CHANGES` and unavailable/invalid output fail; valid `APPROVE`/`COMMENT` pass. Keep same-repository human/Dependabot eligibility and fork secret isolation; run both publisher test files and Actionlint after workflow changes. The read-only `verify-gates.js` audit requires actual successful reviewer results, including after cancelled or skipped runs. See `.github/README.md` and `.github/review-gating-evidence.json`.
+## 💻 Local development
 
-GitHub dependency-review evidence: Keep full dependency-change JSON in the `dependency-review-evidence` artifact, pass it through a file instead of environment variables, and bound the report sent to RoboCop to 16 KiB plus summary metadata. Large lockfile migrations can exceed Linux's per-environment-variable limit. The independent gate must still fail for every non-success review outcome; report truncation must disclose omitted entries and never change the verdict.
+Use manual setup; do not assume Django or Node dependencies are installed.
+Use Python 3.12 in an isolated environment and the Node version range in
+`frontend/package.json`. The backend README also provides a direct pip setup.
+Uvicorn serves REST and MCP; Django `runserver` serves REST/auth only.
 
-## Changelog format
-When updating `CHANGELOG.md`, add a new dated section at the top and group entries under:
-- `### Added`
-- `### Fixed`
-- `### Changed`
-- `### Removed`
-Omit any empty groups (do not include a heading if there are no entries for it).
-Keep headings in that order and ensure each entry is filed under the correct group.
+### Codex cloud environment
 
-Template:
-
-```md
-## YYYY-MM-DD
-### Added
-- ...
-### Fixed
-- ...
-### Changed
-- ...
-### Removed
-- ...
-```
-
-Infra: Production runs behind Cloudflare (DNS/proxy) on a DigitalOcean VM. If you change domains, paths, or add new backend routes, also review:
-- Cloudflare DNS/proxy settings and any Redirect/WAF/Caching rules
-- Production gateway/vhosts: the Infrastructure repository; `deploy/nginx-proxy.conf` is local/legacy-only.
-- Deploy-time env/vars: `DJANGO_ALLOWED_HOSTS`, `DJANGO_CORS_ALLOWED_ORIGINS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `REACT_APP_API_BASE_URL`
-  - Password reset mail vars: `DJANGO_FRONTEND_BASE_URL`, `DJANGO_EMAIL_BACKEND`, `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_KEY`, `DJANGO_EMAIL_TIMEOUT`, `DJANGO_DEFAULT_FROM_EMAIL`
-
-## Codex cloud environment
 Use this description in the Codex environment settings:
 
 ```text
@@ -96,7 +81,8 @@ npm ci
 
 Use the same script as the Codex maintenance script so cached containers refresh backend and frontend dependencies after checkout.
 
-## Setup (local dev with Conda)
+### Conda setup
+
 1) Create or update the Conda environment:
    - create: `conda env create -f backend/environment.yml`
    - update: `conda env update --file backend/environment.yml --prune`
@@ -104,34 +90,17 @@ Use the same script as the Codex maintenance script so cached containers refresh
 3) Optional backend `.env` for local non-Docker runs:
    - `backend/.env` is auto-loaded by Django settings (`python-dotenv`).
    - Add `DJANGO_*` keys there if you don't want to set shell vars manually.
-4) Optional env vars (defaults are used if unset):
-   - `DJANGO_SECRET_KEY` (required when `DJANGO_DEBUG=0`; debug runs generate a temporary random key if unset/blank, so set a stable local key to retain sessions across restarts)
-   - `DJANGO_DEBUG` (default: `1`)
-   - `DJANGO_SQLITE_PATH` (default: `backend/db.sqlite3`)
-   - `DJANGO_ALLOWED_HOSTS` (comma-separated)
-   - `DJANGO_CORS_ALLOWED_ORIGINS` (comma-separated)
-   - `DJANGO_CSRF_TRUSTED_ORIGINS` (comma-separated)
-   - `DJANGO_FRONTEND_BASE_URL` (default: `http://localhost:3000`; used in password-reset email links)
-   - `DJANGO_MCP_BASE_URL` (origin only, no path; defaults to `http://localhost:8000` in debug or `https://notoli.judeandrewalaba.com` in production; OAuth issuer and MCP resource base)
-   - `DJANGO_TRUSTED_PROXY_IPS` (individual proxy IPs only; default empty; production Compose sets Nginx's private address `172.30.88.2`; never use wildcards or CIDRs)
-   - `DJANGO_EMAIL_BACKEND` (default: `django.core.mail.backends.console.EmailBackend`)
-   - `DJANGO_EMAIL_HOST` (default: `smtp.resend.com`)
-   - `DJANGO_EMAIL_PORT` (default: `587`)
-   - `DJANGO_EMAIL_USE_TLS` (default: `1`)
-   - `DJANGO_EMAIL_HOST_USER` (default: `resend`)
-   - `DJANGO_EMAIL_HOST_KEY` (Resend API key)
-   - `DJANGO_EMAIL_TIMEOUT` (default: `10`)
-   - `DJANGO_DEFAULT_FROM_EMAIL` (default: `notoli@example.com`)
-5) Run backend migrations: `python backend/manage.py migrate`
-6) Start backend including MCP: `cd backend` then `python -m uvicorn app.asgi:application --port 8000 --reload --no-proxy-headers` (Django `runserver` serves only REST/auth, not `/mcp`). Return to the repo root for the frontend steps.
-7) Frontend setup:
+4) Run backend migrations: `python backend/manage.py migrate`
+5) Start backend including MCP: `cd backend` then `python -m uvicorn app.asgi:application --port 8000 --reload --no-proxy-headers` (Django `runserver` serves only REST/auth, not `/mcp`). Return to the repo root for the frontend steps.
+6) Frontend setup:
    - `cd frontend`
    - `npm install`
    - Optional: set `REACT_APP_API_BASE_URL` (default: `http://localhost:8000`)
      - For production builds, leave this blank/unset for relative `/api/...` calls on `https://notoli.judeandrewalaba.com`
    - `npm start`
 
-## Setup (Docker)
+### Docker setup
+
 Use the [local Docker guide](deploy/README.md) for hot reload at
 `notoli.localhost` and optional standalone HTTPS. Initialize only missing local
 env/database files; never truncate an existing SQLite file. Development Compose
@@ -144,7 +113,96 @@ Do not use them on the shared production host. The
 [production guide](deploy/production/README.md) is the sole app release/recovery
 procedure; Infrastructure owns gateway, certificates and host routing.
 
-## Production Routing Notes
+## ⚙️ Configuration
+
+Optional backend variables (defaults are used if unset):
+
+- `DJANGO_SECRET_KEY` (required when `DJANGO_DEBUG=0`; debug runs generate a temporary random key if unset/blank, so set a stable local key to retain sessions across restarts)
+- `DJANGO_DEBUG` (default: `1`)
+- `DJANGO_SQLITE_PATH` (default: `backend/db.sqlite3`)
+- `DJANGO_ALLOWED_HOSTS` (comma-separated)
+- `DJANGO_CORS_ALLOWED_ORIGINS` (comma-separated)
+- `DJANGO_CSRF_TRUSTED_ORIGINS` (comma-separated)
+- `DJANGO_FRONTEND_BASE_URL` (default: `http://localhost:3000`; used in password-reset email links)
+- `DJANGO_MCP_BASE_URL` (origin only, no path; defaults to `http://localhost:8000` in debug or `https://notoli.judeandrewalaba.com` in production; OAuth issuer and MCP resource base)
+- `DJANGO_TRUSTED_PROXY_IPS` (individual proxy IPs only; default empty; production Compose sets Nginx's private address `172.30.88.2`; never use wildcards or CIDRs)
+- `DJANGO_EMAIL_BACKEND` (default: `django.core.mail.backends.console.EmailBackend`)
+- `DJANGO_EMAIL_HOST` (default: `smtp.resend.com`)
+- `DJANGO_EMAIL_PORT` (default: `587`)
+- `DJANGO_EMAIL_USE_TLS` (default: `1`)
+- `DJANGO_EMAIL_HOST_USER` (default: `resend`)
+- `DJANGO_EMAIL_HOST_KEY` (Resend API key)
+- `DJANGO_EMAIL_TIMEOUT` (default: `10`)
+- `DJANGO_DEFAULT_FROM_EMAIL` (default: `notoli@example.com`)
+
+## 🧪 Checks
+
+Run checks in proportion to the change, from the repository root:
+
+```powershell
+python backend/manage.py test backend
+ruff check backend
+ruff format backend --check
+```
+
+From `frontend/`:
+
+```powershell
+npm test
+npm run lint:strict
+npm run format:check
+npm run build
+```
+
+For browser checks, install backend requirements in an isolated Python environment,
+then run `npx playwright install chromium` and `npm run test:e2e` from `frontend/`.
+Ports 8001/3001 must be free. Preserve disposable SQLite/file mail, synthetic
+accounts and isolation from developer dotenv files and databases; do not use real
+accounts, external email or paid AI calls. Follow `frontend/README.md` for the
+configured test pools and browser evidence limits.
+
+For shared release changes, run `python deploy/check_parity.py` and
+`python -m unittest discover -s deploy/tests -v` with a disposable local/CI Docker
+daemon, plus all applicable consumer suites. Never test against production.
+
+## 🚀 Production
+
+Ordinary changes merge through reviewed `main` before promoting an exact reviewed
+source tree through the repository's existing `env-prod` process. Preserve all
+required CI, reviews, owner authorization and recovery gates. Explicitly
+owner-authorized deployment experiments must return promptly to `main` through
+review before the next ordinary promotion. Preserve both histories and newer main
+work; never reset or force-push to manufacture parity. Intentional release lag is
+allowed while prerequisites or acceptance remain unfinished. History reconciliation
+does not authorize deployment, and an absent production branch is not a reason
+to create one. Follow the [main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/docs/SHARED-ROLLOUT-POLICY.md#main-first-releases).
+
+Common release code, tests, checker and workflow are owned by Infrastructure.
+Change `app-release/v1` at the source, regenerate its manifest, then synchronize
+all consumers to the same immutable source commit. Application repositories track
+that source in `deploy/shared-source.json`; never edit only a vendored copy.
+Preserve app-specific Compose, network/readiness policy, immutable image digests,
+SQLite capture/recovery and explicit rollback. Keep shared ingress/certificates
+and host operations within their separately authorized Infrastructure scope.
+
+Use the [app-only release/recovery guide](deploy/production/README.md).
+`deploy/production/app.json` owns the app's intentional network/readiness policy.
+Review Infrastructure gateway/vhosts, Cloudflare DNS/proxy/Redirect/WAF/Caching
+settings and allowlist/base-URL variables when domains or routes change.
+Retain prior release images and matched private recovery data; no host-wide Docker
+pruning. Cleanup requires the host operator to review disk usage and select unused
+app images explicitly. Releases manage only the app's backend/frontend; local
+`deploy/docker-compose.yml` and `deploy/nginx-proxy.conf` are local/legacy-only.
+
+Preserve branch ownership recorded in
+[FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262)
+and [Notoli #975](https://github.com/VanillaIceCube/Notoli/issues/975).
+Production uses only the app release/recovery procedure; Infrastructure owns
+Cloudflare, certificates, gateway and host routing under its separately approved
+operator plan.
+
+### Routes and authentication
+
 Notoli runs at the subdomain root. Backend URLs use no configurable path prefix,
 and Django static assets use `/static/`.
 
@@ -167,7 +225,7 @@ and Django static assets use `/static/`.
   - Authenticated React integration routes: `/connections/authorize` (OAuth consent) and `/connections` (Connected Apps; also in the profile menu).
 - Navigation utilities accept `/board/` and `/boards/` inputs, strip query/fragment suffixes and a trailing slash, and ignore invalid paths or navigators. Public React routes and generated links use singular `/board/`; helper compatibility does not add a plural route.
 - Cloudflare, certificate and gateway changes belong to the separately approved
-  Infrastructure operator plan; see the [production guide](deploy/production/README.md#chatgpt-mcp-deployment).
+  Infrastructure operator plan; see the [production guide](deploy/production/README.md).
 - Required env vars for the subdomain backend:
   - `DJANGO_ALLOWED_HOSTS=notoli.judeandrewalaba.com`
   - `DJANGO_CORS_ALLOWED_ORIGINS=https://notoli.judeandrewalaba.com`
@@ -184,17 +242,109 @@ and Django static assets use `/static/`.
     - `POST /auth/forgot-password/` accepts `email` and always returns a generic success message.
     - `POST /auth/reset-password/` accepts `uid`, `token`, and `password`.
 
-## Maintenance
-- Deployments must not run host-wide Docker pruning. Retain prior release images for rollback; cleanup requires a host operator to review disk usage and explicitly select unused app images. Production releases use immutable digests and manage only Notoli's backend/frontend through `deploy/production/release.py`. Shared ingress/certificates belong to the infrastructure repository under approved architecture v2. See `deploy/production/README.md` and `.github/README.md`.
-- Frontend builds use Vite and tests use Vitest/jsdom. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite explicitly maps the existing `REACT_APP_API_BASE_URL`/`PUBLIC_URL` settings, keeps port 3000 and `build/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
-- Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for the browser baseline.
-- ChatGPT listing metadata: `backend/app_mcp/chatgpt/plugin.json` is the canonical branding source, but personal custom-MCP plugins use a separate generated compatibility manifest. Download the installed plugin ZIP and use `backend/app_mcp/chatgpt/build_listing.py` to apply branding while preserving its exported name and `.app.json`; upload a new version to the same plugin. Keep account-specific exports/build ZIPs out of Git. Listing publication is separate from Docker deployment and MCP tool refresh. Privacy/terms pages and verified publisher identity remain prerequisites for public submission. See `backend/app_mcp/chatgpt/README.md`.
+## 🤖 GitHub automation
+
+Preserve existing required checks, scanner/lint/test gates and reviewer budgets.
+Eligible same-repository human and Dependabot PRs retain their reviewers; forks
+remain excluded from secret-bearing reviews. Keep reviewer identities and
+serialized writers separate, validated optional `AI_REVIEW_*` settings aligned,
+and Dependabot lint auto-fixes disabled. External GitHub Actions use immutable
+commit SHAs with version comments. Workflow updates do not authorize deployment.
+
+The shared publisher fails after every `REQUEST_CHANGES`, including repeated or
+unchanged verdicts; valid `APPROVE`/`COMMENT` pass and unavailable/invalid output
+fails. Missing credentials, incomplete required major-upgrade briefs and oversized
+diffs must fail visibly. The shared diff budget is 512 KiB. Obi-Wan's semver-major
+Dependabot brief uses complete primary-source evidence; web search remains limited
+to that review path. Run the repository's publisher regression tests and
+Actionlint when changing this contract. Where used, the read-only `verify-gates.js` audit requires actual
+successful reviewer results, including after cancelled or skipped runs.
+
+Dependency review retains full JSON in the `dependency-review-evidence` artifact,
+passes it through a file rather than environment variables, and limits RoboCop's
+report to 16 KiB plus summary metadata. Disclose omitted entries; bounded reports
+must not change the independent gate's non-success verdict. Missing evidence
+fails. Preserve CodeQL scope outputs, full default-branch coverage and RoboCop
+baseline evidence; concurrent security-alert closure requires verified final state.
+
+Secret-dependent workflows fail visibly when credentials are unavailable.
+RoboCop's short-lived App token reads alerts and authors issue mutations;
+`SECURITY_ALERTS_TOKEN` is isolated to personal GitHub Project v2 synchronization.
+Keep App IDs/private keys, least-privilege permissions, trigger policy and field
+setup documented in `.github/README.md`. Security-alert variables resolve in the
+three caller workflows, not local composite metadata; pass explicit model, effort
+and token inputs. Run `.github/actions/custom-regressions/security-alert-contract.test.js`
+after changes; actual loading acceptance requires fresh controlled dispatches on
+corrected main. Preserve applicable bounded malware review and documented
+coverage decisions. Maintain CI architecture diagrams and regenerate
+`docs/CI-CD-SOURCE-INVENTORY.json` with `python scripts/ci_architecture.py` after
+workflow edits. Promotion summaries are informational.
+
+Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs
+listed in `.github/README.md`; do not require the standalone `CodeQL` Code
+Scanning results context. Skipped analyzers satisfy checks for documentation-only
+PRs; detector/analyzer failures block merging. Main also requires
+`AI Code Review / Obi-Wan Code-nobi code review`,
+`AI Build Sheriff Review / Lint Eastwood build sheriff review`, and
+`AI Security Review / RoboCop security review`. Preserve the existing 14
+scanner/lint/test requirements and all other ruleset settings; see
+`.github/review-gating-evidence.json`. Run both publisher test files when changing
+the reviewer contract. Keep dependency-usage loop fixes coordinated
+with #890 and remaining branch-policy work in #656. Batch 2 controls and Python
+malware coverage remain documented in `.github/README.md` and
+[the Python malware decision](docs/PYTHON-MALWARE-DECISION.md).
+
+Security-alert aggregation requires `ROBOCOP_OPENAI_API_KEY`,
+`ROBOCOP_PRIVATE_KEY`, `SECURITY_ALERTS_TOKEN`, `ROBOCOP_APP_ID`,
+`OPENAI_REVIEWERS_PROJECT_ID` and `SECURITY_ALERTS_PROJECT_ID`, with RoboCop
+`Issues: write`, `Code scanning alerts: read` and `Dependabot alerts: read`.
+Preserve its fail-closed credential separation and documented field setup.
+
+## 🔑 OpenAI reviewer isolation
+
+Use `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, and
+`ROBOCOP_OPENAI_API_KEY` for their respective reviewers; RoboCop also owns
+all security-alert model calls. `OPENAI_REVIEWERS_PROJECT_ID` identifies this
+repository's reviewer project. Keep credentials separate across repositories
+and application environments, preserve visible missing-key failures, and follow
+the credential ownership and cutover verification in `.github/README.md`.
+Store the three reviewer OpenAI keys and three reviewer App private keys in both
+Actions and Dependabot. Keep production, application, SSH and Project-token
+secrets outside Dependabot. A human PR smoke test does not prove Dependabot access.
+
+Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-alert
+grouping. Preserve each reviewer's key/project isolation, budgets and blocking
+gates. Application AI model selection remains app-owned.
+
+## 🔌 MCP integration
+
+Shared MCP framework changes originate in FullStackTemplate's canonical Python
+package; synchronize consumer hashes and pins. Derived applications own enablement,
+registries, scopes and business tools. Infrastructure supplies ordinary gateway
+routing and its optional MCP contract. Preserve existing Notoli credentials,
+scopes, tool permissions, connection and exact proxy trust. The retired central
+issuer is not a deployment prerequisite. Advertise an app service only after its
+own registry, OAuth and readiness checks pass; framework adoption alone does not
+authorize activation, client registration, owner consent or plugin installation.
+
+Notoli owns its OAuth issuer, consent, grants and tools. Preserve its existing
+connection; the abandoned central issuer migration (#973) is not a prerequisite.
+Follow the [app MCP contract](backend/app_mcp/README.md) and
+[tool/listing guide](backend/app_mcp/chatgpt/README.md).
+
 - MCP review regressions: Connected Apps must include the current user's unexpired grants before token exchange, exclude expired/foreign grants, and deduplicate apps across grants/tokens. Read consent must explicitly disclose owner/collaborator IDs, usernames, and emails. The shared REST/MCP collaborator resolver must reject multiple matching identities before membership or notification writes; never choose a recipient with `.first()`.
 - MCP deployment: install requirements, apply Django OAuth Toolkit's supplied migrations with `migrate`, and run `python manage.py check --deploy` under production settings. Serve `app.asgi:application` using Uvicorn with `--no-proxy-headers` (one worker for SQLite); WSGI does not serve MCP. Production publishes no frontend or backend host port. The gateway reaches the frontend through `notoli_default`. Only Nginx shares `backend_private` with the backend (`172.30.88.0/29`, Nginx `172.30.88.2`, backend `172.30.88.3`); `backend_egress` is backend-only for outbound email. ASGI accepts forwarded scheme/client only from the configured exact proxy IP, strips all other forwarded metadata, and Django ignores forwarded host/proto headers. If changing the subnet, update IPAM, both fixed IPs, and trusted IP together, then recreate services.
 - Register the predefined public ChatGPT OAuth client once: `python manage.py register_mcp_client --redirect-uri "<exact ChatGPT callback URI>"`. Copy the callback from ChatGPT's management page; use S256 PKCE and token auth method `none`. No client secret, password grant, dynamic registration, or unverified OIDC email claims are exposed. Existing registrations must be edited explicitly in Django admin.
 - MCP product coverage: 31 explicit tools cover boards, lists, items (including board-only items), ordering, membership, sharing, and notifications. `notoli:read` includes board-scoped owner/collaborator discovery; `notoli:write` permits item creation/edits; `notoli:share` permits owner-only collaborator add/remove; `notoli:organize` permits board/list creation/edits, order, and list membership; `notoli:notifications` permits recipient-only activity reads/read flags; `notoli:delete` permits permanent deletion (notification deletion also needs notifications). Sharing covers all lists/items in a board. Delete tools require `confirm: true` after explaining cascade impact; this is a caller assertion, not independent human verification. Arrays are capped at 1000 IDs, and reordering requires the complete current set. Preserve REST validation, owner checks, live membership checks, immutable boards, and notifications via shared services. Existing connections must reconnect for new scopes; refresh cannot escalate. Keep metadata/challenges aligned. No raw HTTP, global user directory, ownership transfer, or credential/admin tools are exposed. Full catalog/evaluations: `backend/app_mcp/chatgpt/README.md`.
 - Browser `GET /auth/mcp/authorize/` redirects to React `/connections/authorize` using `DJANGO_FRONTEND_BASE_URL` and the original query. React reuses the existing JWT login (no second Django session). JSON GET consent and POST ticket/decision require a verified JWT header; signed tickets bind the displayed request to the account for 10 minutes. Allow/Cancel returns Django's validated callback URL. React `/connections` calls JWT-only `GET/POST /auth/mcp/connections/` to list/revoke the current user's tokens and pending grants. Cookies and posted user IDs cannot authorize these endpoints. Keep JWTs out of URLs and retain PKCE/resource/scope checks in Django. Schedule token cleanup only through the approved production maintenance plan; keep access/refresh tokens, consent tickets, and authorization codes out of logs.
 - When changing MCP routes or the issuer, review Cloudflare Redirect/WAF/Caching rules for `/mcp`, `/.well-known/*`, and `/auth/mcp/*`: no interactive challenges or path rewriting for MCP/discovery, no caching of authenticated responses, and rate limits for login/token endpoints. Existing DNS and Full (strict) TLS are reused. Details and connection steps: `deploy/production/README.md` and `backend/app_mcp/chatgpt/README.md`.
+- MCP HTTP protocol tests use the directly pinned `httpx2` client in `backend/requirements.txt`; keep its pin compatible with the MCP SDK and update the Conda environment through the existing pip requirements path.
+
+## 🧩 Repository-specific contracts
+
+- Frontend builds use Vite and tests use Vitest/jsdom. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite explicitly maps the existing `REACT_APP_API_BASE_URL`/`PUBLIC_URL` settings, keeps port 3000 and `build/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
+- Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for the browser baseline.
+- ChatGPT listing metadata: `backend/app_mcp/chatgpt/plugin.json` is the canonical branding source, but personal custom-MCP plugins use a separate generated compatibility manifest. Download the installed plugin ZIP and use `backend/app_mcp/chatgpt/build_listing.py` to apply branding while preserving its exported name and `.app.json`; upload a new version to the same plugin. Keep account-specific exports/build ZIPs out of Git. Listing publication is separate from Docker deployment and MCP tool refresh. Privacy/terms pages and verified publisher identity remain prerequisites for public submission. See `backend/app_mcp/chatgpt/README.md`.
 - Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
 - Backend tests: `cd backend` then `python manage.py test`. The configured Django test runner scopes the fast password hasher to the test run and restores settings on exit; `DJANGO_TESTING`, command-line inspection, and imported pytest modules do not change normal password hashing.
 - Update Conda env: `conda env update --file backend/environment.yml --prune`
@@ -203,66 +353,10 @@ and Django static assets use `/static/`.
 - Frontend deps: `cd frontend` then `npm install`
 - Note: pip dependencies are installed via the `pip:` section in `environment.yml`
   and resolved from `requirements.txt` (never via conda).
-- MCP HTTP protocol tests use the directly pinned `httpx2` client in `backend/requirements.txt`; keep its pin compatible with the MCP SDK and update the Conda environment through the existing pip requirements path.
 
-External GitHub Actions use immutable commit SHAs with version comments.
-Keep that convention when updating workflows or composite actions; preserve
-review/scanner failure gates and do not treat action updates as deployment approval.
+Vitest projects isolate pure Node files from VM DOM forks; do not override the configured pool
+for timing. Browser checks use the disposable setup described above.
 
-## 🔑 OpenAI reviewer isolation
-
-Use `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, and
-`ROBOCOP_OPENAI_API_KEY` for their respective reviewers; RoboCop also owns
-all security-alert model calls. `OPENAI_REVIEWERS_PROJECT_ID` identifies this repository's
-reviewer project. Keep credentials separate across repositories and application
-environments, preserve visible missing-key failures, and follow the deferred
-cutover steps in `.github/README.md`.
-
-
-## 🔌 Shared MCP framework
-
-MCP framework changes follow [docs/MCP-FRAMEWORK.md](backend/app_mcp/README.md). FullStackTemplate owns the canonical Python package; keep all consumer hashes/pins aligned. Derived applications own enablement and their business tools. Preserve Notoli credentials, scopes, tool permissions and exact proxy trust.
-
-Dependency-review and alert-lifecycle behavior follows the shared parity contract in
-`.github/README.md`: missing evidence fails, reports stay bounded, and
-concurrent closure requires verified final state. Keep CodeQL scope outputs and
-RoboCop baseline evidence connected without changing full default-branch coverage.
-
-## 🤖 Reviewer model policy
-
-Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-alert grouping. Preserve each reviewer’s existing key/project isolation, budgets and blocking gates. Application AI model selection remains app-owned.
-
-Batch 2 workflow controls and bounded npm malware review are documented in `.github/README.md`; Python malware coverage follows `docs/PYTHON-MALWARE-DECISION.md`. Shared deployment changes require the pinned Infrastructure source.
-
-Frontend testing now uses Vitest (`npm test`, optional `-- --maxWorkers=2`) with jsdom; Vite retains the documented REACT_APP_API_BASE_URL compatibility and build/ output. Jest/Babel test tooling is removed. Development images use reviewed digest pins and manifest-aware dependency startup. See frontend/README.md and deploy/README.md.
-
-Browser checks: activate an isolated Python environment with backend requirements,
-then `cd frontend`, `npx playwright install chromium`, `npm run test:e2e`. Ports
-8001/3001 must be free. Tests use disposable SQLite/file mail and no real accounts.
-Vitest projects isolate pure Node files from VM DOM forks; do not override the
-configured pool for timing. See frontend/README.md.
-
-Reviewer configuration and safe follow-up rules now follow `.github/actions/README.md`;
-keep validated optional AI_REVIEW_* variables, per-persona identity, serialized
-writers and existing blocking checks aligned when editing CI.
-
-Maintain CI architecture diagrams and regenerate `docs/CI-CD-SOURCE-INVENTORY.json`
-with `python scripts/ci_architecture.py` after workflow edits. Promotion summaries
-are informational; preserve existing release/check authorization and secret boundaries.
-
-Resend timeout supports `0 < seconds <= 30` with safe 10-second fallback; preserve original
-fail_silently behavior and generic reset responses. Never log delivery exception
-text/tracebacks or recipient/token data. See backend/README.md.
-
-Security-alert repository variables must resolve in the three caller workflows, not
-inside local composite metadata. Pass explicit model/effort/token inputs and run
-`.github/actions/custom-regressions/security-alert-contract.test.js` after edits;
-actual loading acceptance uses fresh controlled dispatches on corrected main.
-
-## 📚 Documentation ownership
-
-The main README introduces the repository. Keep setup, commands, configuration,
-and maintenance details in the owning folder README and its linked references.
-Use consistent headings: 🧭 Structure, 💻 Local development, ⚙️ Configuration,
-🧪 Checks, 🔌 MCP integration, and 📚 Reference where applicable.
-See the [documentation index](docs/README.md) for scripts, tests, and other guides.
+Resend timeout supports `0 < seconds <= 30` with a safe 10-second fallback.
+Preserve original `fail_silently` behavior and generic reset responses. Never log
+delivery exception text/tracebacks or recipient/token data; see the backend README.
