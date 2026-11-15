@@ -6,11 +6,13 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Distinguish the frontend router basename, Vite asset base and API origin in configuration guidance; retain domain-root deployment behavior.
 - Correct development dependency guidance to require an explicit container `npm ci` before restart.
 - Reject unsafe paths, symlinks and duplicate members in exported ChatGPT ZIPs, bound archive expansion, and cover hostile exports with offline regressions.
 
 ### Changed
 
+- Move frontend connection contracts into session guidance and menu/refresh behavior into board/list guidance; keep related guides as final navigation.
 - Align frontend npm commands: production builds run strict lint first and `lint:fix` applies available lint fixes.
 - Document frontend API configuration through development Compose and production build arguments, and exclude local frontend env files from Docker build contexts.
 - Rename shared frontend test support to `src/test-helpers/`, retain application and feature tests beside their implementation, and preserve application-specific helper behavior.

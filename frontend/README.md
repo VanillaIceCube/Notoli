@@ -43,9 +43,11 @@ Local `.env` files are excluded from Docker build contexts.
 
 For direct `npm` development, an unset API origin uses `http://localhost:8000`.
 An explicit shell value overrides that default; an explicit blank uses same-origin.
-Vite retains `PUBLIC_URL` as the router/asset base and exposes only those legacy
-client variables. Production uses subdomain-root routing and Nginx's SPA fallback
-for deep links.
+`PUBLIC_URL` supplies the router basename, defaulting to `/`. HTML asset URLs
+use `%BASE_URL%` from Vite's separate `base` setting. The API origin is independent
+of both. Production uses subdomain-root routing and Nginx's SPA fallback for deep
+links; changing one prefix alone does not configure a complete subdirectory
+deployment.
 
 ## 🗺️ Routes and behavior
 
@@ -88,6 +90,19 @@ revocation stay account-bound; scopes and current membership remain enforced by
 Django. See [Notoli's MCP integration](../backend/integrations/README.md) and
 [client setup](../backend/app_mcp/chatgpt/README.md).
 
+### Connections response contract
+
+Successful consent, decision, list and revoke responses must be JSON objects.
+Unreadable, empty, null, scalar or array successes reject with `Request failed.`;
+a protocol failure must not follow a callback or claim revocation succeeded.
+HTTP failures use the first nonblank string in `error_description`, `detail`, then
+`error`, otherwise `HTTP <status>`. Never expose raw HTML/plaintext, parser errors,
+nested objects or unrelated JSON fields as fallback messages. Backend public error
+fields must be safe to display. Preserve JWT-only headers, omitted cookies, form
+encoding, signed consent tickets and validated callbacks. Invalid refresh credentials
+clear the session; transient proxy/refresh failures retain it for retry. Notoli
+retains its extra post-refresh 401 handling and legacy API-base compatibility.
+
 ## 🧩 Board and list behavior
 
 ### 🤝 Board Sharing
@@ -113,6 +128,18 @@ and native new-tab coverage. Drawer mutations use the shared structured-error
 helper and snackbar feedback, guard missing tokens, and navigate away after
 deleting the active board. Keep routing helper invalid-input coverage alongside
 the documented singular/plural compatibility behavior.
+
+### Menu exit and refresh behavior
+
+Keep permission-dependent menu selection through MUI's exit transition and clear
+it at `onExited`; reopening replaces selection and cancels the previous exit.
+Use direct menu children for keyboard navigation and restore focus to a named,
+focusable trigger. A single proportional refresh-indicator spacer owns pull
+displacement and holds space until completion; keep paper padding constant.
+Cancellation never refreshes, overlapping requests are ignored, and failed callbacks
+settle. Respect nested/document scroll and inactive route slots. Suppress competing
+native root overscroll through a pending custom refresh; restore prior policy
+immediately on route exit/unmount and once a disabled hook has settled.
 
 ## 🎨 Style guide
 
@@ -187,28 +214,3 @@ keep test environments independent without dropping authentication or domain ass
 
 - [Backend and MCP integration](../backend/README.md).
 - [Local Docker and production releases](../deploy/README.md).
-
-### Connections response contract
-
-Successful consent, decision, list and revoke responses must be JSON objects.
-Unreadable, empty, null, scalar or array successes reject with `Request failed.`;
-a protocol failure must not follow a callback or claim revocation succeeded.
-HTTP failures use the first nonblank string in `error_description`, `detail`, then
-`error`, otherwise `HTTP <status>`. Never expose raw HTML/plaintext, parser errors,
-nested objects or unrelated JSON fields as fallback messages. Backend public error
-fields must be safe to display. Preserve JWT-only headers, omitted cookies, form
-encoding, signed consent tickets and validated callbacks. Invalid refresh credentials
-clear the session; transient proxy/refresh failures retain it for retry. Notoli
-retains its extra post-refresh 401 handling and legacy API-base compatibility.
-
-### Menu exit and refresh behavior
-
-Keep permission-dependent menu selection through MUI's exit transition and clear
-it at `onExited`; reopening replaces selection and cancels the previous exit.
-Use direct menu children for keyboard navigation and restore focus to a named,
-focusable trigger. A single proportional refresh-indicator spacer owns pull
-displacement and holds space until completion; keep paper padding constant.
-Cancellation never refreshes, overlapping requests are ignored, and failed callbacks
-settle. Respect nested/document scroll and inactive route slots. Suppress competing
-native root overscroll through a pending custom refresh; restore prior policy
-immediately on route exit/unmount and once a disabled hook has settled.
