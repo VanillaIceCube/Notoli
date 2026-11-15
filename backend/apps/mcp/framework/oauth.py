@@ -77,7 +77,8 @@ class MCPOAuthValidator(OAuth2Validator):
 
 def resolve_token(raw_token, scope=None):
     """Revalidate tokens against the database; revocation takes effect immediately."""
-    scope = scope or settings.MCP_REQUIRED_SCOPES[0]
+    # An omitted or blank scope still requires the application's baseline scope.
+    required_scope = scope or settings.MCP_REQUIRED_SCOPES[0]
     checksum = hashlib.sha256(raw_token.encode()).hexdigest()
     token = (
         AccessToken.objects.select_related("user", "application")
@@ -96,10 +97,10 @@ def resolve_token(raw_token, scope=None):
         raise ConnectionPermissionDenied(
             "Connection expired, revoked, or lacks the required permission."
         )
-    if scope not in token.scope.split():
+    if required_scope not in token.scope.split():
         raise ConnectionPermissionDenied(
             "Connection lacks the required permission.",
             "insufficient_scope",
-            required_scopes=[scope],
+            required_scopes=[required_scope],
         )
     return token

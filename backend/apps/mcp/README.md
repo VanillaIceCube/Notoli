@@ -133,6 +133,10 @@ minutes. JWTs stay in sessionStorage/header, never URLs. `/connections` lists
 current-account access/refresh grants, including pending authorization codes,
 and revokes them transactionally. Cookie authentication and posted user IDs cannot
 grant access. Revocation is rechecked against the database on every MCP request.
+Token resolution with an omitted or blank scope still requires the first
+configured `MCP_REQUIRED_SCOPES` entry; it never skips scope authorization. An
+explicit scope must be present in the live grant. The transport also requires
+every configured baseline scope before accepting an MCP request.
 
 OAuth tokens are distinct from REST JWTs. The provider requires the exact `/mcp`
 resource, S256 PKCE and state; authorization codes expire in 120 seconds, access

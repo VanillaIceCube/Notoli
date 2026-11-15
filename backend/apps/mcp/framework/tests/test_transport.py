@@ -24,6 +24,42 @@ class MCPTransportTests(TransactionTestCase):
         self.application = make_application()
         self.token = make_token(self.user, self.application)
 
+    def test_default_and_explicit_scope_requirements_cannot_be_skipped(self):
+        from ..errors import ConnectionPermissionDenied
+        from ..oauth import resolve_token
+        from ..server import DjangoTokenVerifier
+
+        required_scope = settings.MCP_REQUIRED_SCOPES[0]
+        calls = ((), (None,), ("",), (required_scope,))
+        for arguments in calls:
+            with self.subTest(arguments=arguments):
+                self.assertEqual(
+                    resolve_token("framework-access", *arguments).pk, self.token.pk
+                )
+        with self.assertRaises(ConnectionPermissionDenied) as denied:
+            resolve_token("framework-access", "fixture:additional")
+        self.assertEqual(denied.exception.oauth_error, "insufficient_scope")
+        self.assertEqual(denied.exception.required_scopes, ("fixture:additional",))
+        self.token.scope += " fixture:additional"
+        self.token.save()
+        self.assertEqual(
+            resolve_token("framework-access", "fixture:additional").pk, self.token.pk
+        )
+        verifier = DjangoTokenVerifier()
+        verified = async_to_sync(verifier.verify_token)("framework-access")
+        self.assertIsNotNone(verified)
+        self.assertEqual(verified.subject, str(self.user.pk))
+
+        self.token.scope = "fixture:additional"
+        self.token.save()
+        for arguments in calls:
+            with self.subTest(arguments=arguments):
+                with self.assertRaises(ConnectionPermissionDenied) as denied:
+                    resolve_token("framework-access", *arguments)
+                self.assertEqual(denied.exception.oauth_error, "insufficient_scope")
+                self.assertEqual(denied.exception.required_scopes, (required_scope,))
+        self.assertIsNone(async_to_sync(verifier.verify_token)("framework-access"))
+
     def test_authenticated_initialization_discovery_and_safe_fixture(self):
         import httpx2
         from django.core.asgi import get_asgi_application
