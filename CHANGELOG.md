@@ -4,12 +4,28 @@ All notable changes to this project are documented in this file.
 
 ## 2026-11-14
 
+### Added
+
+- Add the author's original project story to the main README.
+
 ### Fixed
 
+- Distinguish the frontend router basename, Vite asset base and API origin in configuration guidance; retain domain-root deployment behavior.
+- Correct development dependency guidance to require an explicit container `npm ci` before restart.
 - Reject unsafe paths, symlinks and duplicate members in exported ChatGPT ZIPs, bound archive expansion, and cover hostile exports with offline regressions.
 
 ### Changed
 
+- Standardize README heading emojis, sentence case, reference labels and Markdown spacing while preserving substantive content, code examples and existing anchors.
+- Move frontend connection contracts into session guidance and menu/refresh behavior into board/list guidance; keep related guides as final navigation.
+- Align frontend npm commands: production builds run strict lint first and `lint:fix` applies available lint fixes.
+- Document frontend API configuration through development Compose and production build arguments, and exclude local frontend env files from Docker build contexts.
+- Rename shared frontend test support to `src/test-helpers/`, retain application and feature tests beside their implementation, and preserve application-specific helper behavior.
+- Consolidate shared frontend test setup, helpers and suites under `src/tests/`, update imports and discovery paths, and retain App, startup and feature tests beside their implementation.
+- Replace mocked frontend startup wiring checks with real React entry-point integration coverage for the signed-out login route, isolated state and blocked network access.
+- Consolidate global styles in `frontend/src/index.css`, remove the redundant app stylesheet and unused starter selectors, and preserve app-specific themes and accessibility rules.
+- Group frontend Dockerfiles and Nginx configuration in `frontend/docker/`; update Compose, build workflows and Docker dependency discovery while retaining the frontend build context.
+- Resolve favicon, Apple touch icon and web manifest URLs through the Vite base URL for consistent public asset paths.
 - Consolidate durable documentation into existing owning READMEs, move the active CI inventory beside workflow guidance, and repair links and architecture regressions.
 - Restore consistent changelog titles, chronological dates, ordered categories, and spacing while preserving historical entries.
 - Align shared agent instructions across the repository family while preserving application-specific contracts and Infrastructure authorization controls.
@@ -18,6 +34,11 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Remove the frontend env example; retain `deploy/backend.env` for backend configuration.
+- Remove centralized frontend lint-configuration and theme-source suites; preserve shared support and all colocated application, component and service tests.
+- Remove the unreferenced legacy stylesheet mock from frontend test support.
+- Remove the custom frontend development entrypoint and automatic dependency reinstall; start Vite directly and install changed dependencies manually in the development container.
+- Remove frontend end-to-end suites, Playwright configuration and dependencies, browser-test helpers and CI jobs; retain component, backend, action-local and shared release checks.
 - Remove duplicate documentation indexes, redirects, stale narratives and historical receipts after preserving useful contracts.
 - Remove the root `tests/` directory and its CI invocations; retain backend, frontend/browser, action-local, and shared release suites.
 

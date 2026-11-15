@@ -32,22 +32,21 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-testing-library": "^7.13.3",
     "globals": "^17.14.0",
+    "jsdom": "^31.0.0",
     "prettier": "^3.9.9",
     "vite": "^8.3.7",
-    "vitest": "^5.1.0",
-    "jsdom": "^31.0.0",
-    "@playwright/test": "^1.65.0"
+    "vitest": "^5.1.0"
   },
   "scripts": {
     "start": "vite",
     "build": "npm run lint:strict && vite build",
     "test": "vitest run",
     "lint": "eslint \"src/**/*.{js,jsx}\"",
+    "lint:fix": "eslint \"src/**/*.{js,jsx}\" --fix",
     "lint:strict": "eslint \"src/**/*.{js,jsx}\" --max-warnings=0",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "test:watch": "vitest",
-    "test:e2e": "node e2e/run_e2e.cjs"
+    "test:watch": "vitest"
   },
   "browserslist": {
     "production": [

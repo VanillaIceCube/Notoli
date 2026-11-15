@@ -27,7 +27,7 @@ dist/
 staticfiles/
 release_bundle/
 
-# Test, lint, coverage, and browser artifacts
+# Test, lint, and coverage artifacts
 .pytest_cache/
 .ruff_cache/
 .coverage
@@ -36,9 +36,6 @@ release_bundle/
 coverage.xml
 coverage/
 htmlcov/
-frontend/playwright-report/
-frontend/test-results/
-browser-evidence/
 
 # Local Docker configuration and certificates
 docker-compose.override.yml

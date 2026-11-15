@@ -5,10 +5,16 @@ authentication, and the application shell.
 
 ## 🧭 Structure
 
+- `docker/`: production/development Dockerfiles and Nginx configuration.
+  Docker builds keep `frontend/` as their context; `.dockerignore` stays at the
+  frontend root.
+- `src/index.css`: the single global stylesheet, loaded by `src/index.jsx`; keep
+  theme tokens, document defaults, shared controls and app-specific rules here.
 - `src/components/`: reusable interface components.
 - `src/pages/`: application pages and routes.
 - `src/services/`: API requests and session handling.
-- `src/__tests__/`, `e2e/`: component and isolated browser tests.
+- `src/test-helpers/`: shared test setup and reusable helpers.
+  App, startup and feature tests stay beside the files they exercise.
 
 ## 💻 Local development
 
@@ -30,10 +36,18 @@ Open `http://notoli.localhost:3000`. For Docker hot reload, follow the
 requests; client-side settings must contain no secrets. The build output is
 `build/`.
 
-An unset API origin defaults to localhost:8000 during development and same-origin
-in production; an explicit blank uses same-origin. Vite retains `PUBLIC_URL` as
-the router/asset base and exposes only those legacy client variables. Production
-uses subdomain-root routing and Nginx's SPA fallback for deep links.
+Development Compose supplies `REACT_APP_API_BASE_URL` through its `environment`
+settings. Production Docker builds pass the matching build argument, which is
+compiled into the static assets; a blank value selects same-origin requests.
+Local `.env` files are excluded from Docker build contexts.
+
+For direct `npm` development, an unset API origin uses `http://localhost:8000`.
+An explicit shell value overrides that default; an explicit blank uses same-origin.
+`PUBLIC_URL` supplies the router basename, defaulting to `/`. HTML asset URLs
+use `%BASE_URL%` from Vite's separate `base` setting. The API origin is independent
+of both. Production uses subdomain-root routing and Nginx's SPA fallback for deep
+links; changing one prefix alone does not configure a complete subdirectory
+deployment.
 
 ## 🗺️ Routes and behavior
 
@@ -48,7 +62,7 @@ uses subdomain-root routing and Nginx's SPA fallback for deep links.
 Authentication-page navigation uses Material UI `Link` with React Router `Link`,
 so each destination has a real `href`, Tab/Enter access, and native new-tab
 behavior without submitting its form. Regression tests cover all five links
-with the real router; browser tests also check new-tab navigation.
+with the real router.
 
 Navigation utilities accept `/board/` and `/boards/` inputs, strip query strings,
 fragments, and a trailing slash, and ignore invalid paths or navigators. Public
@@ -76,31 +90,58 @@ revocation stay account-bound; scopes and current membership remain enforced by
 Django. See [Notoli's MCP integration](../backend/integrations/README.md) and
 [client setup](../backend/app_mcp/chatgpt/README.md).
 
+### Connections response contract
+
+Successful consent, decision, list and revoke responses must be JSON objects.
+Unreadable, empty, null, scalar or array successes reject with `Request failed.`;
+a protocol failure must not follow a callback or claim revocation succeeded.
+HTTP failures use the first nonblank string in `error_description`, `detail`, then
+`error`, otherwise `HTTP <status>`. Never expose raw HTML/plaintext, parser errors,
+nested objects or unrelated JSON fields as fallback messages. Backend public error
+fields must be safe to display. Preserve JWT-only headers, omitted cookies, form
+encoding, signed consent tickets and validated callbacks. Invalid refresh credentials
+clear the session; transient proxy/refresh failures retain it for retry. Notoli
+retains its extra post-refresh 401 handling and legacy API-base compatibility.
+
 ## 🧩 Board and list behavior
 
-### 🤝 Board Sharing
+<a id="-board-sharing"></a>
+
+### Board sharing
 
 Board management lives in the right sidebar. Open the Board list, use a board row's action menu, and choose Share. The Share dialog displays the board owner and collaborators. Owners can add collaborators by username/email and remove collaborators; non-owners can view access in read-only mode.
 
-### Notes Checklist Items
+### Notes checklist items
 
 Notes in a list render as checklist rows. Checking a note updates its `status` to `Complete` through the notes API, immediately reflects the change in the UI, and shows complete note text with a strikethrough. Unchecked notes use `Not Started`, and the API also supports `In Progress`.
 
-### In-App Notifications
+### In-app notifications
 
 The app bar notification icon opens a popover with the newest notifications first. Unread notifications show a badge count and can be marked read all at once. Clicking a notification opens its target board or list when the backend provides `target_path`, and each notification can be cleared individually. Notification API failures are shown inside the popover and do not block the rest of the page.
 
-### Drag-and-Drop Reordering
+### Drag-and-drop reordering
 
 List and note pages include a top-right page action menu for entering reorder mode. Reorder mode hides row action menus, shows right-side drag handles, hides Add New, and exits through Done. Dragging only starts from the handle and persists the final order through the reorder API after drop.
 
-Loaded board/list pages may report readiness again when their parent renders. The route coordinator keeps an already active single-page state unchanged, preventing a render feedback loop that can make controls unresponsive. Unit tests exercise automatic and repeated readiness; desktop/mobile browser menu and refresh journeys also reject render-loop messages and uncaught page errors. See issue #1022.
+Loaded board/list pages may report readiness again when their parent renders. The route coordinator keeps an already active single-page state unchanged, preventing a render feedback loop that can make controls unresponsive. Unit tests exercise automatic and repeated readiness. See issue #1022.
 
 Use semantic links for destinations and buttons for actions; retain keyboard
 and native new-tab coverage. Drawer mutations use the shared structured-error
 helper and snackbar feedback, guard missing tokens, and navigate away after
 deleting the active board. Keep routing helper invalid-input coverage alongside
 the documented singular/plural compatibility behavior.
+
+### Menu exit and refresh behavior
+
+Keep permission-dependent menu selection through MUI's exit transition and clear
+it at `onExited`; reopening replaces selection and cancels the previous exit.
+Use direct menu children for keyboard navigation and restore focus to a named,
+focusable trigger. A single proportional refresh-indicator spacer owns pull
+displacement and holds space until completion; keep paper padding constant.
+Cancellation never refreshes, overlapping requests are ignored, and failed callbacks
+settle. Respect nested/document scroll and inactive route slots. Suppress competing
+native root overscroll through a pending custom refresh; restore prior policy
+immediately on route exit/unmount and once a disabled hook has settled.
 
 ## 🎨 Style guide
 
@@ -110,16 +151,25 @@ the documented singular/plural compatibility behavior.
 - Avoid full-bleed divider lines inside dialogs unless the surrounding surface also uses full-bleed sectioning.
 - Use the app divider color (`var(--secondary-color)`) and a visible weight (`borderBottomWidth: 2`) for consistency with sidebar and list surfaces.
 
-### Dialog Density
+### Dialog density
 
 - Keep dialogs focused on the current task and avoid repeating identity fields.
 - Prefer compact sections or responsive two-column layouts when a dialog compares two related groups, such as owner and collaborators.
 - In member lists, show a display name plus one secondary identifier when possible instead of separate labeled username and email rows.
 - Sharing dialogs should use a single `People with access` list with consistent user rows, avatars, role labels, and owner-only management controls.
 - When a section heading already labels an input group, prefer placeholder text plus an accessible `aria-label` over a floating visual input label.
-- Text field focus states should use the Notoli secondary color globally, never the default Material UI blue. Keep the global overrides in `src/App.css` covered by `notoliThemeStyles.test.js`.
+- Text field focus states should use the Notoli secondary color globally, never the default Material UI blue. Keep the global overrides in `src/index.css`.
 
 ## 🧪 Checks
+
+`src/index.test.jsx` boots the real entry point, React root and application in
+jsdom, then checks the signed-out login route and usable form without private API
+requests or uncaught startup errors. It unmounts the real root and restores test
+state afterward. Existing Material UI test shims still apply; browser layout and
+built HTML are outside this test's scope.
+
+`npm run build` runs strict lint before Vite's production build. Use
+`npm run lint:fix` to apply available lint fixes.
 
 From `frontend/`:
 
@@ -129,37 +179,6 @@ npm run lint:strict
 npm run format:check
 npm run build
 ```
-
-## 🌐 Browser tests
-
-`frontend/e2e/` owns the browser journeys and their helpers: `run_e2e.cjs` creates
-and cleans up disposable state, `e2e_backend.py` starts the isolated loopback
-backend, `e2e_settings.py` suppresses developer dotenv loading and selects temporary
-SQLite/file mail, and `collect_browser_artifacts.py` collects bounded failure
-evidence. `npm run test:e2e` invokes the runner from `frontend/`; CI collects reports
-with `python e2e/collect_browser_artifacts.py` from the same directory.
-
-Install backend requirements in an activated Python environment. From `frontend/`:
-
-```powershell
-npx playwright install chromium
-npm run test:e2e
-```
-
-Ports 8001 and 3001 must be free. The wrapper starts Django and Vite with fresh,
-marked temporary state and stops both before deleting that state. It uses synthetic
-users, temporary SQLite and file mail; it does not load developer `.env` files,
-reuse running servers, send external email, or make paid AI calls. The shared auth
-journeys cover registration, session isolation, logout, protected routing, invalid
-credentials, JWT expiry, and password reset. Product journeys belong under `e2e/`.
-
-The suite uses one Chromium worker, no retries, and a ten-minute global timeout.
-Linux CI installs Chromium with `--with-deps`. Failure artifacts are written to
-`test-results/` and `playwright-report/`; CI retains bounded evidence for seven
-days. Reports may include disposable tokens, so do not publish them in issues.
-
-The board/menu and mobile refresh journeys retain render-loop and uncaught-error
-checks. See [menu and refresh behavior](README.md#menu-exit-and-refresh-behavior).
 
 ## 🛠️ Maintenance
 
@@ -184,8 +203,8 @@ Jest/Babel and their glob/deepmerge test-only graph were removed by the Vitest m
 
 Keep Material UI and icons on compatible versions and regenerate the lockfile
 together. Prefer `sx` and `slotProps`; preserve accessible control labels. For
-jsdom CSS assertions, check computed transition/animation longhands and use real
-browser tests for responsive geometry. Follow the Node range in `package.json`,
+jsdom CSS assertions, check computed transition/animation longhands; inspect
+responsive geometry in a browser. Follow the Node range in `package.json`,
 and verify clean installs, strict lint, formatting, tests and production builds.
 See [Docker dependency maintenance](../deploy/README.md#development-dependency-reproducibility).
 
@@ -193,32 +212,9 @@ Keep Vitest projects isolated. Do not override the configured pool; use
 `--maxWorkers=1` for serial profiling. The DOM worker memory limit and recycling
 keep test environments independent without dropping authentication or domain assertions.
 
-## 📚 Related guides
+<a id="-related-guides"></a>
+
+## 📚 Reference
 
 - [Backend and MCP integration](../backend/README.md).
 - [Local Docker and production releases](../deploy/README.md).
-
-### Connections response contract
-
-Successful consent, decision, list and revoke responses must be JSON objects.
-Unreadable, empty, null, scalar or array successes reject with `Request failed.`;
-a protocol failure must not follow a callback or claim revocation succeeded.
-HTTP failures use the first nonblank string in `error_description`, `detail`, then
-`error`, otherwise `HTTP <status>`. Never expose raw HTML/plaintext, parser errors,
-nested objects or unrelated JSON fields as fallback messages. Backend public error
-fields must be safe to display. Preserve JWT-only headers, omitted cookies, form
-encoding, signed consent tickets and validated callbacks. Invalid refresh credentials
-clear the session; transient proxy/refresh failures retain it for retry. Notoli
-retains its extra post-refresh 401 handling and legacy API-base compatibility.
-
-### Menu exit and refresh behavior
-
-Keep permission-dependent menu selection through MUI's exit transition and clear
-it at `onExited`; reopening replaces selection and cancels the previous exit.
-Use direct menu children for keyboard navigation and restore focus to a named,
-focusable trigger. A single proportional refresh-indicator spacer owns pull
-displacement and holds space until completion; keep paper padding constant.
-Cancellation never refreshes, overlapping requests are ignored, and failed callbacks
-settle. Respect nested/document scroll and inactive route slots. Suppress competing
-native root overscroll through a pending custom refresh; restore prior policy
-immediately on route exit/unmount and once a disabled hook has settled.

@@ -56,6 +56,7 @@ See the [production network contract](../deploy/production/README.md).
 ## 🗺️ API routes
 
 Top-level routes (without any path prefix):
+
 - Auth: `/auth/` (register/login/refresh)
 - API: `/api/` (boards/lists/notes/notifications)
 - Admin: `/admin/`
@@ -69,6 +70,7 @@ Production serves these routes from the subdomain root at `https://notoli.judean
 JWT auth is provided by `djangorestframework-simplejwt`.
 
 Common endpoints:
+
 - `POST /auth/register/` -> creates a user; returns `access`, `refresh`, `username`, `email`, and `board_id`
 - `POST /auth/login/` -> accepts `email` (preferred) or `username`, plus `password`; returns `access`, `refresh`, `username`, and `email`
 - `POST /auth/refresh/` -> exchanges `refresh` for a new `access`
@@ -78,6 +80,7 @@ Common endpoints:
 New users get a default board named after their username, such as `"andrew's Board"`, created automatically via a post-save signal in `notes/signals.py`. If the username is auto-derived from the email prefix, the board name uses that prefix with its first letter capitalized, such as `"Example_02's Board"` for `example_02@gmail.com`. The default personal board is also bootstrapped with ordered starter lists: `Grocery List`, `Chores List`, and `Todo List`, each with starter notes.
 
 All `/api/*` endpoints require:
+
 - Header: `Authorization: Bearer <accessToken>`
 
 ## 🧱 Data model and access
@@ -88,6 +91,7 @@ All `/api/*` endpoints require:
 - Notification: recipient-scoped in-app activity item with persistent read/unread state, board-name snapshots, optional board/list/note context, and frontend navigation targets, owned by the `notifications` app
 
 Access scoping:
+
 - Board membership is the source of truth for access. `Board.owner` and `Board.collaborators` control access to child lists and notes.
 - Lists and notes keep `created_by` metadata, but do not have separate owner or collaborator fields.
 - Board owners can update board metadata and delete boards; collaborators receive a 403 response for board `PATCH`/`DELETE` attempts while retaining read access to shared boards.
@@ -170,10 +174,6 @@ Maintain the Python version in `environment.yml` and pip dependencies in
 `requirements.txt` together with CI and Docker. The test runner's fast password
 hasher applies only during tests; normal settings retain secure hashing.
 See [Docker dependency maintenance](../deploy/README.md#development-dependency-reproducibility).
-
-The browser-test backend uses disposable SQLite, synthetic users, local file mail,
-and loopback binding. It does not load developer dotenv files or use the developer
-database. Install backend requirements before running the frontend browser suite.
 
 ## 🚀 Production
 

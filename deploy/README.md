@@ -11,6 +11,11 @@ Production serves the frontend through the shared HTTPS gateway and publishes no
 
 ## 💻 Local Docker with `notoli.localhost`
 
+The development Compose `environment` sets the frontend API origin. Production
+uses the Docker build argument, which is compiled into the static assets; a blank
+value selects same-origin requests. Backend settings remain in `deploy/.env`,
+created from the committed `deploy/backend.env` example below.
+
 From the repository root, initialize only missing local files:
 
 ```powershell
@@ -26,10 +31,11 @@ Open `http://notoli.localhost:3000`; the backend is
 The stack mounts both source trees, runs Vite and Uvicorn autoreload, and needs
 no certificate or Nginx. Its blank-secret fallback is development-only.
 
-The frontend keeps a `node_modules` volume and refreshes it with `npm ci` after
-dependency-file changes when restarted:
+The frontend keeps a `node_modules` volume. After dependency-file changes, install
+explicitly in the running container, then restart it:
 
 ```powershell
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T frontend npm ci
 docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart frontend
 ```
 
@@ -69,7 +75,7 @@ openssl req -x509 -newkey rsa:2048 -nodes \
   -subj "/CN=notoli.judeandrewalaba.com" \
   -addext "subjectAltName=DNS:notoli.judeandrewalaba.com,DNS:localhost,IP:127.0.0.1"
 docker build -t ghcr.io/vanillaicecube/notoli-backend:latest ./backend
-docker build --build-arg REACT_APP_API_BASE_URL= -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend
+docker build --file frontend/docker/Dockerfile --build-arg REACT_APP_API_BASE_URL= -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend
 docker compose -f deploy/docker-compose.yml up -d
 docker compose -f deploy/docker-compose.yml exec -T backend python manage.py migrate
 curl -k -I --resolve notoli.judeandrewalaba.com:443:127.0.0.1 https://notoli.judeandrewalaba.com/
@@ -116,24 +122,38 @@ registry digests. Production Dockerfiles and the independent release engine are
 unchanged by this development-image policy. Refresh tags/digests together after
 registry verification and a disposable build/configuration check.
 
-The frontend development entrypoint hashes both `package.json` and
-`package-lock.json` inside its persistent `node_modules` volume. Fresh volumes
-install with `npm ci`; unchanged restarts reuse dependencies; changing either
-manifest reinstalls. Missing manifests or a failed installation stop startup and
-retry on the next invocation. Use one volume per checkout and restart after edits.
+Frontend production/development Dockerfiles and Nginx configuration live in
+`frontend/docker/`. The build context remains
+`frontend/`; Compose and CI select the Dockerfile explicitly.
+
+The frontend starts Vite directly with `npm start`. Source hot reload and the
+persistent `frontend_node_modules` volume remain. Dependency changes require a
+manual install in the running frontend container, followed by a restart:
+
+```powershell
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T frontend npm ci
+docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart frontend
+```
+
+If the frontend is stopped, use `run --rm --no-deps frontend npm ci` with the same
+Compose options, then start it again. Keep one dependency volume per checkout.
 Compose configuration
 checks do not deploy or touch application data.
 
 <a id="non-deploying-repository-validation"></a>
 
-## 🧪 Repository validation
+<a id="-repository-validation"></a>
+
+## 🧪 Checks
 
 See [workflow checks and validation](../.github/workflows/README.md#-checks-and-diagnostics).
 
 
-## 📚 Further reading
+<a id="-further-reading"></a>
+
+## 📚 Reference
 
 - [Live-server releases and recovery](production/README.md).
 - [Backend configuration](../backend/README.md).
 - [Frontend development](../frontend/README.md).
-- [CI tools and validation](../.github/README.md#-verification).
+- [CI tools and validation](../.github/README.md#-checks).

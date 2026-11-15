@@ -198,7 +198,7 @@
         "contents": "read",
         "packages": "write"
       },
-      "source_sha256": "b2a9b2fb6e7c1ba0937e4ed7b170439e1efe360272476acad84c2d5e5cd636a2",
+      "source_sha256": "229f307c3e410e139ce43dca5b419ac2c3e1bba309957dce4f657fbc1a228ccf",
       "variable_names": [
         "DEPLOY_HOST",
         "DEPLOY_HOST_FINGERPRINT",
@@ -589,11 +589,6 @@
           "name": "Development image builds",
           "needs": "changes"
         },
-        "e2e-tests": {
-          "if": "needs.changes.outputs.e2e == 'true'",
-          "name": "Isolated authentication browser tests",
-          "needs": "changes"
-        },
         "frontend-tests": {
           "if": "needs.changes.outputs.frontend == 'true'",
           "name": "Frontend Tests (React)",
@@ -607,8 +602,7 @@
             "frontend-tests",
             "backend-tests",
             "automation-tests",
-            "development-images",
-            "e2e-tests"
+            "development-images"
           ]
         }
       },
@@ -617,7 +611,7 @@
         "contents": "read",
         "pull-requests": "read"
       },
-      "source_sha256": "a381eebc4724818934d52d1064c5bf5e9d47f4ae197ac68e21631f4521516a39",
+      "source_sha256": "d955d8f2ad77b687edf364b29fb8ec4c219359ee2cbad807c70c9719a1068e22",
       "variable_names": []
     },
     "gate-vulnerability.yml": {
