@@ -2,8 +2,8 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import BoardNavigationDrawer from './BoardNavigationDrawer';
-import { boardFixtures } from '../test-support/fixtures';
-import { createDeferred, renderWithProviders } from '../test-support/utils';
+import { boardFixtures } from '../test-helpers/fixtures';
+import { createDeferred, renderWithProviders } from '../test-helpers/utils';
 import { getBoardId } from '../utils/Navigation';
 import {
   addBoardCollaborator,
