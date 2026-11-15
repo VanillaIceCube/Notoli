@@ -1,4 +1,7 @@
-"""Notoli tool permissions layered over the shared OAuth lifecycle."""
+"""Notoli scopes and live connection checks over the shared OAuth lifecycle."""
+
+from apps.mcp.framework.errors import ConnectionPermissionDenied
+from apps.mcp.framework.oauth import resolve_token
 
 
 def required_scopes(operation):
@@ -36,3 +39,19 @@ def required_scopes(operation):
     if operation in {"add_board_collaborator", "remove_board_collaborator"}:
         scopes.append("notoli:share")
     return scopes
+
+
+def principal(raw_token, operation):
+    scopes = required_scopes(operation)
+    try:
+        if not isinstance(raw_token, str) or not raw_token or len(raw_token) > 4096:
+            raise ConnectionPermissionDenied("Connect your Notoli account.")
+        token = resolve_token(raw_token)
+        if not set(scopes) <= set(token.scope.split()):
+            raise ConnectionPermissionDenied(
+                "This connection lacks required permissions.", "insufficient_scope"
+            )
+        return token
+    except ConnectionPermissionDenied as error:
+        error.required_scopes = scopes
+        raise

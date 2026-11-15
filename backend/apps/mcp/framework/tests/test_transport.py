@@ -7,7 +7,7 @@ from asgiref.sync import async_to_sync
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
-from django.test import TransactionTestCase
+from django.test import SimpleTestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from .helpers import make_application, make_token
@@ -136,8 +136,14 @@ class MCPTransportTests(TransactionTestCase):
                 for key, value in change.items():
                     setattr(self.token, key, value)
                 self.token.save()
-                with self.assertRaises(PermissionDenied):
+                from ..errors import ConnectionPermissionDenied
+
+                with self.assertRaises(ConnectionPermissionDenied) as denied:
                     resolve_token("framework-access")
+                self.assertEqual(
+                    denied.exception.oauth_error,
+                    "insufficient_scope" if "scope" in change else "invalid_token",
+                )
                 for key, value in original.items():
                     setattr(self.token, key, value)
                 self.token.save()
@@ -150,3 +156,57 @@ class MCPTransportTests(TransactionTestCase):
         self.token.delete()
         with self.assertRaises(PermissionDenied):
             resolve_token("framework-access")
+
+
+@override_settings(
+    MCP_NAME="Fixture",
+    MCP_BASE_URL="https://fixture.example",
+    MCP_REQUIRED_SCOPES=["fixture:read"],
+)
+class ConnectionChallengeTests(SimpleTestCase):
+    def test_missing_scope_preserves_required_scopes_without_private_details(self):
+        from ..errors import ConnectionPermissionDenied, connection_error
+
+        error = ConnectionPermissionDenied(
+            "private-token-provider-or-record",
+            "insufficient_scope",
+            required_scopes=["fixture:read", "fixture:write"],
+        )
+        output = connection_error(error).model_dump(by_alias=True)
+        challenge = output["_meta"]["mcp/www_authenticate"][0]
+        self.assertTrue(output["isError"])
+        self.assertIn('error="insufficient_scope"', challenge)
+        self.assertIn('scope="fixture:read fixture:write"', challenge)
+        self.assertIn(
+            'resource_metadata="https://fixture.example/.well-known/oauth-protected-resource/mcp"',
+            challenge,
+        )
+        self.assertNotIn("private-token-provider-or-record", str(output))
+
+    def test_expired_connection_uses_reconnect_guidance_and_caller_scopes(self):
+        from ..errors import ConnectionPermissionDenied, connection_error
+
+        output = connection_error(
+            ConnectionPermissionDenied("private-expiry"),
+            ["fixture:read", "fixture:estimate"],
+        ).model_dump(by_alias=True)
+        self.assertIn(
+            'error="invalid_token"', output["_meta"]["mcp/www_authenticate"][0]
+        )
+        self.assertIn(
+            'scope="fixture:read fixture:estimate"',
+            output["_meta"]["mcp/www_authenticate"][0],
+        )
+        self.assertIn("Reconnect Fixture", output["content"][0]["text"])
+        self.assertNotIn("private-expiry", str(output))
+
+    def test_unexpected_auth_error_code_cannot_escape_into_challenge(self):
+        from ..errors import ConnectionPermissionDenied, connection_error
+
+        output = connection_error(
+            ConnectionPermissionDenied("secret", 'private"code')
+        ).model_dump(by_alias=True)
+        self.assertIn(
+            'error="invalid_token"', output["_meta"]["mcp/www_authenticate"][0]
+        )
+        self.assertNotIn("private", str(output))

@@ -44,8 +44,20 @@ Client setup and branding live in [chatgpt/](#chatgpt).
 
 - `server.py`, `asgi.py`, `routing.py`: server factory, transport, and ASGI lifecycle.
 - `oauth.py`, `views.py`, `urls.py`: OAuth consent and connection management.
+- `errors.py`: reconnectable connection failures and sanitized MCP auth challenges.
+- `apps.py`: the canonical origin, HTTPS and registry configuration checks.
 - `config.py`, `proxy.py`: application settings and exact proxy trust.
 - `tests/`: profile, OAuth consent, and transport regressions grouped by behavior.
+
+
+Connection failures discovered during a tool invocation return a sanitized MCP
+error with `_meta["mcp/www_authenticate"]`, the local protected-resource metadata
+URL, `invalid_token` or `insufficient_scope`, and the operation's required scopes.
+Expired/revoked connections can reconnect; object ownership or membership denials
+do not request a new grant. HTTP authentication still rejects invalid credentials
+before tool dispatch. Exception bodies, tokens and record identifiers never enter
+these challenges. App-owned `permissions.py` defines scopes and live principal
+checks; `framework/oauth.py` retains the OAuth lifecycle.
 
 ### ⚙️ Enabling a derived application
 
@@ -109,7 +121,7 @@ read/write/destructive/idempotent annotations and OAuth scope metadata. Resolve
 the current OAuth token's user and check scope, ownership and current membership
 for every operation. Never trust a user ID supplied by a caller. Transport
 authentication alone does not establish object permissions. Validate consequential
-writes and confirmation in the application service; keep REST behavior aligned.
+writes and application-specific mutation controls in the application service; keep REST behavior aligned.
 
 ### 🔐 Browser consent and credentials
 
@@ -187,7 +199,9 @@ DJANGO_MCP_ENABLED=1 DJANGO_MCP_SERVER_FACTORY=apps.mcp.tools.server.create_serv
 The framework tests cover discovery/initialization/sample calls, absent/invalid
 credentials, REST-JWT rejection, token expiry/resource/scope/revocation, S256 code
 exchange and refresh rotation, account-bound consent, foreign-account revocation,
-pending grants and exact client registration. Frontend tests cover displayed
+pending grants, exact client registration and sanitized reconnect challenges.
+Keep all framework runtime files and test-package files identical across the three
+applications (line-ending normalization is allowed). Frontend tests cover displayed
 permissions, login return paths, Allow/Cancel, expired consent and revocation.
 Run frontend tests/lint/build in both default and enabled builds. Notoli also runs
 its application tool/permission/transport/proxy regressions. Live ChatGPT writes
@@ -204,10 +218,18 @@ supplies transport and common OAuth plumbing.
 
 ### 🧭 Tool files
 
-- `server.py`, `tools.py`, `schemas.py`: registered tools and typed contracts.
-- `oauth.py`, `views.py`, `urls.py`: application OAuth and consent policy.
-- `adapters.py`: integration with application services.
-- `coverage.py`: product action dispatch; `tests/`: OAuth, permissions, sharing, product actions and transport checks.
+- `server.py`: fresh per-factory registries, 31 typed tools, security metadata and sanitized transport errors.
+- `permissions.py`: operation scopes and live OAuth principal checks.
+- `services.py`: authenticated read/mutation routing, transaction and bounded-result boundary.
+- `queries.py`: read-only discovery and actor-scoped lookups.
+- `operations.py`: mutation dispatch through authoritative [notes services](../notes/services.py) and [notification services](../notifications/services.py).
+- `results.py`: domain-shaped formatting and adaptive pagination; no authorization policy.
+- `schemas.py`: TypedDict domain outputs with optional truncation/success metadata.
+- `apps.py`: `NotoliMCPConfig` retains Django label `integrations`; configuration checks belong exclusively to `framework/apps.py`.
+- `tests/`: OAuth, permissions, sharing, product actions, response limits and transport checks.
+
+Tools call domain services directly, without REST views or synthetic HTTP requests.
+No parallel OAuth lifecycle or compatibility dispatch modules are retained.
 
 ### 🔐 Accounts and permissions
 
@@ -216,6 +238,29 @@ checks its scope and current object ownership or collaboration. Read,
 write, share, organize, notification, and deletion scopes remain distinct.
 Deletion requires explicit confirmation; caller-supplied user IDs cannot
 establish authorization.
+
+### 📏 Result limits
+
+Typed board, list, item, collaborator, notification, order and count shapes remain
+application-owned. Results use a 32-KiB encoded JSON budget; page contents use
+24 KiB to leave room for board/owner metadata. Text is capped at 4 KiB of UTF-8
+per field, with smaller caps when a single record still needs to fit. Unicode
+escaping is included in the JSON byte check. Structural limits are six nesting
+levels and 6,000 values; ordered ID results retain all of their up-to-1,000 IDs.
+The transport's JSON-RPC/text wrapper has additional overhead.
+
+Pages still accept at most 100 rows and may return fewer to fit the byte budget.
+Follow the actual `next_offset` until it is null; never advance by the requested
+limit. Clipped text sets `truncated: true` with guidance to review full content in
+Notoli before editing. A returned page advances only past the rows it contains.
+Stored descriptions and notification messages remain complete.
+
+A mutation with clipped output returns its ordinary domain shape, stable record
+identity, `applied: true`, `truncated: true` and explicit completed-action guidance.
+Do not repeat the change to recover detail. Formatting occurs inside the invocation
+transaction: an unexpected structural overflow fails before commit and rolls back
+the business change. A narrower-request error never masks a committed mutation.
+Unexpected errors receive a reference and omit private exception bodies.
 
 <a id="-guides"></a>
 

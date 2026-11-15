@@ -7,9 +7,19 @@ permissions, notifications, and application integrations.
 
 - `config/`: Django settings, URL configuration, and ASGI/WSGI entry points.
 - `docker/`: production/development Dockerfiles and their adjacent Dockerfile-specific ignore files; keep `backend/` as the build context.
-- `apps/notes/`: boards, lists, and notes.
-- `apps/authentication/`, `apps/notifications/`: accounts and notifications.
+- `apps/notes/`: boards, lists, and notes; `services.py` owns actor-scoped queries, mutations, membership, ordering and activity events shared by REST and MCP.
+- `apps/authentication/`, `apps/notifications/`: accounts and notifications; recipient-scoped notification operations live in `apps/notifications/services.py`.
 - `apps/mcp/`: shared framework, Notoli tools and ChatGPT packaging in `framework/`, `tools/` and `chatgpt/`.
+
+REST views own HTTP authentication, serializer validation and responses. MCP tools
+retain OAuth scope checks, bounded results and deletion confirmation, validate
+with the same serializers using an actor context, and call domain services
+directly. Domain writes recheck live board membership and ownership under a
+transaction; caller-provided or previously fetched objects do not authorize a
+write. Removing a collaborator also removes access to lists and items they
+created on that board. List creation retains its existing successful-write
+behavior if activity delivery fails; other domain writes and their activity
+records roll back together.
 
 ## 💻 Local development
 

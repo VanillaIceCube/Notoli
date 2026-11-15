@@ -4,16 +4,11 @@ import hashlib
 from urllib.parse import urlsplit
 
 from django.conf import settings
-from django.core.exceptions import PermissionDenied
 from oauth2_provider.models import AccessToken
 from oauth2_provider.oauth2_validators import OAuth2Validator
 from oauthlib.oauth2.rfc6749.errors import CustomOAuth2Error
 
-
-class ConnectionPermissionDenied(PermissionDenied):
-    def __init__(self, message, oauth_error="invalid_token"):
-        super().__init__(message)
-        self.oauth_error = oauth_error
+from .errors import ConnectionPermissionDenied
 
 
 class MCPOAuthValidator(OAuth2Validator):
@@ -91,7 +86,7 @@ def resolve_token(raw_token, scope=None):
     )
     if (
         token is None
-        or not token.is_valid([scope])
+        or not token.is_valid()
         or token.resource != [settings.MCP_RESOURCE_URL]
         or token.user is None
         or not token.user.is_active
@@ -100,5 +95,11 @@ def resolve_token(raw_token, scope=None):
     ):
         raise ConnectionPermissionDenied(
             "Connection expired, revoked, or lacks the required permission."
+        )
+    if scope not in token.scope.split():
+        raise ConnectionPermissionDenied(
+            "Connection lacks the required permission.",
+            "insufficient_scope",
+            required_scopes=[scope],
         )
     return token

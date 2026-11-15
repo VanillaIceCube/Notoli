@@ -11,7 +11,7 @@ from apps.notes.models import Board
 from apps.notes.models import List as NoteList
 from apps.notifications.models import Notification
 
-from ..tools import execute
+from ..services import execute
 from .helpers import make_client, make_token
 
 
@@ -213,7 +213,7 @@ class SharingToolTests(TestCase):
 
     def test_notification_failure_rolls_back_membership(self):
         with patch(
-            "apps.notes.views.notify_board_members",
+            "apps.notes.services.notify_board_members",
             side_effect=RuntimeError("notification failure"),
         ):
             with self.assertRaises(RuntimeError):

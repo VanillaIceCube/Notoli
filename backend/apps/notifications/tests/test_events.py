@@ -139,12 +139,12 @@ class NotificationEventTests(NotificationFixture, APITestCase):
         )
 
     @patch(
-        "apps.notes.views.notify_board_members",
+        "apps.notes.services.notify_board_members",
         side_effect=Exception("notifications table is unavailable"),
     )
     def test_list_create_succeeds_when_notification_fails(self, mock_notify):
         self.client.force_authenticate(user=self.collaborator)
-        with self.assertLogs("apps.notes.views", level="ERROR") as logs:
+        with self.assertLogs("apps.notes.services", level="ERROR") as logs:
             response = self.client.post(
                 "/api/lists/",
                 {

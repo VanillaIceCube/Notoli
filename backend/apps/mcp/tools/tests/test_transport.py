@@ -1,13 +1,14 @@
 """Authenticated MCP HTTP protocol, origin and revocation behavior."""
 
 from datetime import timedelta
+from unittest.mock import patch
 
 import httpx2
 from asgiref.sync import async_to_sync, sync_to_async
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
-from django.test import TransactionTestCase
+from django.test import SimpleTestCase, TransactionTestCase
 from django.utils import timezone
 from oauth2_provider.models import AccessToken
 from rest_framework_simplejwt.tokens import RefreshToken as JWTRefreshToken
@@ -344,3 +345,53 @@ class MCPToolTransportTests(TransactionTestCase):
         self.token.delete()
         with self.assertRaises(PermissionDenied):
             resolve_token("test-access")
+
+
+class RegistryAndErrorTests(SimpleTestCase):
+    def test_server_factories_have_independent_complete_tool_registries(self):
+        from ..server import create_server
+
+        first, second = create_server(), create_server()
+        self.assertIsNot(first, second)
+        first_tools = [
+            tool.model_dump(by_alias=True) for tool in async_to_sync(first.list_tools)()
+        ]
+        second_tools = [
+            tool.model_dump(by_alias=True)
+            for tool in async_to_sync(second.list_tools)()
+        ]
+        self.assertEqual(first_tools, second_tools)
+        self.assertEqual(len(first_tools), 31)
+
+        @first.tool()
+        def isolated_fixture() -> dict:
+            return {"fixture": True}
+
+        self.assertEqual(len(async_to_sync(first.list_tools)()), 32)
+        self.assertEqual(len(async_to_sync(second.list_tools)()), 31)
+
+    def test_object_denial_has_no_reconnect_challenge_or_private_exception(self):
+        from .. import server
+
+        with patch.object(
+            server, "execute", side_effect=PermissionDenied("private-object-id")
+        ):
+            with self.assertRaisesMessage(
+                server.ToolError, "Object not found or permission denied"
+            ) as denied:
+                async_to_sync(server.call)("get_board", board_id=123)
+        self.assertNotIn("private-object-id", str(denied.exception))
+
+    def test_unexpected_failure_is_sanitized_with_reference(self):
+        from .. import server
+
+        with patch.object(
+            server, "execute", side_effect=ValueError("private-provider-body")
+        ):
+            with self.assertLogs(server.logger, level="WARNING") as logs:
+                with self.assertRaises(server.ToolError) as failure:
+                    async_to_sync(server.call)("get_board", board_id=123)
+        self.assertIn("reference ", str(failure.exception))
+        self.assertNotIn(
+            "private-provider-body", str(failure.exception) + str(logs.output)
+        )

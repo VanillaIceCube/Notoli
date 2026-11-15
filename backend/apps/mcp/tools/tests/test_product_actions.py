@@ -5,13 +5,13 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 
-from apps.mcp.framework.oauth import ConnectionPermissionDenied
+from apps.mcp.framework.errors import ConnectionPermissionDenied
 from apps.notes.models import Board, ListNote, Note
 from apps.notes.models import List as NoteList
 from apps.notifications.models import Notification
 
-from ..oauth import required_scopes
-from ..tools import execute
+from ..permissions import required_scopes
+from ..services import execute
 from .helpers import make_client, make_token
 
 

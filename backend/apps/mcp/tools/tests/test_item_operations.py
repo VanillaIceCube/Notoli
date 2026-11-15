@@ -9,7 +9,7 @@ from apps.notes.models import Board, ListNote, Note
 from apps.notes.models import List as NoteList
 from apps.notifications.models import Notification
 
-from ..tools import execute
+from ..services import execute
 from .helpers import make_client, make_token
 
 

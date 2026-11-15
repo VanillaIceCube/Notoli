@@ -6,11 +6,15 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Bound MCP text and encoded responses with accurate adaptive pagination; retain truthful successful mutation outputs with explicit truncation metadata and sanitize unexpected failures.
 - Align authentication request validation, duplicate-registration handling and exact password preservation across applications; reject malformed reset credentials with HTTP 400 and roll back failed signup onboarding.
 - Require a nonblank production signing key consistently.
 
 ### Changed
 
+- Standardize MCP permissions, authenticated invocation, read queries, mutation dispatch and result-formatting modules; create a fresh 31-tool registry per factory call and retain the `integrations` app label.
+- Use only canonical framework origin/HTTPS checks and align structured reconnect challenges with the shared application contract.
+- Route REST and MCP board, list, item, sharing, ordering and notification operations through actor-scoped domain services; recheck live membership and ownership before writes, preserve activity behavior and remove synthetic REST view dispatch from MCP.
 - Organize backend tests into owning `tests/` packages with descriptive behavior names and fixture-only helpers; separate item lifecycle, access, membership and scoped ordering while retaining onboarding, notifications, OAuth and exact proxy-trust coverage.
 - Use shared MCP routing, OAuth defaults and token validation directly, consolidating proxy checks into existing configuration tests.
 - Use Django OAuth Toolkit's built-in MCP client registration, remove custom management commands and document explicit public-client onboarding and validation behavior (#1060).
