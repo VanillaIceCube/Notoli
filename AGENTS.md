@@ -263,7 +263,7 @@ commit SHAs with version comments. Workflow updates do not authorize deployment.
 The shared publisher fails after every `REQUEST_CHANGES`, including repeated or
 unchanged verdicts; valid `APPROVE`/`COMMENT` pass and unavailable/invalid output
 fails. Missing credentials, incomplete required major-upgrade briefs and oversized
-diffs must fail visibly. The shared diff budget is 512 KiB. Obi-Wan's semver-major
+diffs must fail visibly. The shared diff budget is 2 MB (2,000,000 bytes). Obi-Wan's semver-major
 Dependabot brief uses complete primary-source evidence; web search remains limited
 to that review path. Run the repository's publisher regression tests and
 Actionlint when changing this contract. Where used, the read-only `verify-gates.js` audit requires actual

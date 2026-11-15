@@ -10,7 +10,7 @@ inputs:
   max_bytes:
     description: Maximum diff size in bytes before truncation.
     required: false
-    default: "524288"
+    default: "2000000"
 outputs:
   diff_path:
     description: Path to the generated diff file.

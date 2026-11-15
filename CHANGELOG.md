@@ -6,12 +6,14 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Verify the CI uv bootstrap against a reviewed wheel SHA-256 before installation across all four repositories; reject unsupported runner targets and source distributions.
 - Bound MCP text and encoded responses with accurate adaptive pagination; retain truthful successful mutation outputs with explicit truncation metadata and sanitize unexpected failures.
 - Align authentication request validation, duplicate-registration handling and exact password preservation across applications; reject malformed reset credentials with HTTP 400 and roll back failed signup onboarding.
 - Require a nonblank production signing key consistently.
 
 ### Changed
 
+- Raise the complete source-diff limit for all three AI reviewers to 2 MB (2,000,000 bytes) across all four repositories; preserve fail-closed incomplete reviews and all other context, token and model settings.
 - Standardize MCP permissions, authenticated invocation, read queries, mutation dispatch and result-formatting modules; create a fresh 31-tool registry per factory call and retain the `integrations` app label.
 - Use only canonical framework origin/HTTPS checks and align structured reconnect challenges with the shared application contract.
 - Route REST and MCP board, list, item, sharing, ordering and notification operations through actor-scoped domain services; recheck live membership and ownership before writes, preserve activity behavior and remove synthetic REST view dispatch from MCP.

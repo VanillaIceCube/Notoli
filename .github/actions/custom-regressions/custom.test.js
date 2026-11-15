@@ -104,3 +104,99 @@ test('all reviewer workflows request only evidence reads from workflow token and
     assert.match(text,/permission-pull-requests: write/); assert.match(text,/evidence_token: \$\{\{ github.token \}\}/);
   }
 });
+
+
+test('uv bootstrap enforces its reviewed runner and cleans requirements on success or failure', () => {
+  const run = steps('setup-uv').find(step => step.name === 'Install uv').run;
+  const env = { RUNNER_OS: 'Linux', RUNNER_ARCH: 'X64', RUNNER_TEMP: posix(os.tmpdir()) };
+  const stubs = { python: 'printf "%s\\n" "$@" > "$MOCK_CWD/pip.args"; for arg do requirements="$arg"; done; cat "$requirements" > "$MOCK_CWD/requirements"; printf "%s" "$requirements" > "$MOCK_CWD/requirements-path"; exit "${PIP_EXIT:-0}"' };
+  for (const status of [0, 1]) fixture(run, { ...env, PIP_EXIT: String(status) }, stubs, (result, dir) => {
+    assert.equal(result.status, status, result.stderr);
+    const args = fs.readFileSync(path.join(dir, 'pip.args'), 'utf8').trim().split('\n');
+    for (const flag of ['--isolated', '--no-cache-dir', '--force-reinstall', '--no-deps', '--only-binary=:all:', '--require-hashes']) assert.ok(args.includes(flag), flag);
+    assert.equal(args[args.indexOf('--index-url') + 1], 'https://pypi.org/simple');
+    assert.match(fs.readFileSync(path.join(dir, 'requirements'), 'utf8'), /^uv==0\.13\.8 --hash=sha256:[a-f0-9]{64}\n$/);
+    const requirements = fs.readFileSync(path.join(dir, 'requirements-path'), 'utf8');
+    const nativePath = process.platform === 'win32' ? requirements.replace(/^\/([a-z])\//, '$1:/') : requirements;
+    assert.equal(fs.existsSync(nativePath), false);
+  });
+  for (const target of [{ RUNNER_OS: 'Windows' }, { RUNNER_ARCH: 'ARM64' }]) fixture(run, { ...env, ...target }, stubs, (result, dir) => {
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /reviewed Linux X64 wheel/);
+    assert.equal(fs.existsSync(path.join(dir, 'pip.args')), false);
+  });
+});
+
+test('uv bootstrap pip options accept a verified wheel and reject altered bytes offline', () => {
+  const program = String.raw`
+import hashlib
+import os
+from pathlib import Path
+import shlex
+import subprocess
+import tempfile
+import venv
+import zipfile
+import yaml
+steps = yaml.safe_load(Path('.github/actions/setup-uv/action.yml').read_text())['runs']['steps']
+run = next(step['run'] for step in steps if step.get('name') == 'Install uv')
+args = shlex.split(run[run.index('python -m pip'):].replace('\\\n', ' '))[1:]
+with tempfile.TemporaryDirectory() as directory:
+    root = Path(directory)
+    # Locked uv environments need not include pip; keep ensurepip outside the repo.
+    environment = root / "python"
+    venv.EnvBuilder(with_pip=True).create(environment)
+    interpreter = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    wheel = root / 'uv-0.13.8-py3-none-any.whl'
+    with zipfile.ZipFile(wheel, 'w') as archive:
+        archive.writestr('uv/__init__.py', '# offline fixture\n')
+        archive.writestr('uv-0.13.8.dist-info/METADATA', 'Metadata-Version: 2.1\nName: uv\nVersion: 0.13.8\n')
+        archive.writestr('uv-0.13.8.dist-info/WHEEL', 'Wheel-Version: 1.0\nGenerator: fixture\nRoot-Is-Purelib: true\nTag: py3-none-any\n')
+        archive.writestr('uv-0.13.8.dist-info/RECORD', '')
+    requirements = root / 'requirements.txt'
+    requirements.write_text('uv==0.13.8 --hash=sha256:' + hashlib.sha256(wheel.read_bytes()).hexdigest() + '\n')
+    args[args.index('--requirement') + 1] = str(requirements)
+    index = args.index('--index-url')
+    args[index:index + 2] = ['--no-index', '--find-links', str(root)]
+    for tampered in (False, True):
+        target = root / ('rejected' if tampered else 'accepted')
+        if tampered:
+            with wheel.open('ab') as output:
+                output.write(b'changed after approval')
+        result = subprocess.run([str(interpreter), *args, '--target', str(target)], capture_output=True, text=True)
+        if tampered:
+            assert result.returncode != 0, result.stdout
+            assert 'DO NOT MATCH THE HASHES' in result.stderr, result.stderr
+            assert not (target / 'uv').exists()
+        else:
+            assert result.returncode == 0, result.stderr
+            assert (target / 'uv/__init__.py').exists()
+`;
+  execFileSync(python, ['-c', program], { stdio: 'pipe', timeout: 30000 });
+});
+
+
+test('complete source diffs are accepted through 2 MB and marked incomplete above it', () => {
+  const action = fs.readFileSync(path.join(root, '.github/actions/get-pr-diff/action.yml'), 'utf8');
+  const budget = Number(action.match(/max_bytes:[\s\S]*?default: "(\d+)"/)[1]);
+  assert.equal(budget, 2000000);
+  const run = steps('get-pr-diff')[0].run
+    .replaceAll('${{ inputs.base_sha }}', 'a'.repeat(40))
+    .replaceAll('${{ inputs.head_sha }}', 'b'.repeat(40))
+    .replaceAll('${{ inputs.max_bytes }}', String(budget));
+  const stubs = {
+    git: `if [ "$1" = "ls-tree" ] || [ "\${2:-}" = "--name-only" ]; then exit 0; fi
+python -c 'import os,sys; sys.stdout.buffer.write(b"+" + b"x" * (int(os.environ["DIFF_SIZE"]) - 2) + bytes([10]))'`,
+    python3: 'exec python "$@"',
+  };
+  for (const bytes of [budget - 1, budget, budget + 1]) fixture(run, { DIFF_SIZE: String(bytes), BASE_SHA: 'a'.repeat(40), HEAD_SHA: 'b'.repeat(40), MAX_BYTES: String(budget) }, stubs, (result, dir) => {
+    assert.equal(result.status, 0, result.stderr);
+    const outputs = Object.fromEntries(fs.readFileSync(path.join(dir, 'output'), 'utf8').trim().split('\n').map(line => line.split('=')));
+    assert.equal(Number(outputs.max_bytes), budget);
+    assert.equal(Number(outputs.diff_bytes), bytes);
+    assert.equal(outputs.truncated, String(bytes > budget));
+    assert.equal(fs.statSync(path.join(dir, 'pr.diff')).size, Math.min(bytes, budget));
+    if (bytes > budget) assert.match(result.stdout, /Truncated to 2000000 bytes/);
+    else assert.doesNotMatch(result.stdout, /Truncated/);
+  });
+});
