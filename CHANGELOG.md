@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Rename shared frontend test support to `src/test-helpers/`, retain application and feature tests beside their implementation, and preserve application-specific helper behavior.
 - Consolidate shared frontend test setup, helpers and suites under `src/tests/`, update imports and discovery paths, and retain App, startup and feature tests beside their implementation.
 - Replace mocked frontend startup wiring checks with real React entry-point integration coverage for the signed-out login route, isolated state and blocked network access.
 - Consolidate global styles in `frontend/src/index.css`, remove the redundant app stylesheet and unused starter selectors, and preserve app-specific themes and accessibility rules.
@@ -23,6 +24,7 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Remove centralized frontend lint-configuration and theme-source suites; preserve shared support and all colocated application, component and service tests.
 - Remove the unreferenced legacy stylesheet mock from frontend test support.
 - Remove the custom frontend development entrypoint and automatic dependency reinstall; start Vite directly and install changed dependencies manually in the development container.
 - Remove frontend end-to-end suites, Playwright configuration and dependencies, browser-test helpers and CI jobs; retain component, backend, action-local and shared release checks.

@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import NotepadRowActionMenu from './NotepadRowActionMenu';
-import { renderWithProviders } from '../../tests/utils';
+import { renderWithProviders } from '../../test-helpers/utils';
 vi.unmock('@mui/material');
 function renderMenu(props = {}) {
   const anchor = document.createElement('button');

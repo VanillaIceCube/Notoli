@@ -157,7 +157,7 @@ npm run format:check
 npm run build
 ```
 
-Shared frontend test setup, helpers and suites live in `frontend/src/tests/`.
+Shared frontend test setup and helpers live in `frontend/src/test-helpers/`.
 App, startup and feature tests stay beside their implementation. Vitest discovers
 `*.test.js` and `*.test.jsx`.
 

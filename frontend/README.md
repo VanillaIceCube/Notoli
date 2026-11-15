@@ -13,7 +13,7 @@ authentication, and the application shell.
 - `src/components/`: reusable interface components.
 - `src/pages/`: application pages and routes.
 - `src/services/`: API requests and session handling.
-- `src/tests/`: test setup, reusable helpers and shared suites.
+- `src/test-helpers/`: shared test setup and reusable helpers.
   App, startup and feature tests stay beside the files they exercise.
 
 ## 💻 Local development
@@ -123,7 +123,7 @@ the documented singular/plural compatibility behavior.
 - In member lists, show a display name plus one secondary identifier when possible instead of separate labeled username and email rows.
 - Sharing dialogs should use a single `People with access` list with consistent user rows, avatars, role labels, and owner-only management controls.
 - When a section heading already labels an input group, prefer placeholder text plus an accessible `aria-label` over a floating visual input label.
-- Text field focus states should use the Notoli secondary color globally, never the default Material UI blue. Keep the global overrides in `src/index.css` covered by `notoliThemeStyles.test.js`.
+- Text field focus states should use the Notoli secondary color globally, never the default Material UI blue. Keep the global overrides in `src/index.css`.
 
 ## 🧪 Checks
 

@@ -2,8 +2,8 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import BoardNavigationDrawer from './BoardNavigationDrawer';
-import { boardFixtures } from '../tests/fixtures';
-import { renderWithProviders } from '../tests/utils';
+import { boardFixtures } from '../test-helpers/fixtures';
+import { renderWithProviders } from '../test-helpers/utils';
 
 vi.unmock('@mui/material');
 vi.mock('../services/notoliApiClient', () => ({

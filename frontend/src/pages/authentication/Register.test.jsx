@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { renderWithProviders } from '../../tests/utils';
+import { renderWithProviders } from '../../test-helpers/utils';
 import Register from './Register';
 import { register } from '../../services/notoliApiClient';
 import { useNavigate } from 'react-router-dom';
