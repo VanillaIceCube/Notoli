@@ -1,57 +1,58 @@
 # Python / Django
 __pycache__/
 *.py[cod]
-*.pyo
-*.log
+*.egg-info/
 local_settings.py
-db.sqlite3
+*.sqlite3
+*.sqlite3-*
 
-# Python environments / Conda
+# Local environments and private configuration
 .env
+.env.*
+*.env
+*.env.*
+!.env.example
+!*.env.example
+!.env.template
+!*.env.template
 .venv/
 env/
 venv/
 
-# Package and build artifacts
-*.egg-info/
-dist/
-build/
-
-# Test & coverage
-*.coverage
-coverage.xml
-htmlcov/
-
-# Node / React (frontend)
+# Dependencies and generated builds
 node_modules/
 npm-debug.log*
-frontend/build/
-
-# Static files (Django + React)
+build/
+dist/
 staticfiles/
+release_bundle/
 
-# Docker
-*.env.*
+# Test, lint, coverage, and browser artifacts
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+*.coverage
+coverage.xml
+coverage/
+htmlcov/
+frontend/playwright-report/
+frontend/test-results/
+browser-evidence/
+
+# Local Docker configuration and certificates
 docker-compose.override.yml
+/certs/
+*.key
+*.pfx
+*.p12
 
-# TLS certs (never commit private keys)
-certs/*.pem
-certs/*.key
-certs/*.crt
-certs/*.csr
-certs/*.pfx
-certs/*.der
-
-# Editor / OS-specific files
+# Logs, editor, OS, and local task files
+*.log
 .idea/
 .vscode/
 .DS_Store
-
-# Misc
-*.lock
-
-# Disposable browser test artifacts
-frontend/playwright-report/
-frontend/test-results/
-
-browser-evidence/
+Thumbs.db
+Desktop.ini
+.codex-remote-attachments/
+.codex-ticket-bodies/

@@ -1,144 +1,35 @@
 # 📝 Notoli
 
-Production release ownership: use the [app-only release/recovery guide](deploy/production/README.md).
+**A personal list application inspired by Notion**
 
-**A Notion-Inspired To-Do List App**
-Notoli is my personalized take on a list application, inspired by the flexibility of Notion databases.
-It's designed to support **multiple views** of the same list, so my wife, Diana, and I can each use the app in the way that works best for us, whether that's a clean, simple Notes-style interface or a more detailed, database-like workflow.
+Notoli is my personalized take on a list application, inspired by the
+flexibility of Notion databases. It is designed so my wife, Diana, and I can
+each use our lists in the way that works best for us, from a simple notes
+interface to a more structured view.
 
 ## ✨ Features
-- **Boards -> Lists -> Notes** hierarchy
-- **JWT auth** (register/login/refresh) with an email-first login flow
-- **Password reset by email** via secure tokenized reset links
-- **Sane defaults**: new accounts get a default board automatically
-- **Fast CRUD UI**: add, edit, and delete items inline
-- **Manual ordering**: reorder lists and notes with an intentional drag-and-drop mode
-- **Access scoping**: the API limits objects by `owner`/`created_by`/`collaborators`
-- **In-app notifications**: shared board activity appears under the app bar bell with persistent read state and links back to the relevant board or list
-- **Flexible organization**: notes can appear in multiple lists with per-list ordering
-- **Subdomain hosting**: runs at the root of `https://notoli.judeandrewalaba.com`, with backend URLs and static assets served without a configurable path prefix
-- **Dockerized deployment**: frontend + backend + Nginx reverse proxy, with distinct fixed backend/proxy addresses on the private network to prevent startup collisions
-- **ChatGPT integration**: 31 authenticated MCP tools for boards, lists, items, ordering, sharing, and notifications, with separate permissions for organization, sharing, notifications, and confirmed deletion; React consent uses your existing login, and Connected Apps lets you revoke access
 
-## 🚀 Tech Stack
-- **Backend:** Django
-- **Frontend:** React + Vite, Vitest, ESLint 10, and Material UI 9 (Material and icons upgraded together)
-- **Environment Management:** Conda
-- **Deployment:** Docker
-- **Hosting:** DigitalOcean
-- **DNS/Proxy:** Cloudflare
-- **TLS:** Cloudflare Full (strict) to origin (Cloudflare Origin Certificate)
-- **CI/CD & Workflows:** GitHub Actions
-- **Deployment artifact retention:** Releases perform no automatic Docker pruning; host operators review disk usage and retain rollback images before targeted cleanup. Shared-ingress separation remains tracked in [#904](https://github.com/VanillaIceCube/Notoli/issues/904).
-- **Scope-aware security checks:** Required CodeQL scope and analyzer jobs let documentation-only PRs skip analysis without waiting for an absent standalone results check; see the [branch-protection policy](.github/README-WORKFLOWS.md#main-branch-required-checks).
-- **PR dependency gates:** high/critical vulnerability review and npm malware advisory review, with full dependency evidence retained as an artifact and bounded AI report output for large migrations
-- **Major dependency upgrade briefs:** Obi-Wan explains upstream breaking changes, Notoli impact, and verification recommendations with primary sources on Dependabot major updates.
-- **Daily security planning:** LLM-grouped CodeQL and Dependabot alert issues, synchronized with the Notoli GitHub Project
+- Boards, lists, notes, and checklist items.
+- Flexible organization and drag-and-drop ordering.
+- Board sharing, collaboration, and in-app notifications.
+- Email-first accounts, protected pages, and password recovery.
+- A ChatGPT integration for working with boards, lists, and notes.
+
+## 🚀 Tech stack
+
+- **Frontend:** React, Vite, and Material UI.
+- **Backend:** Django REST Framework and JWT authentication.
+- **Development and hosting:** Docker, Nginx, and GitHub Actions.
 
 ## 📚 Documentation
-- Setup, Codex cloud environment settings, env vars, and common commands: [`AGENTS.md`](AGENTS.md)
-- Backend (API, auth, data model): [`backend/README.md`](backend/README.md)
-- Frontend (routing, API base URL): [`frontend/README.md`](frontend/README.md)
-- Deployment (Docker + Nginx): [`deploy/README.md`](deploy/README.md)
-- CI/CD + automation: [`.github/README-WORKFLOWS.md`](.github/README-WORKFLOWS.md)
-- Changelog: [`CHANGELOG.md`](CHANGELOG.md)
-- ChatGPT plugin setup and evaluation prompts: [`plugins/notoli/README.md`](plugins/notoli/README.md)
-- ChatGPT listing updates: the installed personal cloud plugin has its own exported manifest. Use the [listing update steps](plugins/notoli/README.md#listing-metadata-and-updates) to apply repository branding while retaining its existing connection. A Docker deploy alone does not update the listing.
 
-## Docker hot-reload development
-
-For fast source iteration without rebuilding the production images:
-
-```powershell
-Copy-Item deploy/backend.env deploy/.env
-New-Item -ItemType File -Path deploy/db.sqlite3 -Force
-docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml up --build -d
-docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate
-```
-
-Open `http://notoli.localhost:3000`. React and Django reload mounted source
-changes, and the frontend calls Django at `http://notoli.localhost:8000`.
-Both ports bind to localhost only. Set `NOTOLI_DEV_FRONTEND_PORT` or
-`NOTOLI_DEV_BACKEND_PORT` in `deploy/.env` to override them. See
-[`deploy/README.md`](deploy/README.md) for the separate production-shaped
-Nginx and TLS workflow.
-
-The development Compose file supplies a local-only fallback when
-`DJANGO_SECRET_KEY` is blank, so a newly copied `deploy/.env` can register and
-log in immediately. Set a unique secret before using the production-shaped
-stack.
-
-Outside Docker, debug runs generate a temporary random secret when
-`DJANGO_SECRET_KEY` is unset or blank. Set a stable local key to retain sessions
-across restarts. Non-debug startup requires a configured secret. Backend tests
-use fast hashing scoped to Django's test runner; see [backend testing](backend/README.md).
-
-The frontend synchronizes its Docker `node_modules` volume with `package.json`
-and `package-lock.json` at container start. After changing either dependency
-file, restart the frontend service:
-
-```powershell
-docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart frontend
-```
+- [Backend](backend/README.md) — setup, APIs, authentication, email, and MCP.
+- [Frontend](frontend/README.md) — setup, pages, components, and browser tests.
+- [Deployment](deploy/README.md) — local Docker, configuration, and live-server guides.
+- [GitHub setup and workflows](.github/README.md) — first-PR setup and automation.
+- [Changelog](CHANGELOG.md) — project updates.
 
 ## 📜 License
-This project is licensed under a **Modified MIT License (Non-Commercial Use Only)**.
-See the [LICENSE](./LICENSE.md) file for full details.
 
-## 🙏 Acknowledgments
-This project includes code from [`conda_export.py`](https://github.com/andresberejnoi/Conda-Tools) by **Andres Berejnoi**,
-used under the terms of the original [MIT License](https://opensource.org/licenses/MIT).
-
-## 🔑 AI reviewer credentials
-
-Obi-Wan, Lint Eastwood, and RoboCop use separate OpenAI keys scoped to this
-repository. See the [workflow setup and deferred migration](.github/README-WORKFLOWS.md#-separate-openai-reviewer-credentials)
-for exact secret names, project configuration, verification, and rollback.
-
-
-## 🔌 Shared MCP framework
-
-Optional MCP transport/OAuth and application adoption are described in [the framework guide](docs/MCP-FRAMEWORK.md).
-
-Security-alert maintenance validates complete source coverage and supports bounded,
-idempotent Project recovery; see [.github/README-WORKFLOWS.md](.github/README-WORKFLOWS.md#security-alert-recovery).
-
-## Development dependency reproducibility
-
-Development images pin reviewed multi-platform Node 26 and Miniforge 26.9.4-0
-registry digests. Production Dockerfiles and the independent release engine are
-unchanged by this development-image policy. Refresh tags/digests together after
-registry verification and a disposable build/configuration check.
-
-The frontend development entrypoint hashes both `package.json` and
-`package-lock.json` inside its persistent `node_modules` volume. Fresh volumes
-install with `npm ci`; unchanged restarts reuse dependencies; changing either
-manifest reinstalls. Missing manifests or a failed installation stop startup and
-retry on the next invocation. Use one volume per checkout and restart after edits.
-Run `node --test tests/dev-dependencies.test.cjs` from the repository root for the
-credential-free mocked lifecycle/exit-status regression. Compose configuration
-checks do not deploy or touch application data.
-
-## Isolated browser and automation checks
-
-The optional Chromium foundation exercises existing authentication/session and
-password-recovery behavior using a fresh disposable SQLite database and local
-file mail. Setup, commands and extension points are in [frontend/README.md](frontend/README.md).
-CI runs it only for relevant changes. No application credentials are required.
-See [automation coverage](docs/AUTOMATION-COVERAGE.md) and the
-[Batch 2 parity record](docs/BATCH2-PARITY.md) for cross-repository adoption and limits.
-
-
-Reviewer discussion, feedback ownership, safe usage evidence and recovery are
-documented in [.github/AI-REVIEWERS.md](.github/AI-REVIEWERS.md).
-
-
-CI/CD events, reviewer flow, credential boundaries and production-summary behavior
-are mapped in [the architecture reference](docs/CI-CD-ARCHITECTURE.md).
-Shared adoption and justified differences are recorded in [Batch 3 parity](docs/BATCH3-PARITY.md).
-
-Transactional mail failure categories, finite timeouts and password-reset recovery
-are documented in [backend/README.md](backend/README.md#transactional-email-failure-handling).
-
-Security-alert model overrides are resolved by the three caller workflows and passed
-through validated composite inputs; see the [configuration contract](.github/README-WORKFLOWS.md#security-alert-configuration-contract).
+[Modified MIT License (Non-Commercial Use Only)](LICENSE.md).
+Commercial use requires separate permission from the copyright holder.

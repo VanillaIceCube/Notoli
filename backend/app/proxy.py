@@ -1,3 +1,3 @@
-from mcp_framework.proxy import TrustedProxyHeadersMiddleware
+from app_mcp.proxy import TrustedProxyHeadersMiddleware
 
 __all__ = ["TrustedProxyHeadersMiddleware"]

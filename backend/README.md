@@ -1,19 +1,60 @@
-# 🛠️ Backend (Django)
+# 🛠️ Notoli backend
 
-Production release ownership: use the [app-only release/recovery guide](../deploy/production/README.md).
+The Django REST Framework backend owns application data, authentication,
+permissions, notifications, and application integrations.
 
+## 🧭 Structure
 
-The Notoli backend is a Django + Django REST Framework API and authenticated MCP server, served by Uvicorn ASGI in production.
+- `app/`: settings and server entry points.
+- `notes/`: boards, lists, and notes.
+- `authentication/`, `notifications/`: accounts and notifications.
+- `integrations/`, `app_mcp/`: application tools and shared MCP.
 
-## 🧭 What Lives Here
-- `backend/app/`: Django project settings/urls (`settings.py`, `urls.py`)
-- `backend/authentication/`: custom user model + JWT auth endpoints
-- `backend/notes/`: boards, lists, and notes (DRF viewsets)
-- `backend/notifications/`: recipient-scoped in-app notifications, API endpoints, and notification helper services
-- `backend/integrations/`: OAuth policy/JSON consent/client registration and MCP tools
-- `backend/manage.py`: Django management entrypoint
+## 💻 Local development
 
-## 🗺️ API Routes
+Use Python 3.12 in an isolated environment. From the repository root:
+
+```powershell
+python -m pip install -r backend/requirements.txt
+python backend/manage.py migrate
+Set-Location backend
+python -m uvicorn app.asgi:application --port 8000 --reload --no-proxy-headers
+```
+
+Local settings can be supplied in ignored `backend/.env`.
+For Docker hot reload, follow the [deployment guide](../deploy/README.md).
+
+Uvicorn serves both REST and MCP. Django `runserver` serves REST/auth only.
+
+## ⚙️ Configuration
+
+Local runs load ignored `backend/.env`. The database defaults to
+`backend/db.sqlite3`; set `DJANGO_SQLITE_PATH` to use another local database.
+Use `app/settings.py` for current defaults.
+
+| Setting | Purpose |
+| --- | --- |
+| `DJANGO_SECRET_KEY`, `DJANGO_DEBUG` | Stable local signing key and debug mode; use a private key and disable debug in production. |
+| `DJANGO_ALLOWED_HOSTS` | Comma-separated accepted hosts. |
+| `DJANGO_CORS_ALLOWED_ORIGINS`, `DJANGO_CSRF_TRUSTED_ORIGINS` | Explicit frontend origins, including the port during development. |
+| `DJANGO_FRONTEND_BASE_URL` | Browser redirects and password-reset links. |
+| `DJANGO_EMAIL_BACKEND`, `DJANGO_DEFAULT_FROM_EMAIL` | Delivery backend and sender. |
+| `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, `DJANGO_EMAIL_USE_TLS` | SMTP configuration when using an SMTP backend. |
+| `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_KEY`, `DJANGO_EMAIL_TIMEOUT` | Delivery credentials and timeout; keep credentials out of source control. |
+
+For Docker hot reload and dependency volumes, use the
+[deployment README](../deploy/README.md).
+
+With `DJANGO_DEBUG=0`, startup requires a nonblank secret. A stable local key
+keeps sessions valid across restarts. `DJANGO_MCP_BASE_URL` is the OAuth issuer
+origin; its exact resource is `<origin>/mcp`. Run Uvicorn with `--no-proxy-headers`.
+Only exact IPs in `DJANGO_TRUSTED_PROXY_IPS` may supply forwarded scheme/client
+metadata; other forwarded headers are stripped. Local development trusts none.
+Production supplies Nginx's exact private IP and exposes no backend host port.
+See the [production network contract](../deploy/production/README.md).
+
+## 🗺️ API routes
+
 Top-level routes (without any path prefix):
 - Auth: `/auth/` (register/login/refresh)
 - API: `/api/` (boards/lists/notes/notifications)
@@ -23,116 +64,8 @@ Top-level routes (without any path prefix):
 
 Production serves these routes from the subdomain root at `https://notoli.judeandrewalaba.com`.
 
-## ChatGPT MCP authentication and tools
+## 🔐 Authentication API
 
-The official Python MCP SDK serves a stateless JSON Streamable HTTP endpoint
-at `/mcp`. Django OAuth Toolkit supplies migrations and the authorization-code
-flow. Run the ASGI entrypoint, not WSGI or Django `runserver`, to expose MCP.
-`DJANGO_MCP_BASE_URL` is the issuer origin (no path); the exact token audience
-is `<origin>/mcp`. Production must use HTTPS. The origin must also be in
-`DJANGO_ALLOWED_HOSTS`. Configure `DJANGO_FRONTEND_BASE_URL` for browser redirects
-and allow the React origin in `DJANGO_CORS_ALLOWED_ORIGINS` during development.
-
-The browser's `GET /auth/mcp/authorize/` redirects to React's
-`/connections/authorize`, preserving the OAuth query. Already-signed-in users
-see consent immediately; signed-out users use the existing `/login?next=...`
-and return to the pending request. React requests consent with
-`Accept: application/json` and an explicit Notoli JWT bearer header.
-Django validates the request and returns application identity, permissions,
-and a signed, account-bound consent ticket valid for 10 minutes. React submits
-`ticket` and `decision=allow|cancel` as a form-encoded POST to the same endpoint;
-Django revalidates the grant and returns a validated `redirect_url` for the browser
-to follow, including state and issuer on success or denial. Expired tickets
-require reopening the authorization request.
-
-React's `/connections` page (also in the profile menu as **Connected Apps**) uses
-JWT-authenticated `GET /auth/mcp/connections/` to list applications and
-`POST /auth/mcp/connections/` with `application_id` to revoke the current user's
-access tokens, refresh tokens, and pending authorization codes. Applications with
-only an unexpired code also appear, so users can revoke before token exchange;
-expired codes and other accounts' grants do not make an application visible. These JSON
-endpoints accept JWT access tokens only: session cookies, OAuth MCP tokens, and
-posted user IDs cannot supply the user's identity. Browser requests omit cookies,
-so consent does not create a second login session or require cookie CSRF tokens.
-JWTs stay in the existing `sessionStorage`; they are never placed in redirect
-URLs or OAuth callbacks. The separate Django login/logout pages have been removed.
-The RFC 7009 token revocation endpoint is
-`POST /auth/mcp/revoke/`; token exchange/refresh is `POST /auth/mcp/token/`
-with a form-encoded body.
-
-Register a public client after migrations:
-
-```bash
-python manage.py register_mcp_client --redirect-uri "<exact callback URI shown by ChatGPT>"
-```
-
-The default client ID is `notoli-chatgpt`; token authentication is `none` and
-S256 PKCE is mandatory. Repeat `--redirect-uri` for multiple exact HTTPS
-callbacks. Review changes to existing registrations in Django admin; the command
-does not silently replace them. Client registration is operator controlled;
-there is no dynamic registration endpoint or OIDC email verification claim.
-
-The issuer is included as `iss` in OAuth callback responses. Authorization
-requires `state`, S256, and the exact MCP `resource`. The server validates
-resource binding, expiry, active user, scopes, and revocation on each HTTP
-request and rechecks them inside each tool. JWTs are not accepted by MCP and
-OAuth MCP tokens are not accepted by the REST API. Access tokens expire after
-one hour; refresh tokens rotate with reuse protection and a 30-day idle limit.
-The toolkit stores token checksums rather than bearer tokens. Run
-`python manage.py cleartokens` periodically; do not log token bodies or headers.
-
-`notoli:read` grants discovery/read tools, including `get_board_collaborators`
-(owner, usernames/emails, collaborator IDs, and whether the current user can
-manage access). Consent explicitly discloses board owner/collaborator IDs, usernames,
-and email addresses. `notoli:write` grants list and board item creation/updates.
-`notoli:share` additionally grants `add_board_collaborator` by exact username/email
-and `remove_board_collaborator` by a discovered user ID, only on boards the token's
-user owns. Sharing covers every list/item in the board; there are no separate
-workspace or list-only permissions. Consent explicitly describes that access.
-Sharing rejects identifiers matching multiple accounts (including username/email
-collisions and case variants) without changing membership or sending notifications.
-Use an unambiguous alternative username or email; the same validation applies to REST.
-`notoli:organize` permits board/list creation and name/description edits, list/item
-ordering, item attachment, and full list-membership replacement. Board edits remain
-owner-only; accessible board members can manage lists/items as in REST. Ownership,
-creator IDs, collaborator fields, and board transfers never enter these serializers
-from MCP input. `notoli:notifications` permits recipient-only activity reads and
-read/unread changes. `notoli:delete` permits deletion of accessible lists/items and
-owned boards; deleting notifications also requires `notoli:notifications`.
-Existing connections must reconnect and approve new permissions; refresh cannot
-upgrade their scope. Membership reads are board-scoped, not a user directory.
-There are 31 tools; see the complete [tool catalog](../plugins/notoli/README.md).
-Read pagination defaults to 50 and is capped at 100. Write titles are capped at
-255 characters, descriptions at 10,000. Membership/order arrays contain at most
-1000 positive IDs. Reordering requires the complete current ID set without duplicates.
-`set_list_items` replaces the entire membership/order and accepts an empty array
-without deleting items. Attachments stay inside one board. Board-wide item reads
-include unlisted items and return `list_id: null`.
-Tool schemas and annotations include each tool's OAuth scopes. Missing operation scope
-returns an MCP authentication challenge so ChatGPT can request reauthorization.
-Board/list permission failures return ordinary tool errors without data.
-
-Tools reuse the REST querysets, note serializer, and `perform_create`/
-`perform_update` services inside a transaction, preserving validation, ordering,
-and notifications. MCP also rechecks board membership even for an item's original
-creator after collaboration is removed. Sharing reuses `BoardViewSet`'s owner-only
-collaborator actions inside a transaction, preserving validation and notifications.
-Removal immediately blocks that collaborator's MCP access to the board and its
-lists. Organization, item deletion, and notification tools reuse the same viewset
-services inside that transaction. Notification reads/updates/deletes are limited
-to the current recipient, including their historical activity. List deletion keeps
-items; item deletion removes all list occurrences; board deletion cascades to every
-list/item. All deletion tools require literal `confirm: true`, checked again at the
-service boundary, and instruct the client to explain impact and obtain explicit user
-confirmation. This records the caller's assertion, not an independently verified
-human approval. Normal auth/account/admin flows remain outside the MCP tool surface.
-See [plugin tools and evaluation prompts](../plugins/notoli/README.md).
-
-Run the OAuth and HTTP protocol tests with `python manage.py test integrations`.
-Their ASGI HTTP client, `httpx2==2.13.1`, is pinned directly in requirements
-(also required transitively by MCP) so fresh test environments declare it explicitly.
-
-## 🔐 Authentication
 JWT auth is provided by `djangorestframework-simplejwt`.
 
 Common endpoints:
@@ -147,7 +80,8 @@ New users get a default board named after their username, such as `"andrew's Boa
 All `/api/*` endpoints require:
 - Header: `Authorization: Bearer <accessToken>`
 
-## 🧱 Data Model (High Level)
+## 🧱 Data model and access
+
 - Board: top-level container for organizing lists
 - List: belongs to a board; associates notes via a many-to-many relation
 - Note: a single checklist item (`note` + optional `description` + `status`); can be linked into multiple lists
@@ -166,196 +100,84 @@ Access scoping:
 - Notification responses include board/list/note context plus `target_path` so the frontend can route users to the relevant board or list.
 - Shared board activity creates notifications for other board members when a collaborator is added or removed, when a board is renamed, when a list is created or updated, when a note is created, updated, or transitions to `Complete`, and when boards/lists/notes are deleted. Added and removed collaborators also receive direct access-change notifications.
 
-## 💻 Local Development
-Full setup (Conda, env vars) lives in [`AGENTS.md`](../AGENTS.md). Common commands:
+## ✉️ Email
 
-```bash
-python backend/manage.py migrate
-cd backend
-python -m uvicorn app.asgi:application --port 8000 --reload --no-proxy-headers
+Local development uses Django's console email backend. The included
+Resend HTTPS backend is configured with:
+
+```env
+DJANGO_EMAIL_BACKEND=authentication.email_backends.ResendApiEmailBackend
+DJANGO_EMAIL_HOST_KEY=<resend-api-key>
+DJANGO_EMAIL_TIMEOUT=10
+DJANGO_DEFAULT_FROM_EMAIL=<sender-on-a-verified-domain>
 ```
 
-For local non-Docker runs, Django auto-loads `backend/.env` (via `python-dotenv`) before reading `DJANGO_*` settings.
+Keep `.localhost` senders with console delivery. Live delivery uses an approved
+sender domain and private credentials configured through the production guide.
+Plain text, HTML, multipart alternatives, `cc`, `bcc`, and `reply_to` are supported.
 
-## Docker hot reload
+The socket-operation timeout defaults to 10 seconds and supports `0 < seconds <= 30`.
+The environment value is parsed as an integer. Invalid runtime timeout values fall
+back safely; malformed startup configuration fails visibly. A successful provider
+response means acceptance, not confirmed inbox delivery.
 
-The development Compose workflow builds `backend/Dockerfile.dev`, mounts the
-backend source, and runs Uvicorn with source reload:
+Failures preserve `fail_silently`: false re-raises, while true skips failures and
+returns the number sent. Password reset returns a generic response for known and
+unknown accounts, including delivery failures. Logger `authentication.email_backends`
+records safe category/status fields: `configuration`, `request`, `rate_limit`,
+`provider`, `timeout`, `network`, or `unexpected`. Never log provider response
+bodies, recipient details, reset tokens, message contents, or credentials.
+
+Diagnose failures using those categories and the existing provider dashboard.
+There is no automatic retry or resend: a timeout may occur after acceptance.
+Use mocked delivery tests; production email receipt requires separate verification.
+
+## 🔌 MCP integration
+
+The shared-framework checker lives at `backend/check_app_mcp.py`, beside the backend
+and outside the hash-verified package. Run `python backend/check_app_mcp.py` from
+the repository root; use `--source-root <canonical-checkout>` for local offline
+verification. See the [framework guide](app_mcp/README.md) for source ownership.
+
+The [MCP README](app_mcp/README.md) explains shared transport,
+OAuth, configuration, and verification.
+
+Notoli tools and permissions live in the [integration README](integrations/README.md),
+which links to the [ChatGPT plugin guide](../backend/app_mcp/chatgpt/README.md).
+
+Connection manifests, artwork, and package builders live in
+[chatgpt/](app_mcp/chatgpt/README.md).
+
+## 🧪 Checks
+
+From the repository root:
 
 ```powershell
-docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml up --build -d backend
-docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate
+python backend/manage.py test
+ruff check backend
+ruff format backend --check
+python backend/manage.py makemigrations --check --dry-run
 ```
 
-The development backend listens on `http://notoli.localhost:8000` by default.
-Use the production Dockerfile and Compose file when testing Uvicorn, Nginx,
-HTTPS, or deployment-shaped behavior.
+## 🛠️ Maintenance
 
-The development Compose configuration supplies a local-only fallback when
-`DJANGO_SECRET_KEY` is blank, so a freshly copied `deploy/.env` can issue JWTs
-without manual configuration. Provide a unique `DJANGO_SECRET_KEY` before
-using the production-shaped stack. `backend/Dockerfile.dev` pins Miniforge
-26.9.4-0 to a reviewed multi-platform digest; update that digest only through an explicit
-image-version and security review.
+Keep registration and reset validation against the prospective/existing user,
+preserve password whitespace, and retain generic account-recovery responses.
+Notification operations remain recipient-scoped; bulk mutations are atomic.
+Preserve pending/error handling through response parsing in the frontend.
 
-Run tests:
+Maintain the Python version in `environment.yml` and pip dependencies in
+`requirements.txt` together with CI and Docker. The test runner's fast password
+hasher applies only during tests; normal settings retain secure hashing.
+See [Docker dependency maintenance](../deploy/README.md#development-dependency-reproducibility).
 
-```bash
-cd backend
-python manage.py test
-```
+The browser-test backend uses disposable SQLite, synthetic users, local file mail,
+and loopback binding. It does not load developer dotenv files or use the developer
+database. Install backend requirements before running the frontend browser suite.
 
-The configured Django test runner uses MD5 password hashing only while executing
-the suite and restores the original hashers on success or failure. Normal app
-settings retain Django's secure hashers regardless of `DJANGO_TESTING`, command
-arguments, or imported test modules. Tests of a specific password algorithm can
-use `override_settings(PASSWORD_HASHERS=...)` within that test.
+## 🚀 Production
 
-With `DJANGO_DEBUG=0`, startup requires a nonblank `DJANGO_SECRET_KEY`. Debug
-runs generate a temporary random secret if none is configured; set a stable
-local key in `backend/.env` to keep sessions valid across restarts.
-
-Migrations:
-
-```bash
-python backend/manage.py makemigrations
-python backend/manage.py migrate
-```
-
-Linting (CI uses Ruff):
-
-```bash
-cd backend
-pip install ruff
-ruff check .
-ruff format --check .
-```
-
-## ⚙️ Configuration
-Key environment variables (see `backend/app/settings.py` for defaults):
-- `DJANGO_SECRET_KEY`
-- `DJANGO_DEBUG` (`1`/`0`)
-- `DJANGO_SQLITE_PATH`
-- `DJANGO_ALLOWED_HOSTS` (comma-separated)
-- `DJANGO_CORS_ALLOWED_ORIGINS` (comma-separated)
-- `DJANGO_CSRF_TRUSTED_ORIGINS` (comma-separated)
-- `DJANGO_FRONTEND_BASE_URL` (base URL used in password-reset links, for example `https://notoli.judeandrewalaba.com`)
-- `DJANGO_MCP_BASE_URL` (OAuth issuer origin; exact MCP resource is `<origin>/mcp`)
-- `DJANGO_TRUSTED_PROXY_IPS` (comma-separated individual proxy IPs; default empty,
-  production Compose supplies Nginx's private address `172.30.88.2`)
-- `DJANGO_EMAIL_BACKEND` (default `django.core.mail.backends.console.EmailBackend`)
-- `DJANGO_EMAIL_HOST` / `DJANGO_EMAIL_PORT` / `DJANGO_EMAIL_USE_TLS`
-- `DJANGO_EMAIL_HOST_USER` / `DJANGO_EMAIL_HOST_KEY`
-- `DJANGO_EMAIL_TIMEOUT` (default `10`)
-- `DJANGO_DEFAULT_FROM_EMAIL`
-
-Production email recommendation:
-- Use `DJANGO_EMAIL_BACKEND=authentication.email_backends.ResendApiEmailBackend` to send through Resend's HTTPS API on port `443`.
-- Keep `DJANGO_EMAIL_HOST_KEY=<RESEND_API_KEY>` and `DJANGO_DEFAULT_FROM_EMAIL=<verified-from-address>`.
-
-SMTP alternative:
-- `DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`
-- `DJANGO_EMAIL_HOST=smtp.resend.com`
-- `DJANGO_EMAIL_PORT=587`
-- `DJANGO_EMAIL_USE_TLS=1`
-- `DJANGO_EMAIL_HOST_USER=resend`
-- `DJANGO_EMAIL_HOST_KEY=<RESEND_API_KEY>`
-
-Proxy / HTTPS:
-- Start Uvicorn with `--no-proxy-headers` so its outer middleware never trusts
-  or rewrites peers before Notoli checks them. Notoli's ASGI middleware accepts
-  forwarded scheme/client only from `DJANGO_TRUSTED_PROXY_IPS`; wildcards,
-  subnets, and hostnames are rejected. Other peers' forwarded headers are stripped.
-  Django uses ASGI's validated scheme and the ordinary `Host` header, with
-  `SECURE_PROXY_SSL_HEADER=None` and `USE_X_FORWARDED_HOST=False`.
-- Production Compose publishes no backend port. Only Nginx shares the internal
-  backend network; a separate backend-only bridge permits outbound email.
-  Local development trusts no proxy. See `deploy/production/README.md` for production network details.
-
-Static files:
-- Collected during the Docker build (`python manage.py collectstatic --noinput`)
-- `STATIC_URL` is `/static/`. Notoli serves backend routes at the subdomain root and does not configure a deployment path prefix.
-
-
-## 🔌 Shared MCP framework
-
-See [the MCP framework guide](../docs/MCP-FRAMEWORK.md) for opt-in settings, ASGI startup, OAuth migrations/client registration, consent, scope/ownership requirements and disabled-profile tests.
-
-## Authentication and notification parity
-
-Registration validates passwords with Django's configured validators against the
-candidate user's final username/email before account creation. Validation failures
-return HTTP 400 with a human-readable `error`; non-string passwords also return
-400. Password reset already validates against the existing user. Notification
-bulk mark-read/clear operations are transactional and remain recipient-scoped.
-See [the adoption audit](../docs/AUTH-PARITY.md) for evidence and boundaries.
-
-## Development dependency reproducibility
-
-Development images pin reviewed multi-platform Node 26 and Miniforge 26.9.4-0
-registry digests. Production Dockerfiles and the independent release engine are
-unchanged by this development-image policy. Refresh tags/digests together after
-registry verification and a disposable build/configuration check.
-
-The frontend development entrypoint hashes both `package.json` and
-`package-lock.json` inside its persistent `node_modules` volume. Fresh volumes
-install with `npm ci`; unchanged restarts reuse dependencies; changing either
-manifest reinstalls. Missing manifests or a failed installation stop startup and
-retry on the next invocation. Use one volume per checkout and restart after edits.
-Run `node --test tests/dev-dependencies.test.cjs` from the repository root for the
-credential-free mocked lifecycle/exit-status regression. Compose configuration
-checks do not deploy or touch application data.
-
-## Disposable browser-test backend
-
-The frontend `npm run test:e2e` wrapper runs `scripts/e2e_backend.py` with
-`scripts/e2e_settings.py`: synthetic secret, fresh temporary SQLite, local file
-email, test-only fast hashing, disabled MCP and loopback-only binding. It refuses
-state directories without the wrapper marker and prevents dotenv loading.
-Install `backend/requirements.txt` in your activated Python environment first.
-This harness never reads the developer database or production settings and does
-not change the normal server/test-runner hashing policy. See frontend/README.md.
-
-
-## Transactional email failure handling
-
-`ResendApiEmailBackend` sends once per message. An HTTP 2xx means provider
-acceptance, not confirmed inbox delivery. `EMAIL_TIMEOUT` is a finite socket
-operation timeout: default 10 seconds, supported `0 < seconds <= 30`. Invalid, nonfinite,
-bool or larger runtime values produce a safe warning and use 10 seconds. The
-`DJANGO_EMAIL_TIMEOUT` environment setting is parsed as an integer at startup;
-malformed text fails configuration visibly rather than changing delivery policy.
-
-The backend preserves `fail_silently`: false re-raises the original exception;
-true logs the failure, continues the batch and returns only successful sends.
-Missing credentials log `configuration` and return 0 only in silent mode. The
-password-reset caller deliberately uses false, catches failures, emits a safe
-caller event and returns the same generic 200 response for known and unknown
-accounts. No recipient/user ID, exception text/traceback, reset URL/token, key or
-message content is included in these logs.
-
-Logger `authentication.email_backends` emits ERROR records with
-`delivery_provider=resend`, `delivery_category` and numeric `delivery_status`
-(or unknown). Categories: `configuration`, `request` (HTTP 4xx except 429),
-`rate_limit` (429), `provider` (HTTP 5xx), `timeout`, `network`, `unexpected`.
-The text formatter includes category/status even when structured fields are not
-configured. Provider bodies and error strings are untrusted and never read for
-logging. Template's established HTML/reply-to support and app sender identities
-are preserved; generic failure behavior is equivalent across all three apps.
-
-Operator recovery: check these safe categories and the existing Resend dashboard
-using the existing account. Missing key/401/403 calls for credential selection,
-permissions or sender-domain verification; fix deployment configuration through
-the documented release path without logging/rotating keys.400/422 means inspect
-payload rules using synthetic data. 429/5xx/network/timeouts indicate capacity or
-provider availability; check status/rate limits before asking for a fresh reset.
-Repeated configuration/auth failures or a sustained outage warrant operator
-attention through existing channels. This adds logs, not a monitoring service.
-
-There is no automatic retry, queue or resend: a timeout may occur after provider
-acceptance, so a blind retry could duplicate a reset email. Idempotency/backoff
-and durable delivery tracking would need their own bounded design. No production
-mail is sent by tests; mocks cover success, credentials, network/timeouts,
-400/401/403/422/429/500/503, both silent modes, partial batches, safe fallback and
-the real reset caller's generic response/redacted logs. Production public
-readiness cannot establish authenticated password-reset inbox delivery.
+Use the [production release and recovery guide](../deploy/production/README.md)
+for private configuration, exact proxy trust, migrations, static files and readiness.
+Production sessions/CSRF cookies require HTTPS with debug disabled; backend ports
+remain private. Local Docker files are development tools, not production release inputs.
