@@ -1,6 +1,5 @@
 import base64
 import hashlib
-import io
 from datetime import timedelta
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlencode, urlsplit
@@ -10,8 +9,6 @@ from asgiref.sync import async_to_sync, sync_to_async
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
-from django.core.management import call_command
-from django.core.management.base import CommandError
 from django.test import Client, TestCase, TransactionTestCase
 from django.utils import timezone
 from oauth2_provider.models import AccessToken, Application, Grant, RefreshToken
@@ -343,33 +340,6 @@ class OAuthTests(TestCase):
         self.assertFalse(AccessToken.objects.filter(pk=mine.pk).exists())
         self.client.post("/auth/mcp/connections/", {"application_id": self.app.pk})
         self.assertTrue(AccessToken.objects.filter(pk=theirs.pk).exists())
-
-    def test_registration_command_checks_exact_redirects(self):
-        for uri in (
-            "http://chatgpt.com/callback",
-            "https://*.chatgpt.com/callback",
-            "https://user:pass@chatgpt.com/callback",
-        ):
-            with self.assertRaises(CommandError):
-                call_command(
-                    "register_mcp_client",
-                    redirect_uri=[uri],
-                    client_id="bad",
-                    stdout=io.StringIO(),
-                )
-        call_command(
-            "register_mcp_client",
-            redirect_uri=[CALLBACK],
-            client_id="another-client",
-            stdout=io.StringIO(),
-        )
-        with self.assertRaises(CommandError):
-            call_command(
-                "register_mcp_client",
-                redirect_uri=[CALLBACK],
-                client_id="another-client",
-                stdout=io.StringIO(),
-            )
 
     def test_consent_denial_and_unsupported_grants(self):
         response = self.client.get(

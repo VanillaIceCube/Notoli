@@ -12,8 +12,7 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
-from django.core.management import call_command
-from django.core.management.base import CommandError
+from django.core.management import call_command, get_commands
 from django.test import SimpleTestCase, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
@@ -43,8 +42,7 @@ class ProfileTests(SimpleTestCase):
                 "Disabled profile is exercised in the ordinary backend test run"
             )
         self.assertFalse(apps.is_installed("oauth2_provider"))
-        with self.assertRaisesMessage(CommandError, "MCP is disabled"):
-            call_command("register_mcp_client", "--redirect-uri", CALLBACK)
+        self.assertNotIn("createapplication", get_commands())
         from .asgi import create_application
 
         sentinel = object()
@@ -138,7 +136,10 @@ class OAuthTests(TestCase):
             code_challenge_method="S256",
         )
         query.update(changes)
-        return self.client.get("/auth/mcp/authorize/", query)
+        return self.client.get(
+            "/auth/mcp/authorize/",
+            {key: value for key, value in query.items() if value is not None},
+        )
 
     def exchange(self, code, **changes):
         data = dict(
@@ -152,12 +153,12 @@ class OAuthTests(TestCase):
         data.update(changes)
         return self.client.post(
             "/auth/mcp/token/",
-            urlencode(data),
+            urlencode({key: value for key, value in data.items() if value is not None}),
             content_type="application/x-www-form-urlencoded",
         )
 
-    def authorize(self):
-        response = self.consent()
+    def authorize(self, **changes):
+        response = self.consent(**changes)
         self.assertEqual(response.status_code, 200, response.content)
         data = response.json()
         self.assertEqual(
@@ -292,24 +293,118 @@ class OAuthTests(TestCase):
             401,
         )
 
-    def test_registration_requires_exact_https_callback_and_never_overwrites(self):
+    def test_toolkit_onboarding_preserves_public_consent_and_existing_clients(self):
+        from oauth2_provider.models import Application
+
+        call_command(
+            "createapplication",
+            "public",
+            "authorization-code",
+            client_id="onboarded-client",
+            name="Framework onboarding",
+            redirect_uris=CALLBACK,
+            stdout=io.StringIO(),
+        )
+        self.application = Application.objects.get(client_id="onboarded-client")
+        self.assertEqual(self.application.client_type, "public")
+        self.assertEqual(
+            self.application.authorization_grant_type, "authorization-code"
+        )
+        self.assertFalse(self.application.skip_authorization)
+
+        output = io.StringIO()
+        call_command(
+            "createapplication",
+            "public",
+            "authorization-code",
+            client_id="onboarded-client",
+            name="Unreviewed replacement",
+            redirect_uris="https://other.example/callback",
+            stdout=output,
+        )
+        self.assertIn("Please correct", output.getvalue())
+        self.application.refresh_from_db()
+        self.assertEqual(self.application.name, "Framework onboarding")
+        self.assertEqual(self.application.redirect_uris, CALLBACK)
+        self.assertEqual(self.exchange(self.authorize()).status_code, 200)
+
+    def test_toolkit_onboarding_enforces_application_callback_policy(self):
+        from oauth2_provider.models import Application
+
         for uri in (
             "http://client.example/callback",
-            "https://client.example/*",
-            "https://user:password@client.example/callback",
+            "https://*.client.example/callback",
             "https://client.example/callback#fragment",
         ):
-            with self.assertRaises(CommandError):
+            with self.subTest(uri=uri):
+                output = io.StringIO()
                 call_command(
-                    "register_mcp_client", redirect_uri=[uri], stdout=io.StringIO()
+                    "createapplication",
+                    "public",
+                    "authorization-code",
+                    client_id="invalid-callback-client",
+                    name="Invalid callback",
+                    redirect_uris=uri,
+                    stdout=output,
                 )
-        call_command(
-            "register_mcp_client", redirect_uri=[CALLBACK], stdout=io.StringIO()
-        )
-        with self.assertRaises(CommandError):
-            call_command(
-                "register_mcp_client", redirect_uri=[CALLBACK], stdout=io.StringIO()
+                self.assertIn("Please correct", output.getvalue())
+                self.assertFalse(
+                    Application.objects.filter(
+                        client_id="invalid-callback-client"
+                    ).exists()
+                )
+
+    def test_stored_unsafe_callbacks_cannot_authorize_explicitly_or_by_default(self):
+        from oauth2_provider.models import Grant
+
+        for uri in (
+            "http://client.example/callback",
+            "https://user:password@client.example/callback",
+            "https://client.example/*",
+            "https://client.example/callback#fragment",
+        ):
+            self.application.redirect_uris = uri
+            self.application.save(update_fields=["redirect_uris"])
+            for requested_uri in (uri, None):
+                with self.subTest(stored=uri, requested=requested_uri):
+                    response = self.consent(redirect_uri=requested_uri)
+                    self.assertEqual(response.status_code, 400)
+                    self.assertNotIn("ticket", response.json())
+                    self.assertFalse(Grant.objects.exists())
+
+    def test_stored_unsafe_callback_grants_cannot_issue_tokens(self):
+        from oauth2_provider.models import AccessToken, Grant
+
+        for index, uri in enumerate(
+            (
+                "http://client.example/callback",
+                "https://user:password@client.example/callback",
+                "https://client.example/*",
+                "https://client.example/callback#fragment",
             )
+        ):
+            with self.subTest(uri=uri):
+                grant = Grant.objects.create(
+                    user=self.user,
+                    application=self.application,
+                    code=f"legacy-code-{index}",
+                    expires=timezone.now() + timedelta(seconds=120),
+                    redirect_uri=uri,
+                    scope=" ".join(settings.MCP_REQUIRED_SCOPES),
+                    code_challenge=CHALLENGE,
+                    code_challenge_method="S256",
+                    resource=[settings.MCP_RESOURCE_URL],
+                )
+                self.assertEqual(
+                    self.exchange(grant.code, redirect_uri=uri).status_code, 400
+                )
+                self.assertFalse(AccessToken.objects.exists())
+
+    def test_registered_default_callback_supports_consent_and_code_exchange(self):
+        code = self.authorize(redirect_uri=None)
+        response = self.exchange(code, redirect_uri=None)
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertIn("access_token", response.json())
 
 
 @unittest.skipUnless(

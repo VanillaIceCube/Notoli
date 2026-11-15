@@ -1,6 +1,7 @@
 """OAuth policy around the toolkit's code, PKCE, and token lifecycle."""
 
 import hashlib
+from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -16,6 +17,40 @@ class ConnectionPermissionDenied(PermissionDenied):
 
 
 class MCPOAuthValidator(OAuth2Validator):
+    @staticmethod
+    def _callback_allowed(uri):
+        # Toolkit's generic registration UI/command accepts more URI forms than
+        # this app's public MCP clients. Apply policy even to a default callback.
+        if not isinstance(uri, str):
+            return False
+        try:
+            parsed = urlsplit(uri)
+            return (
+                parsed.scheme == "https"
+                and bool(parsed.hostname)
+                and "@" not in parsed.netloc
+                and "#" not in uri
+                and "*" not in uri
+            )
+        except ValueError:
+            return False
+
+    def validate_redirect_uri(self, client_id, redirect_uri, request, *args, **kwargs):
+        return self._callback_allowed(redirect_uri) and super().validate_redirect_uri(
+            client_id, redirect_uri, request, *args, **kwargs
+        )
+
+    def get_default_redirect_uri(self, client_id, request, *args, **kwargs):
+        uri = super().get_default_redirect_uri(client_id, request, *args, **kwargs)
+        return uri if self._callback_allowed(uri) else None
+
+    def confirm_redirect_uri(
+        self, client_id, code, redirect_uri, client, *args, **kwargs
+    ):
+        return self._callback_allowed(redirect_uri) and super().confirm_redirect_uri(
+            client_id, code, redirect_uri, client, *args, **kwargs
+        )
+
     def validate_grant_type(
         self, client_id, grant_type, client, request, *args, **kwargs
     ):

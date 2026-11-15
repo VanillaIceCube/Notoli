@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-15
+
+### Changed
+
+- Use Django OAuth Toolkit's built-in MCP client registration, remove custom management commands and document explicit public-client onboarding and validation behavior (#1060).
+
 ## 2026-11-14
 
 ### Added
@@ -16,6 +22,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Consolidate MCP framework, tools and ChatGPT guidance into one `apps/mcp/README.md`, preserving permissions, tool catalogs and connection instructions.
 - Replace the custom Resend email backend with Django-Anymail, retain existing credential and backend-selection variables, and keep password-reset failures generic without logging private provider details.
 - Move provider email delivery into `apps/email/` while retaining password-reset privacy coverage with authentication and preserving the existing delivery configuration and timeout contract.
 - Group backend applications under `apps/`, rename Django configuration to `config/`, and consolidate MCP framework, application tools and ChatGPT packaging under `apps/mcp/` while preserving existing app labels, migrations, tables and proxy behavior.
@@ -41,6 +48,8 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Remove unused MCP framework source-pin and hash-manifest metadata; retain coordinated source review and runtime tests.
+- Remove the local ChatGPT package/listing builders and their test modules; retain source manifests/artwork and ordinary/MCP runtime checks.
 - Remove the repository MCP parity checker and its CI/docs integration; retain shared framework source pins, manifests and runtime tests.
 - Remove Conda environment definitions and the environment export helper after migrating dependency declarations to uv.
 - Remove the frontend env example; retain `deploy/backend.env` for backend configuration.

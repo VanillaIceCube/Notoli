@@ -87,8 +87,8 @@ Ordinary login lands on the preferred board; connection login preserves the
 validated pending consent path and query. Connection pages use explicit JWT
 headers and omit cookies. JWTs never enter OAuth callback URLs. Consent and
 revocation stay account-bound; scopes and current membership remain enforced by
-Django. See [Notoli's MCP integration](../backend/apps/mcp/tools/README.md) and
-[client setup](../backend/apps/mcp/chatgpt/README.md).
+Django. See [Notoli's MCP integration](../backend/apps/mcp/README.md#application-tools) and
+[client setup](../backend/apps/mcp/README.md#chatgpt).
 
 ### Connections response contract
 

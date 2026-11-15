@@ -56,7 +56,6 @@ jobs:
               - '.github/actions/setup-uv/**'
             backend:
               - 'backend/**'
-              - 'backend/apps/mcp/framework/source.json'
               - '.github/workflows/gate-test.yml'
               - '.github/actions/read-versions/**'
               - '.github/actions/setup-uv/**'
@@ -206,7 +205,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          { uv run --locked python -m unittest discover -s apps/mcp/chatgpt -p 'test_*.py' && uv run --locked python manage.py test --verbosity=2; } 2>&1 | tee test_output.txt || status=$?
+          { uv run --locked python manage.py test --verbosity=2; } 2>&1 | tee test_output.txt || status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
       - name: Test summary

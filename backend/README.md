@@ -149,14 +149,14 @@ tests for local verification; production receipt requires separate acceptance.
 
 ## 🔌 MCP integration
 
-The [MCP README](apps/mcp/framework/README.md) explains shared transport,
+The [MCP README](apps/mcp/README.md#framework) explains shared transport,
 OAuth, configuration, and verification.
 
-Notoli tools and permissions live in the [integration README](apps/mcp/tools/README.md),
-which links to the [ChatGPT plugin guide](apps/mcp/chatgpt/README.md).
+Notoli tools and permissions live in the [integration README](apps/mcp/README.md#application-tools),
+which links to the [ChatGPT plugin guide](apps/mcp/README.md#chatgpt).
 
-Connection manifests, artwork, and package builders live in
-[chatgpt/](apps/mcp/chatgpt/README.md).
+Connection manifests and artwork live in
+[chatgpt/](apps/mcp/README.md#chatgpt).
 
 ## 🧪 Checks
 
