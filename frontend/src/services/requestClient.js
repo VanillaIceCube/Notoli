@@ -15,7 +15,7 @@ function shouldRedirectToLogin(path) {
   );
 }
 
-export function clearAuthSession() {
+function clearAuthSession() {
   try {
     sessionStorage.removeItem('accessToken');
     sessionStorage.removeItem('refreshToken');
@@ -26,7 +26,7 @@ export function clearAuthSession() {
   }
 }
 
-export function redirectToLogin(returnTo) {
+function redirectToLogin(returnTo) {
   const destination = loginPath(returnTo);
   const didNavigate = navigate(destination, { replace: true });
 

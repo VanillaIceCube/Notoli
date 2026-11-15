@@ -159,8 +159,6 @@ parent or override changes. Review upstream API changes before widening the
 selector. Remove overrides once all parent ranges natively accept patched
 versions, regenerate the lockfile and repeat those checks.
 
-Notoli also overrides `glob@>=9 <14.0.2` to `^14.0.2` for
-[GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4).
 Jest/Babel and their glob/deepmerge test-only graph were removed by the Vitest migration. Keep lockfile updates coupled to supported lint/test dependencies.
 
 Keep Material UI and icons on compatible versions and regenerate the lockfile

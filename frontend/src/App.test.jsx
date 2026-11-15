@@ -88,14 +88,10 @@ vi.mock('./pages/lists/ListTasksPage', async () => {
   };
 });
 const testTheme = createTheme();
-const routerFuture = {
-  v7_startTransition: true,
-  v7_relativeSplatPath: true,
-};
 function renderApp(route) {
   return render(
     <ThemeProvider theme={testTheme}>
-      <MemoryRouter future={routerFuture} initialEntries={[route]}>
+      <MemoryRouter initialEntries={[route]}>
         <App />
       </MemoryRouter>
     </ThemeProvider>,

@@ -32,7 +32,6 @@ services:
       CHOKIDAR_USEPOLLING: "true"
       HOST: 0.0.0.0
       REACT_APP_API_BASE_URL: http://notoli.localhost:${NOTOLI_DEV_BACKEND_PORT:-8000}
-      WATCHPACK_POLLING: "true"
     volumes:
       - ../frontend:/frontend
       - frontend_node_modules:/frontend/node_modules

@@ -233,7 +233,6 @@ STATIC_URL = "/static/"
 
 # Where collectstatic will put all static files in prod
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # Default primary key field type

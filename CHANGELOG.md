@@ -24,6 +24,7 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Remove inactive frontend environment, browser-target and Watchpack settings, the obsolete Django static-storage setting, an override for the absent glob dependency, ignored React Router migration flags, and the unused starter code-font rule; keep live helpers private where no imports use their exports.
 - Remove unused Axios and eslint-config-prettier dependencies, the unused primary-color CSS token, and an uncalled login test helper.
 - Remove centralized frontend lint-configuration and theme-source suites; preserve shared support and all colocated application, component and service tests.
 - Remove the unreferenced legacy stylesheet mock from frontend test support.
