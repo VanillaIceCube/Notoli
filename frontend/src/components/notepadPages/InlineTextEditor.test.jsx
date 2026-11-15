@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import InlineTextEditor from './InlineTextEditor';
-import { renderWithProviders } from '../../test-support/utils';
+import { renderWithProviders } from '../../test-helpers/utils';
 describe('InlineTextEditor', () => {
   test('when rendered, it shows the current value and placeholder', () => {
     renderWithProviders(

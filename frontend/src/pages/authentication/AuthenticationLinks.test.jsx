@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
-import { renderWithProviders } from '../../test-support/utils';
+import { renderWithProviders } from '../../test-helpers/utils';
 import Login from './Login';
 import Register from './Register';
 import ForgotPassword from './ForgotPassword';

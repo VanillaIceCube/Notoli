@@ -25,7 +25,7 @@ FROM nginx:alpine
 WORKDIR /usr/share/nginx/html
 
 # SPA-friendly routing (serve index.html for unknown routes)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy the built static files from the build stage
 COPY --from=build /frontend/build .

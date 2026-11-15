@@ -32,7 +32,7 @@ updates:
       time: "00:00"
 
   - package-ecosystem: "docker"
-    directory: "/frontend"
+    directory: "/frontend/docker"
     schedule:
       interval: "daily"
       time: "00:00"

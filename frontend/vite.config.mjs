@@ -17,8 +17,6 @@ export default defineConfig(({ mode }) => {
             environment: 'node',
             pool: 'forks',
             include: [
-              'src/__tests__/eslintConfig.test.js',
-              'src/__tests__/notoliThemeStyles.test.js',
               'src/services/authRedirect.test.js',
               'src/services/navigationService.test.js',
               'src/services/notoliApiClient.test.js',
@@ -34,8 +32,6 @@ export default defineConfig(({ mode }) => {
             vmMemoryLimit: '384MB',
             include: ['src/**/*.test.{js,jsx}'],
             exclude: [
-              'src/__tests__/eslintConfig.test.js',
-              'src/__tests__/notoliThemeStyles.test.js',
               'src/services/authRedirect.test.js',
               'src/services/navigationService.test.js',
               'src/services/notoliApiClient.test.js',
@@ -57,7 +53,7 @@ export default defineConfig(({ mode }) => {
           },
         },
       ],
-      setupFiles: './src/setupTests.js',
+      setupFiles: './src/test-helpers/setup.js',
       clearMocks: true,
       testTimeout: 15000,
       unstubEnvs: true,
