@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Consolidate global styles in `frontend/src/index.css`, remove the redundant app stylesheet and unused starter selectors, and preserve app-specific themes and accessibility rules.
 - Group frontend Dockerfiles and Nginx configuration in `frontend/docker/`; update Compose, build workflows and Docker dependency discovery while retaining the frontend build context.
 - Resolve favicon, Apple touch icon and web manifest URLs through the Vite base URL for consistent public asset paths.
 - Consolidate durable documentation into existing owning READMEs, move the active CI inventory beside workflow guidance, and repair links and architecture regressions.

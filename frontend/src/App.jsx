@@ -1,4 +1,3 @@
-import './App.css';
 import React, { useCallback, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import AuthenticatedRoute from './components/AuthenticatedRoute';

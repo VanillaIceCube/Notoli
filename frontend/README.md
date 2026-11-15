@@ -8,6 +8,8 @@ authentication, and the application shell.
 - `docker/`: production/development Dockerfiles and Nginx configuration.
   Docker builds keep `frontend/` as their context; `.dockerignore` stays at the
   frontend root.
+- `src/index.css`: the single global stylesheet, loaded by `src/index.jsx`; keep
+  theme tokens, document defaults, shared controls and app-specific rules here.
 - `src/components/`: reusable interface components.
 - `src/pages/`: application pages and routes.
 - `src/services/`: API requests and session handling.
@@ -120,7 +122,7 @@ the documented singular/plural compatibility behavior.
 - In member lists, show a display name plus one secondary identifier when possible instead of separate labeled username and email rows.
 - Sharing dialogs should use a single `People with access` list with consistent user rows, avatars, role labels, and owner-only management controls.
 - When a section heading already labels an input group, prefer placeholder text plus an accessible `aria-label` over a floating visual input label.
-- Text field focus states should use the Notoli secondary color globally, never the default Material UI blue. Keep the global overrides in `src/App.css` covered by `notoliThemeStyles.test.js`.
+- Text field focus states should use the Notoli secondary color globally, never the default Material UI blue. Keep the global overrides in `src/index.css` covered by `notoliThemeStyles.test.js`.
 
 ## 🧪 Checks
 
