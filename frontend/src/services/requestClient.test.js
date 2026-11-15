@@ -75,6 +75,7 @@ describe('requestClient', () => {
         ok: true,
         status: 200,
       });
+    sessionStorage.setItem('accessToken', 'EXPIRED');
     sessionStorage.setItem('refreshToken', 'REFRESH');
     const { apiFetch } = await import('./requestClient');
     await apiFetch('/auth/mcp/authorize/', {
@@ -670,4 +671,54 @@ describe('session lifecycle', () => {
     expect((await second).ok).toBe(true);
     expect(sessionStorage.getItem('accessToken')).toBe('fresh-new-user');
   });
+});
+
+describe('reactive session ownership', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    sessionStorage.clear();
+    window.history.replaceState({}, '', '/private');
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+  test('a foreign explicit Authorization 401 cannot refresh or expire the current user', async () => {
+    const { startSession, getSessionSnapshot } = await import('./sessionState');
+    startSession({ access: 'current', refresh: 'current-refresh' });
+    const session = getSessionSnapshot();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 401 }));
+    const { apiFetch } = await import('./requestClient');
+    await apiFetch('/api/private/', { headers: { Authorization: 'Bearer another-account' } });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0][1].headers.Authorization).toBe('Bearer another-account');
+    expect(getSessionSnapshot()).toBe(session);
+  });
+  test.each(['logout', 'expiry'])(
+    '%s queues feedback before publishing the anonymous session',
+    async (action) => {
+      const { startSession, getSessionSnapshot, subscribeSession } = await import('./sessionState');
+      startSession({ access: 'current', refresh: 'refresh' });
+      const { setNavigate } = await import('./navigationService');
+      setNavigate(vi.fn());
+      const messages = [];
+      const unsubscribe = subscribeSession(() => {
+        if (!getSessionSnapshot().accessToken)
+          messages.push(JSON.parse(sessionStorage.getItem('pendingSnackbar')));
+      });
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 401 }));
+      const { apiFetch, logout } = await import('./requestClient');
+      if (action === 'logout') logout();
+      else await apiFetch('/api/private/');
+      expect(messages).toEqual([
+        expect.objectContaining({
+          message:
+            action === 'logout'
+              ? 'Logout Successful :)'
+              : 'Your session expired. Please log in again.',
+        }),
+      ]);
+      unsubscribe();
+    },
+  );
 });

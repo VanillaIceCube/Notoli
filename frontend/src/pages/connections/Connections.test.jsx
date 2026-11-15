@@ -1,4 +1,5 @@
-import { screen, waitFor } from '@testing-library/react';
+import { startSession } from '../../services/sessionState';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes, useLocation } from 'react-router';
 import { renderWithProviders } from '../../test-helpers/utils';
@@ -272,3 +273,24 @@ test('failed revocation keeps the connection visible', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Network error');
   expect(screen.getByText('ChatGPT')).toBeInTheDocument();
 });
+
+test.each(['account change', 'unmount'])(
+  'does not follow an old consent decision after %s',
+  async (change) => {
+    startSession({ access: 'a', refresh: 'r' });
+    let finish;
+    connections.decideConsent.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const { unmount } = renderFlow();
+    await userEvent.click(await screen.findByRole('button', { name: 'Allow' }));
+    if (change === 'account change') act(() => startSession({ access: 'new', refresh: 'new-r' }));
+    else unmount();
+    await act(async () => {
+      finish({ redirect_url: 'https://example.com/old-callback' });
+    });
+    expect(connections.followOAuthCallback).not.toHaveBeenCalled();
+  },
+);

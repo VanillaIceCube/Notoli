@@ -1,3 +1,4 @@
+import useSession, { useSessionGuard } from '../hooks/useSession';
 import { useMemo, useState } from 'react';
 import {
   Avatar,
@@ -141,8 +142,8 @@ export default function BoardShareDialog({
 
   const owner = board?.owner_details;
   const collaborators = useMemo(() => board?.collaborators_details || [], [board]);
-  const currentUsername = sessionStorage.getItem('username');
-  const currentEmail = sessionStorage.getItem('email');
+  const { username: currentUsername, email: currentEmail } = useSession();
+  const isCurrentSession = useSessionGuard();
   const isOwner = Boolean(
     owner &&
     ((currentUsername && owner.username === currentUsername) ||
@@ -154,7 +155,7 @@ export default function BoardShareDialog({
   ];
 
   const showError = (message) => {
-    showSnackbar?.('error', message);
+    if (isCurrentSession()) showSnackbar?.('error', message);
   };
 
   const handleAdd = async () => {
@@ -184,6 +185,7 @@ export default function BoardShareDialog({
       if (!response.ok)
         throw new Error(await getResponseErrorMessage(response, 'Unable to add collaborator.'));
       const updated = await response.json();
+      if (!isCurrentSession()) return;
       onBoardUpdated(updated);
       setIdentifier('');
     } catch (err) {
@@ -202,6 +204,7 @@ export default function BoardShareDialog({
       if (!response.ok)
         throw new Error(await getResponseErrorMessage(response, 'Unable to remove collaborator.'));
       const updated = await response.json();
+      if (!isCurrentSession()) return;
       onBoardUpdated(updated);
     } catch (err) {
       showError(err.message || 'Unable to remove collaborator.');

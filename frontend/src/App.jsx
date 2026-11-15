@@ -1,20 +1,27 @@
+import { getSessionVersion } from './services/sessionState';
+import useSession, { useSessionGuard } from './hooks/useSession';
+import RouteContent from './components/RouteContent';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import notoliTheme from './theme';
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, useCallback, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router';
 import AuthenticatedRoute from './components/AuthenticatedRoute';
-import Login from './pages/authentication/Login';
-import Register from './pages/authentication/Register';
-import ForgotPassword from './pages/authentication/ForgotPassword';
-import ResetPassword from './pages/authentication/ResetPassword';
-import ConnectedApps, { OAuthConsent } from './pages/connections/Connections';
-import BoardListsPage from './pages/boards/BoardListsPage';
-import ListTasksPage from './pages/lists/ListTasksPage';
 import AppHeader from './components/AppHeader';
 import AppSnackbar from './components/AppSnackbar';
 import BoardNavigationDrawer from './components/BoardNavigationDrawer';
 import NavigationBridge from './components/NavigationBridge';
 import BoardHomeRedirect from './components/BoardHomeRedirect';
+
+const Login = lazy(() => import('./pages/authentication/Login'));
+const Register = lazy(() => import('./pages/authentication/Register'));
+const ForgotPassword = lazy(() => import('./pages/authentication/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/authentication/ResetPassword'));
+const BoardListsPage = lazy(() => import('./pages/boards/BoardListsPage'));
+const ListTasksPage = lazy(() => import('./pages/lists/ListTasksPage'));
+const ConnectedApps = lazy(() => import('./pages/connections/Connections'));
+const OAuthConsent = lazy(() =>
+  import('./pages/connections/Connections').then((module) => ({ default: module.OAuthConsent })),
+);
 
 function getLocationSignature(location) {
   return `${location.pathname}${location.search}${location.hash}`;
@@ -76,47 +83,50 @@ function NotepadRoutes({ setAppBarHeader }) {
 
   return routeSlots.map((slot) => (
     <div key={slot.signature} hidden={!slot.active}>
-      <Routes location={slot.location}>
-        <Route
-          path="/"
-          element={
-            <AuthenticatedRoute>
-              <BoardHomeRedirect />
-            </AuthenticatedRoute>
-          }
-        />
+      <RouteContent routeKey={slot.signature} onError={() => handlePageReady(slot.signature)}>
+        <Routes location={slot.location}>
+          <Route
+            path="/"
+            element={
+              <AuthenticatedRoute>
+                <BoardHomeRedirect />
+              </AuthenticatedRoute>
+            }
+          />
 
-        <Route
-          path="/board/:boardId"
-          element={
-            <AuthenticatedRoute>
-              <BoardListsPage
-                active={slot.active}
-                onPageReady={() => handlePageReady(slot.signature)}
-                setAppBarHeader={setAppBarHeader}
-              />
-            </AuthenticatedRoute>
-          }
-        />
+          <Route
+            path="/board/:boardId"
+            element={
+              <AuthenticatedRoute>
+                <BoardListsPage
+                  active={slot.active}
+                  onPageReady={() => handlePageReady(slot.signature)}
+                  setAppBarHeader={setAppBarHeader}
+                />
+              </AuthenticatedRoute>
+            }
+          />
 
-        <Route
-          path="/board/:boardId/list/:listId"
-          element={
-            <AuthenticatedRoute>
-              <ListTasksPage
-                active={slot.active}
-                onPageReady={() => handlePageReady(slot.signature)}
-                setAppBarHeader={setAppBarHeader}
-              />
-            </AuthenticatedRoute>
-          }
-        />
-      </Routes>
+          <Route
+            path="/board/:boardId/list/:listId"
+            element={
+              <AuthenticatedRoute>
+                <ListTasksPage
+                  active={slot.active}
+                  onPageReady={() => handlePageReady(slot.signature)}
+                  setAppBarHeader={setAppBarHeader}
+                />
+              </AuthenticatedRoute>
+            }
+          />
+        </Routes>
+      </RouteContent>
     </div>
   ));
 }
 
-function App() {
+function ApplicationSession({ showSnackbar }) {
+  const isCurrentSession = useSessionGuard();
   // App Bar
   const [appBarHeader, setAppBarHeader] = useState('');
 
@@ -124,37 +134,22 @@ function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerBoardsLabel, setDrawerBoardsLabel] = useState('');
 
-  // Snackbar
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarSeverity, setSnackbarSeverity] = useState('');
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-
-  const showSnackbar = (severity, message) => {
-    setSnackbarSeverity(severity);
-    setSnackbarMessage(message);
-    setSnackbarOpen(true);
+  const showSessionSnackbar = (severity, message) => {
+    if (isCurrentSession()) showSnackbar(severity, message);
   };
-
-  const handleSnackbarClose = (_event, reason) => {
-    if (reason === 'clickaway') return;
-    setSnackbarOpen(false);
-  };
-
-  const routerBasename = import.meta.env.BASE_URL;
 
   return (
-    <ThemeProvider theme={notoliTheme}>
-      <CssBaseline />
-      <Router basename={routerBasename}>
-        <NavigationBridge />
-        <AppHeader appBarHeader={appBarHeader} setDrawerOpen={setDrawerOpen} />
-        <BoardNavigationDrawer
-          open={drawerOpen}
-          setDrawerOpen={setDrawerOpen}
-          drawerBoardsLabel={drawerBoardsLabel}
-          setDrawerBoardsLabel={setDrawerBoardsLabel}
-          showSnackbar={showSnackbar}
-        />
+    <>
+      <NavigationBridge />
+      <AppHeader appBarHeader={appBarHeader} setDrawerOpen={setDrawerOpen} />
+      <BoardNavigationDrawer
+        open={drawerOpen}
+        setDrawerOpen={setDrawerOpen}
+        drawerBoardsLabel={drawerBoardsLabel}
+        setDrawerBoardsLabel={setDrawerBoardsLabel}
+        showSnackbar={showSessionSnackbar}
+      />
+      <RouteContent>
         <Routes>
           <Route path="/login" element={<Login showSnackbar={showSnackbar} />} />
           <Route path="/register" element={<Register showSnackbar={showSnackbar} />} />
@@ -179,15 +174,31 @@ function App() {
 
           <Route path="*" element={<NotepadRoutes setAppBarHeader={setAppBarHeader} />} />
         </Routes>
+      </RouteContent>
+    </>
+  );
+}
+
+export default function App() {
+  const { version } = useSession();
+  const [snackbar, setSnackbar] = useState({ open: false, severity: 'info', message: '', version });
+  const showSnackbar = useCallback((severity, message) => {
+    setSnackbar({ open: true, severity, message, version: getSessionVersion() });
+  }, []);
+  return (
+    <ThemeProvider theme={notoliTheme}>
+      <CssBaseline />
+      <Router basename={import.meta.env.BASE_URL}>
+        <ApplicationSession key={version} showSnackbar={showSnackbar} />
       </Router>
       <AppSnackbar
-        open={snackbarOpen}
-        severity={snackbarSeverity}
-        message={snackbarMessage}
-        onClose={handleSnackbarClose}
+        open={snackbar.open && snackbar.version === version}
+        severity={snackbar.severity}
+        message={snackbar.message}
+        onClose={(_event, reason) => {
+          if (reason !== 'clickaway') setSnackbar((current) => ({ ...current, open: false }));
+        }}
       />
     </ThemeProvider>
   );
 }
-
-export default App;

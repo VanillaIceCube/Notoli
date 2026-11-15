@@ -1,3 +1,4 @@
+import useSession from '../../hooks/useSession';
 // BoardListsPage loads one board's lists and plugs board-specific CRUD/navigation into notepad UI.
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -49,7 +50,7 @@ const rowTitleSx = { fontSize: '1.1rem', textAlign: 'left' };
 export default function BoardListsPage({ active = true, onPageReady = () => {}, setAppBarHeader }) {
   const navigate = useNavigate();
   const { boardId } = useParams();
-  const token = sessionStorage.getItem('accessToken');
+  const { accessToken: token } = useSession();
   const [boardName, setBoardName] = useState('');
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);

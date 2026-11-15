@@ -1,4 +1,4 @@
-import { advanceSessionVersion } from './sessionState';
+import { startSession } from './sessionState';
 
 export async function safeReadJson(response) {
   try {
@@ -49,28 +49,5 @@ export async function readOkJson(response, fallbackMessage) {
 }
 
 export function persistAuthSession(data) {
-  if (!data?.access || !data?.refresh) {
-    throw new Error('Auth response missing tokens.');
-  }
-
-  advanceSessionVersion();
-  try {
-    sessionStorage.setItem('accessToken', data.access);
-    sessionStorage.setItem('refreshToken', data.refresh);
-
-    // Profile info (app bar menu). Remove stale keys if missing in payload.
-    if (typeof data?.username === 'string' && data.username.trim()) {
-      sessionStorage.setItem('username', data.username.trim());
-    } else {
-      sessionStorage.removeItem('username');
-    }
-
-    if (typeof data?.email === 'string' && data.email.trim()) {
-      sessionStorage.setItem('email', data.email.trim());
-    } else {
-      sessionStorage.removeItem('email');
-    }
-  } catch (_err) {
-    throw new Error('Unable to access browser session storage.');
-  }
+  startSession(data);
 }

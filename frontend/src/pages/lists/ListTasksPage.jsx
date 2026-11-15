@@ -1,3 +1,4 @@
+import useSession from '../../hooks/useSession';
 // ListTasksPage loads one list's tasks and adds task-specific completion behavior to notepad UI.
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -54,7 +55,7 @@ const pageActionButtonSx = {
 export default function ListTasksPage({ active = true, onPageReady = () => {}, setAppBarHeader }) {
   const { boardId, listId } = useParams();
   const location = useLocation();
-  const token = sessionStorage.getItem('accessToken');
+  const { accessToken: token } = useSession();
   const [boardName, setBoardName] = useState('');
   const [listName, setListName] = useState('');
   const [tasks, setTasks] = useState([]);

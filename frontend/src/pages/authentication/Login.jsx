@@ -1,3 +1,4 @@
+import { getSessionVersion } from '../../services/sessionState';
 import { useState, useCallback, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
@@ -36,14 +37,14 @@ export default function Login({ showSnackbar }) {
 
   // Pull Board List
   const fetchBoards = useCallback(
-    async (token, showError) => {
+    async (token, showError, sessionVersion) => {
       try {
         const response = await fetchBoardsApi(token);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         return data;
       } catch (err) {
-        if (showError) {
+        if (showError && getSessionVersion() === sessionVersion) {
           const isHttpError = typeof err?.message === 'string' && err.message.startsWith('HTTP ');
           showSnackbar('error', isHttpError ? 'Board load failed :(' : 'Network error :(');
         }
@@ -62,6 +63,7 @@ export default function Login({ showSnackbar }) {
 
       const data = await readOkJson(response, 'Login failed :(');
       persistAuthSession(data);
+      const sessionVersion = getSessionVersion();
 
       // Update Snackbar
       const welcomeName =
@@ -77,7 +79,8 @@ export default function Login({ showSnackbar }) {
       }
 
       // Navigate to first Board, if empty, navigate to root
-      const boards = await fetchBoards(data.access, true);
+      const boards = await fetchBoards(data.access, true, sessionVersion);
+      if (getSessionVersion() !== sessionVersion) return;
       const boardId = getPreferredBoardId(boards);
       if (boardId) {
         navigate(`/board/${boardId}`);

@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { startSession } from '../../services/sessionState';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-helpers/utils';
 import Login from './Login';
@@ -34,6 +35,25 @@ describe('Login', () => {
     sessionStorage.clear();
     localStorage.clear();
     useNavigate.mockReturnValue(mockNavigate);
+  });
+
+  test('a post-login board lookup cannot navigate after another account replaces the session', async () => {
+    let finish;
+    fetchBoards.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    renderWithProviders(<Login showSnackbar={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'reader@example.com' } });
+    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Login' }));
+    await waitFor(() => expect(fetchBoards).toHaveBeenCalled());
+    act(() => startSession({ access: 'new', refresh: 'new-r' }));
+    await act(async () => {
+      finish({ ok: true, json: async () => [{ id: 1 }] });
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
   test('when rendered, it shows email/password inputs and submit button', () => {
     renderWithProviders(<Login showSnackbar={vi.fn()} />);

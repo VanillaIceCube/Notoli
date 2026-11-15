@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import useNotifications from '../hooks/useNotifications';
+import useSession from '../hooks/useSession';
+import { getSessionVersion } from '../services/sessionState';
+import { useState } from 'react';
 import {
   AppBar,
   Badge,
@@ -35,13 +38,13 @@ import {
   markNotificationRead,
 } from '../services/notoliApiClient';
 
-function safeGetSessionItem(key) {
-  try {
-    return sessionStorage.getItem(key) || '';
-  } catch (_err) {
-    return '';
-  }
-}
+const notificationApi = {
+  fetchNotifications,
+  markNotificationRead,
+  clearNotification,
+  markAllNotificationsRead,
+  clearAllNotifications,
+};
 
 function formatNotificationMessage(notification) {
   const listSuffix = notification.list_name ? ` in ${notification.list_name}.` : '';
@@ -59,129 +62,31 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
   const [profileAnchorEl, setProfileAnchorEl] = useState(null);
   const profileMenuOpen = Boolean(profileAnchorEl);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
-  const [notifications, setNotifications] = useState([]);
-  const [notificationsLoading, setNotificationsLoading] = useState(false);
-  const [notificationError, setNotificationError] = useState('');
-  const [actionPending, setActionPending] = useState(false);
-  const [pendingIds, setPendingIds] = useState(() => new Set());
+  const session = useSession();
+  const { username: profileUsername, email: profileEmail } = session;
   const notificationsOpen = Boolean(notificationAnchorEl);
-
-  const profileUsername = safeGetSessionItem('username');
-  const profileEmail = safeGetSessionItem('email');
-  const accessToken = safeGetSessionItem('accessToken');
   const profilePrimary = profileUsername || profileEmail.split?.('@')?.[0] || 'username';
   const profileSecondary =
     profileEmail || (profilePrimary === 'username' ? 'username@gmail.com' : null);
-  const unreadCount = useMemo(
-    () => notifications.filter((notification) => !notification.is_read).length,
-    [notifications],
-  );
-
-  const loadNotifications = useCallback(async () => {
-    if (!accessToken) {
-      setNotifications([]);
-      return;
-    }
-
-    setNotificationsLoading(true);
-    setNotificationError('');
-    try {
-      const response = await fetchNotifications(accessToken);
-      if (!response.ok) {
-        throw new Error('Unable to load notifications.');
-      }
-      const data = await response.json();
-      if (!Array.isArray(data)) throw new Error('Invalid notification response.');
-      setNotifications(data);
-    } catch (_err) {
-      setNotificationError('Notifications are unavailable right now.');
-    } finally {
-      setNotificationsLoading(false);
-    }
-  }, [accessToken]);
-
-  useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
-
-  const finishItemAction = (notificationId) => {
-    setPendingIds((current) => {
-      const remaining = new Set(current);
-      remaining.delete(notificationId);
-      return remaining;
-    });
-  };
-
-  const handleClearNotification = async (notificationId) => {
-    if (pendingIds.has(notificationId) || actionPending) return;
-    setNotificationError('');
-    setPendingIds((current) => new Set(current).add(notificationId));
-    try {
-      const response = await clearNotification(notificationId, accessToken);
-      if (!response?.ok) throw new Error();
-      setNotifications((current) => current.filter((item) => item.id !== notificationId));
-    } catch (_error) {
-      setNotificationError('Could not clear that notification.');
-    } finally {
-      finishItemAction(notificationId);
-    }
-  };
+  const {
+    notifications,
+    notificationsLoading,
+    notificationError,
+    actionPending,
+    pendingIds,
+    unreadCount,
+    loadNotifications,
+    markRead,
+    clearNotification: handleClearNotification,
+    markAllRead: handleMarkAllRead,
+    clearAll: handleClearAllNotifications,
+  } = useNotifications(notificationApi);
 
   const handleOpenNotification = async (notification) => {
-    if (pendingIds.has(notification.id) || actionPending) return;
-    if (!notification.is_read) {
-      setNotificationError('');
-      setPendingIds((current) => new Set(current).add(notification.id));
-      try {
-        const response = await markNotificationRead(notification.id, accessToken);
-        if (!response?.ok) throw new Error();
-        const updated = await response.json();
-        if (updated?.id !== notification.id || updated?.is_read !== true) throw new Error();
-        setNotifications((current) =>
-          current.map((item) => (item.id === updated.id ? updated : item)),
-        );
-      } catch (_error) {
-        setNotificationError('Could not update that notification.');
-        return;
-      } finally {
-        finishItemAction(notification.id);
-      }
-    }
+    if (!(await markRead(notification)) || getSessionVersion() !== session.version) return;
     if (notification.target_path) {
       setNotificationAnchorEl(null);
       navigate(notification.target_path);
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    if (actionPending || pendingIds.size > 0) return;
-    setNotificationError('');
-    setActionPending(true);
-    try {
-      const response = await markAllNotificationsRead(accessToken);
-      if (!response?.ok) throw new Error();
-      setNotifications((current) =>
-        current.map((notification) => ({ ...notification, is_read: true })),
-      );
-    } catch (_error) {
-      setNotificationError('Could not update notifications.');
-    } finally {
-      setActionPending(false);
-    }
-  };
-
-  const handleClearAllNotifications = async () => {
-    if (actionPending || pendingIds.size > 0) return;
-    setNotificationError('');
-    setActionPending(true);
-    try {
-      const response = await clearAllNotifications(accessToken);
-      if (!response?.ok) throw new Error();
-      setNotifications([]);
-    } catch (_error) {
-      setNotificationError('Could not clear notifications.');
-    } finally {
-      setActionPending(false);
     }
   };
 

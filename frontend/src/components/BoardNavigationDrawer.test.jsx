@@ -1,3 +1,4 @@
+import { startSession } from '../services/sessionState';
 vi.mock('@mui/material', async () => await vi.importActual('@mui/material'));
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -683,6 +684,46 @@ describe('BoardNavigationDrawer', () => {
     await userEvent.keyboard('{enter}');
     expect(createBoard).not.toHaveBeenCalled();
     expect(showSnackbar).toHaveBeenCalledWith('error', 'Authentication required.');
+  });
+  test('an old board-name response cannot change the new account label', async () => {
+    const pending = createDeferred();
+    fetchBoardApi
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValue({ ok: true, json: async () => ({ name: 'New account board' }) });
+    const { setDrawerBoardsLabel } = await renderDrawer();
+    act(() => startSession({ access: 'new', refresh: 'new-r' }));
+    await waitFor(() => expect(setDrawerBoardsLabel).toHaveBeenCalledWith('New account board'));
+    await act(async () => {
+      pending.resolve({ ok: true, json: async () => ({ name: 'Old account board' }) });
+    });
+    expect(setDrawerBoardsLabel).not.toHaveBeenCalledWith('Old account board');
+  });
+
+  test('a board-name response after unmount cannot publish a parent label', async () => {
+    const pending = createDeferred();
+    fetchBoardApi.mockReturnValueOnce(pending.promise);
+    const { unmount, setDrawerBoardsLabel } = await renderDrawer();
+    unmount();
+    await act(async () => {
+      pending.resolve({ ok: true, json: async () => ({ name: 'Old board' }) });
+    });
+    expect(setDrawerBoardsLabel).not.toHaveBeenCalled();
+  });
+
+  test('a delete finishing after account replacement cannot navigate or show a stale snackbar', async () => {
+    const pending = createDeferred();
+    deleteBoard.mockReturnValueOnce(pending.promise);
+    const { showSnackbar } = await renderDrawer();
+    await openBoardList();
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /remove/i }));
+    expect(deleteBoard).toHaveBeenCalledWith(1, 'token');
+    act(() => startSession({ access: 'new', refresh: 'new-r' }));
+    await act(async () => {
+      pending.resolve({ ok: true });
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(showSnackbar).not.toHaveBeenCalled();
   });
 });
 

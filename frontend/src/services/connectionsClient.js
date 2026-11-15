@@ -1,3 +1,4 @@
+import { getSessionSnapshot } from './sessionState';
 import { apiFetch } from './requestClient';
 import { safeReadJson } from './authSession';
 
@@ -7,7 +8,7 @@ async function request(path, returnTo, body) {
     credentials: 'omit',
     headers: {
       Accept: 'application/json',
-      Authorization: `Bearer ${sessionStorage.getItem('accessToken') || ''}`,
+      Authorization: `Bearer ${getSessionSnapshot().accessToken || ''}`,
       ...(body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
     },
     ...(body ? { body: new URLSearchParams(body).toString() } : {}),

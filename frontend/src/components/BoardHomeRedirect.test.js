@@ -1,5 +1,6 @@
+import { startSession } from '../services/sessionState';
 import { createElement } from 'react';
-import { waitFor } from '@testing-library/react';
+import { act, waitFor } from '@testing-library/react';
 import { renderWithProviders } from '../test-helpers/utils';
 import BoardHomeRedirect from './BoardHomeRedirect';
 import { fetchBoards } from '../services/notoliApiClient';
@@ -71,4 +72,25 @@ describe('BoardHomeRedirect', () => {
       });
     });
   });
+});
+
+test('ignores a previous account board lookup when selecting the new account home', async () => {
+  let finish;
+  const navigate = vi.fn();
+  useNavigate.mockReturnValue(navigate);
+  startSession({ access: 'a', refresh: 'r' });
+  fetchBoards
+    .mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    )
+    .mockResolvedValue({ ok: true, json: async () => [{ id: 12 }] });
+  renderWithProviders(createElement(BoardHomeRedirect));
+  act(() => startSession({ access: 'new', refresh: 'new-r' }));
+  await waitFor(() => expect(navigate).toHaveBeenCalledWith('/board/12', { replace: true }));
+  await act(async () => {
+    finish({ ok: true, json: async () => [{ id: 1 }] });
+  });
+  expect(navigate).not.toHaveBeenCalledWith('/board/1', expect.anything());
 });

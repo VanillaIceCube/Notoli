@@ -1,7 +1,10 @@
 let navigateImpl = null;
 
 // Keep the native browser boundary separate from React Router navigation.
-export const browserLocation = { replace: (to) => window.location.replace(to) };
+export const browserLocation = {
+  replace: (to) => window.location.replace(to),
+  reload: () => window.location.reload(),
+};
 
 export function setNavigate(navigate) {
   navigateImpl = typeof navigate === 'function' ? navigate : null;

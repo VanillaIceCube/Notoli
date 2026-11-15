@@ -1,3 +1,4 @@
+import { useSessionGuard } from '../../hooks/useSession';
 import { useEffect, useState } from 'react';
 import { Alert, Box, Button, Paper, Stack, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router';
@@ -23,6 +24,7 @@ function ConnectionSurface({ title, children }) {
 }
 
 export function OAuthConsent() {
+  const isCurrentSession = useSessionGuard();
   const { search } = useLocation();
   const [consent, setConsent] = useState(null);
   const [error, setError] = useState('');
@@ -34,25 +36,27 @@ export function OAuthConsent() {
     setError('');
     loadConsent(search)
       .then((data) => {
-        if (!active) return;
+        if (!active || !isCurrentSession()) return;
         if (data.redirect_url) followOAuthCallback(data.redirect_url);
         else setConsent(data);
       })
       .catch((err) => {
-        if (active) setError(err.message);
+        if (active && isCurrentSession()) setError(err.message);
       });
     return () => {
       active = false;
     };
-  }, [search]);
+  }, [search, isCurrentSession]);
 
   const decide = async (decision) => {
+    if (!isCurrentSession()) return;
     setBusy(true);
     setError('');
     try {
       const data = await decideConsent(consent.ticket, decision, search);
-      followOAuthCallback(data.redirect_url);
+      if (isCurrentSession()) followOAuthCallback(data.redirect_url);
     } catch (err) {
+      if (!isCurrentSession()) return;
       setError(err.message);
       setBusy(false);
     }
@@ -88,6 +92,7 @@ export function OAuthConsent() {
 }
 
 export default function ConnectedApps() {
+  const isCurrentSession = useSessionGuard();
   const navigate = useNavigate();
   const [applications, setApplications] = useState(null);
   const [error, setError] = useState('');
@@ -97,26 +102,29 @@ export default function ConnectedApps() {
     let active = true;
     loadConnections()
       .then((data) => {
-        if (active) setApplications(data.applications);
+        if (active && isCurrentSession()) setApplications(data.applications);
       })
       .catch((err) => {
-        if (active) setError(err.message);
+        if (active && isCurrentSession()) setError(err.message);
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [isCurrentSession]);
 
   const revoke = async (id) => {
+    if (!isCurrentSession()) return;
     setRevoking(id);
     setError('');
     try {
       await revokeConnection(id);
+      if (!isCurrentSession()) return;
       setApplications((apps) => apps.filter((app) => app.id !== id));
     } catch (err) {
+      if (!isCurrentSession()) return;
       setError(err.message);
     } finally {
-      setRevoking(null);
+      if (isCurrentSession()) setRevoking(null);
     }
   };
 

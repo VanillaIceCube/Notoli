@@ -1,5 +1,10 @@
 import { connectionReturnTo, loginPath as connectionLoginPath } from './authRedirect';
-import { advanceSessionVersion, getSessionVersion } from './sessionState';
+import {
+  clearSession,
+  getSessionSnapshot,
+  getSessionVersion,
+  rotateSessionTokens,
+} from './sessionState';
 import { browserLocation, navigate } from './navigationService';
 
 const API_BASE_URL =
@@ -13,18 +18,6 @@ function shouldRedirectToLogin(path) {
     !path.startsWith('/auth/forgot-password') &&
     !path.startsWith('/auth/reset-password')
   );
-}
-
-function clearAuthSession() {
-  advanceSessionVersion();
-  try {
-    sessionStorage.removeItem('accessToken');
-    sessionStorage.removeItem('refreshToken');
-    sessionStorage.removeItem('username');
-    sessionStorage.removeItem('email');
-  } catch (_err) {
-    // Ignore non-browser / blocked storage environments.
-  }
 }
 
 function redirectToLogin(returnTo) {
@@ -45,7 +38,6 @@ function redirectToLogin(returnTo) {
 }
 
 export function logout() {
-  clearAuthSession();
   try {
     sessionStorage.setItem(
       'pendingSnackbar',
@@ -57,13 +49,15 @@ export function logout() {
   } catch (_err) {
     // ignore
   }
+  clearSession();
   redirectToLogin();
 }
 
 function handleUnauthorized(returnTo) {
-  clearAuthSession();
-
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') {
+    clearSession();
+    return;
+  }
 
   const currentPath = window.location?.pathname?.replace(/\/+$/, '') ?? '';
   if (
@@ -72,6 +66,7 @@ function handleUnauthorized(returnTo) {
     currentPath.endsWith('/forgot-password') ||
     currentPath.endsWith('/reset-password')
   ) {
+    clearSession();
     return;
   }
 
@@ -91,13 +86,14 @@ function handleUnauthorized(returnTo) {
   const pending =
     connectionReturnTo(returnTo) ||
     connectionReturnTo(`${window.location?.pathname || ''}${window.location?.search || ''}`);
+  clearSession();
   redirectToLogin(pending);
 }
 
 let refreshRequest = null;
 
 async function refreshAccessToken(sessionVersion) {
-  const refreshToken = sessionStorage.getItem('refreshToken');
+  const refreshToken = getSessionSnapshot().refreshToken;
   if (!refreshToken) return { status: 'invalid' };
   if (
     refreshRequest?.sessionVersion === sessionVersion &&
@@ -109,8 +105,7 @@ async function refreshAccessToken(sessionVersion) {
   const request = { sessionVersion, refreshToken };
   refreshRequest = request;
   const isCurrent = () =>
-    getSessionVersion() === sessionVersion &&
-    sessionStorage.getItem('refreshToken') === refreshToken;
+    getSessionVersion() === sessionVersion && getSessionSnapshot().refreshToken === refreshToken;
   request.promise = (async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
@@ -125,10 +120,7 @@ async function refreshAccessToken(sessionVersion) {
       const data = await response.json();
       if (!isCurrent()) return { status: 'stale' };
       if (typeof data?.access !== 'string' || !data.access.trim()) return { status: 'transient' };
-      sessionStorage.setItem('accessToken', data.access);
-      if (typeof data.refresh === 'string' && data.refresh.trim()) {
-        sessionStorage.setItem('refreshToken', data.refresh);
-      }
+      if (!rotateSessionTokens(data, sessionVersion, refreshToken)) return { status: 'stale' };
       return { status: 'refreshed', accessToken: data.access };
     } catch (_err) {
       return { status: 'transient' };
@@ -174,12 +166,7 @@ function hasAuthorizationHeader(headers) {
 }
 
 function getStoredAccessToken() {
-  try {
-    const token = sessionStorage.getItem('accessToken');
-    return typeof token === 'string' && token.trim() ? token.trim() : null;
-  } catch (_err) {
-    return null;
-  }
+  return getSessionSnapshot().accessToken;
 }
 
 function removeAuthorizationHeaders(headers) {
@@ -207,6 +194,11 @@ export async function apiFetch(path, options = {}) {
 
   const sessionVersion = getSessionVersion();
   const storedToken = getStoredAccessToken();
+  const explicitAuthorization = Object.entries(headers).find(
+    ([key, value]) => key.toLowerCase() === 'authorization' && Boolean(value),
+  )?.[1];
+  const ownsAuthorization =
+    !explicitAuthorization || explicitAuthorization === `Bearer ${storedToken}`;
   if (storedToken && !hasAuthorizationHeader(headers) && shouldRedirectToLogin(path)) {
     removeAuthorizationHeaders(headers);
     headers.Authorization = `Bearer ${storedToken}`;
@@ -223,6 +215,7 @@ export async function apiFetch(path, options = {}) {
 
   if (
     response?.status === 401 &&
+    ownsAuthorization &&
     shouldRedirectToLogin(path) &&
     getSessionVersion() === sessionVersion
   ) {

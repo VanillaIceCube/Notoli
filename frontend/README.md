@@ -14,7 +14,8 @@ authentication, and the application shell.
   loaded by `src/index.jsx`. Keep responsive page geometry in the owning component.
 - `src/components/`: reusable interface components.
 - `src/pages/`: application pages and routes.
-- `src/services/`: API requests and session handling.
+- `src/services/`: API requests and centralized session storage.
+- `src/hooks/`: reactive session access and shared notification lifecycle behavior.
 - `src/test-helpers/`: shared test setup and reusable helpers.
   App, startup and feature tests stay beside the files they exercise.
 
@@ -56,6 +57,17 @@ deployment.
 
 ## 🗺️ Routes and behavior
 
+Route pages load through `React.lazy` and the shared `RouteContent` boundary.
+The application shell stays usable while a page loads. Authentication guards
+run before protected lazy pages render, and a failed import offers a full-page
+reload at the current URL, preserving its query and deployment base. Navigating
+to another route clears that route's error state. The build emits separate page
+chunks; shared vendor code remains part of the signed-out dependency graph.
+
+Notoli gives each active/pending notepad slot its own boundary. The active page
+stays visible while a pending chunk loads; a pending import failure activates
+its recovery UI instead of leaving it hidden behind the previous page.
+
 - `/` redirects authenticated users to their first board when one exists
 - `/board/:boardId` shows lists for a board
 - `/board/:boardId/list/:listId` shows notes for a list
@@ -75,6 +87,28 @@ React routes and generated links use `/board/`; `/boards/` is a helper input
 compatibility form, not an additional React route.
 
 ## 🔐 Sessions and connections
+
+`src/services/sessionState.js` is the sole owner of the compatible access/refresh
+and username/email storage keys. Its cached snapshots and subscriptions feed
+`useSession`; login/logout replace the account generation, while guarded refresh
+updates tokens without replacing that generation. Do not read or mutate auth
+storage in components or API adapters. Use the snapshot for request-time reads,
+the hook for rendering, and the store operations for writes. The unrelated
+`pendingSnackbar` key remains the login-message handoff.
+
+The application shell and protected content reset on account changes, including
+open menus, private drafts and Notoli's board drawer state. Async continuations
+use `useSessionGuard` before account-scoped navigation or global UI updates.
+Logout/expiry queue their login message before publishing the cleared session;
+root snackbar state preserves successful login/register feedback and excludes
+messages from an older generation.
+
+`useNotifications` owns loading, retries, unread state and synchronous item/bulk
+locks. Headers inject stable app-owned API adapters and keep presentation and
+target navigation local. Generation and unmount guards discard stale lists,
+mutations and errors; token rotation preserves pending work. An earlier list
+request cannot undo a newer mutation. MacroMapper retains its existing HTTP
+error-message adapter.
 
 Authentication forms disable submission while pending. Tokens and profile data
 live in `sessionStorage`; new sessions trim profile fields and clear absent values.

@@ -11,6 +11,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Centralize reactive frontend session ownership and notification lifecycle handling, isolate account changes and stale async results, and lazy-load route pages with usable loading and reload recovery across the shared application family.
 - Centralize the existing dark/yellow palette and shared Material UI appearance in `frontend/src/theme.js`; preserve document typography, page sizing and specialized component layouts.
 - Pair frontend tests with the owning source basename and extension, consolidate behavior and integration cases without losing coverage, and align applicable shared regression checks.
 - Use semantic authentication and Connected Apps links, align common frontend dependency ranges, and standardize Vite environment, router base and build-output configuration.

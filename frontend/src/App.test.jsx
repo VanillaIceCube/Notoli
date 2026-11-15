@@ -2,7 +2,7 @@ import App from './App';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { MemoryRouter } from 'react-router';
+import { Link, MemoryRouter } from 'react-router';
 vi.mock('react-router', async () => ({
   ...(await vi.importActual('react-router')),
   BrowserRouter: ({ children }) => <>{children}</>,
@@ -104,41 +104,41 @@ describe('App', () => {
     delete globalThis.__notoliAutoReady;
     delete globalThis.__notoliReadyCalls;
   });
-  test('when the route is /login, it renders Login', () => {
+  test('when the route is /login, it renders Login', async () => {
     renderApp('/login');
-    expect(document.body.textContent).toContain('LoginPage');
+    expect(await screen.findByText('LoginPage')).toBeInTheDocument();
   });
-  test('when the route is /register, it renders Register', () => {
+  test('when the route is /register, it renders Register', async () => {
     renderApp('/register');
-    expect(document.body.textContent).toContain('RegisterPage');
+    expect(await screen.findByText('RegisterPage')).toBeInTheDocument();
   });
-  test('when the route is /forgot-password, it renders ForgotPassword', () => {
+  test('when the route is /forgot-password, it renders ForgotPassword', async () => {
     renderApp('/forgot-password');
-    expect(document.body.textContent).toContain('ForgotPasswordPage');
+    expect(await screen.findByText('ForgotPasswordPage')).toBeInTheDocument();
   });
-  test('when the route is /reset-password, it renders ResetPassword', () => {
+  test('when the route is /reset-password, it renders ResetPassword', async () => {
     renderApp('/reset-password?uid=abc&token=tok');
-    expect(document.body.textContent).toContain('ResetPasswordPage');
+    expect(await screen.findByText('ResetPasswordPage')).toBeInTheDocument();
   });
-  test('when the route is /, it renders the board redirect', () => {
+  test('when the route is /, it renders the board redirect', async () => {
     sessionStorage.setItem('accessToken', 'token');
     renderApp('/');
-    expect(document.body.textContent).toContain('BoardHomeRedirect');
+    expect(await screen.findByText('BoardHomeRedirect')).toBeInTheDocument();
   });
-  test('when the route is /board/:id, it renders board lists', () => {
+  test('when the route is /board/:id, it renders board lists', async () => {
     sessionStorage.setItem('accessToken', 'token');
     renderApp('/board/1');
-    expect(document.body.textContent).toContain('BoardListsPage');
+    expect(await screen.findByText('BoardListsPage')).toBeInTheDocument();
   });
-  test('when the route is /board/:id/list/:id, it renders list tasks', () => {
+  test('when the route is /board/:id/list/:id, it renders list tasks', async () => {
     sessionStorage.setItem('accessToken', 'token');
     renderApp('/board/1/list/2');
-    expect(document.body.textContent).toContain('ListTasksPage');
+    expect(await screen.findByText('ListTasksPage')).toBeInTheDocument();
   });
   test('when a child triggers showSnackbar, it renders the snackbar message', async () => {
     renderApp('/login');
     await userEvent.click(
-      screen.getByRole('button', {
+      await screen.findByRole('button', {
         name: /loginpage/i,
       }),
     );
@@ -197,5 +197,183 @@ describe('App', () => {
     expect(globalThis.__notoliReadyCalls).toBeLessThanOrEqual(2);
     await userEvent.click(screen.getByRole('button', { name: /toggledrawer/i }));
     expect(screen.getByTestId('drawer')).toHaveTextContent('DrawerOpen');
+  });
+});
+
+test('a failed pending notepad chunk becomes a visible recoverable route', async () => {
+  vi.resetModules();
+  sessionStorage.setItem('accessToken', 'token');
+  let rejectChunk;
+  const pending = new Promise((_resolve, reject) => {
+    rejectChunk = reject;
+  });
+  vi.doMock('./pages/lists/ListTasksPage', () => pending);
+  const { default: FailedApp } = await import('./App');
+  const { browserLocation } = await import('./services/navigationService');
+  const reload = vi.spyOn(browserLocation, 'reload').mockImplementation(() => {});
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  render(
+    <MemoryRouter initialEntries={['/board/1']}>
+      <Link to="/login">Sign in</Link>
+      <FailedApp />
+    </MemoryRouter>,
+  );
+  await userEvent.click(await screen.findByRole('button', { name: 'OpenList' }));
+  expect(screen.getByTestId('active-board-page')).toBeVisible();
+  await act(async () => {
+    rejectChunk(new Error('missing chunk'));
+  });
+  expect(await screen.findByRole('alert')).toBeVisible();
+  expect(screen.queryByTestId('active-board-page')).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Reload page' }));
+  expect(reload).toHaveBeenCalledTimes(1);
+  await userEvent.click(screen.getByRole('link', { name: 'Sign in' }));
+  expect(await screen.findByText('LoginPage')).toBeVisible();
+  vi.restoreAllMocks();
+  vi.doUnmock('./pages/lists/ListTasksPage');
+});
+
+describe('real session route lifecycle', () => {
+  let SessionApp;
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.doUnmock('react-router');
+    vi.doUnmock('./components/AuthenticatedRoute');
+    vi.doUnmock('./components/AppHeader');
+    vi.doUnmock('./components/BoardNavigationDrawer');
+    vi.doUnmock('./components/AppSnackbar');
+    vi.doUnmock('./components/BoardHomeRedirect');
+    vi.doUnmock('./pages/authentication/Login');
+    vi.doUnmock('./pages/authentication/Register');
+    vi.doUnmock('./pages/authentication/ForgotPassword');
+    vi.doUnmock('./pages/authentication/ResetPassword');
+    vi.doUnmock('./pages/boards/BoardListsPage');
+    vi.doUnmock('./pages/lists/ListTasksPage');
+    SessionApp = (await import('./App')).default;
+  });
+
+  const reply = (body, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+  const credentials = {
+    access: 'access',
+    refresh: 'refresh',
+    username: 'Reader',
+    email: 'reader@example.com',
+  };
+  beforeEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+    vi.stubEnv('VITE_MCP_ENABLED', '1');
+    window.history.replaceState({}, '', '/login');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url) => {
+        if (url.includes('/auth/login/') || url.includes('/auth/register/'))
+          return Promise.resolve(reply(credentials));
+        if (url.includes('/auth/mcp/authorize/'))
+          return Promise.resolve(
+            reply({
+              ticket: 'ticket',
+              application: { name: 'Reader app', client_id: 'client' },
+              user: { username: 'Reader' },
+              permissions: [],
+            }),
+          );
+        if (url.includes('/api/expired/')) return Promise.resolve(reply({}, 401));
+        if (url.includes('/diary/')) return Promise.resolve(reply({ meals: [], totals: [] }));
+        return Promise.resolve(reply([]));
+      }),
+    );
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  test.each(['login', 'register'])(
+    'keeps the real %s success message across the session transition',
+    async (page) => {
+      window.history.replaceState({}, '', `/${page}`);
+      render(<SessionApp />);
+      const user = userEvent.setup();
+      await user.type(await screen.findByRole('textbox', { name: 'Email' }), 'reader@example.com');
+      await user.type(screen.getByLabelText('Password', { exact: true }), 'password123');
+      if (page === 'register') {
+        await user.type(screen.getByRole('textbox', { name: /Username/ }), 'Reader');
+        await user.type(screen.getByLabelText('Confirm Password'), 'password123');
+      }
+      await user.click(
+        screen.getByRole('button', {
+          name: page === 'login' ? /^Login$/i : /^(Register|Create account)$/i,
+        }),
+      );
+      expect(
+        await screen.findByText(
+          page === 'login' ? 'Welcome Reader!' : /Account created! Welcome to/,
+        ),
+      ).toBeVisible();
+      expect(await screen.findByLabelText('user profile')).toBeVisible();
+      expect(sessionStorage.getItem('accessToken')).toBe('access');
+    },
+  );
+
+  test('shows the queued logout message after the session shell and lazy Login change', async () => {
+    const { startSession } = await import('./services/sessionState');
+    startSession(credentials);
+    window.history.replaceState({}, '', '/');
+    render(<SessionApp />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText('user profile'));
+    await user.click(screen.getByText('Logout'));
+    expect(await screen.findByRole('heading', { name: 'Login' })).toBeVisible();
+    expect(await screen.findByText('Logout Successful :)')).toBeVisible();
+    expect(sessionStorage.getItem('pendingSnackbar')).toBeNull();
+  });
+
+  test('shows expiry feedback after a reactive guard redirects to lazy Login', async () => {
+    sessionStorage.setItem('accessToken', 'expired');
+    window.history.replaceState({}, '', '/');
+    render(<SessionApp />);
+    expect(await screen.findByLabelText('user profile')).toBeVisible();
+    const { apiFetch } = await import('./services/requestClient');
+    await act(() => apiFetch('/api/expired/'));
+    expect(await screen.findByRole('heading', { name: 'Login' })).toBeVisible();
+    expect(await screen.findByText('Your session expired. Please log in again.')).toBeVisible();
+  });
+
+  test('retains the complete consent query through lazy login and account publication', async () => {
+    const pending = '/connections/authorize?state=keep%26this&client_id=reader';
+    window.history.replaceState({}, '', pending);
+    render(<SessionApp />);
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole('textbox', { name: 'Email' }), 'reader@example.com');
+    expect(new URLSearchParams(window.location.search).get('next')).toBe(pending);
+    await user.type(screen.getByLabelText('Password', { exact: true }), 'password123');
+    await user.click(screen.getByRole('button', { name: 'Login' }));
+    expect(await screen.findByText('Connect to Notoli')).toBeVisible();
+    expect(`${window.location.pathname}${window.location.search}`).toBe(pending);
+    expect(await screen.findByText('Signed in as Reader')).toBeVisible();
+  });
+
+  test('account replacement closes account menus and presents only the current profile', async () => {
+    const { startSession } = await import('./services/sessionState');
+    startSession(credentials);
+    window.history.replaceState({}, '', '/');
+    render(<SessionApp />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByLabelText('user profile'));
+    expect(screen.getByText('reader@example.com')).toBeVisible();
+    act(() =>
+      startSession({
+        access: 'next',
+        refresh: 'next-r',
+        username: 'Next',
+        email: 'next@example.com',
+      }),
+    );
+    expect(screen.queryByText('reader@example.com')).not.toBeInTheDocument();
+    await user.click(screen.getByLabelText('user profile'));
+    expect(screen.getByText('next@example.com')).toBeVisible();
   });
 });
