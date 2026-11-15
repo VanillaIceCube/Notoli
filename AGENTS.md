@@ -358,6 +358,9 @@ Follow the [app MCP contract](backend/apps/mcp/framework/README.md) and
 Vitest projects isolate pure Node files from VM DOM forks; do not override the configured pool
 for timing.
 
-Resend timeout supports `0 < seconds <= 30` with a safe 10-second fallback.
-Preserve original `fail_silently` behavior and generic reset responses. Never log
-delivery exception text/tracebacks or recipient/token data; see the backend README.
+Django-Anymail directly handles Resend delivery. Map the existing host key to
+`ANYMAIL.RESEND_API_KEY` only when nonblank, bound the request timeout to
+`0 < seconds <= 30` with a 10-second fallback, and keep API debugging disabled.
+Operational failures honor `fail_silently`; missing configuration fails during
+backend construction. Keep reset responses generic and application logs static,
+without exception text/tracebacks or recipient/token data; see the backend README.

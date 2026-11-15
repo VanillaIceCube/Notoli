@@ -59,9 +59,10 @@ class BundleTests(unittest.TestCase):
     def test_layout_email_backend_values_create_compatible_new_bundles(self):
         legacy = "authentication.email_backends.ResendApiEmailBackend"
         intermediate = "apps.authentication.email_backends.ResendApiEmailBackend"
-        current = "apps.email.backends.ResendApiEmailBackend"
+        separated = "apps.email.backends.ResendApiEmailBackend"
+        current = "anymail.backends.resend.EmailBackend"
         smtp = "django.core.mail.backends.smtp.EmailBackend"
-        for supplied, expected in ((legacy, current), (intermediate, current), (current, current), (smtp, smtp)):
+        for supplied, expected in ((legacy, current), (intermediate, current), (separated, current), (current, current), (smtp, smtp)):
             with self.subTest(backend=supplied), tempfile.TemporaryDirectory() as directory:
                 values = environment() | {"DJANGO_EMAIL_BACKEND": supplied}
                 target = Path(directory) / "incoming"

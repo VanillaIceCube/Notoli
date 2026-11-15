@@ -9,7 +9,6 @@ permissions, notifications, and application integrations.
 - `docker/`: production/development Dockerfiles and their adjacent Dockerfile-specific ignore files; keep `backend/` as the build context.
 - `apps/notes/`: boards, lists, and notes.
 - `apps/authentication/`, `apps/notifications/`: accounts and notifications.
-- `apps/email/`: provider delivery adapters and tests; no Django app registration or database models.
 - `apps/mcp/`: shared framework, Notoli tools and ChatGPT packaging in `framework/`, `tools/` and `chatgpt/`.
 
 ## 💻 Local development
@@ -110,35 +109,43 @@ Access scoping:
 
 ## ✉️ Email
 
-Local development uses Django's console email backend. The included
-Resend HTTPS backend is configured with:
+Local development uses Django's console email backend. Resend delivery uses
+Django-Anymail's maintained backend directly, with no application-owned email
+backend package. Configure it through the existing variables:
 
 ```env
-DJANGO_EMAIL_BACKEND=apps.email.backends.ResendApiEmailBackend
+DJANGO_EMAIL_BACKEND=anymail.backends.resend.EmailBackend
 DJANGO_EMAIL_HOST_KEY=<resend-api-key>
 DJANGO_EMAIL_TIMEOUT=10
 DJANGO_DEFAULT_FROM_EMAIL=<sender-on-a-verified-domain>
 ```
 
-Keep `.localhost` senders with console delivery. Live delivery uses an approved
-sender domain and private credentials configured through the production guide.
-Plain text, HTML, multipart alternatives, `cc`, `bcc`, and `reply_to` are supported.
+The existing host key maps to `ANYMAIL.RESEND_API_KEY`; blank values are omitted
+so Anymail reports a configuration error before attempting provider HTTP. The
+three retired custom Resend backend paths are normalized to the maintained
+backend at startup. Console, SMTP and other explicitly configured backends retain
+their existing selection and variables. Keep `.localhost` senders with console
+delivery; live delivery requires an approved sender domain and private credentials.
 
-The socket-operation timeout defaults to 10 seconds and supports `0 < seconds <= 30`.
-The environment value is parsed as an integer. Invalid runtime timeout values fall
-back safely; malformed startup configuration fails visibly. A successful provider
-response means acceptance, not confirmed inbox delivery.
+`ANYMAIL.REQUESTS_TIMEOUT` defaults to 10 seconds. Integer environment values
+outside `0 < seconds <= 30` fall back to 10; malformed integer startup values
+continue to fail visibly. API request debugging is explicitly disabled to avoid
+printing keys, recipients, reset links or provider payloads. There are no inbound
+routes, webhook dependencies or automatic retries in this integration.
 
-Failures preserve `fail_silently`: false re-raises, while true skips failures and
-returns the number sent. Password reset returns a generic response for known and
-unknown accounts, including delivery failures. Logger `apps.email.backends`
-records safe category/status fields: `configuration`, `request`, `rate_limit`,
-`provider`, `timeout`, `network`, or `unexpected`. Never log provider response
-bodies, recipient details, reset tokens, message contents, or credentials.
+Operational delivery failures respect `fail_silently`: false raises an Anymail
+exception, while true skips the failed message and returns the number sent.
+Configuration errors, including an absent API key, are raised during backend
+construction even when `fail_silently=True`; the project does not wrap or override
+that maintained behavior. Password reset catches failures and retains the same
+generic response for known and unknown accounts. Its application logger records
+only a fixed failure message without exception text or tracebacks. Never log an
+Anymail exception's text/repr, provider body, recipients, reset tokens or secrets.
 
-Diagnose failures using those categories and the existing provider dashboard.
-There is no automatic retry or resend: a timeout may occur after acceptance.
-Use mocked delivery tests; production email receipt requires separate verification.
+Plain text, HTML alternatives, `cc`, `bcc` and `reply_to` pass through Django's
+email API. A successful provider response means acceptance, not inbox delivery.
+Use the provider dashboard for delivery diagnosis and mocked request-boundary
+tests for local verification; production receipt requires separate acceptance.
 
 ## 🔌 MCP integration
 

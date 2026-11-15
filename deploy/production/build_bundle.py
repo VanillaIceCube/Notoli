@@ -42,11 +42,12 @@ def build(target, env):
     if values["DJANGO_EMAIL_BACKEND"] in (
         "authentication.email_backends.ResendApiEmailBackend",
         "apps.authentication.email_backends.ResendApiEmailBackend",
+        "apps.email.backends.ResendApiEmailBackend",
     ):
-        values["DJANGO_EMAIL_BACKEND"] = "apps.email.backends.ResendApiEmailBackend"
+        values["DJANGO_EMAIL_BACKEND"] = "anymail.backends.resend.EmailBackend"
     if values["DJANGO_EMAIL_BACKEND"] not in (
         "django.core.mail.backends.smtp.EmailBackend",
-        "apps.email.backends.ResendApiEmailBackend",
+        "anymail.backends.resend.EmailBackend",
     ):
         raise ValueError("Configure a production email backend")
     release = {"app": APP, "id": identity, "revision": revision}

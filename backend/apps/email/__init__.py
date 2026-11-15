@@ -1,1 +1,0 @@
-"""Application email delivery adapters."""
