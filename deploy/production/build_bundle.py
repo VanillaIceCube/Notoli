@@ -12,7 +12,6 @@ CONFIG = json.loads((Path(__file__).parent / "app.json").read_text(encoding="utf
 if CONFIG["contract_version"] != 1:
     raise ValueError("Unsupported release contract version")
 APP = CONFIG["app"]
-ORIGIN = "https://" + CONFIG["domain"]
 REQUIRED = CONFIG["environment"]["required"]
 DEFAULTS = CONFIG["environment"]["defaults"]
 FIXED = CONFIG["environment"]["fixed"]
