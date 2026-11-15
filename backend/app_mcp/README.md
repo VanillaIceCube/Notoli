@@ -4,13 +4,11 @@
 Streamable HTTP transport and ASGI lifecycle. Application registries own their
 models, permissions and tools. FullStackTemplate is the canonical source;
 `backend/app_mcp/source.json` pins its immutable source and
-`backend/app_mcp/manifest.json` hashes shared runtime Python files (application-specific
-`chatgpt/` packaging is excluded). Edit the
-canonical package, regenerate its manifest with
-`python backend/check_app_mcp.py --write-manifest`, commit it, then copy
-the package/manifest/checker and pin the same commit in every consumer. Never
-brand or independently patch the shared package. CI checks the remote pin;
-`--source-root ../FullStackTemplate` is a local development override only.
+`backend/app_mcp/manifest.json` records shared runtime Python hashes
+(application-specific `chatgpt/` packaging is excluded). Edit the canonical
+package and synchronize its package, manifest and immutable source pin in every
+consumer. Never brand or independently patch the shared package. Framework
+transport/OAuth tests remain in the backend suite.
 
 Infrastructure routes requests through nginx to each application's own MCP
 endpoint and OAuth provider. The framework is shared source, deployed inside each
@@ -46,10 +44,10 @@ For an isolated development database:
 ```sh
 export DJANGO_MCP_ENABLED=1
 export DJANGO_MCP_BASE_URL=http://localhost:8000
-python backend/manage.py migrate
-python backend/manage.py register_mcp_client --redirect-uri 'https://client.example/callback'
+uv run --locked --project backend python backend/manage.py migrate
+uv run --locked --project backend python backend/manage.py register_mcp_client --redirect-uri 'https://client.example/callback'
 cd backend
-python -m uvicorn app.asgi:application --port 8000 --no-proxy-headers
+uv run --locked uvicorn app.asgi:application --port 8000 --no-proxy-headers
 ```
 
 Use the exact HTTPS callback supplied by the client. Registration is predefined,
@@ -98,7 +96,7 @@ no production maintenance. No OIDC login or automatic account linking is added.
 
 Production requires an HTTPS origin in `DJANGO_MCP_BASE_URL`, correct frontend,
 host/CORS/CSRF origins, a strong independent Django secret and
-`python backend/manage.py check --deploy`. MCP uses ASGI, one worker for SQLite,
+`uv run --locked --project backend python backend/manage.py check --deploy`. MCP uses ASGI, one worker for SQLite,
 stateless JSON Streamable HTTP, a 64 KiB request limit and lifespan-managed SDK
 sessions. Preserve the exact `/mcp` path; `/mcp/` is a different URL. The transport
 validates Host/Origin and rejects REST JWTs as MCP credentials.
@@ -140,17 +138,12 @@ salt, client IDs, database tables, credentials, domain tools or readiness policy
 
 ## 🧪 Checks
 
-Run `python backend/check_app_mcp.py` from the repository root to verify the
-pinned shared framework. The checker lives outside `app_mcp/` so moving repository
-tooling does not change the framework manifest. Local offline checks can supply
-`--source-root <canonical-checkout>`.
-
 Run the ordinary backend suite from `backend/`, then run a separate enabled
 profile against an isolated test database:
 
 ```sh
-python manage.py test
-DJANGO_MCP_ENABLED=1 DJANGO_MCP_SERVER_FACTORY=app_mcp.server.sample_server python manage.py test app_mcp
+uv run --locked python manage.py test
+DJANGO_MCP_ENABLED=1 DJANGO_MCP_SERVER_FACTORY=app_mcp.server.sample_server uv run --locked python manage.py test app_mcp
 ```
 
 The framework tests cover discovery/initialization/sample calls, absent/invalid

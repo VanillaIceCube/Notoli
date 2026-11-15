@@ -137,7 +137,8 @@ Security-alert aggregation:
 Version pins:
 
 - Node version is read from `frontend/package.json` (`engines.node`)
-- Python version is read from `backend/environment.yml` (`python=<version>`)
+- Python requirements are read from `project.requires-python` in `backend/pyproject.toml`; uv synchronizes `backend/uv.lock` against that project definition.
+- `.github/actions/setup-uv` installs uv 0.13.8, runs `uv sync --locked`, and exposes the project environment to Python subprocesses. Lint and parser-only jobs install only the `dev` group; the privileged policy workflow retains reviewed-main checkout and uses no dependency cache.
 - Third-party `dorny/paths-filter` workflow steps are pinned to an immutable commit hash.
 
 CodeQL details:
@@ -199,7 +200,7 @@ actionlint
 
 ### Shared MCP framework
 
-The backend test gate checks the pinned MCP framework manifest and each repository's documented ordinary/MCP-enabled profiles. Template sample fixtures do not create a production target; Notoli and MacroMapper retain their app-owned enabled protocol/domain acceptance. See [the framework guide](../../backend/app_mcp/README.md) and the application MCP guide where present.
+The backend test gate runs the documented ordinary/MCP-enabled profiles and ChatGPT packaging tests. Template sample fixtures do not create a production target; Notoli and MacroMapper retain their app-owned enabled protocol/domain acceptance. See [the framework guide](../../backend/app_mcp/README.md) and the application MCP guide where present.
 
 ## 🔒 Merge and dependency controls
 
@@ -213,7 +214,7 @@ Dependabot configuration:
   - npm (`/frontend`)
   - pip (`/backend`)
   - GitHub Actions (`/`)
-  - Docker (`/backend`, `/frontend/docker`)
+  - Docker (`/backend/docker`, `/frontend/docker`)
 
 Auto-merge behavior:
 
@@ -388,7 +389,9 @@ remain unchanged. Infrastructure adopts this guard and reviewer eligibility,
 retaining weekly updates, independent Required CI and owner merge.
 
 ```sh
-python -m pip install PyYAML==6.0.3
+uv sync --locked --project backend
+# Add backend/.venv/Scripts (Windows) or backend/.venv/bin (Unix) to PATH
+# for Node regression tests that spawn Python.
 node --test .github/actions/check-codeql-pins/*.test.js .github/actions/dependabot-auto-merge/*.test.js
 ```
 

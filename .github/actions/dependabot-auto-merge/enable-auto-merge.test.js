@@ -137,9 +137,9 @@ test("latest check rerun supersedes an earlier failure, but not a newer pending 
 
 test("CodeQL skips require successful detection and authoritative matching diff scope", async () => {
   assert.equal(scopeAllowsSkip("CodeQL / Analyze Python", ["frontend/package-lock.json"]), true);
-  assert.equal(scopeAllowsSkip("CodeQL / Analyze JavaScript/TypeScript", ["backend/requirements.txt"]), true);
+  assert.equal(scopeAllowsSkip("CodeQL / Analyze JavaScript/TypeScript", ["backend/uv.lock"]), true);
   assert.equal(scopeAllowsSkip("CodeQL / Analyze GitHub Actions", ["README.md"]), true);
-  for (const files of [undefined, ["backend/requirements.txt"], [".github/workflows/gate-codeql.yml"], [".github/actions/guard/action.yml"]]) {
+  for (const files of [undefined, ["backend/uv.lock"], [".github/workflows/gate-codeql.yml"], [".github/actions/guard/action.yml"]]) {
     assert.equal(scopeAllowsSkip("CodeQL / Analyze Python", files), false);
   }
   const h = harness(); const name = "CodeQL / Analyze Python";
@@ -156,7 +156,7 @@ test("CodeQL skips require successful detection and authoritative matching diff 
 test("lint and test skips require the actual detector to authorize that path scope", async () => {
   for (const [name, file] of [
     ["Lints / Lint Frontend (ESLint + Prettier)", "frontend/package.json"],
-    ["Lints / Lint Backend (Ruff)", "backend/requirements.txt"],
+    ["Lints / Lint Backend (Ruff)", "backend/uv.lock"],
     ["Tests / Frontend Tests (React)", "frontend/package-lock.json"],
     ["Tests / Backend Tests (Django)", "backend/app/settings.py"],
     ["Tests / Automation Tests (Node)", ".github/actions/publish-ai-review/action.yml"],

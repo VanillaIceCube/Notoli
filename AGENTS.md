@@ -52,8 +52,8 @@ history and valid UTF-8 text when editing or merging entries.
 ## 💻 Local development
 
 Use manual setup; do not assume Django or Node dependencies are installed.
-Use Python 3.12 in an isolated environment and the Node version range in
-`frontend/package.json`. The backend README also provides a direct pip setup.
+Use uv 0.13.8 to manage Python 3.12 and the backend environment, and the Node
+version range in `frontend/package.json`. Follow the backend README for uv setup.
 Uvicorn serves REST and MCP; Django `runserver` serves REST/auth only.
 
 ### Codex cloud environment
@@ -62,7 +62,7 @@ Use this description in the Codex environment settings:
 
 ```text
 Notoli
-A Notion-inspired list app with a Django REST backend and React frontend. Includes JWT auth, subdomain production routing at notoli.judeandrewalaba.com, Docker/Nginx deployment support, and local setup via Python requirements plus npm.
+A Notion-inspired list app with a Django REST backend and React frontend. Includes JWT auth, subdomain production routing at notoli.judeandrewalaba.com, Docker/Nginx deployment support, and local setup via uv sync plus npm.
 ```
 
 Use this setup script in Codex cloud environments:
@@ -72,8 +72,8 @@ set -euo pipefail
 
 cd /board/Notoli
 
-python -m pip install --upgrade pip
-python -m pip install -r backend/requirements.txt
+python -m pip install uv==0.13.8
+uv sync --locked --project backend
 
 cd frontend
 npm ci
@@ -81,18 +81,16 @@ npm ci
 
 Use the same script as the Codex maintenance script so cached containers refresh backend and frontend dependencies after checkout.
 
-### Conda setup
+### uv setup
 
-1) Create or update the Conda environment:
-   - create: `conda env create -f backend/environment.yml`
-   - update: `conda env update --file backend/environment.yml --prune`
-2) Activate: `conda activate notoli_env`
-3) Optional backend `.env` for local non-Docker runs:
+1) Install uv 0.13.8 following its official installation guide, then run
+   `uv sync --locked --project backend` from the repository root.
+2) Optional backend `.env` for local non-Docker runs:
    - `backend/.env` is auto-loaded by Django settings (`python-dotenv`).
    - Add `DJANGO_*` keys there if you don't want to set shell vars manually.
-4) Run backend migrations: `python backend/manage.py migrate`
-5) Start backend including MCP: `cd backend` then `python -m uvicorn app.asgi:application --port 8000 --reload --no-proxy-headers` (Django `runserver` serves only REST/auth, not `/mcp`). Return to the repo root for the frontend steps.
-6) Frontend setup:
+3) Run backend migrations: `uv run --locked --project backend python backend/manage.py migrate`
+4) Start backend including MCP: `cd backend` then `uv run --locked uvicorn app.asgi:application --port 8000 --reload --no-proxy-headers` (Django `runserver` serves only REST/auth, not `/mcp`). Return to the repo root for the frontend steps.
+5) Frontend setup:
    - `cd frontend`
    - `npm install`
    - Optional: set `REACT_APP_API_BASE_URL` (default: `http://localhost:8000`)
@@ -101,8 +99,13 @@ Use the same script as the Codex maintenance script so cached containers refresh
 
 ### Docker setup
 
-Frontend image definitions and Nginx configuration live in `frontend/docker/`;
-keep `frontend/` as the Docker build context.
+Backend image definitions live in `backend/docker/`; keep `backend/` as the
+Docker build context. Frontend image definitions and Nginx configuration live in
+`frontend/docker/`; keep `frontend/` as the Docker build context.
+Both Docker folders contain `Dockerfile.dockerignore` and
+`Dockerfile.dev.dockerignore`; their patterns are relative to the corresponding
+backend/frontend context. Preserve Nginx configuration and development entrypoint
+inputs when adjusting exclusions.
 
 Use the [local Docker guide](deploy/README.md) for hot reload at
 `notoli.localhost` and optional standalone HTTPS. Initialize only missing local
@@ -143,9 +146,9 @@ Optional backend variables (defaults are used if unset):
 Run checks in proportion to the change, from the repository root:
 
 ```powershell
-python backend/manage.py test backend
-ruff check backend
-ruff format backend --check
+uv run --locked --project backend python backend/manage.py test backend
+uv run --locked --project backend ruff check backend
+uv run --locked --project backend ruff format backend --check
 ```
 
 From `frontend/`:
@@ -333,26 +336,24 @@ Follow the [app MCP contract](backend/app_mcp/README.md) and
 [tool/listing guide](backend/app_mcp/chatgpt/README.md).
 
 - MCP review regressions: Connected Apps must include the current user's unexpired grants before token exchange, exclude expired/foreign grants, and deduplicate apps across grants/tokens. Read consent must explicitly disclose owner/collaborator IDs, usernames, and emails. The shared REST/MCP collaborator resolver must reject multiple matching identities before membership or notification writes; never choose a recipient with `.first()`.
-- MCP deployment: install requirements, apply Django OAuth Toolkit's supplied migrations with `migrate`, and run `python manage.py check --deploy` under production settings. Serve `app.asgi:application` using Uvicorn with `--no-proxy-headers` (one worker for SQLite); WSGI does not serve MCP. Production publishes no frontend or backend host port. The gateway reaches the frontend through `notoli_default`. Only Nginx shares `backend_private` with the backend (`172.30.88.0/29`, Nginx `172.30.88.2`, backend `172.30.88.3`); `backend_egress` is backend-only for outbound email. ASGI accepts forwarded scheme/client only from the configured exact proxy IP, strips all other forwarded metadata, and Django ignores forwarded host/proto headers. If changing the subnet, update IPAM, both fixed IPs, and trusted IP together, then recreate services.
+- MCP deployment: sync locked production dependencies, apply Django OAuth Toolkit's supplied migrations with `migrate`, and run `python manage.py check --deploy` under production settings. Serve `app.asgi:application` using Uvicorn with `--no-proxy-headers` (one worker for SQLite); WSGI does not serve MCP. Production publishes no frontend or backend host port. The gateway reaches the frontend through `notoli_default`. Only Nginx shares `backend_private` with the backend (`172.30.88.0/29`, Nginx `172.30.88.2`, backend `172.30.88.3`); `backend_egress` is backend-only for outbound email. ASGI accepts forwarded scheme/client only from the configured exact proxy IP, strips all other forwarded metadata, and Django ignores forwarded host/proto headers. If changing the subnet, update IPAM, both fixed IPs, and trusted IP together, then recreate services.
 - Register the predefined public ChatGPT OAuth client once: `python manage.py register_mcp_client --redirect-uri "<exact ChatGPT callback URI>"`. Copy the callback from ChatGPT's management page; use S256 PKCE and token auth method `none`. No client secret, password grant, dynamic registration, or unverified OIDC email claims are exposed. Existing registrations must be edited explicitly in Django admin.
 - MCP product coverage: 31 explicit tools cover boards, lists, items (including board-only items), ordering, membership, sharing, and notifications. `notoli:read` includes board-scoped owner/collaborator discovery; `notoli:write` permits item creation/edits; `notoli:share` permits owner-only collaborator add/remove; `notoli:organize` permits board/list creation/edits, order, and list membership; `notoli:notifications` permits recipient-only activity reads/read flags; `notoli:delete` permits permanent deletion (notification deletion also needs notifications). Sharing covers all lists/items in a board. Delete tools require `confirm: true` after explaining cascade impact; this is a caller assertion, not independent human verification. Arrays are capped at 1000 IDs, and reordering requires the complete current set. Preserve REST validation, owner checks, live membership checks, immutable boards, and notifications via shared services. Existing connections must reconnect for new scopes; refresh cannot escalate. Keep metadata/challenges aligned. No raw HTTP, global user directory, ownership transfer, or credential/admin tools are exposed. Full catalog/evaluations: `backend/app_mcp/chatgpt/README.md`.
 - Browser `GET /auth/mcp/authorize/` redirects to React `/connections/authorize` using `DJANGO_FRONTEND_BASE_URL` and the original query. React reuses the existing JWT login (no second Django session). JSON GET consent and POST ticket/decision require a verified JWT header; signed tickets bind the displayed request to the account for 10 minutes. Allow/Cancel returns Django's validated callback URL. React `/connections` calls JWT-only `GET/POST /auth/mcp/connections/` to list/revoke the current user's tokens and pending grants. Cookies and posted user IDs cannot authorize these endpoints. Keep JWTs out of URLs and retain PKCE/resource/scope checks in Django. Schedule token cleanup only through the approved production maintenance plan; keep access/refresh tokens, consent tickets, and authorization codes out of logs.
 - When changing MCP routes or the issuer, review Cloudflare Redirect/WAF/Caching rules for `/mcp`, `/.well-known/*`, and `/auth/mcp/*`: no interactive challenges or path rewriting for MCP/discovery, no caching of authenticated responses, and rate limits for login/token endpoints. Existing DNS and Full (strict) TLS are reused. Details and connection steps: `deploy/production/README.md` and `backend/app_mcp/chatgpt/README.md`.
-- MCP HTTP protocol tests use the directly pinned `httpx2` client in `backend/requirements.txt`; keep its pin compatible with the MCP SDK and update the Conda environment through the existing pip requirements path.
+- MCP HTTP protocol tests use the directly pinned `httpx2` client in `backend/pyproject.toml`; keep its pin compatible with the MCP SDK and update `backend/uv.lock` with uv.
 
 ## 🧩 Repository-specific contracts
 
 - Frontend builds use Vite and tests use Vitest/jsdom. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite explicitly maps the existing `REACT_APP_API_BASE_URL`/`PUBLIC_URL` settings, keeps port 3000 and `build/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
 - Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for frontend checks.
 - ChatGPT listing metadata: `backend/app_mcp/chatgpt/plugin.json` is the canonical branding source, but personal custom-MCP plugins use a separate generated compatibility manifest. Download the installed plugin ZIP and use `backend/app_mcp/chatgpt/build_listing.py` to apply branding while preserving its exported name and `.app.json`; upload a new version to the same plugin. Keep account-specific exports/build ZIPs out of Git. Listing publication is separate from Docker deployment and MCP tool refresh. Privacy/terms pages and verified publisher identity remain prerequisites for public submission. See `backend/app_mcp/chatgpt/README.md`.
-- Backend migrations: `python backend/manage.py makemigrations` then `python backend/manage.py migrate`
-- Backend tests: `cd backend` then `python manage.py test`. The configured Django test runner scopes the fast password hasher to the test run and restores settings on exit; `DJANGO_TESTING`, command-line inspection, and imported pytest modules do not change normal password hashing.
-- Update Conda env: `conda env update --file backend/environment.yml --prune`
-- Regenerate Conda env + requirements:
-  - `python backend/environment_manager.py export -o backend/environment.yml`
+- Backend migrations: `uv run --locked --project backend python backend/manage.py makemigrations` then `uv run --locked --project backend python backend/manage.py migrate`
+- Backend tests: `cd backend` then `uv run --locked python manage.py test`. The configured Django test runner scopes the fast password hasher to the test run and restores settings on exit; `DJANGO_TESTING`, command-line inspection, and imported pytest modules do not change normal password hashing.
+- Sync the locked environment: `uv sync --locked --project backend`
+- Change dependencies with `uv add --project backend` / `uv remove --project backend`; commit `pyproject.toml` and `uv.lock` together.
 - Frontend deps: `cd frontend` then `npm install`
-- Note: pip dependencies are installed via the `pip:` section in `environment.yml`
-  and resolved from `requirements.txt` (never via conda).
+- Python versions are selected by `project.requires-python` in `backend/pyproject.toml`. Conda is not required.
 
 Vitest projects isolate pure Node files from VM DOM forks; do not override the configured pool
 for timing.

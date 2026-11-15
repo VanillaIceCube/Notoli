@@ -50,6 +50,7 @@ runs:
           ':(exclude)**/yarn.lock' \
           ':(exclude)**/pnpm-lock.yaml' \
           ':(exclude)**/poetry.lock' \
+          ':(exclude)**/uv.lock' \
           > pr.diff
 
         # Truncate if it's huge so we don't blow up token limits

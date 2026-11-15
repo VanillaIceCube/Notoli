@@ -158,7 +158,7 @@ async function collectUpstreamMajorUpgradeEvidence({
         continue;
       }
 
-      if (ecosystem === "pip") {
+      if (["pip", "uv"].includes(ecosystem)) {
         const metadata = await fetchJson(
           `https://pypi.org/pypi/${encodeURIComponent(dependency)}/${encodeURIComponent(targetVersion)}/json`,
         );

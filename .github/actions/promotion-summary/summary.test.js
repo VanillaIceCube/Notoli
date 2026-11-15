@@ -19,7 +19,7 @@ function fixture() {
   return { pr, github, bot, comments, writes, call };
 }
 test('summary derives observed areas and separate risks from actual metadata, including renames', () => {
-  const files = [{ filename: 'backend/app/migrations/0002_change.py', status: 'added', additions: 5, deletions: 0 }, { filename: 'frontend/package-lock.json', previous_filename: 'backend/environment.yml', status: 'renamed' }, { filename: '.github/workflows/ci-deploy.yml' }];
+  const files = [{ filename: 'backend/app/migrations/0002_change.py', status: 'added', additions: 5, deletions: 0 }, { filename: 'frontend/package-lock.json', previous_filename: 'backend/pyproject.toml', status: 'renamed' }, { filename: '.github/workflows/ci-deploy.yml' }];
   const groups = classify(files);
   assert.equal(groups.migrations, 1); assert.equal(groups.dependencies, 1); assert.equal(groups.release, 1);
   const text = render({ repo: 'Notoli', number: 1, base: BASE, head: HEAD, files });

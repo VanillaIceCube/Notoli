@@ -16,6 +16,10 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Move backend/frontend Docker exclusions beside each production/development Dockerfile as Dockerfile-specific ignore files, retaining context-relative exclusions and required frontend build inputs.
+- Select Python directly from `pyproject.toml` in uv and CI instead of maintaining a separate version file.
+- Replace Conda and requirements export with a Python 3.12 uv project and committed lockfile; use locked environments in local setup, CI and Docker while preserving application server and proxy policy (#1058).
+- Group backend Dockerfiles in `backend/docker/`; update Compose, build workflows and Docker dependency discovery while retaining the backend build context (FullStackTemplate #337).
 - Standardize README heading emojis, sentence case, reference labels and Markdown spacing while preserving substantive content, code examples and existing anchors.
 - Move frontend connection contracts into session guidance and menu/refresh behavior into board/list guidance; keep related guides as final navigation.
 - Align frontend npm commands: production builds run strict lint first and `lint:fix` applies available lint fixes.
@@ -34,6 +38,8 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Remove the repository MCP parity checker and its CI/docs integration; retain shared framework source pins, manifests and runtime tests.
+- Remove Conda environment definitions and the environment export helper after migrating dependency declarations to uv.
 - Remove the frontend env example; retain `deploy/backend.env` for backend configuration.
 - Remove centralized frontend lint-configuration and theme-source suites; preserve shared support and all colocated application, component and service tests.
 - Remove the unreferenced legacy stylesheet mock from frontend test support.

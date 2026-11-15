@@ -6,7 +6,7 @@ inputs:
     required: false
     default: "true"
   read_python:
-    description: "Read Python version from backend/environment.yml python pin"
+    description: "Read Python requirement from backend/pyproject.toml"
     required: false
     default: "true"
 outputs:
@@ -14,7 +14,7 @@ outputs:
     description: "Node version from frontend/package.json engines.node"
     value: ${{ steps.node.outputs.node_version }}
   python_version:
-    description: "Python version from backend/environment.yml"
+    description: "Python requirement from backend/pyproject.toml"
     value: ${{ steps.python.outputs.python_version }}
 runs:
   using: composite
@@ -46,15 +46,15 @@ runs:
       run: |
         python3 - <<'PY'
         import os
-        import re
+        import tomllib
         from pathlib import Path
 
         root = Path(os.environ["GITHUB_WORKSPACE"])
-        env_path = root / "backend" / "environment.yml"
-        text = env_path.read_text(encoding="utf-8")
-        match = re.search(r"^\s*-\s*python=([0-9.]+)\s*$", text, re.M)
-        if not match:
-            raise SystemExit("Missing python pin in backend/environment.yml")
+        project_path = root / "backend" / "pyproject.toml"
+        data = tomllib.loads(project_path.read_text(encoding="utf-8"))
+        version = (data.get("project") or {}).get("requires-python")
+        if not isinstance(version, str) or not version.strip():
+            raise SystemExit("Missing project.requires-python in backend/pyproject.toml")
         with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
-            f.write(f"python_version={match.group(1)}\n")
+            f.write(f"python_version={version}\n")
         PY
