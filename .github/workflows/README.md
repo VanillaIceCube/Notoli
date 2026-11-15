@@ -28,12 +28,16 @@ leave a visible evidence gap. Required briefs need at least one valid HTTP(S)
 source URL. The publisher keeps independent body findings when it suppresses
 duplicate inline comments or sees an unchanged verdict.
 
-### ✅ Flow 1: CI (`.github/workflows/ci-orchestrator.yml`)
+<a id="-flow-1-ci-githubworkflowsci-orchestratoryml"></a>
+
+### Flow 1: CI (`.github/workflows/ci-orchestrator.yml`)
 
 Trigger:
+
 - Pull requests (opened/synchronize/reopened/ready_for_review)
 
 What it does:
+
 - Runs the reusable lint gate: [`.github/workflows/gate-lint.yml`](gate-lint.yml)
   - Frontend: Prettier + ESLint (auto-fix, then strict checks)
   - Backend: Ruff (auto-fix, then strict checks)
@@ -92,6 +96,7 @@ The publisher requires all major-brief fields before publishing a normal major-u
 The port uses MacroMapper main `9075aab874ea92dbac1656458b893a3221a6ca07` as its reference. A shared dependency-usage loop bug omits the final dependency (and all usage evidence for a single-package update); its coordinated fix and behavioral coverage are tracked in [Notoli #890](https://github.com/VanillaIceCube/Notoli/issues/890), [MacroMapper #230](https://github.com/VanillaIceCube/MacroMapper/issues/230), and [FullStackTemplate #195](https://github.com/VanillaIceCube/FullStackTemplate/issues/195). This parity port does not introduce a separate Notoli-only fix. Additional verified shared issues are tracked in #891 (suppressed inline duplicates can hide independent body findings), #892 (grouped versions and bare Actions release references), and #893 (invalid source values can satisfy the required-brief check). Matching tickets exist in MacroMapper and FullStackTemplate; the PR links each coordinated set.
 
 OpenAI and GitHub App inputs:
+
 - `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, and `ROBOCOP_OPENAI_API_KEY` secrets. Triggered AI reviews fail visibly when the key is missing or the OpenAI request cannot produce a usable response.
 - `OPENAI_REVIEWERS_PROJECT_ID` (repo variable)
 - Configure `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, `ROBOCOP_OPENAI_API_KEY`, `OBI_WAN_CODE_NOBI_PRIVATE_KEY`, `LINT_EASTWOOD_PRIVATE_KEY`, and `ROBOCOP_PRIVATE_KEY` in both the Actions and Dependabot secret stores. Dependabot-triggered workflows use Dependabot secrets; repository variables supply the same App IDs and OpenAI project ID. Missing/invalid review credentials fail visibly rather than falling back to another author or granting an approval. Fork PRs receive neither secret store through these reviewer jobs.
@@ -107,11 +112,13 @@ OpenAI and GitHub App inputs:
 - AI review publishing only sends inline comments that target valid added diff lines. Every finding that cannot be placed inline is preserved under the normal Findings group with file and line context; duplicate, placement, and malformed-comment diagnostics are recorded in workflow logs instead of visible automation notes. The publishing logic, visual Markdown examples, and Node regression tests are colocated under `.github/actions/publish-ai-review/`.
 
 Review personas:
+
 - **RoboCop - AI Security Officer:** owns CodeQL, Dependency/Vulnerability Review, Malware Review, security-sensitive code paths, permissions/auth risk, and security interpretation.
 - **Lint Eastwood - AI Build Sheriff:** owns lint failures, test failures, build/workflow failures, formatting/type-check style failures, and CI failure interpretation.
 - **Obi-Wan Code-nobi - AI Code Reviewer:** owns general implementation review: correctness, maintainability, architecture, edge cases, missing tests, API/UX concerns, and overall code quality.
 
 Security-alert aggregation:
+
 - Daily workflows collect open CodeQL alerts plus non-urgent Dependabot vulnerability alerts and npm malware-classified Dependabot alerts. Each workflow also supports **Run workflow** from the Actions tab.
 - The alert workflows keep scheduling in [`alert-codeql.yml`](alert-codeql.yml), [`alert-vulnerability.yml`](alert-vulnerability.yml), and [`alert-malware.yml`](alert-malware.yml). The fetching, grouping, validation, and synchronization implementation lives in the [Security Alerts composite action](../actions/security-alerts/action.yml). The response must be valid JSON and must account for every source alert exactly once; validation happens before any issue is created or updated.
 - OpenAI request failures, including exhausted quota/tokens, missing credentials, transport errors, and unusable responses, produce a warning and workflow summary with recovery guidance. Alert synchronization then fails validation before changing tickets.
@@ -128,11 +135,13 @@ Security-alert aggregation:
 - Run the repository automation coverage locally with `node --test .github/actions/collect-upstream-major-upgrade-evidence/collect-upstream-major-upgrade-evidence.test.js .github/actions/publish-ai-review/publish-ai-review.test.js .github/actions/security-alerts/sync-security-alerts.test.js`. Major-upgrade coverage exercises npm, PyPI, and GitHub Actions sources, target/first-major releases, release-note bounds, lookup failures, complete/incomplete briefs, preservation on unchanged reviews, blocking review checks, the shared diff budget and incomplete-review wiring, bounded OpenAI request configuration, and major-only evidence/web-search wiring. Workflow coverage follows MacroMapper's tests; the dependency-usage loop regression is tracked separately in #890. AI review coverage includes persona-specific clean approvals, populated semantic groups, infrastructure-only comments, exact-line comments, unchanged reviews, duplicate suppression, preservation of multiple unplaceable findings, malformed-response diagnostics, unavailable notices, and synchronization of the rendered [`review-output-examples.md`](../actions/publish-ai-review/review-output-examples.md) fixture. Security-alert coverage includes credential separation and RoboCop-only issue mutations; reconciliation across unchanged and reordered groups, splits, merges, added alerts, resolved alerts, empty feeds; and the known stale-ticket set from issue #633.
 
 Version pins:
+
 - Node version is read from `frontend/package.json` (`engines.node`)
 - Python version is read from `backend/environment.yml` (`python=<version>`)
 - Third-party `dorny/paths-filter` workflow steps are pinned to an immutable commit hash.
 
 CodeQL details:
+
 - Pull requests run CodeQL through `ci-orchestrator.yml`, keeping PR feedback under the main CI workflow.
 - Pull request CodeQL uses the reusable workflow's change-detection job, following the same skip-by-scope pattern as linting and testing; documentation-only and unrelated pull requests run the detector but skip analysis jobs.
 - For a CodeQL-relevant pull request, Python and JavaScript/TypeScript analysis use language-specific filters, while GitHub Actions analysis runs so the `/language:actions` configuration remains present for code-scanning comparisons.
@@ -144,6 +153,7 @@ CodeQL details:
 - CodeQL is not a scanner for Dockerfiles, Nginx config, or env example files. Those remain covered by Dependabot updates, review, and deployment validation unless a separate scanner is added.
 
 Merge blocking:
+
 - The active `main` ruleset requires the exact checks listed below, including CodeQL scope detection, the three analyzers, Vulnerability, and Malware.
 - Dependency vulnerability review fails at `high` severity or above and posts its summary directly on the PR.
 - Dependency malware review is npm-focused because GitHub's malware advisory coverage is currently npm-focused; it checks only changed lockfile package versions.
@@ -185,15 +195,20 @@ node --test .github/actions/publish-ai-review/*.test.js
 actionlint
 ```
 
-### 🔌 Shared MCP framework
+<a id="-shared-mcp-framework"></a>
+
+### Shared MCP framework
 
 The backend test gate checks the pinned MCP framework manifest and each repository's documented ordinary/MCP-enabled profiles. Template sample fixtures do not create a production target; Notoli and MacroMapper retain their app-owned enabled protocol/domain acceptance. See [the framework guide](../../backend/app_mcp/README.md) and the application MCP guide where present.
 
 ## 🔒 Merge and dependency controls
 
-### 📦 Flow 3: Dependabot (`.github/dependabot.yml` + CI/Auto Merge)
+<a id="-flow-3-dependabot-githubdependabotyml--ciauto-merge"></a>
+
+### Flow 3: Dependabot (`.github/dependabot.yml` + CI/Auto Merge)
 
 Dependabot configuration:
+
 - [`.github/dependabot.yml`](../dependabot.yml) opens daily PRs for:
   - npm (`/frontend`)
   - pip (`/backend`)
@@ -201,6 +216,7 @@ Dependabot configuration:
   - Docker (`/backend`, `/frontend/docker`)
 
 Auto-merge behavior:
+
 - Dependabot PRs go through CI (`ci-orchestrator.yml`), and if all gates pass, `ci-auto-merge.yml` can enable auto-merge.
 - Dependabot PRs receive the three required same-repository AI reviews using Dependabot secrets. Major updates additionally receive Obi-Wan's upgrade brief and remain a human merge decision. [#656](https://github.com/VanillaIceCube/Notoli/issues/656) owns the existing Dependabot eligibility implementation; [#946](https://github.com/VanillaIceCube/Notoli/issues/946) adds the missing reviewer requirements. Independent lint, test, CodeQL, vulnerability, and malware gates continue to block auto-merge when any gate fails.
 - Auto-merge is restricted to patch/minor updates.
@@ -227,7 +243,9 @@ existing trust, networks, environment requirements, workflow and runtime bytes.
 The same immutable source commit is proposed for all three consumers. These
 source-pin PRs do not authorize merging, promotion, or deployment.
 
-### 🔒 Protected Dependabot auto-merge
+<a id="-protected-dependabot-auto-merge"></a>
+
+### Protected Dependabot auto-merge
 
 FullStackTemplate (#240) owns the canonical application policy. After successful
 PR CI, `ci-auto-merge.yml` runs only reviewed main code, with no PR checkout,
@@ -289,7 +307,9 @@ GraphQL input fields without changing reviewer verdict requirements.
 
 ## 🛡️ Security and alerts
 
-### 🛡️ Dependency evidence and alert lifecycle parity
+<a id="-dependency-evidence-and-alert-lifecycle-parity"></a>
+
+### Dependency evidence and alert lifecycle parity
 
 The reusable baseline is FullStackTemplate's `.github/actions/prepare-vulnerability-report`.
 MacroMapper, Notoli and Infrastructure carry the same report implementation and
@@ -331,7 +351,9 @@ check names, categories, queries and ruleset requirements remain unchanged;
 this does not independently resolve the historical default-branch/attribution
 acceptance in #612 or #587.
 
-### 📦 Compatible CodeQL updates
+<a id="-compatible-codeql-updates"></a>
+
+### Compatible CodeQL updates
 
 Dependabot groups all `github/codeql-action` entry points (including `init`,
 `analyze`, `autobuild` and `upload-sarif`) in `codeql` version-update PRs.
@@ -353,7 +375,9 @@ gates remain unchanged. Canonical rollout:
 The November maintenance sweep tracks the aligned upgrade and generated inventory
 in [FullStackTemplate #309](https://github.com/VanillaIceCube/FullStackTemplate/issues/309).
 
-### 🧪 Atomic CodeQL regression guard
+<a id="-atomic-codeql-regression-guard"></a>
+
+### Atomic CodeQL regression guard
 
 Before required scope detection, all CodeQL action entry points in workflow and
 composite-action YAML must share one full immutable SHA. Structural safe parsing
@@ -492,7 +516,9 @@ See the [production guide](../../deploy/production/README.md) for current setup,
 readiness, migration and explicit recovery procedures. Local Compose examples
 are not production release inputs.
 
-### 🔄 Shared deployment action update
+<a id="-shared-deployment-action-update"></a>
+
+### Shared deployment action update
 
 Docker login v4.8.0 (`8aa5831fb8d48d8f76594c7ddde61ae58019f550`) is rendered from Infrastructure commit
 `d9ab394bb38d2bdce38088ac952c53704c5bae5a`. Keep `deploy/shared-source.json` and
@@ -540,7 +566,9 @@ original check failures and bounded/redacted diagnostics. Update the existing
 architecture inventory with `python .github/tools/ci_architecture.py` after workflow
 changes and verify it with `--check`. Do not use production as a test fixture.
 
-## 📚 Related guides
+<a id="-related-guides"></a>
+
+## 📚 Reference
 
 - [Repository setup and credentials](../README.md).
 - [Local actions and reviewer contract](../actions/README.md).

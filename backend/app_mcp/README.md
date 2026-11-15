@@ -136,7 +136,9 @@ operator cleanup rather than reversing migrations or silently revoking grants.
 Moving framework documentation changes no application issuer, scopes, consent
 salt, client IDs, database tables, credentials, domain tools or readiness policy.
 
-## 🧪 Verification
+<a id="-verification"></a>
+
+## 🧪 Checks
 
 Run `python backend/check_app_mcp.py` from the repository root to verify the
 pinned shared framework. The checker lives outside `app_mcp/` so moving repository
