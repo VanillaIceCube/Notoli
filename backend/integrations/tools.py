@@ -4,7 +4,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from rest_framework.exceptions import APIException
 
-from mcp_framework.oauth import ConnectionPermissionDenied
+from app_mcp.oauth import ConnectionPermissionDenied
 from notes.models import Board
 from notes.serializers import UserSummarySerializer
 from notes.views import BoardViewSet, ListViewSet, NoteViewSet

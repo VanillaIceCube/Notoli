@@ -1,4 +1,6 @@
-# App-only production release and recovery
+# 🚀 Production releases and recovery
+
+For local development, use the [deployment README](../README.md).
 
 Notoli owns MCP OAuth, consent, token validation, connections and all 31 tools.
 The unreleased central issuer migration in #973 has been withdrawn; no shared
@@ -43,7 +45,7 @@ the historical ingress migration, not as a permanent operator identity. Shared d
 
 ## Shared implementation and app configuration
 
-Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/a82888c83975de486b27ec0d0dc787fb5b167301/docs/app-release-standard.md).
+Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/a82888c83975de486b27ec0d0dc787fb5b167301/app-release/README.md).
 `app.json` contains this app's service/container/domain/environment/network/DB
 and readiness policy; `compose.yml` defines its services. Common release and
 bundle code has no application-name branches. `deploy/shared-source.json` pins
@@ -289,8 +291,8 @@ proxy through an application release.
 
 The bundle fixes the issuer and frontend origin to `https://notoli.judeandrewalaba.com`.
 Changing an issuer invalidates resource-bound grants; coordinate client
-reconnection and `plugins/notoli/mcp.json` updates explicitly. Listing metadata
-is published separately: follow the [listing workflow](../../plugins/notoli/README.md#listing-metadata-and-updates).
+reconnection and `backend/app_mcp/chatgpt/mcp.json` updates explicitly. Listing metadata
+is published separately: follow the [listing workflow](../../backend/app_mcp/chatgpt/README.md#listing-metadata-and-updates).
 The following registration, write, mail and maintenance actions require the
 separately approved operator plan; they are not automatic release probes.
 
@@ -315,7 +317,7 @@ separately approved operator plan; they are not automatic release probes.
    lists/items in the selected board and remains owner-only. Delete tools require
    explicit confirmation of their impact: board deletion removes all lists/items,
    item deletion removes every occurrence, and list deletion preserves items. See the
-   [personal connection walkthrough](../../plugins/notoli/README.md).
+   [personal connection walkthrough](../../backend/app_mcp/chatgpt/README.md).
 
 3. Verify discovery and an unauthenticated challenge before linking:
 
@@ -371,4 +373,4 @@ source-pin PRs do not authorize merging, promotion, or deployment.
 
 ## 🔌 Shared MCP framework
 
-Follow the [MCP framework contract](../../docs/MCP-FRAMEWORK.md) before activating an optional app. Notoli and MacroMapper retain their app-owned production MCP profiles and readiness contracts; consult each app's policy and release evidence for the accepted state. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.
+Follow the [MCP framework contract](../../backend/app_mcp/README.md) before activating an optional app. Notoli and MacroMapper retain their app-owned production MCP profiles and readiness contracts; consult each app's policy and release evidence for the accepted state. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.

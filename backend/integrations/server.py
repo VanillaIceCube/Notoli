@@ -10,8 +10,8 @@ from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import Field
 
-from mcp_framework.oauth import ConnectionPermissionDenied
-from mcp_framework.server import create_server, http_application
+from app_mcp.oauth import ConnectionPermissionDenied
+from app_mcp.server import create_server, http_application
 
 from .oauth import required_scopes
 from .schemas import (

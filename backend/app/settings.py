@@ -71,7 +71,7 @@ INSTALLED_APPS = [
     "notes",
     "notifications",
     "integrations",
-    "mcp_framework",
+    "app_mcp",
 ]
 
 

@@ -78,7 +78,7 @@ test('permission failure and unconfirmed writes remain failures, not reported su
 });
 
 test('documentation-only files do not manufacture runtime or release-input impact', () => {
-  const groups = classify([{ filename: 'backend/README.md' }, { filename: 'deploy/production/README.md' }, { filename: '.github/README-WORKFLOWS.md' }]);
+  const groups = classify([{ filename: 'backend/README.md' }, { filename: 'deploy/production/README.md' }, { filename: '.github/README.md' }]);
   assert.equal(groups.documentation, 3); assert.equal(groups.other, 0); assert.equal(groups.backend, 0); assert.equal(groups.release, 0); assert.equal(groups.automation, 0);
 });
 

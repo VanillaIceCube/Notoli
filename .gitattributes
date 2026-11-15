@@ -1,1 +1,4 @@
+# Keep shell scripts checked out with LF (Unix/Linux) line endings.
+# This makes the same scripts usable in Linux containers and GitHub Actions
+# when the repository is also edited on Windows, which commonly uses CRLF.
 *.sh text eol=lf
