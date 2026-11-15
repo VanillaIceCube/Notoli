@@ -22,6 +22,7 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Remove unused Axios and eslint-config-prettier dependencies, the unused primary-color CSS token, and an uncalled login test helper.
 - Remove the custom frontend development entrypoint and automatic dependency reinstall; start Vite directly and install changed dependencies manually in the development container.
 - Remove frontend end-to-end suites, Playwright configuration and dependencies, browser-test helpers and CI jobs; retain component, backend, action-local and shared release checks.
 - Remove duplicate documentation indexes, redirects, stale narratives and historical receipts after preserving useful contracts.

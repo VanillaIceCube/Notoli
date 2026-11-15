@@ -456,19 +456,6 @@ class LoginTests(APITestCase):
             password="test_password",
         )
 
-    def _login_and_get_tokens(self):
-        response = self.client.post(
-            "/auth/login/",
-            {"email": "test_email@example.com", "password": "test_password"},
-            format="json",
-        )
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_200_OK,
-            f"Expected 200 for valid credentials, got {response.status_code}: {response.data}",
-        )
-        return response.data
-
     def test_login_success(self):
         response = self.client.post(
             "/auth/login/",
