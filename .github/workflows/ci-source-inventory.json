@@ -617,7 +617,7 @@
         "contents": "read",
         "pull-requests": "read"
       },
-      "source_sha256": "1ed10effd4815f4d8ccc08d56270fb4f7f9252cb83a3339e4b7edf346db3d764",
+      "source_sha256": "11d3c1db7f83c2205a6f484bbe126c30bee4c35817b29ec599844420a9094a54",
       "variable_names": []
     },
     "gate-vulnerability.yml": {

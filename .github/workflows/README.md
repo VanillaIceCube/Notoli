@@ -200,7 +200,7 @@ actionlint
 
 ### Shared MCP framework
 
-The backend test gate runs the documented ordinary/MCP-enabled profiles and ChatGPT packaging tests. Template sample fixtures do not create a production target; Notoli and MacroMapper retain their app-owned enabled protocol/domain acceptance. See [the framework guide](../../backend/app_mcp/README.md) and the application MCP guide where present.
+The backend test gate runs the documented ordinary/MCP-enabled profiles and ChatGPT packaging tests. Template sample fixtures do not create a production target; Notoli and MacroMapper retain their app-owned enabled protocol/domain acceptance. See [the framework guide](../../backend/apps/mcp/framework/README.md) and the application MCP guide where present.
 
 ## 🔒 Merge and dependency controls
 

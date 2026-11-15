@@ -158,7 +158,7 @@ test("lint and test skips require the actual detector to authorize that path sco
     ["Lints / Lint Frontend (ESLint + Prettier)", "frontend/package.json"],
     ["Lints / Lint Backend (Ruff)", "backend/uv.lock"],
     ["Tests / Frontend Tests (React)", "frontend/package-lock.json"],
-    ["Tests / Backend Tests (Django)", "backend/app/settings.py"],
+    ["Tests / Backend Tests (Django)", "backend/config/settings.py"],
     ["Tests / Automation Tests (Node)", ".github/actions/publish-ai-review/action.yml"],
   ]) {
     assert.equal(scopeAllowsSkip(name, [file]), false, name);

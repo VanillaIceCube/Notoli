@@ -5,11 +5,12 @@ permissions, notifications, and application integrations.
 
 ## 🧭 Structure
 
-- `app/`: settings and server entry points.
+- `config/`: Django settings, URL configuration, and ASGI/WSGI entry points.
 - `docker/`: production/development Dockerfiles and their adjacent Dockerfile-specific ignore files; keep `backend/` as the build context.
-- `notes/`: boards, lists, and notes.
-- `authentication/`, `notifications/`: accounts and notifications.
-- `integrations/`, `app_mcp/`: application tools and shared MCP.
+- `apps/notes/`: boards, lists, and notes.
+- `apps/authentication/`, `apps/notifications/`: accounts and notifications.
+- `apps/email/`: provider delivery adapters and tests; no Django app registration or database models.
+- `apps/mcp/`: shared framework, Notoli tools and ChatGPT packaging in `framework/`, `tools/` and `chatgpt/`.
 
 ## 💻 Local development
 
@@ -21,7 +22,7 @@ From the repository root:
 uv sync --locked --project backend
 uv run --locked --project backend python backend/manage.py migrate
 Set-Location backend
-uv run --locked uvicorn app.asgi:application --port 8000 --reload --no-proxy-headers
+uv run --locked uvicorn config.asgi:application --port 8000 --reload --no-proxy-headers
 ```
 
 Local settings can be supplied in ignored `backend/.env`.
@@ -33,7 +34,7 @@ Uvicorn serves both REST and MCP. Django `runserver` serves REST/auth only.
 
 Local runs load ignored `backend/.env`. The database defaults to
 `backend/db.sqlite3`; set `DJANGO_SQLITE_PATH` to use another local database.
-Use `app/settings.py` for current defaults.
+Use `config/settings.py` for current defaults.
 
 | Setting | Purpose |
 | --- | --- |
@@ -80,7 +81,7 @@ Common endpoints:
 - `POST /auth/forgot-password/` -> accepts `email`; sends a reset link if the account exists and returns a generic success message
 - `POST /auth/reset-password/` -> accepts `uid`, `token`, and `password`; sets a new password when the token is valid
 
-New users get a default board named after their username, such as `"andrew's Board"`, created automatically via a post-save signal in `notes/signals.py`. If the username is auto-derived from the email prefix, the board name uses that prefix with its first letter capitalized, such as `"Example_02's Board"` for `example_02@gmail.com`. The default personal board is also bootstrapped with ordered starter lists: `Grocery List`, `Chores List`, and `Todo List`, each with starter notes.
+New users get a default board named after their username, such as `"andrew's Board"`, created automatically via a post-save signal in `apps/notes/signals.py`. If the username is auto-derived from the email prefix, the board name uses that prefix with its first letter capitalized, such as `"Example_02's Board"` for `example_02@gmail.com`. The default personal board is also bootstrapped with ordered starter lists: `Grocery List`, `Chores List`, and `Todo List`, each with starter notes.
 
 All `/api/*` endpoints require:
 
@@ -113,7 +114,7 @@ Local development uses Django's console email backend. The included
 Resend HTTPS backend is configured with:
 
 ```env
-DJANGO_EMAIL_BACKEND=authentication.email_backends.ResendApiEmailBackend
+DJANGO_EMAIL_BACKEND=apps.email.backends.ResendApiEmailBackend
 DJANGO_EMAIL_HOST_KEY=<resend-api-key>
 DJANGO_EMAIL_TIMEOUT=10
 DJANGO_DEFAULT_FROM_EMAIL=<sender-on-a-verified-domain>
@@ -130,7 +131,7 @@ response means acceptance, not confirmed inbox delivery.
 
 Failures preserve `fail_silently`: false re-raises, while true skips failures and
 returns the number sent. Password reset returns a generic response for known and
-unknown accounts, including delivery failures. Logger `authentication.email_backends`
+unknown accounts, including delivery failures. Logger `apps.email.backends`
 records safe category/status fields: `configuration`, `request`, `rate_limit`,
 `provider`, `timeout`, `network`, or `unexpected`. Never log provider response
 bodies, recipient details, reset tokens, message contents, or credentials.
@@ -141,14 +142,14 @@ Use mocked delivery tests; production email receipt requires separate verificati
 
 ## 🔌 MCP integration
 
-The [MCP README](app_mcp/README.md) explains shared transport,
+The [MCP README](apps/mcp/framework/README.md) explains shared transport,
 OAuth, configuration, and verification.
 
-Notoli tools and permissions live in the [integration README](integrations/README.md),
-which links to the [ChatGPT plugin guide](../backend/app_mcp/chatgpt/README.md).
+Notoli tools and permissions live in the [integration README](apps/mcp/tools/README.md),
+which links to the [ChatGPT plugin guide](apps/mcp/chatgpt/README.md).
 
 Connection manifests, artwork, and package builders live in
-[chatgpt/](app_mcp/chatgpt/README.md).
+[chatgpt/](apps/mcp/chatgpt/README.md).
 
 ## 🧪 Checks
 

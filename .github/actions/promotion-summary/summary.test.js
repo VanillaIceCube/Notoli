@@ -9,7 +9,7 @@ function fixture() {
   const bot = { id: 41898282, login: 'github-actions[bot]', type: 'Bot' };
   const github = { rest: { pulls: {
     get: async () => ({ data: structuredClone(pr) }),
-    listFiles: async () => ({ data: [{ filename: 'backend/authentication/views.py', additions: 3, deletions: 1 }] }),
+    listFiles: async () => ({ data: [{ filename: 'backend/apps/authentication/views.py', additions: 3, deletions: 1 }] }),
   }, users: { getByUsername: async () => ({ data: bot }) }, issues: {
     listComments: async () => ({ data: structuredClone(comments) }),
     createComment: async request => { writes.push(request); const comment = { ...request, id: 10, user: bot }; comments.push(comment); return { data: comment }; },
@@ -19,7 +19,7 @@ function fixture() {
   return { pr, github, bot, comments, writes, call };
 }
 test('summary derives observed areas and separate risks from actual metadata, including renames', () => {
-  const files = [{ filename: 'backend/app/migrations/0002_change.py', status: 'added', additions: 5, deletions: 0 }, { filename: 'frontend/package-lock.json', previous_filename: 'backend/pyproject.toml', status: 'renamed' }, { filename: '.github/workflows/ci-deploy.yml' }];
+  const files = [{ filename: 'backend/config/migrations/0002_change.py', status: 'added', additions: 5, deletions: 0 }, { filename: 'frontend/package-lock.json', previous_filename: 'backend/pyproject.toml', status: 'renamed' }, { filename: '.github/workflows/ci-deploy.yml' }];
   const groups = classify(files);
   assert.equal(groups.migrations, 1); assert.equal(groups.dependencies, 1); assert.equal(groups.release, 1);
   const text = render({ repo: 'Notoli', number: 1, base: BASE, head: HEAD, files });
@@ -90,4 +90,9 @@ test('a newly protected PR retains historical evidence without another mutation'
   assert.equal(h.writes.length, 1); assert.equal(h.comments[0].body, original);
   h.pr.labels = [];
   assert.equal((await h.call()).status, 'updated'); assert.equal(h.comments.length, 1);
+});
+
+// Folder moves retain authentication/email classification for current and historical paths.
+test("classifies namespaced authentication paths", () => {
+  assert.equal(classify([{ filename: "backend/apps/authentication/views.py" }]).authentication_email, 1);
 });

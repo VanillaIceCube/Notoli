@@ -309,8 +309,8 @@ proxy through an application release.
 
 The bundle fixes the issuer and frontend origin to `https://notoli.judeandrewalaba.com`.
 Changing an issuer invalidates resource-bound grants; coordinate client
-reconnection and `backend/app_mcp/chatgpt/mcp.json` updates explicitly. Listing metadata
-is published separately: follow the [listing workflow](../../backend/app_mcp/chatgpt/README.md#listing-metadata-and-updates).
+reconnection and `backend/apps/mcp/chatgpt/mcp.json` updates explicitly. Listing metadata
+is published separately: follow the [listing workflow](../../backend/apps/mcp/chatgpt/README.md#listing-metadata-and-updates).
 The following registration, write, mail and maintenance actions require the
 separately approved operator plan; they are not automatic release probes.
 
@@ -335,7 +335,7 @@ separately approved operator plan; they are not automatic release probes.
    lists/items in the selected board and remains owner-only. Delete tools require
    explicit confirmation of their impact: board deletion removes all lists/items,
    item deletion removes every occurrence, and list deletion preserves items. See the
-   [personal connection walkthrough](../../backend/app_mcp/chatgpt/README.md).
+   [personal connection walkthrough](../../backend/apps/mcp/chatgpt/README.md).
 
 3. Verify discovery and an unauthenticated challenge before linking:
 
@@ -391,4 +391,4 @@ source-pin PRs do not authorize merging, promotion, or deployment.
 
 ## 🔌 Shared MCP framework
 
-Follow the [MCP framework contract](../../backend/app_mcp/README.md) before activating an optional app. Notoli and MacroMapper retain their app-owned production MCP profiles and readiness contracts; consult each app's policy and release evidence for the accepted state. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.
+Follow the [MCP framework contract](../../backend/apps/mcp/framework/README.md) before activating an optional app. Notoli and MacroMapper retain their app-owned production MCP profiles and readiness contracts; consult each app's policy and release evidence for the accepted state. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.
