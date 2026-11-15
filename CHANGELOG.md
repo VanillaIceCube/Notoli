@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## 2026-11-14
 
+### Fixed
+
+- Reject unsafe paths, symlinks and duplicate members in exported ChatGPT ZIPs, bound archive expansion, and cover hostile exports with offline regressions.
+
 ### Changed
 
 - Resolve favicon, Apple touch icon and web manifest URLs through the Vite base URL for consistent public asset paths.
