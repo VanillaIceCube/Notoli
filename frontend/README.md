@@ -126,6 +126,12 @@ the documented singular/plural compatibility behavior.
 
 ## 🧪 Checks
 
+`src/index.test.jsx` boots the real entry point, React root and application in
+jsdom, then checks the signed-out login route and usable form without private API
+requests or uncaught startup errors. It unmounts the real root and restores test
+state afterward. Existing Material UI test shims still apply; browser layout and
+built HTML are outside this test's scope.
+
 From `frontend/`:
 
 ```powershell
