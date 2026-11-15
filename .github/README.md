@@ -91,9 +91,9 @@ Repository CI helpers live in `.github/tools/`: `bounded_log.py` retains bounded
 reviewer diagnostics; `install_actionlint.sh` installs the pinned, checksum-verified
 Linux Actionlint release; `validate_repository.py` checks workflow/script syntax
 and synthetic Compose configuration; `ci_architecture.py` validates the documented
-CI contract and regenerates `docs/CI-CD-SOURCE-INVENTORY.json`. Run these from the
+CI contract and regenerates `.github/workflows/ci-source-inventory.json`. Run these from the
 repository root. See the [workflow checks](workflows/README.md#-checks-and-diagnostics)
-and [CI architecture](../docs/CI-CD-ARCHITECTURE.md) for dependencies and commands.
+and [CI architecture](workflows/README.md#-architecture-and-trust-boundaries) for dependencies and commands.
 
 Verify the current head's independent checks and all three native review identities.
 Distinguish synthetic local tests from actual GitHub runner/credential acceptance.
@@ -118,5 +118,14 @@ local application setup and reviewer configuration.
 
 - [Workflow behavior and maintenance](workflows/README.md).
 - [Shared action and reviewer contracts](actions/README.md).
-- [CI/CD architecture](../docs/CI-CD-ARCHITECTURE.md).
+- [CI/CD architecture](workflows/README.md#-architecture-and-trust-boundaries).
 - [Application production setup and recovery](../deploy/production/README.md).
+
+## 🤝 Shared engineering ownership and rollout
+
+Follow FullStackTemplate's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#-shared-engineering-ownership-and-rollout)
+for repository applicability, canonical source ownership, downstream acceptance and
+[main-first releases](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#main-first-releases).
+Preserve app-specific profiles and Infrastructure's separate owner authorization,
+Required CI and host operations. A shared parent closes only after required downstream
+adoptions are merged and verified or explicitly deferred with owner/tracking/acceptance.

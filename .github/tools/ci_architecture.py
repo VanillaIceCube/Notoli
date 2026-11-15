@@ -92,7 +92,8 @@ def contracts(data, root):
     raw_summary = (root / ".github/workflows/promotion-summary.yml").read_text(encoding="utf-8")
     if "uses:" in raw_request or "secrets." in raw_request or "ref: main" not in raw_summary or "persist-credentials: false" not in raw_summary:
         raise ValueError("Promotion summary must never execute a PR checkout or request artifact/cache")
-    document = (root / "docs/CI-CD-ARCHITECTURE.md").read_text(encoding="utf-8")
+    document_path = root / ".github/workflows/README.md"
+    document = document_path.read_text(encoding="utf-8")
     diagrams = re.findall(r"```mermaid\n(.*?)```", document, flags=re.S)
     if len(diagrams) != 4 or not all(text.startswith("flowchart ") for text in diagrams):
         raise ValueError("Expected the four maintained Mermaid architecture diagrams")
@@ -120,8 +121,10 @@ def contracts(data, root):
         consumers = set(data["custom_action_consumers"].get("./.github/actions/" + action, []))
         if not {".github/workflows/" + name for name in ["review-code.yml", "review-build.yml", "review-security.yml"]}.issubset(consumers):
             raise ValueError("Reviewer diagram/custom-action consumer drift")
-    for target in re.findall(r"\]\((\.\./[^)#]+)(?:#[^)]*)?\)", document):
-        if not (root / "docs" / target).is_file():
+    for target in re.findall(r"\]\(([^)#\s]+)(?:#[^)]*)?\)", document):
+        if re.match(r"[a-zA-Z][a-zA-Z0-9+.-]*:", target):
+            continue
+        if not (document_path.parent / target).is_file():
             raise ValueError(f"Broken local architecture source link: {target}")
 
 
@@ -132,7 +135,7 @@ def main():
     root = Path(__file__).resolve().parents[2]
     data = inventory(root)
     contracts(data, root)
-    target = root / "docs/CI-CD-SOURCE-INVENTORY.json"
+    target = root / ".github/workflows/ci-source-inventory.json"
     text = json.dumps(data, indent=2, sort_keys=True) + "\n"
     if args.check:
         if target.read_text(encoding="utf-8") != text:

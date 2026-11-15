@@ -45,7 +45,7 @@ the historical ingress migration, not as a permanent operator identity. Shared d
 
 ## Shared implementation and app configuration
 
-Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/a82888c83975de486b27ec0d0dc787fb5b167301/docs/app-release-standard.md).
+Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/a82888c83975de486b27ec0d0dc787fb5b167301/app-release/README.md).
 `app.json` contains this app's service/container/domain/environment/network/DB
 and readiness policy; `compose.yml` defines its services. Common release and
 bundle code has no application-name branches. `deploy/shared-source.json` pins
@@ -373,4 +373,4 @@ source-pin PRs do not authorize merging, promotion, or deployment.
 
 ## 🔌 Shared MCP framework
 
-Follow the [MCP framework contract](../../docs/MCP-FRAMEWORK.md) before activating an optional app. Notoli and MacroMapper retain their app-owned production MCP profiles and readiness contracts; consult each app's policy and release evidence for the accepted state. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.
+Follow the [MCP framework contract](../../backend/app_mcp/README.md) before activating an optional app. Notoli and MacroMapper retain their app-owned production MCP profiles and readiness contracts; consult each app's policy and release evidence for the accepted state. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.

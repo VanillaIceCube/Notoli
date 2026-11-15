@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Consolidate durable documentation into existing owning READMEs, move the active CI inventory beside workflow guidance, and repair links and architecture regressions.
 - Restore consistent changelog titles, chronological dates, ordered categories, and spacing while preserving historical entries.
 - Align shared agent instructions across the repository family while preserving application-specific contracts and Infrastructure authorization controls.
 - Move active CI helpers into `.github/tools/`, browser helpers beside `frontend/e2e/` journeys, and the MCP checker into `backend/`; update callers, path filters, regressions, and owning guides while preserving existing checks and isolation.
@@ -13,6 +14,7 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Remove duplicate documentation indexes, redirects, stale narratives and historical receipts after preserving useful contracts.
 - Remove the root `tests/` directory and its CI invocations; retain backend, frontend/browser, action-local, and shared release suites.
 
 ## 2026-11-13

@@ -159,7 +159,7 @@ Linux CI installs Chromium with `--with-deps`. Failure artifacts are written to
 days. Reports may include disposable tokens, so do not publish them in issues.
 
 The board/menu and mobile refresh journeys retain render-loop and uncaught-error
-checks. See [menu and refresh behavior](../docs/UI-BUG-BATCH-915-847.md).
+checks. See [menu and refresh behavior](README.md#menu-exit-and-refresh-behavior).
 
 ## 🛠️ Maintenance
 
@@ -197,3 +197,28 @@ keep test environments independent without dropping authentication or domain ass
 
 - [Backend and MCP integration](../backend/README.md).
 - [Local Docker and production releases](../deploy/README.md).
+
+### Connections response contract
+
+Successful consent, decision, list and revoke responses must be JSON objects.
+Unreadable, empty, null, scalar or array successes reject with `Request failed.`;
+a protocol failure must not follow a callback or claim revocation succeeded.
+HTTP failures use the first nonblank string in `error_description`, `detail`, then
+`error`, otherwise `HTTP <status>`. Never expose raw HTML/plaintext, parser errors,
+nested objects or unrelated JSON fields as fallback messages. Backend public error
+fields must be safe to display. Preserve JWT-only headers, omitted cookies, form
+encoding, signed consent tickets and validated callbacks. Invalid refresh credentials
+clear the session; transient proxy/refresh failures retain it for retry. Notoli
+retains its extra post-refresh 401 handling and legacy API-base compatibility.
+
+### Menu exit and refresh behavior
+
+Keep permission-dependent menu selection through MUI's exit transition and clear
+it at `onExited`; reopening replaces selection and cancels the previous exit.
+Use direct menu children for keyboard navigation and restore focus to a named,
+focusable trigger. A single proportional refresh-indicator spacer owns pull
+displacement and holds space until completion; keep paper padding constant.
+Cancellation never refreshes, overlapping requests are ignored, and failed callbacks
+settle. Respect nested/document scroll and inactive route slots. Suppress competing
+native root overscroll through a pending custom refresh; restore prior policy
+immediately on route exit/unmount and once a disabled hook has settled.

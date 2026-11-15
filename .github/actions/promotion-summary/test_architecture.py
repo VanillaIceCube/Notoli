@@ -13,7 +13,7 @@ SPEC.loader.exec_module(MODULE)
 
 class ArchitectureTests(unittest.TestCase):
     def test_diagram_only_dependency_change_fails(self):
-        target = ROOT / "docs/CI-CD-ARCHITECTURE.md"
+        target = ROOT / ".github/workflows/README.md"
         original = Path.read_text
         document = target.read_text(encoding="utf-8")
         self.assertIn("LintTest --> Lint[", document)
