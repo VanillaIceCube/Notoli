@@ -12,7 +12,10 @@ permissions, notifications, and application integrations.
 - `apps/mcp/`: shared framework, Notoli tools and ChatGPT packaging in `framework/`, `tools/` and `chatgpt/`.
 
 REST views own HTTP authentication, serializer validation and responses. MCP tools
-retain OAuth scope checks, bounded results and deletion confirmation, validate
+retain OAuth scope checks, bounded results and durable request-UUID receipts. Routine
+changes and collaborator additions execute directly; only deletion, collaborator
+removal and omitted list memberships require
+separate signed-in app approval. Tools validate
 with the same serializers using an actor context, and call domain services
 directly. Domain writes recheck live board membership and ownership under a
 transaction; caller-provided or previously fetched objects do not authorize a

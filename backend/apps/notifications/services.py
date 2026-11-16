@@ -123,6 +123,9 @@ def mark_all_read(actor):
 
 
 @transaction.atomic
-def clear_all(actor):
-    deleted, _ = notifications_for(actor).delete()
+def clear_all(actor, *, selected_ids=None):
+    rows = notifications_for(actor)
+    if selected_ids is not None:
+        rows = rows.filter(pk__in=selected_ids)
+    deleted, _ = rows.delete()
     return deleted

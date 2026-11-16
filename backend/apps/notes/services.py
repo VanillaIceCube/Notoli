@@ -195,12 +195,16 @@ def validate_note_data(actor, data, instance=None):
 
 
 @transaction.atomic
-def add_collaborator(actor, board_id, identifier):
+def add_collaborator(actor, board_id, identifier, *, expected_user_id=None):
     board = _locked_board(actor, board_id)
     require_owner(actor, board)
     user = find_collaborator(identifier)
     if user is None:
         raise SharingChangeError("No user found for that username or email.", 404)
+    if expected_user_id is not None and user.pk != expected_user_id:
+        raise SharingChangeError(
+            "The requested collaborator changed. Review the action again.", 400
+        )
     if user.id == board.owner_id:
         raise SharingChangeError("The board owner already has access.", 400)
     if board.collaborators.filter(pk=user.pk).exists():

@@ -11,7 +11,7 @@ from apps.notes.models import Board
 from apps.notes.models import List as NoteList
 from apps.notifications.models import Notification
 
-from ..services import execute
+from .helpers import execute_action as execute
 from .helpers import make_client, make_token
 
 
