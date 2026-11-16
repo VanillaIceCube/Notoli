@@ -42,6 +42,51 @@ def check_whitespace():
     run("git", "diff", "--check", "HEAD", "--")
 
 
+def check_local_policy(model, development):
+    """Reject exposed local services and loss of the exact proxy trust boundary."""
+    services = model["services"]
+    ports = [port for service in services.values() for port in service.get("ports", [])]
+    if not ports or any(port.get("host_ip") != "127.0.0.1" for port in ports):
+        raise ValueError("Local services must publish only to IPv4 loopback")
+    backend = services["backend"]
+    databases = [mount for mount in backend.get("volumes", [])
+                 if mount.get("target") == "/backend/db.sqlite3"]
+    if (len(databases) != 1 or databases[0].get("type") != "bind"
+            or databases[0].get("bind", {}).get("create_host_path", False) is not False):
+        raise ValueError("Local SQLite must use an existing file; never auto-create its bind path")
+    environment = backend["environment"]
+    if development:
+        if (environment.get("DJANGO_DEBUG") != "1"
+                or environment.get("DJANGO_TRUSTED_PROXY_IPS") != ""
+                or "--no-proxy-headers" not in backend.get("command", [])):
+            raise ValueError("Direct local development must use debug mode and trust no proxy")
+        if services["frontend"]["environment"].get("HOST") != "0.0.0.0":
+            raise ValueError("The development frontend must listen on its container interface")
+        return
+    proxy = services["proxy"]
+    if (backend.get("ports") or services["frontend"].get("ports")
+            or {port["target"] for port in proxy["ports"]} != {80, 443}):
+        raise ValueError("Standalone HTTPS must publish only its TLS/redirect proxy")
+    private = model["networks"]["backend_private"]
+    if private.get("internal") is not True:
+        raise ValueError("The backend proxy network must remain internal")
+    if (set(backend["networks"]) != {"backend_private", "backend_egress"}
+            or "backend_private" in services["frontend"]["networks"]
+            or set(proxy["networks"]) != {"default", "backend_private"}):
+        raise ValueError("Only the standalone proxy may bridge frontend and backend networks")
+    address = proxy["networks"]["backend_private"]["ipv4_address"]
+    if environment.get("DJANGO_TRUSTED_PROXY_IPS") != address:
+        raise ValueError("Backend trust must match the exact standalone proxy address")
+    origin = proxy["environment"]["LOCAL_HTTPS_ORIGIN"]
+    if not origin.startswith("https://") or any(
+        environment.get(name) != origin for name in (
+            "DJANGO_FRONTEND_BASE_URL", "DJANGO_MCP_BASE_URL",
+            "DJANGO_CORS_ALLOWED_ORIGINS", "DJANGO_CSRF_TRUSTED_ORIGINS",
+        )
+    ):
+        raise ValueError("Standalone browser, OAuth and trusted origins must agree")
+
+
 def main():
     run("actionlint", "-ignore", 'unknown permission scope "vulnerability-alerts"')
     # The single compatibility exception is for GitHub's existing new scope;
@@ -73,7 +118,7 @@ def main():
             run("pwsh", "-NoProfile", "-NonInteractive", "-Command",
                 '$errors=$null; [void][System.Management.Automation.Language.Parser]::ParseFile($env:CHECK_PS_FILE,[ref]$null,[ref]$errors); '
                 'if ($errors) { $errors | ForEach-Object { Write-Error ("{0}:{1}: {2}" -f $env:CHECK_PS_FILE,$_.Extent.StartLineNumber,$_.Message) }; exit 1 }', env=env)
-    with tempfile.TemporaryDirectory(prefix="batch2-compose-") as directory:
+    with tempfile.TemporaryDirectory(prefix="local-compose-") as directory:
         temp = Path(directory)
         fixture = temp / "synthetic.env"
         fixture.write_text("DJANGO_SECRET_KEY=disposable-fixture-only\n", encoding="utf-8")
@@ -97,7 +142,15 @@ def main():
                         "APP_DB_PATH": str(temp / "db.sqlite3")})
             for variable in re.findall(r"\$\{([A-Z][A-Z0-9_]*)(?::)?\?", text):
                 env.setdefault(variable, str(temp / "fixture"))
-            run("docker", "compose", "--project-directory", str(source.parent), "--env-file", str(fixture), "-f", str(rendered), "config", "--quiet", env=env)
+            command = ["docker", "compose", "--project-directory", str(source.parent),
+                       "--env-file", str(fixture), "-f", str(rendered), "config"]
+            run(*command, "--quiet", env=env)
+            if source.parent == ROOT / "deploy":
+                model = json.loads(subprocess.check_output(
+                    [*command, "--format", "json", "--no-env-resolution"],
+                    cwd=ROOT, env=env, text=True,
+                ))
+                check_local_policy(model, source.name == "docker-compose.dev.yml")
     check_whitespace()
     print("Repository files: workflow/composite syntax, script parsers and synthetic Compose validation passed")
 

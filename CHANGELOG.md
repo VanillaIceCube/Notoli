@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Align local deployment profiles across applications: loopback-only ports, private backend networks, exact proxy trust, Uvicorn/Vite reload, matching MCP/browser origins and streaming routes, safe forwarded headers, cache controls and local setup instructions.
 - Fold shared release verification and synchronization into the existing bundle builder; keep CI/deployment parity gates and store the immutable Infrastructure source pin in the existing app configuration.
 
 ### Removed
