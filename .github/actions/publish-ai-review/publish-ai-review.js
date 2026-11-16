@@ -357,7 +357,7 @@ async function publishAiReview({
   let parsed;
   try {
     parsed = JSON.parse(stripCodeFences(reviewJson));
-  } catch (error) {
+  } catch {
     await publishUnavailableReview({
       github,
       context,

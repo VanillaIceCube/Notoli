@@ -22,7 +22,7 @@ import Divider from '@mui/material/Divider';
 export const NOTEPAD_ITEM_VERTICAL_GAP = '8px';
 export const NOTEPAD_ITEM_ROW_MIN_HEIGHT = 42;
 export const NOTEPAD_ITEM_FOOTPRINT_HEIGHT = 52;
-export const VERTICAL_REORDER_DRAG_MODIFIERS = [
+const VERTICAL_REORDER_DRAG_MODIFIERS = [
   ({ transform }) => ({
     ...transform,
     x: 0,

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router';
 import ListTasksPage from './ListTasksPage';
 import { noteFixtures, boardFixtures } from '../../test-helpers/fixtures';
 import { collectRowStartPixels } from '../../test-helpers/layout';
@@ -20,8 +20,8 @@ import {
 const { mockUseParams } = vi.hoisted(() => ({
   mockUseParams: vi.fn(),
 }));
-vi.mock('react-router-dom', async () => ({
-  ...(await vi.importActual('react-router-dom')),
+vi.mock('react-router', async () => ({
+  ...(await vi.importActual('react-router')),
   useParams: () => mockUseParams(),
 }));
 vi.mock('../../services/notoliApiClient', () => ({

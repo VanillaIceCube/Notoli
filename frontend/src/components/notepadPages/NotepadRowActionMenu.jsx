@@ -5,14 +5,6 @@ import Edit from '@mui/icons-material/Edit';
 import Reorder from '@mui/icons-material/Reorder';
 import Divider from '@mui/material/Divider';
 
-const menuPaperSx = {
-  backgroundColor: 'var(--secondary-background-color)',
-  color: 'var(--secondary-color)',
-  boxShadow: 3,
-  border: '2.5px solid var(--background-color)',
-  borderRadius: 1.5,
-};
-
 const menuItemSx = { py: 0.1, px: 1.5, minHeight: 'auto', fontWeight: 'bold' };
 const dividerSx = {
   my: 0,
@@ -32,12 +24,7 @@ export default function NotepadRowActionMenu({
   reorderDisabled = false,
 }) {
   return (
-    <Menu
-      slotProps={{ paper: { sx: menuPaperSx } }}
-      anchorEl={anchorEl}
-      open={open}
-      onClose={onClose}
-    >
+    <Menu anchorEl={anchorEl} open={open} onClose={onClose}>
       <MenuItem sx={menuItemSx} onClick={onRename}>
         <Edit sx={menuIconSx} />
         Rename

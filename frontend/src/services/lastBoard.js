@@ -1,8 +1,8 @@
+import { getSessionSnapshot } from './sessionState';
 const STORAGE_KEY = 'notoli:lastBoardByUser';
 
 function getUserKey() {
-  const username = sessionStorage.getItem('username');
-  const email = sessionStorage.getItem('email');
+  const { username, email } = getSessionSnapshot();
   return username || email || null;
 }
 

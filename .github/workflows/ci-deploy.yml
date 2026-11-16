@@ -62,7 +62,7 @@ jobs:
           file: ./frontend/docker/Dockerfile
           push: true
           build-args: |
-            REACT_APP_API_BASE_URL=
+            VITE_API_BASE_URL=
           tags: ${{ steps.images.outputs.frontend }}:sha-${{ github.sha }}
       - name: Create immutable app-only bundle
         id: bundle

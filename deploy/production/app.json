@@ -140,7 +140,7 @@
     ]
   },
   "workflow": {
-    "frontend_build_arg": "REACT_APP_API_BASE_URL",
+    "frontend_build_arg": "VITE_API_BASE_URL",
     "extra_env": {}
   }
 }

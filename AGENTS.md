@@ -93,7 +93,7 @@ Use the same script as the Codex maintenance script so cached containers refresh
 5) Frontend setup:
    - `cd frontend`
    - `npm install`
-   - Optional: set `REACT_APP_API_BASE_URL` (default: `http://localhost:8000`)
+   - Optional: set `VITE_API_BASE_URL` (default: `http://localhost:8000`)
      - For production builds, leave this blank/unset for relative `/api/...` calls on `https://notoli.judeandrewalaba.com`
    - `npm start`
 
@@ -111,8 +111,9 @@ Use the [local Docker guide](deploy/README.md) for hot reload at
 `notoli.localhost` and optional standalone HTTPS. Initialize only missing local
 env/database files; never truncate an existing SQLite file. Development Compose
 mounts backend/frontend source, binds ports to loopback and runs Uvicorn/Vite
-reload. Restart the frontend after dependency changes so its startup check runs
-`npm ci`. Keep the reviewed development base-image digest and lockfile in sync.
+reload. After dependency changes, run `npm ci` explicitly in the frontend
+container, then restart it; follow the commands in the local Docker guide. Keep
+the reviewed development base-image digest and lockfile in sync.
 
 `deploy/docker-compose.yml` and `deploy/nginx-proxy.conf` are local/legacy-only.
 Do not use them on the shared production host. The
@@ -242,8 +243,8 @@ and Django static assets use `/static/`.
   - `DJANGO_FRONTEND_BASE_URL=https://notoli.judeandrewalaba.com`
   - `DJANGO_MCP_BASE_URL=https://notoli.judeandrewalaba.com`
 - Frontend API base for production builds:
-  - Prefer `REACT_APP_API_BASE_URL=` (blank/unset) so requests resolve to same-origin `/api/...`.
-  - If blank handling is not possible in a deploy environment, use `REACT_APP_API_BASE_URL=https://notoli.judeandrewalaba.com`.
+  - Prefer `VITE_API_BASE_URL=` (blank/unset) so requests resolve to same-origin `/api/...`.
+  - If blank handling is not possible in a deploy environment, use `VITE_API_BASE_URL=https://notoli.judeandrewalaba.com`.
 - Frontend auth behavior:
   - Tokens live in `sessionStorage` (`accessToken`/`refreshToken`).
   - Backend `401` from non-auth endpoints attempts one JWT refresh/retry. Invalid refresh credentials clear tokens, redirect to `/login`, and show an error snackbar. Connection requests preserve a validated local `next` path/query through login; ordinary login retains the preferred-board landing.
@@ -352,7 +353,7 @@ Follow the [app MCP contract](backend/apps/mcp/README.md#framework) and
 
 ## 🧩 Repository-specific contracts
 
-- Frontend builds use Vite and tests use Vitest/jsdom. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite explicitly maps the existing `REACT_APP_API_BASE_URL`/`PUBLIC_URL` settings, keeps port 3000 and `build/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
+- Frontend builds use Vite and tests use Vitest/jsdom. ESLint 10 uses `frontend/eslint.config.mjs` with compatible plugins; do not restore Create React App's ESLint 8 peer graph. `npm run build` includes strict lint, and the frontend CI test gate runs tests plus the production build. Vite uses `VITE_API_BASE_URL` and `import.meta.env.BASE_URL`, keeps port 3000 and `dist/`, and supports Docker's polling configuration. JSX-bearing source files use `.jsx`. See `frontend/README.md` and `deploy/README.md`.
 - Frontend Material UI and icons must use compatible v9 versions. Upgrade them together, use `sx` instead of removed layout system props and `slotProps` for removed component prop APIs, then verify strict lint, tests (including real menu keyboard interaction), and production build. See `frontend/README.md` for frontend checks.
 - ChatGPT listing metadata: `backend/apps/mcp/chatgpt/plugin.json` is the canonical branding source, but personal custom-MCP plugins use a separate generated compatibility manifest. Listing updates must preserve the installed plugin identity and registered app mapping; the repository no longer maintains local package or listing builders. Keep account-specific exports/build ZIPs out of Git. Listing publication is separate from Docker deployment and MCP tool refresh. Privacy/terms pages and verified publisher identity remain prerequisites for public submission. See `backend/apps/mcp/README.md`.
 - Backend migrations: `uv run --locked --project backend python backend/manage.py makemigrations` then `uv run --locked --project backend python backend/manage.py migrate`

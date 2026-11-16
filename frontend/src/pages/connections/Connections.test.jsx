@@ -1,6 +1,7 @@
-import { screen, waitFor } from '@testing-library/react';
+import { startSession } from '../../services/sessionState';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Route, Routes, useLocation } from 'react-router-dom';
+import { Route, Routes, useLocation } from 'react-router';
 import { renderWithProviders } from '../../test-helpers/utils';
 import AuthenticatedRoute from '../../components/AuthenticatedRoute';
 import ConnectedApps, { OAuthConsent } from './Connections';
@@ -273,6 +274,26 @@ test('failed revocation keeps the connection visible', async () => {
   expect(screen.getByText('ChatGPT')).toBeInTheDocument();
 });
 
+test.each(['account change', 'unmount'])(
+  'does not follow an old consent decision after %s',
+  async (change) => {
+    startSession({ access: 'a', refresh: 'r' });
+    let finish;
+    connections.decideConsent.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const { unmount } = renderFlow();
+    await userEvent.click(await screen.findByRole('button', { name: 'Allow' }));
+    if (change === 'account change') act(() => startSession({ access: 'new', refresh: 'new-r' }));
+    else unmount();
+    await act(async () => {
+      finish({ redirect_url: 'https://example.com/old-callback' });
+    });
+    expect(connections.followOAuthCallback).not.toHaveBeenCalled();
+  },
+);
 const actionQuery = '?approval_id=opaque-reference';
 const actionPreview = {
   ticket: 'SIGNED-ACTION',
@@ -388,5 +409,58 @@ test('an approved action can be cancelled immediately with its new signed ticket
   );
   expect(connections.loadActionApproval).toHaveBeenCalledTimes(1);
   expect(screen.queryByRole('button', { name: 'Cancel action' })).not.toBeInTheDocument();
+  expect(connections.followOAuthCallback).not.toHaveBeenCalled();
+});
+
+test.each(
+  ['account change', 'unmount'].flatMap((change) =>
+    ['preview', 'decision'].flatMap((operation) =>
+      ['success', 'failure'].map((outcome) => [change, operation, outcome]),
+    ),
+  ),
+)('ignores action approval %s during a pending %s %s', async (change, operation, outcome) => {
+  startSession({ access: 'old-access', refresh: 'old-refresh' });
+  let resolve;
+  let reject;
+  const pending = new Promise((onResolve, onReject) => {
+    resolve = onResolve;
+    reject = onReject;
+  });
+  connections.loadActionApproval.mockResolvedValue(actionPreview);
+  if (operation === 'preview') connections.loadActionApproval.mockReturnValueOnce(pending);
+  else connections.decideActionApproval.mockReturnValueOnce(pending);
+  const { unmount } = renderFlow(`/connections/authorize${actionQuery}`);
+  if (operation === 'decision') {
+    await userEvent.click(await screen.findByRole('button', { name: 'Approve this action' }));
+  } else {
+    await waitFor(() => expect(connections.loadActionApproval).toHaveBeenCalledTimes(1));
+  }
+  if (change === 'account change') {
+    connections.loadActionApproval.mockResolvedValue({
+      ...actionPreview,
+      ticket: 'NEW-ACCOUNT-TICKET',
+      approval: { ...actionPreview.approval, user: { username: 'bob' } },
+    });
+    act(() => startSession({ access: 'new-access', refresh: 'new-refresh' }));
+    await screen.findByText('Signed in as bob');
+  } else {
+    unmount();
+  }
+  await act(async () => {
+    if (outcome === 'failure') reject(new Error('Old account action failure.'));
+    else {
+      resolve({
+        ...actionPreview,
+        approval: {
+          ...actionPreview.approval,
+          status: operation === 'decision' ? 'approved' : 'prepared',
+        },
+      });
+    }
+  });
+  expect(screen.queryByText('Signed in as alice')).not.toBeInTheDocument();
+  expect(screen.queryByText('Status: approved')).not.toBeInTheDocument();
+  expect(screen.queryByText(/Old account action failure/)).not.toBeInTheDocument();
+  expect(connections.decideActionApproval).toHaveBeenCalledTimes(operation === 'decision' ? 1 : 0);
   expect(connections.followOAuthCallback).not.toHaveBeenCalled();
 });

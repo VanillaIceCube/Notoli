@@ -12,10 +12,10 @@ RUN npm ci
 COPY . .
 
 # Build-time API setting, explicitly exposed by Vite
-ARG REACT_APP_API_BASE_URL
-ENV REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
-# Build optimized React app (Vite outputs to /frontend/build)
+# Build optimized React app (Vite outputs to /frontend/dist)
 RUN npm run build
 
 # ---- Run stage (Nginx) ----
@@ -28,7 +28,7 @@ WORKDIR /usr/share/nginx/html
 COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy the built static files from the build stage
-COPY --from=build /frontend/build .
+COPY --from=build /frontend/dist .
 
 # Nginx listens on port 80 inside the container
 EXPOSE 80

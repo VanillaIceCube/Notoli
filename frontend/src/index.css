@@ -1,38 +1,5 @@
-/* Theme tokens */
-:root {
-  --background-color: #1a1a1a;
-  --secondary-background-color: #f5e79e;
-  --primary-color: #ffc107;
-  --secondary-color: #555555;
-  --text-color: #ffffff;
-}
-
-/* Document defaults */
+/* Platform font rendering; palette, typography and MUI defaults live in theme.js. */
 body {
-  margin: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
-    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--background-color);
-  color: var(--text-color);
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
-}
-
-/* Shared controls */
-.MuiInputLabel-root.Mui-focused {
-  color: var(--secondary-color) !important;
-}
-
-.MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
-  border-color: var(--secondary-color) !important;
-}
-
-.MuiInput-underline::after,
-.MuiFilledInput-underline::after {
-  border-bottom-color: var(--secondary-color) !important;
 }
