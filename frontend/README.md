@@ -207,6 +207,8 @@ The four existing CSS color variables come from this theme, not duplicated CSS
 literals. App bars, overlay frames, outlined white fields and focus colors share
 theme defaults. Standard inline editors remain transparent; specialized field
 surfaces, divider emphasis/insets and responsive layout remain component-owned.
+MUI 9 applies the outlined surface through `MuiTextField.styleOverrides.root.variants`;
+the real startup test verifies the rendered white background, while standard editors stay transparent.
 Test helpers use the actual app theme with only ripple suppression added.
 
 ### Dividers

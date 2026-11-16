@@ -14,6 +14,31 @@ const item = {
   is_read: false,
   target_path: '/target',
 };
+const invalidFields = [
+  ...['title', 'message'].flatMap((field) =>
+    [{ text: 'Unexpected object' }, ['Unexpected array'], 42, true, null, undefined].map(
+      (value) => [field, value],
+    ),
+  ),
+  ...['board_name', 'list_name', 'target_path'].flatMap((field) =>
+    [{ name: 'Unexpected object' }, ['Unexpected array'], 42].map((value) => [field, value]),
+  ),
+  ['id', {}],
+  ['id', []],
+  ['id', true],
+  ['id', ''],
+  ['is_read', 'false'],
+  ['is_read', 0],
+  ['is_read', null],
+  ['target_path', 'https://outside.example/'],
+  ['target_path', '//outside.example/'],
+  ['target_path', '//application.invalid/x'],
+  ['target_path', '/\\application.invalid/x'],
+  ['target_path', '/\n/application.invalid/x'],
+  ['target_path', '/\r/application.invalid/x'],
+  ['target_path', '/\t\\application.invalid/x'],
+  ['target_path', 'relative-path'],
+];
 const response = (body, ok = true) => ({ ok, json: vi.fn().mockResolvedValue(body) });
 const deferred = () => {
   let resolve;
@@ -58,19 +83,23 @@ test('never fetches private notifications while signed out', () => {
   expect(result.current.notifications).toEqual([]);
 });
 
-test.each([null, [null], [{ message: 'no identity' }]])(
-  'rejects malformed data %j and allows a successful retry',
-  async (bad) => {
-    api.fetchNotifications.mockResolvedValueOnce(response(bad));
-    const { result } = renderHook(() => useNotifications(api));
-    await waitFor(() =>
-      expect(result.current.notificationError).toBe('Notifications are unavailable right now.'),
-    );
-    await act(() => result.current.loadNotifications());
-    expect(result.current.notifications).toEqual([item]);
-    expect(result.current.notificationError).toBe('');
-  },
-);
+test.each([
+  null,
+  [null],
+  [{ message: 'no identity' }],
+  ...invalidFields.map(([field, value]) => [{ ...item, [field]: value }]),
+])('rejects malformed data %j and allows a successful retry', async (bad) => {
+  api.fetchNotifications.mockResolvedValueOnce(response(bad));
+  const { result } = renderHook(() => useNotifications(api));
+  await waitFor(() =>
+    expect(result.current.notificationError).toBe('Notifications are unavailable right now.'),
+  );
+  expect(result.current.notifications).toEqual([]);
+  expect(result.current.notificationsLoading).toBe(false);
+  await act(() => result.current.loadNotifications());
+  expect(result.current.notifications).toEqual([item]);
+  expect(result.current.notificationError).toBe('');
+});
 
 test('only the newest load may publish data or errors', async () => {
   const first = deferred();
@@ -166,17 +195,69 @@ test('an earlier list response cannot resurrect a successfully cleared notificat
   expect(result.current.notificationsLoading).toBe(false);
 });
 
-test('a malformed mark-read response does not approve navigation or change the item', async () => {
-  const { result } = await loaded();
-  api.markNotificationRead.mockResolvedValueOnce(response({ ...item, id: 99, is_read: true }));
-  let allowed;
-  await act(async () => {
-    allowed = await result.current.markRead(item);
-  });
-  expect(allowed).toBe(false);
-  expect(result.current.notifications).toEqual([item]);
-  expect(result.current.notificationError).toBe('Could not update that notification.');
-});
+test.each([
+  { ...item, id: 99, is_read: true },
+  { ...item, is_read: false },
+  ...invalidFields.map(([field, value]) => ({ ...item, is_read: true, [field]: value })),
+])(
+  'rejects a malformed mark-read result %j without changing the item and permits retry',
+  async (bad) => {
+    const { result } = await loaded();
+    api.markNotificationRead.mockResolvedValueOnce(response(bad));
+    let allowed;
+    await act(async () => {
+      allowed = await result.current.markRead(item);
+    });
+    expect(allowed).toBe(false);
+    expect(result.current.notifications).toEqual([item]);
+    expect(result.current.pendingIds.size).toBe(0);
+    expect(result.current.notificationError).toBe('Could not update that notification.');
+    await act(async () => {
+      allowed = await result.current.markRead(item);
+    });
+    expect(allowed).toBe(true);
+    expect(result.current.notifications).toEqual([{ ...item, is_read: true }]);
+    expect(result.current.notificationError).toBe('');
+  },
+);
+
+test.each([undefined, null, ''])(
+  'accepts optional empty navigation and location fields (%s)',
+  async (value) => {
+    const compatible = {
+      ...item,
+      title: '',
+      message: '',
+      target_path: value,
+      board_name: value,
+      list_name: value,
+      actor_details: { id: 2, display_name: 'Reader' },
+    };
+    api.fetchNotifications.mockResolvedValueOnce(response([compatible]));
+    const { result } = renderHook(() => useNotifications(api));
+    await waitFor(() => expect(result.current.notifications).toEqual([compatible]));
+    expect(result.current.notificationError).toBe('');
+    expect(result.current.unreadCount).toBe(1);
+  },
+);
+
+test.each(['/', '/target/child?view=read#details', '/target?next=https://outside.example/'])(
+  'accepts the local target %s when loading and marking a notification read',
+  async (target_path) => {
+    const notification = { ...item, target_path };
+    api.fetchNotifications.mockResolvedValueOnce(response([notification]));
+    api.markNotificationRead.mockResolvedValueOnce(response({ ...notification, is_read: true }));
+    const { result } = renderHook(() => useNotifications(api));
+    await waitFor(() => expect(result.current.notifications).toEqual([notification]));
+    let allowed;
+    await act(async () => {
+      allowed = await result.current.markRead(notification);
+    });
+    expect(allowed).toBe(true);
+    expect(result.current.notifications).toEqual([{ ...notification, is_read: true }]);
+    expect(result.current.notificationError).toBe('');
+  },
+);
 
 test.each(['success', 'failure'])(
   'an old account list %s cannot overwrite the new account',

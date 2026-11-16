@@ -12,6 +12,37 @@ const emptyState = (version) => ({
 });
 const fallbackError = (_response, fallback) => fallback;
 
+// Validate only fields used by the shared headers; other server metadata stays opaque.
+function isNotification(item) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
+  const validId =
+    (typeof item.id === 'number' && Number.isFinite(item.id)) ||
+    (typeof item.id === 'string' && item.id.trim() !== '');
+  if (
+    !validId ||
+    typeof item.title !== 'string' ||
+    typeof item.message !== 'string' ||
+    typeof item.is_read !== 'boolean' ||
+    ['board_name', 'list_name', 'target_path'].some(
+      (field) => item[field] != null && typeof item[field] !== 'string',
+    )
+  )
+    return false;
+  if (!item.target_path) return true;
+  try {
+    // URL parsing removes these controls and treats backslashes as path separators.
+    const normalizedTarget = item.target_path.replace(/[\t\n\r]/g, '').replaceAll('\\', '/');
+    return (
+      item.target_path.startsWith('/') &&
+      !normalizedTarget.startsWith('//') &&
+      new URL(item.target_path, 'https://application.invalid').origin ===
+        'https://application.invalid'
+    );
+  } catch (_error) {
+    return false;
+  }
+}
+
 export default function useNotifications(api, getErrorMessage = fallbackError) {
   const { version } = useSession();
   const lifecycleRef = useRef(null);
@@ -48,10 +79,7 @@ export default function useNotifications(api, getErrorMessage = fallbackError) {
         return;
       }
       const data = await response.json();
-      if (
-        !Array.isArray(data) ||
-        data.some((item) => !item || typeof item !== 'object' || item.id == null)
-      ) {
+      if (!Array.isArray(data) || !data.every(isNotification)) {
         throw new Error('Invalid notification response.');
       }
       if (canPublish()) update(operation, () => ({ notifications: data }));
@@ -146,7 +174,13 @@ export default function useNotifications(api, getErrorMessage = fallbackError) {
       (token) => api.markNotificationRead(notification.id, token),
       async (response) => {
         const updated = await response.json();
-        if (updated?.id !== notification.id || updated?.is_read !== true) throw new Error();
+        if (
+          !isNotification(updated) ||
+          updated.id !== notification.id ||
+          updated.is_read !== true
+        ) {
+          throw new Error('Invalid notification response.');
+        }
         return (current) => ({
           notifications: current.notifications.map((item) =>
             item.id === updated.id ? updated : item,

@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Reject malformed notification display, identity, read-state and navigation fields before publishing list or mark-read results; preserve usable header controls, cached rows and retries.
 - Discard JWT refresh results after logout or a new login, align post-refresh session expiry, and preserve pending connection navigation.
 - Validate notification lists before rendering and retain usable error and retry controls.
 - Return a newly signed action ticket after approval so the existing Cancel control works immediately without reloading; preserve the original action expiry and reject stale tickets.

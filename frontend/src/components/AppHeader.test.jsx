@@ -540,6 +540,14 @@ describe('AppHeader', () => {
 });
 
 describe('AppHeader response and navigation integration', () => {
+  const notification = {
+    id: 1,
+    title: 'Notification title',
+    message: 'Notification message',
+    is_read: false,
+    target_path: '/notification-target',
+  };
+
   beforeEach(async () => {
     const actual = await vi.importActual('react-router');
     mockUseLocation.mockImplementation(actual.useLocation);
@@ -548,15 +556,68 @@ describe('AppHeader response and navigation integration', () => {
     sessionStorage.clear();
     sessionStorage.setItem('accessToken', 'access');
   });
-  test.each([null, {}, 'unexpected', 1])(
-    'keeps the header usable for malformed notification JSON: %j',
-    async (body) => {
-      fetchNotifications.mockResolvedValue({ ok: true, json: async () => body });
+  test.each([
+    null,
+    {},
+    'unexpected',
+    1,
+    ...['title', 'message'].flatMap((field) =>
+      [{ text: 'bad' }, ['bad'], 42, true].map((value) => [{ ...notification, [field]: value }]),
+    ),
+  ])('keeps the header usable for malformed notification JSON: %j', async (body) => {
+    fetchNotifications
+      .mockResolvedValueOnce({ ok: true, json: async () => body })
+      .mockResolvedValue({ ok: true, json: async () => [notification] });
+    const user = userEvent.setup();
+    renderWithProviders(<AppHeader appBarHeader="Application" setDrawerOpen={vi.fn()} />);
+    await user.click(screen.getByLabelText('notifications'));
+    expect(await screen.findByText('Notifications are unavailable right now.')).toBeVisible();
+    expect(screen.getByRole('button', { name: /Retry/i })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: /Retry/i }));
+    expect(await screen.findByText(notification.message)).toBeVisible();
+    expect(screen.queryByText('Notifications are unavailable right now.')).not.toBeInTheDocument();
+  });
+
+  test.each([
+    ['title', {}],
+    ['message', []],
+    ['target_path', {}],
+    ['is_read', 'true'],
+    ['board_name', {}],
+    ['list_name', {}],
+  ])(
+    'keeps the cached row and prevents navigation after malformed %s in mark-read',
+    async (field, value) => {
+      fetchNotifications.mockResolvedValue({ ok: true, json: async () => [notification] });
+      markNotificationRead
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ ...notification, is_read: true, [field]: value }),
+        })
+        .mockResolvedValue({ ok: true, json: async () => ({ ...notification, is_read: true }) });
       const user = userEvent.setup();
-      renderWithProviders(<AppHeader appBarHeader="Application" setDrawerOpen={vi.fn()} />);
+      renderWithProviders(
+        <Routes>
+          <Route
+            path="/"
+            element={<AppHeader appBarHeader="Application" setDrawerOpen={vi.fn()} />}
+          />
+          <Route path="/notification-target" element={<h1>Notification destination</h1>} />
+        </Routes>,
+      );
       await user.click(screen.getByLabelText('notifications'));
-      expect(await screen.findByText('Notifications are unavailable right now.')).toBeVisible();
-      expect(screen.getByRole('button', { name: /Retry/i })).toBeEnabled();
+      await user.click(await screen.findByText(notification.message));
+      expect(await screen.findByText('Could not update that notification.')).toBeVisible();
+      expect(screen.getByText(notification.message)).toBeVisible();
+      expect(
+        screen.queryByRole('heading', { name: 'Notification destination' }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Clear notification')).toBeEnabled();
+      await user.click(screen.getByText(notification.message));
+      expect(
+        await screen.findByRole('heading', { name: 'Notification destination' }),
+      ).toBeVisible();
+      expect(markNotificationRead).toHaveBeenCalledTimes(2);
     },
   );
 

@@ -66,6 +66,9 @@ describe('application startup', () => {
     expect(app.getByLabelText('Password')).toBeVisible();
     expect(app.getByRole('button', { name: 'Login' })).toBeEnabled();
     const email = app.getByRole('textbox', { name: 'Email' });
+    // eslint-disable-next-line testing-library/no-node-access -- Verify the real outlined control receives the theme's slot variant.
+    const field = email.closest('.MuiTextField-root');
+    expect(getComputedStyle(field).backgroundColor).toBe('rgb(255, 255, 255)');
     const user = userEvent.setup();
     await user.type(email, 'reader@example.com');
     expect(email).toHaveFocus();
