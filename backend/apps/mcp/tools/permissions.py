@@ -41,7 +41,18 @@ def required_scopes(operation):
     return scopes
 
 
-def principal(raw_token, operation):
+def lock_actor(user):
+    from django.db.models import F
+
+    from .models import ActorLock
+
+    actor, _ = ActorLock.objects.get_or_create(owner=user)
+    ActorLock.objects.filter(pk=actor.pk).update(revision=F("revision"))
+    ActorLock.objects.select_for_update().get(pk=actor.pk)
+    type(user).objects.select_for_update().get(pk=user.pk)
+
+
+def principal(raw_token, operation, *, lock=False):
     scopes = required_scopes(operation)
     try:
         if not isinstance(raw_token, str) or not raw_token or len(raw_token) > 4096:
@@ -51,6 +62,10 @@ def principal(raw_token, operation):
             raise ConnectionPermissionDenied(
                 "This connection lacks required permissions.", "insufficient_scope"
             )
+        if lock:
+            lock_actor(token.user)
+            type(token).objects.select_for_update().get(pk=token.pk)
+            return principal(raw_token, operation)
         return token
     except ConnectionPermissionDenied as error:
         error.required_scopes = scopes

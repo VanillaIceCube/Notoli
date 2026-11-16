@@ -3,6 +3,7 @@
 import json
 
 from django.conf import settings
+from django.core.serializers.json import DjangoJSONEncoder
 
 
 def item_result(note, list_id):
@@ -138,3 +139,18 @@ def notification_result(row):
         "item_id": row.note_id,
         "target_path": row.target_path,
     }
+
+
+def json_value(value, maximum=65536):
+    encoded = json.dumps(
+        value,
+        cls=DjangoJSONEncoder,
+        sort_keys=True,
+        allow_nan=False,
+        ensure_ascii=False,
+    )
+    if len(encoded.encode()) > maximum:
+        raise ValueError(
+            "Exact action exceeds the preview budget. Use Notoli to review this change."
+        )
+    return json.loads(encoded)

@@ -2,6 +2,7 @@
 
 from types import SimpleNamespace
 from unittest.mock import patch
+from uuid import uuid4
 
 from asgiref.sync import async_to_sync
 from django.contrib.auth import get_user_model
@@ -11,7 +12,7 @@ from apps.notes.models import Board
 from apps.notifications.models import Notification
 
 from .. import operations, results, server
-from ..services import execute
+from .helpers import execute_action as execute
 from .helpers import make_client, make_token
 
 
@@ -62,7 +63,12 @@ class BoundedResultTests(TestCase):
             return_value=SimpleNamespace(token="test-access"),
         ):
             output = async_to_sync(registry.call_tool)(
-                "create_board", {"name": "Large result", "description": description}
+                "create_board",
+                {
+                    "request_id": str(uuid4()),
+                    "name": "Large result",
+                    "description": description,
+                },
             )
         self.assertFalse(output.is_error)
         data = output.structured_content

@@ -9,7 +9,7 @@ from apps.notes.models import Board, ListNote, Note
 from apps.notes.models import List as NoteList
 from apps.notifications.models import Notification
 
-from ..services import execute
+from .helpers import execute_action as execute
 from .helpers import make_client, make_token
 
 
@@ -92,10 +92,11 @@ class ItemToolTests(TestCase):
                 self.call(
                     operation,
                     list_id=self.note_list.pk,
-                    limit=50,
-                    offset=0,
-                    note="Forbidden",
-                    description="",
+                    **(
+                        {"limit": 50, "offset": 0}
+                        if operation == "get_items"
+                        else {"note": "Forbidden", "description": ""}
+                    ),
                 )
         self.board.collaborators.add(self.user)
         AccessToken.objects.filter(user=self.user).update(scope="notoli:read")

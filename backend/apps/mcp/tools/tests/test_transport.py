@@ -2,13 +2,14 @@
 
 from datetime import timedelta
 from unittest.mock import patch
+from uuid import uuid4
 
 import httpx2
 from asgiref.sync import async_to_sync, sync_to_async
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
-from django.test import SimpleTestCase, TransactionTestCase
+from django.test import Client, SimpleTestCase, TransactionTestCase
 from django.utils import timezone
 from oauth2_provider.models import AccessToken
 from rest_framework_simplejwt.tokens import RefreshToken as JWTRefreshToken
@@ -114,6 +115,7 @@ class MCPToolTransportTests(TransactionTestCase):
                             "mark_all_notifications_read",
                             "delete_notification",
                             "clear_notifications",
+                            "confirm_change",
                         },
                     )
                     self.assertTrue(tools["get_items"]["annotations"]["readOnlyHint"])
@@ -132,7 +134,7 @@ class MCPToolTransportTests(TransactionTestCase):
                         tools["add_board_collaborator"]["_meta"]["securitySchemes"],
                         [{"type": "oauth2", "scopes": ["notoli:read", "notoli:share"]}],
                     )
-                    self.assertTrue(
+                    self.assertFalse(
                         tools["remove_board_collaborator"]["annotations"][
                             "destructiveHint"
                         ]
@@ -155,6 +157,10 @@ class MCPToolTransportTests(TransactionTestCase):
                     )
 
                     async def invoke(name, arguments):
+                        if name in tools and "request_id" in tools[name][
+                            "inputSchema"
+                        ].get("properties", {}):
+                            arguments = {"request_id": str(uuid4()), **arguments}
                         result = await client.post(
                             "/mcp",
                             headers=headers,
@@ -167,6 +173,44 @@ class MCPToolTransportTests(TransactionTestCase):
                         )
                         self.assertEqual(result.status_code, 200, result.text)
                         return result.json()["result"]
+
+                    async def approve(result):
+                        self.assertFalse(result.get("isError"), result)
+                        prepared = result["structuredContent"]
+                        self.assertEqual(prepared["status"], "prepared")
+                        reference = prepared["result"]["confirmation_id"]
+
+                        def decide():
+                            app_client = Client(HTTP_AUTHORIZATION=f"Bearer {jwt}")
+                            preview = app_client.get(
+                                "/auth/mcp/action-approval/", {"approval_id": reference}
+                            )
+                            self.assertEqual(preview.status_code, 200, preview.content)
+                            approved = app_client.post(
+                                "/auth/mcp/action-approval/",
+                                {
+                                    "ticket": preview.json()["ticket"],
+                                    "decision": "allow",
+                                },
+                            )
+                            self.assertEqual(
+                                approved.status_code, 200, approved.content
+                            )
+
+                        await sync_to_async(decide)()
+                        done = await invoke(
+                            "confirm_change",
+                            {
+                                "request_id": prepared["request_id"],
+                                "confirmation_id": reference,
+                            },
+                        )
+                        self.assertEqual(
+                            done["structuredContent"]["status"], "completed"
+                        )
+                        return {
+                            "structuredContent": done["structuredContent"]["result"]
+                        }
 
                     created = await invoke(
                         "add_item", {"list_id": note_list.pk, "note": "HTTP item"}
@@ -215,7 +259,8 @@ class MCPToolTransportTests(TransactionTestCase):
                         "add_board_collaborator",
                         {"board_id": board_id, "identifier": target.email},
                     )
-                    self.assertFalse(added.get("isError"), added)
+                    self.assertEqual(added["structuredContent"]["status"], "completed")
+                    added = {"structuredContent": added["structuredContent"]["result"]}
                     self.assertEqual(
                         added["structuredContent"]["sharing_level"], "board"
                     )
@@ -241,14 +286,14 @@ class MCPToolTransportTests(TransactionTestCase):
                         "remove_board_collaborator",
                         {"board_id": board_id, "user_id": target.pk},
                     )
-                    self.assertFalse(removed.get("isError"), removed)
+                    removed = await approve(removed)
                     self.assertEqual(removed["structuredContent"]["action"], "removed")
                     for name, args, scope in (
                         ("create_board", {"name": "Denied"}, "notoli:organize"),
                         ("list_notifications", {}, "notoli:notifications"),
                         (
                             "delete_item",
-                            {"board_id": board_id, "item_id": item_id, "confirm": True},
+                            {"board_id": board_id, "item_id": item_id},
                             "notoli:delete",
                         ),
                     ):
@@ -266,12 +311,17 @@ class MCPToolTransportTests(TransactionTestCase):
                         {"board_id": new_board_id, "name": "Protocol list"},
                     )
                     self.assertFalse(new_list.get("isError"), new_list)
-                    invalid = await invoke(
-                        "delete_board", {"board_id": new_board_id, "confirm": False}
-                    )
-                    self.assertTrue(invalid["isError"])
-                    invalid = await invoke("delete_board", {"board_id": new_board_id})
-                    self.assertTrue(invalid["isError"])
+                    for legacy in (False, True):
+                        legacy_result = await invoke(
+                            "delete_board",
+                            {"board_id": new_board_id, "confirm": legacy},
+                        )
+                        self.assertEqual(
+                            legacy_result["structuredContent"]["status"], "prepared"
+                        )
+                        self.assertFalse(legacy_result["structuredContent"]["applied"])
+                    pending = await invoke("delete_board", {"board_id": new_board_id})
+                    self.assertEqual(pending["structuredContent"]["status"], "prepared")
                     invalid = await invoke(
                         "set_list_items",
                         {
@@ -298,12 +348,39 @@ class MCPToolTransportTests(TransactionTestCase):
                         },
                     )
                     self.assertFalse(attached.get("isError"), attached)
+                    direct_memberships = await invoke(
+                        "set_list_items",
+                        {
+                            "list_id": new_list["structuredContent"]["id"],
+                            "item_ids": [orphan["structuredContent"]["id"]],
+                        },
+                    )
+                    self.assertEqual(
+                        direct_memberships["structuredContent"]["status"], "completed"
+                    )
+                    self.assertEqual(
+                        direct_memberships["structuredContent"]["result"][
+                            "ordered_ids"
+                        ],
+                        [orphan["structuredContent"]["id"]],
+                    )
+                    removal_memberships = await invoke(
+                        "set_list_items",
+                        {
+                            "list_id": new_list["structuredContent"]["id"],
+                            "item_ids": [],
+                        },
+                    )
+                    self.assertEqual(
+                        removal_memberships["structuredContent"]["status"], "prepared"
+                    )
+                    self.assertFalse(
+                        removal_memberships["structuredContent"]["applied"]
+                    )
                     history = await invoke("list_notifications", {})
                     self.assertFalse(history.get("isError"), history)
-                    deleted = await invoke(
-                        "delete_board", {"board_id": new_board_id, "confirm": True}
-                    )
-                    self.assertFalse(deleted.get("isError"), deleted)
+                    deleted = await invoke("delete_board", {"board_id": new_board_id})
+                    deleted = await approve(deleted)
                     self.assertEqual(deleted["structuredContent"]["action"], "deleted")
                     jwt_response = await client.post(
                         "/mcp",
@@ -361,14 +438,14 @@ class RegistryAndErrorTests(SimpleTestCase):
             for tool in async_to_sync(second.list_tools)()
         ]
         self.assertEqual(first_tools, second_tools)
-        self.assertEqual(len(first_tools), 31)
+        self.assertEqual(len(first_tools), 32)
 
         @first.tool()
         def isolated_fixture() -> dict:
             return {"fixture": True}
 
-        self.assertEqual(len(async_to_sync(first.list_tools)()), 32)
-        self.assertEqual(len(async_to_sync(second.list_tools)()), 31)
+        self.assertEqual(len(async_to_sync(first.list_tools)()), 33)
+        self.assertEqual(len(async_to_sync(second.list_tools)()), 32)
 
     def test_object_denial_has_no_reconnect_challenge_or_private_exception(self):
         from .. import server

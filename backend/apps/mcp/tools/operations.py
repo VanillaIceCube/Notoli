@@ -45,6 +45,90 @@ OPERATIONS = {
 }
 
 
+# Closed transport policy: unknown fields cannot become ownership or membership edits.
+ROUTINE = {
+    "create_board": ("name", "description"),
+    "update_board": ("board_id", "name", "description"),
+    "create_list": ("board_id", "name", "description"),
+    "update_list": ("list_id", "name", "description"),
+    "add_item": ("list_id", "note", "description"),
+    "update_item": ("list_id", "item_id", "note", "description", "status"),
+    "add_board_item": ("board_id", "note", "description"),
+    "update_board_item": ("board_id", "item_id", "note", "description", "status"),
+    "attach_item": ("list_id", "item_id"),
+    "reorder_lists": ("board_id", "ordered_ids"),
+    "reorder_items": ("list_id", "ordered_ids"),
+    "update_notification": ("notification_id", "is_read"),
+    "mark_all_notifications_read": (),
+    "add_board_collaborator": ("board_id", "identifier"),
+    "set_list_items": ("list_id", "item_ids"),
+}
+PREPARABLE = {
+    "add_board_collaborator": ("board_id", "identifier"),
+    "remove_board_collaborator": ("board_id", "user_id"),
+    "delete_board": ("board_id",),
+    "delete_list": ("list_id",),
+    "delete_item": ("board_id", "item_id"),
+    "set_list_items": ("list_id", "item_ids"),
+    "delete_notification": ("notification_id",),
+    "clear_notifications": (),
+}
+
+
+REMOVAL_ACTIONS = frozenset(
+    {
+        "delete_board",
+        "delete_list",
+        "delete_item",
+        "delete_notification",
+        "clear_notifications",
+        "remove_board_collaborator",
+    }
+)
+
+
+def requires_approval(user, operation, arguments):
+    """Membership omissions are removals; hold the board lock through dispatch."""
+    if operation in REMOVAL_ACTIONS:
+        return True
+    if operation == "set_list_items":
+        from .queries import removes_memberships
+
+        return removes_memberships(user, arguments["list_id"], arguments["item_ids"])
+    if operation in ROUTINE:
+        return False
+    raise OperationError("Unknown operation policy.")
+
+
+def validate_arguments(operation, arguments):
+    fields = (ROUTINE | PREPARABLE).get(operation)
+    if fields is None or set(arguments) - set(fields):
+        raise OperationError("Unknown action or writable fields.")
+    arguments = dict(arguments)
+    for key in fields:
+        value = arguments.get(key)
+        if key.endswith("_id") and (type(value) is not int or value <= 0):
+            raise OperationError("Identifiers must be positive integers.")
+        if key in {"item_ids", "ordered_ids"} and (
+            not isinstance(value, list)
+            or len(value) > 1000
+            or any(type(item) is not int or item <= 0 for item in value)
+            or len(value) != len(set(value))
+        ):
+            raise OperationError("Use distinct positive IDs, at most 1000.")
+        if key == "is_read" and type(value) is not bool:
+            raise OperationError("is_read must be boolean.")
+        if key in {"name", "note", "description", "status", "identifier"}:
+            if value is not None and not isinstance(value, str):
+                raise OperationError("Text fields must be strings.")
+    if operation in {"create_board", "create_list", "add_item", "add_board_item"}:
+        arguments.setdefault("description", "")
+    if operation in {"update_item", "update_board_item"}:
+        for key in ("note", "description", "status"):
+            arguments.setdefault(key, None)
+    return arguments
+
+
 def save(user, kind, data, instance=None):
     serializer_class, create, update = {
         "board": (BoardSerializer, notes.create_board, notes.update_board),
@@ -73,11 +157,6 @@ def updates(arguments, fields):
 
 
 def execute_feature(user, operation, args):
-    if operation.startswith("delete_") or operation == "clear_notifications":
-        if args.get("confirm") is not True:
-            raise OperationError(
-                "Explain the deletion impact and obtain user confirmation first."
-            )
     try:
         return perform(user, operation, args)
     except APIException as error:
@@ -186,7 +265,9 @@ def perform(user, operation, args):
     if operation == "mark_all_notifications_read":
         return {"count": notifications.mark_all_read(user)}
     if operation == "clear_notifications":
-        return {"count": notifications.clear_all(user)}
+        return {
+            "count": notifications.clear_all(user, selected_ids=args["selected_ids"])
+        }
     row = (
         notifications.notifications_for(user).filter(pk=args["notification_id"]).first()
     )
@@ -208,7 +289,12 @@ def execute(user, operation, **arguments):
         board = board_for(user, arguments["board_id"])
         try:
             if operation == "add_board_collaborator":
-                notes.add_collaborator(user, board.pk, arguments.get("identifier"))
+                notes.add_collaborator(
+                    user,
+                    board.pk,
+                    arguments.get("identifier"),
+                    expected_user_id=arguments.get("resolved_user_id"),
+                )
             else:
                 notes.remove_collaborator(user, board.pk, arguments["user_id"])
         except notes.SharingChangeError as error:

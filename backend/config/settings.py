@@ -151,6 +151,7 @@ MCP_NAME = "Notoli"
 MCP_REQUIRED_SCOPES = ["notoli:read"]
 MCP_CONSENT_SALT = "notoli.mcp.consent"
 MCP_SERVER_FACTORY = "apps.mcp.tools.server.create_server"
+MCP_ACTION_APPROVAL_HANDLER = "apps.mcp.tools.services.action_approval"
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 OAUTH2_PROVIDER = oauth_settings(
@@ -158,10 +159,10 @@ OAUTH2_PROVIDER = oauth_settings(
     {
         "notoli:read": "Read your accessible Notoli boards, lists, and items, including board owner and collaborator IDs, usernames, and email addresses",
         "notoli:write": "Add and update items in your accessible Notoli boards and lists",
-        "notoli:share": "Add and remove collaborators on boards you own, granting access to every list and item in those boards",
-        "notoli:organize": "Create and edit boards and lists, reorder lists and items, and change which lists contain items",
+        "notoli:share": "Add collaborators directly to boards you own, granting access to every list and item; removing a collaborator requires your separate approval in Notoli",
+        "notoli:organize": "Create and edit boards and lists, reorder lists and items, and add list memberships directly; removing any existing list membership requires your separate approval in Notoli",
         "notoli:notifications": "Read your activity notifications and mark them read or unread",
-        "notoli:delete": "Permanently delete accessible items and lists, boards you own with all their contents, and your notifications",
+        "notoli:delete": "Prepare permanent deletion of accessible items and lists, owned boards with their contents, and your notifications; each deletion requires your separate approval in Notoli",
     },
     MCP_REQUIRED_SCOPES,
 )

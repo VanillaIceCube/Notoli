@@ -113,3 +113,35 @@ class OAuthClientFixture:
         }
         params.update(changes)
         return self.client.get("/auth/mcp/authorize/", params)
+
+
+def execute_action(raw, operation, **arguments):
+    """Domain regression fixture: drive real UUID/JWT approval where required."""
+    from uuid import uuid4
+
+    from django.test import Client
+
+    from .. import operations, queries, services
+
+    if operation not in queries.READ_OPERATIONS:
+        arguments.setdefault("request_id", str(uuid4()))
+    output = services.execute(raw, operation, **arguments)
+    if operation in operations.PREPARABLE and output.get("status") == "prepared":
+        token = AccessToken.objects.get(token=raw)
+        client = Client(
+            HTTP_AUTHORIZATION=f"Bearer {JWTRefreshToken.for_user(token.user).access_token}"
+        )
+        reference = output["result"]["confirmation_id"]
+        preview = client.get("/auth/mcp/action-approval/", {"approval_id": reference})
+        assert preview.status_code == 200, preview.content
+        decision = client.post(
+            "/auth/mcp/action-approval/",
+            {"ticket": preview.json()["ticket"], "decision": "allow"},
+        )
+        assert decision.status_code == 200, decision.content
+        return services.confirm_change(raw, output["request_id"], reference)["result"]
+    return (
+        output["result"]
+        if operation in operations.PREPARABLE and output.get("status") == "completed"
+        else output
+    )

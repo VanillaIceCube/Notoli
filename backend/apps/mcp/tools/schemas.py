@@ -1,5 +1,6 @@
 from typing import Literal
 
+from pydantic import JsonValue
 from typing_extensions import TypedDict
 
 
@@ -7,6 +8,9 @@ class ResultMetadata(TypedDict, total=False):
     truncated: bool
     detail: str
     applied: bool
+    request_id: str
+    execution_status: Literal["completed"]
+    replayed: bool
 
 
 class BoardSummary(ResultMetadata):
@@ -101,3 +105,20 @@ class NotificationSummary(ResultMetadata):
 class NotificationPage(ResultMetadata):
     results: list[NotificationSummary]
     next_offset: int | None
+
+
+class ExecutionResult(TypedDict):
+    request_id: str
+    action: str
+    status: Literal[
+        "prepared",
+        "approved",
+        "cancelled",
+        "expired",
+        "completed",
+        "in_progress",
+        "uncertain",
+    ]
+    applied: bool | None
+    replayed: bool
+    result: dict[str, JsonValue]
