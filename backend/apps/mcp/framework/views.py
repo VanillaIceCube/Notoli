@@ -291,8 +291,13 @@ def action_approval(request):
                     status=409,
                 )
             details = handler(request.user, reference, decision)
+            # A decision changes the preview (including status). Sign that new
+            # state so an approved action can be cancelled without reloading.
+            digest = hashlib.sha256(
+                json.dumps(details, sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest()
         response = {"approval": details}
-        if request.method == "GET" and details["status"] in {"prepared", "approved"}:
+        if details["status"] in {"prepared", "approved"}:
             response["ticket"] = signing.dumps(
                 {"user_id": request.user.pk, "reference": reference, "digest": digest},
                 salt=salt,

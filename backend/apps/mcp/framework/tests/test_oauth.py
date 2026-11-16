@@ -417,3 +417,21 @@ class ActionApprovalTests(TestCase):
                 409,
             )
             self.assertEqual(decisions, ["allow"])
+            cancellation_ticket = approved.json()["ticket"]
+            self.assertNotEqual(cancellation_ticket, ticket)
+            cancelled = self.client.post(
+                "/auth/mcp/action-approval/",
+                {"ticket": cancellation_ticket, "decision": "cancel"},
+            )
+            self.assertEqual(cancelled.status_code, 200)
+            self.assertEqual(cancelled.json()["approval"]["status"], "cancelled")
+            self.assertNotIn("ticket", cancelled.json())
+            self.assertEqual(decisions, ["allow", "cancel"])
+            self.assertEqual(
+                self.client.post(
+                    "/auth/mcp/action-approval/",
+                    {"ticket": cancellation_ticket, "decision": "allow"},
+                ).status_code,
+                409,
+            )
+            self.assertEqual(decisions, ["allow", "cancel"])

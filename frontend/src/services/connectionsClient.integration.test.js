@@ -81,12 +81,18 @@ test('action approval JWT recovery preserves the signed decision and sends no co
     .fn()
     .mockResolvedValueOnce(response(401, '<html>Expired access</html>'))
     .mockResolvedValueOnce(response(200, '{"access":"NEW-ACCESS"}'))
-    .mockResolvedValueOnce(response(200, '{"approval":{"status":"approved"}}'));
+    .mockResolvedValueOnce(
+      response(200, '{"approval":{"status":"approved"},"ticket":"SIGNED-APPROVED"}'),
+    )
+    .mockResolvedValueOnce(response(200, '{"approval":{"status":"cancelled"}}'));
   vi.stubGlobal('fetch', fetchMock);
   const { decideActionApproval } = await import('./connectionsClient');
-  await expect(decideActionApproval('SIGNED-ACTION', 'allow', '?approval_id=ref')).resolves.toEqual(
-    { approval: { status: 'approved' } },
-  );
+  const approved = await decideActionApproval('SIGNED-ACTION', 'allow', '?approval_id=ref');
+  expect(approved).toEqual({ approval: { status: 'approved' }, ticket: 'SIGNED-APPROVED' });
+  await expect(
+    decideActionApproval(approved.ticket, 'cancel', '?approval_id=ref'),
+  ).resolves.toEqual({ approval: { status: 'cancelled' } });
+  expect(fetchMock.mock.calls[3][1].body).toBe('ticket=SIGNED-APPROVED&decision=cancel');
   const [url, options] = fetchMock.mock.calls[2];
   expect(url).toBe('/auth/mcp/action-approval/');
   expect(options.headers.Authorization).toBe('Bearer NEW-ACCESS');

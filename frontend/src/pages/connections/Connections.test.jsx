@@ -360,3 +360,33 @@ test('signed-out action review returns through existing login with only the opaq
   expect(screen.getByTestId('location')).toHaveTextContent(`/connections/authorize${actionQuery}`);
   expect(connections.decideActionApproval).not.toHaveBeenCalled();
 });
+
+test('an approved action can be cancelled immediately with its new signed ticket', async () => {
+  connections.loadActionApproval.mockResolvedValue(actionPreview);
+  connections.decideActionApproval
+    .mockResolvedValueOnce({
+      ticket: 'SIGNED-APPROVED-ACTION',
+      approval: { ...actionPreview.approval, status: 'approved' },
+    })
+    .mockResolvedValueOnce({ approval: { ...actionPreview.approval, status: 'cancelled' } });
+  renderFlow(`/connections/authorize${actionQuery}`);
+  await userEvent.click(await screen.findByRole('button', { name: 'Approve this action' }));
+  await screen.findByText('Status: approved');
+  await userEvent.click(screen.getByRole('button', { name: 'Cancel action' }));
+  await screen.findByText('Status: cancelled');
+  expect(connections.decideActionApproval).toHaveBeenNthCalledWith(
+    1,
+    'SIGNED-ACTION',
+    'allow',
+    actionQuery,
+  );
+  expect(connections.decideActionApproval).toHaveBeenNthCalledWith(
+    2,
+    'SIGNED-APPROVED-ACTION',
+    'cancel',
+    actionQuery,
+  );
+  expect(connections.loadActionApproval).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('button', { name: 'Cancel action' })).not.toBeInTheDocument();
+  expect(connections.followOAuthCallback).not.toHaveBeenCalled();
+});
