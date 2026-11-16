@@ -1,4 +1,7 @@
+# App-only release: the shared gateway reaches both services without host ports.
+# The bundle builder and release controller require reviewed immutable image digests.
 name: notoli
+
 services:
   backend:
     image: ${BACKEND_IMAGE:?Set the reviewed backend digest}
@@ -6,32 +9,51 @@ services:
     restart: always
     env_file:
       - path: .backend.env
+        # Preserve literal dollar signs, hashes and quotes in private settings.
         format: raw
     volumes:
       - type: bind
         source: ${APP_DB_PATH:?Set the absolute existing SQLite file}
         target: /backend/db.sqlite3
         bind:
+          # Require the existing SQLite file; never create a directory in its place.
           create_host_path: false
     networks:
+      # Only the backend and gateway share this private trust boundary.
       backend_private:
         ipv4_address: 172.30.88.3
-        aliases: [notoli-backend]
+        aliases:
+          - notoli-backend
       backend_egress:
     logging:
       driver: json-file
-      options: {max-size: "10m", max-file: "3"}
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   frontend:
     image: ${FRONTEND_IMAGE:?Set the reviewed frontend digest}
     container_name: notoli-frontend
     restart: always
     networks:
+      # Keep the frontend separate from the backend's private and egress networks.
       frontend:
-        aliases: [notoli-frontend]
+        aliases:
+          - notoli-frontend
     logging:
       driver: json-file
-      options: {max-size: "10m", max-file: "3"}
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Infrastructure owns network creation and gateway membership; app.json owns policy.
 networks:
-  backend_private: {external: true, name: notoli_backend_private}
-  backend_egress: {external: true, name: notoli_backend_egress}
-  frontend: {external: true, name: notoli_default}
+  backend_private:
+    external: true
+    name: notoli_backend_private
+  backend_egress:
+    external: true
+    name: notoli_backend_egress
+  frontend:
+    external: true
+    name: notoli_default

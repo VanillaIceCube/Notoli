@@ -6,6 +6,10 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Require production MCP readiness to verify JSON discovery metadata and the exact app-origin resource-metadata challenge URL, matching the enabled-app release contract.
+- Align production Compose layout and operational comments across applications while preserving existing service, network and port behavior.
+- Align production app-policy section and array formatting across applications.
+- Align production release guides across applications with consistent configuration, authorization, recovery, MCP, maintenance and verification guidance while preserving app-specific policy and onboarding safeguards.
 - Default the local MCP example off across all three apps; retain the explicitly enabled production connector.
 - Align MCP enablement with the shared environment switch, preserve exact ASGI proxy trust while disabled, and retain explicit application enablement policies.
 - Align local deployment profiles across applications: loopback-only ports, private backend networks, exact proxy trust, Uvicorn/Vite reload, matching MCP/browser origins and streaming routes, safe forwarded headers, cache controls and local setup instructions.
