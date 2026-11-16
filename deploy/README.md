@@ -7,6 +7,11 @@ the infrastructure repository.
 
 Production serves the frontend through the shared HTTPS gateway and publishes no host port 3000. See the [production guide](production/README.md).
 
+Shared release verification runs through
+`python deploy/production/build_bundle.py --check-parity`; its immutable
+Infrastructure source pin is `shared_source` in `production/app.json`.
+See the [production guide](production/README.md) for source synchronization.
+
 <a id="local-docker-with-notolilocalhost"></a>
 
 ## 💻 Local Docker with `notoli.localhost`

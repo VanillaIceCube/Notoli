@@ -284,7 +284,7 @@ jobs:
             2>&1 | tee automation_test_output.txt || status=$?
           python3 .github/tools/validate_repository.py \
             2>&1 | tee -a automation_test_output.txt || status=$?
-          python3 deploy/check_parity.py \
+          python3 deploy/production/build_bundle.py --check-parity \
             2>&1 | tee -a automation_test_output.txt || status=$?
           python3 -m unittest discover -s deploy/tests -v \
             2>&1 | tee -a automation_test_output.txt || status=$?

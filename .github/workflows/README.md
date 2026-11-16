@@ -523,9 +523,9 @@ are not production release inputs.
 
 ### Shared deployment action update
 
-Docker login v4.8.0 (`8aa5831fb8d48d8f76594c7ddde61ae58019f550`) is rendered from Infrastructure commit
-`d9ab394bb38d2bdce38088ac952c53704c5bae5a`. Keep `deploy/shared-source.json` and
-the generated workflow synchronized; deployment parity remains mandatory.
+Docker login v4.8.0 is rendered from the immutable Infrastructure revision
+recorded under `shared_source` in `deploy/production/app.json`. Keep the pin
+and generated workflow synchronized; deployment parity remains mandatory.
 
 ### Architecture and production summaries
 

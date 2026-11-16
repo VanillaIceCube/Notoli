@@ -54,11 +54,11 @@ the historical ingress migration, not as a permanent operator identity. Shared d
 Both apps use [release contract v1](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/a82888c83975de486b27ec0d0dc787fb5b167301/app-release/README.md).
 `app.json` contains this app's service/container/domain/environment/network/DB
 and readiness policy; `compose.yml` defines its services. Common release and
-bundle code has no application-name branches. `deploy/shared-source.json` pins
+bundle code has no application-name branches. `shared_source` in `deploy/production/app.json` pins
 the versioned source; CI verifies exact common code/test copies and the generated
 workflow, failing on drift or unavailable source. The parity matrix and update
-procedure live in the standard. Run `python deploy/check_parity.py` locally;
-use `--sync` only after reviewing a coordinated pin update in both applications.
+procedure live in the standard. Run `python deploy/production/build_bundle.py --check-parity` locally;
+use `--sync` only after reviewing a coordinated pin update across all three applications.
 
 Public readiness requests use the honest `JudeAppRelease/1.0` User-Agent and
 request uncached responses. Cloudflare protections and all expected status,
