@@ -51,9 +51,11 @@ jobs:
             core.setOutput('eligible', trusted(pr, `${context.repo.owner}/${context.repo.repo}`));
             require('node:fs').writeFileSync(`${process.env.RUNNER_TEMP}/dependabot-pr-event.json`, JSON.stringify({ pull_request: pr }));
 
-      - name: Install the pinned safe metadata parser
+      - name: Synchronize locked repository tooling
         if: steps.pr.outputs.eligible == 'true'
-        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
+        uses: ./.github/actions/setup-uv
+        with:
+          only-dev: "true"
 
       - name: Validate this head and enable native protected-branch auto-merge
         id: enable

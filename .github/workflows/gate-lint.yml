@@ -59,10 +59,12 @@ jobs:
             frontend:
               - 'frontend/**'
               - '.github/actions/read-versions/**'
+              - '.github/actions/setup-uv/**'
               - '.github/actions/prepare-lint-commit/**'
             backend:
               - 'backend/**'
               - '.github/actions/read-versions/**'
+              - '.github/actions/setup-uv/**'
               - '.github/actions/prepare-lint-commit/**'
 
       - name: Report path detection failure
@@ -217,28 +219,18 @@ jobs:
           ref: ${{ inputs.enable_autofix && inputs.checkout_ref || '' }}
           persist-credentials: false
 
-      - name: Read versions
-        id: versions
-        uses: ./.github/actions/read-versions
+      - name: Synchronize locked lint tools
+        uses: ./.github/actions/setup-uv
         with:
-          read_node: "false"
-
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
-        with:
-          python-version: ${{ steps.versions.outputs.python_version }}
-          cache: 'pip'
-          cache-dependency-path: backend/environment.yml
-
-      - name: Install deps
-        run: pip install ruff
+          only-dev: "true"
 
       - name: Ruff (auto-fix)
         if: inputs.enable_autofix
-        run: ruff check . --fix
+        run: uv run --locked --only-group dev ruff check . --fix
 
       - name: Ruff format (auto-fix)
         if: inputs.enable_autofix
-        run: ruff format .
+        run: uv run --locked --only-group dev ruff format .
 
       - name: Detect changes
         id: git-changes
@@ -283,8 +275,8 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          ruff check . 2>&1 | tee lint_output.txt || status=$?
-          ruff format --check . 2>&1 | tee -a lint_output.txt || status=$?
+          uv run --locked --only-group dev ruff check . 2>&1 | tee lint_output.txt || status=$?
+          uv run --locked --only-group dev ruff format --check . 2>&1 | tee -a lint_output.txt || status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
       - name: Lint summary

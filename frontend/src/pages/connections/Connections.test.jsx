@@ -294,3 +294,173 @@ test.each(['account change', 'unmount'])(
     expect(connections.followOAuthCallback).not.toHaveBeenCalled();
   },
 );
+const actionQuery = '?approval_id=opaque-reference';
+const actionPreview = {
+  ticket: 'SIGNED-ACTION',
+  approval: {
+    status: 'prepared',
+    action: 'sample.delete',
+    target_id: 42,
+    application: { name: 'Requested client', client_id: 'requested-client' },
+    user: { username: 'alice' },
+    expires_at: '2026-11-15T10:05:00Z',
+    changes: { name: '<img src=x onerror=alert(1)>' },
+    current: { name: 'Current record', notes: 'N'.repeat(2200) },
+    destructive: true,
+    paid: true,
+  },
+};
+
+test.each([
+  ['Approve this action', 'allow', 'approved'],
+  ['Cancel action', 'cancel', 'cancelled'],
+])(
+  'action review requires an explicit %s with the signed exact ticket',
+  async (label, decision, status) => {
+    connections.loadActionApproval.mockResolvedValue(actionPreview);
+    connections.decideActionApproval.mockResolvedValue({
+      approval: { ...actionPreview.approval, status },
+    });
+    renderFlow(`/connections/authorize${actionQuery}`);
+    await screen.findByText('Application ID: requested-client');
+    expect(screen.getByText('Signed in as alice')).toBeInTheDocument();
+    expect(screen.getByText('Target ID: 42')).toBeInTheDocument();
+    expect(screen.getByText(/permanently delete or archive/)).toBeInTheDocument();
+    expect(screen.getByText(/spend AI credits/)).toBeInTheDocument();
+    expect(screen.getByText(/<img src=x onerror=alert/)).toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.getByText(/Current record/, { selector: 'pre' }).textContent).toContain(
+      'N'.repeat(2200),
+    );
+    expect(connections.loadActionApproval).toHaveBeenCalledWith('opaque-reference', actionQuery);
+    expect(connections.decideActionApproval).not.toHaveBeenCalled();
+    expect(connections.loadConsent).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: label }));
+    await screen.findByText(`Status: ${status}`);
+    expect(connections.decideActionApproval).toHaveBeenCalledWith(
+      'SIGNED-ACTION',
+      decision,
+      actionQuery,
+    );
+    expect(connections.followOAuthCallback).not.toHaveBeenCalled();
+  },
+);
+
+test('stale action decisions clear approval controls and require a fresh review', async () => {
+  connections.loadActionApproval.mockResolvedValue(actionPreview);
+  connections.decideActionApproval.mockRejectedValue(new Error('Action changed or expired.'));
+  renderFlow(`/connections/authorize${actionQuery}`);
+  await userEvent.click(await screen.findByRole('button', { name: 'Approve this action' }));
+  expect(await screen.findByText(/Reload this page to review/)).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Approve this action' })).not.toBeInTheDocument();
+  expect(connections.decideActionApproval).toHaveBeenCalledTimes(1);
+});
+
+test('framed action approval cannot load a ticket or offer approval', () => {
+  const original = Object.getOwnPropertyDescriptor(window, 'self');
+  Object.defineProperty(window, 'self', { configurable: true, value: {} });
+  try {
+    renderFlow(`/connections/authorize${actionQuery}`);
+    expect(screen.getByText(/Open this page directly/)).toBeInTheDocument();
+    expect(connections.loadActionApproval).not.toHaveBeenCalled();
+    expect(connections.decideActionApproval).not.toHaveBeenCalled();
+  } finally {
+    Object.defineProperty(window, 'self', original);
+  }
+});
+
+test('signed-out action review returns through existing login with only the opaque reference', async () => {
+  sessionStorage.clear();
+  connections.loadActionApproval.mockResolvedValue(actionPreview);
+  renderFlow(`/connections/authorize${actionQuery}`);
+  expect(connections.loadActionApproval).not.toHaveBeenCalled();
+  await userEvent.type(screen.getByLabelText('Email'), 'alice@example.com');
+  await userEvent.type(screen.getByLabelText('Password'), 'password');
+  await userEvent.click(screen.getByRole('button', { name: 'Login' }));
+  await screen.findByText('Signed in as alice');
+  expect(screen.getByTestId('location')).toHaveTextContent(`/connections/authorize${actionQuery}`);
+  expect(connections.decideActionApproval).not.toHaveBeenCalled();
+});
+
+test('an approved action can be cancelled immediately with its new signed ticket', async () => {
+  connections.loadActionApproval.mockResolvedValue(actionPreview);
+  connections.decideActionApproval
+    .mockResolvedValueOnce({
+      ticket: 'SIGNED-APPROVED-ACTION',
+      approval: { ...actionPreview.approval, status: 'approved' },
+    })
+    .mockResolvedValueOnce({ approval: { ...actionPreview.approval, status: 'cancelled' } });
+  renderFlow(`/connections/authorize${actionQuery}`);
+  await userEvent.click(await screen.findByRole('button', { name: 'Approve this action' }));
+  await screen.findByText('Status: approved');
+  await userEvent.click(screen.getByRole('button', { name: 'Cancel action' }));
+  await screen.findByText('Status: cancelled');
+  expect(connections.decideActionApproval).toHaveBeenNthCalledWith(
+    1,
+    'SIGNED-ACTION',
+    'allow',
+    actionQuery,
+  );
+  expect(connections.decideActionApproval).toHaveBeenNthCalledWith(
+    2,
+    'SIGNED-APPROVED-ACTION',
+    'cancel',
+    actionQuery,
+  );
+  expect(connections.loadActionApproval).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('button', { name: 'Cancel action' })).not.toBeInTheDocument();
+  expect(connections.followOAuthCallback).not.toHaveBeenCalled();
+});
+
+test.each(
+  ['account change', 'unmount'].flatMap((change) =>
+    ['preview', 'decision'].flatMap((operation) =>
+      ['success', 'failure'].map((outcome) => [change, operation, outcome]),
+    ),
+  ),
+)('ignores action approval %s during a pending %s %s', async (change, operation, outcome) => {
+  startSession({ access: 'old-access', refresh: 'old-refresh' });
+  let resolve;
+  let reject;
+  const pending = new Promise((onResolve, onReject) => {
+    resolve = onResolve;
+    reject = onReject;
+  });
+  connections.loadActionApproval.mockResolvedValue(actionPreview);
+  if (operation === 'preview') connections.loadActionApproval.mockReturnValueOnce(pending);
+  else connections.decideActionApproval.mockReturnValueOnce(pending);
+  const { unmount } = renderFlow(`/connections/authorize${actionQuery}`);
+  if (operation === 'decision') {
+    await userEvent.click(await screen.findByRole('button', { name: 'Approve this action' }));
+  } else {
+    await waitFor(() => expect(connections.loadActionApproval).toHaveBeenCalledTimes(1));
+  }
+  if (change === 'account change') {
+    connections.loadActionApproval.mockResolvedValue({
+      ...actionPreview,
+      ticket: 'NEW-ACCOUNT-TICKET',
+      approval: { ...actionPreview.approval, user: { username: 'bob' } },
+    });
+    act(() => startSession({ access: 'new-access', refresh: 'new-refresh' }));
+    await screen.findByText('Signed in as bob');
+  } else {
+    unmount();
+  }
+  await act(async () => {
+    if (outcome === 'failure') reject(new Error('Old account action failure.'));
+    else {
+      resolve({
+        ...actionPreview,
+        approval: {
+          ...actionPreview.approval,
+          status: operation === 'decision' ? 'approved' : 'prepared',
+        },
+      });
+    }
+  });
+  expect(screen.queryByText('Signed in as alice')).not.toBeInTheDocument();
+  expect(screen.queryByText('Status: approved')).not.toBeInTheDocument();
+  expect(screen.queryByText(/Old account action failure/)).not.toBeInTheDocument();
+  expect(connections.decideActionApproval).toHaveBeenCalledTimes(operation === 'decision' ? 1 : 0);
+  expect(connections.followOAuthCallback).not.toHaveBeenCalled();
+});

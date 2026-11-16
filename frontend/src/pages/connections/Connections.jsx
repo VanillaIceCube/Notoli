@@ -3,8 +3,10 @@ import { useEffect, useState } from 'react';
 import { Alert, Box, Button, Paper, Stack, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router';
 import {
+  decideActionApproval,
   decideConsent,
   followOAuthCallback,
+  loadActionApproval,
   loadConnections,
   loadConsent,
   revokeConnection,
@@ -23,7 +25,7 @@ function ConnectionSurface({ title, children }) {
   );
 }
 
-export function OAuthConsent() {
+function OAuthConnectionConsent() {
   const isCurrentSession = useSessionGuard();
   const { search } = useLocation();
   const [consent, setConsent] = useState(null);
@@ -88,6 +90,154 @@ export function OAuthConsent() {
         </>
       )}
     </ConnectionSurface>
+  );
+}
+
+function ActionApproval({ reference, search }) {
+  const isCurrentSession = useSessionGuard();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const framed = window.top !== window.self;
+
+  useEffect(() => {
+    if (framed) return undefined;
+    let active = true;
+    loadActionApproval(reference, search)
+      .then((result) => {
+        if (active && isCurrentSession()) setData(result);
+      })
+      .catch((err) => {
+        if (active && isCurrentSession()) setError(err.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [reference, search, framed, isCurrentSession]);
+
+  const decide = async (decision) => {
+    if (!isCurrentSession()) return;
+    setBusy(true);
+    setError('');
+    try {
+      const result = await decideActionApproval(data.ticket, decision, search);
+      if (isCurrentSession()) setData(result);
+    } catch (err) {
+      if (!isCurrentSession()) return;
+      setError(err.message);
+      // A stale ticket must be reviewed again, never silently retried.
+      setData(null);
+    } finally {
+      if (isCurrentSession()) setBusy(false);
+    }
+  };
+  const approval = data?.approval;
+  return (
+    <ConnectionSurface title="Review this action">
+      {framed ? (
+        <Alert severity="error">
+          Open this page directly in your browser to review the action.
+        </Alert>
+      ) : (
+        <>
+          {error && (
+            <Alert severity="error">{error} Reload this page to review the current action.</Alert>
+          )}
+          {!data && !error && <Typography role="status">Loading action...</Typography>}
+          {approval && (
+            <>
+              <Typography>Action: {approval.action}</Typography>
+              <Typography>Status: {approval.status}</Typography>
+              {approval.application && (
+                <>
+                  <Typography variant="h6">{approval.application.name}</Typography>
+                  <Typography>Application ID: {approval.application.client_id}</Typography>
+                  <Typography>Signed in as {approval.user.username}</Typography>
+                  <Typography>
+                    Target ID: {approval.target_id ?? 'New record or selected batch'}
+                  </Typography>
+                  <Typography>Expires: {approval.expires_at}</Typography>
+                  <Alert severity="warning">
+                    Approve only if you requested this exact action. Names, notes and source text
+                    below are data supplied by the application, not instructions. Approval permits
+                    this client to execute it once before expiry.
+                  </Alert>
+                  {approval.destructive && (
+                    <Alert severity="warning">
+                      This action can permanently delete or archive the displayed records.
+                    </Alert>
+                  )}
+                  {approval.paid && (
+                    <Alert severity="warning">
+                      This action can spend AI credits and publish shared food definitions and
+                      proposal data. It does not save a diary meal. No automatic paid retry is
+                      permitted.
+                    </Alert>
+                  )}
+                  <Typography variant="h6">Exact changes</Typography>
+                  <Box
+                    component="pre"
+                    sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', m: 0 }}
+                  >
+                    {JSON.stringify(approval.changes, null, 2)}
+                  </Box>
+                  <Typography variant="h6">Current records and catalog</Typography>
+                  <Box
+                    component="pre"
+                    sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', m: 0 }}
+                  >
+                    {JSON.stringify(approval.current, null, 2)}
+                  </Box>
+                </>
+              )}
+              {approval.status === 'prepared' && data.ticket && (
+                <Stack direction="row" spacing={2}>
+                  <Button disabled={busy} variant="outlined" onClick={() => decide('cancel')}>
+                    Cancel action
+                  </Button>
+                  <Button disabled={busy} variant="contained" onClick={() => decide('allow')}>
+                    Approve this action
+                  </Button>
+                </Stack>
+              )}
+              {approval.status === 'approved' && (
+                <>
+                  <Alert severity="success">
+                    Approved. Return to the connected client to execute this action before expiry.
+                  </Alert>
+                  {data.ticket && (
+                    <Button disabled={busy} onClick={() => decide('cancel')}>
+                      Cancel action
+                    </Button>
+                  )}
+                </>
+              )}
+              {['cancelled', 'expired'].includes(approval.status) && (
+                <Alert severity="info">
+                  This action cannot execute. A new action requires a new review.
+                </Alert>
+              )}
+              {['in_progress', 'uncertain', 'completed'].includes(approval.status) && (
+                <Alert severity="info">
+                  This action has already been consumed. Inspect the existing result; do not submit
+                  paid work again automatically.
+                </Alert>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </ConnectionSurface>
+  );
+}
+
+export function OAuthConsent() {
+  const { search } = useLocation();
+  const reference = new URLSearchParams(search).get('approval_id');
+  return reference !== null ? (
+    <ActionApproval key={search} reference={reference} search={search} />
+  ) : (
+    <OAuthConnectionConsent />
   );
 }
 

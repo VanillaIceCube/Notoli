@@ -1,0 +1,13 @@
+# Node modules and build outputs
+node_modules/
+build/
+dist/
+coverage/
+
+# Docker configuration files
+docker/Dockerfile
+docker/*.dockerignore
+
+# Local frontend environment files
+.env
+.env.*

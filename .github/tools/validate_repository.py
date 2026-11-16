@@ -66,7 +66,7 @@ def main():
             continue
         if file.suffix == ".sh":
             run("bash", "-n", str(file))
-        elif file.suffix == ".py" and name.startswith(("scripts/", ".github/", "deploy/", "backend/check_app_mcp.py")):
+        elif file.suffix == ".py" and name.startswith(("scripts/", ".github/", "deploy/")):
             ast.parse(file.read_text(encoding="utf-8"), filename=name)
         elif file.suffix == ".ps1":
             env = {**os.environ, "CHECK_PS_FILE": str(file)}

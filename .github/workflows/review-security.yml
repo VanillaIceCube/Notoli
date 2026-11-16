@@ -94,7 +94,7 @@ jobs:
             });
             const securitySensitiveFiles = files
               .map((file) => file.filename)
-              .filter((filename) => /(^backend\/authentication\/|\/permissions?\.py$|\/settings\.py$|\/urls\.py$|requirements\.txt$|package-lock\.json$|package\.json$|^\.github\/workflows\/|^\.github\/actions\/|^deploy\/|Dockerfile|nginx|auth|csrf|cors|token|secret|password)/i.test(filename));
+              .filter((filename) => /(^backend\/authentication\/|\/permissions?\.py$|\/settings\.py$|\/urls\.py$|(?:requirements\.txt|pyproject\.toml|uv\.lock)$|package-lock\.json$|package\.json$|^\.github\/workflows\/|^\.github\/actions\/|^deploy\/|Dockerfile|nginx|auth|csrf|cors|token|secret|password)/i.test(filename));
 
             const securityChecks = checkRuns
               .filter((check) => /malware|vulnerab|dependency|codeql|security/i.test(check.name || ''))

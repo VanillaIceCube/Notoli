@@ -1,5 +1,7 @@
 describe('connectionsClient request contract', () => {
   let apiFetch;
+  let loadActionApproval;
+  let decideActionApproval;
   let decideConsent;
   let loadConsent;
   let loadConnections;
@@ -9,8 +11,14 @@ describe('connectionsClient request contract', () => {
     vi.resetModules();
     vi.doMock('./requestClient', () => ({ apiFetch: vi.fn() }));
     ({ apiFetch } = await import('./requestClient'));
-    ({ decideConsent, loadConsent, loadConnections, revokeConnection } =
-      await import('./connectionsClient'));
+    ({
+      loadActionApproval,
+      decideActionApproval,
+      decideConsent,
+      loadConsent,
+      loadConnections,
+      revokeConnection,
+    } = await import('./connectionsClient'));
     vi.clearAllMocks();
     sessionStorage.clear();
     sessionStorage.setItem('accessToken', 'JWT');
@@ -62,6 +70,8 @@ describe('connectionsClient request contract', () => {
   });
 
   const operations = [
+    ['load action', () => loadActionApproval('ref', '?approval_id=ref')],
+    ['decide action', () => decideActionApproval('SIGNED', 'allow', '?approval_id=ref')],
     ['load consent', () => loadConsent('?state=original')],
     ['decide consent', () => decideConsent('SIGNED-TICKET', 'allow', '?state=original')],
     ['list connections', () => loadConnections()],
@@ -142,6 +152,24 @@ describe('connectionsClient request contract', () => {
   ])('returns the valid JSON %s result', async (_name, operation, data) => {
     mockResponse(200, JSON.stringify(data));
     await expect(operation()).resolves.toEqual(data);
+  });
+
+  test('action approval uses JWT-only requests, encoded opaque references and signed decisions', async () => {
+    await loadActionApproval('ref&injected=1', '?approval_id=ref');
+    expect(apiFetch.mock.calls[0][0]).toBe(
+      '/auth/mcp/action-approval/?approval_id=ref%26injected%3D1',
+    );
+    expect(apiFetch.mock.calls[0][1].headers.Authorization).toBe('Bearer JWT');
+    expect(apiFetch.mock.calls[0][1].credentials).toBe('omit');
+    await decideActionApproval('SIGNED+ACTION', 'allow', '?approval_id=ref');
+    const [path, options] = apiFetch.mock.calls[1];
+    expect(path).toBe('/auth/mcp/action-approval/');
+    expect(options.authReturnTo).toBe('/connections/authorize?approval_id=ref');
+    expect(options.credentials).toBe('omit');
+    expect(Object.fromEntries(new URLSearchParams(options.body))).toEqual({
+      ticket: 'SIGNED+ACTION',
+      decision: 'allow',
+    });
   });
 
   afterEach(() => vi.doUnmock('./requestClient'));
@@ -225,5 +253,29 @@ describe('connectionsClient with JWT recovery', () => {
     await expect(loadConnections()).rejects.toEqual(new Error('HTTP 401'));
     expect(sessionStorage.getItem('accessToken')).toBe('OLD-ACCESS');
     expect(sessionStorage.getItem('refreshToken')).toBe('REFRESH');
+  });
+
+  test('action approval JWT recovery preserves the signed decision and sends no cookies', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response(401, '<html>Expired access</html>'))
+      .mockResolvedValueOnce(response(200, '{"access":"NEW-ACCESS"}'))
+      .mockResolvedValueOnce(
+        response(200, '{"approval":{"status":"approved"},"ticket":"SIGNED-APPROVED"}'),
+      )
+      .mockResolvedValueOnce(response(200, '{"approval":{"status":"cancelled"}}'));
+    vi.stubGlobal('fetch', fetchMock);
+    const { decideActionApproval } = await import('./connectionsClient');
+    const approved = await decideActionApproval('SIGNED-ACTION', 'allow', '?approval_id=ref');
+    expect(approved).toEqual({ approval: { status: 'approved' }, ticket: 'SIGNED-APPROVED' });
+    await expect(
+      decideActionApproval(approved.ticket, 'cancel', '?approval_id=ref'),
+    ).resolves.toEqual({ approval: { status: 'cancelled' } });
+    expect(fetchMock.mock.calls[3][1].body).toBe('ticket=SIGNED-APPROVED&decision=cancel');
+    const [url, options] = fetchMock.mock.calls[2];
+    expect(url).toBe('/auth/mcp/action-approval/');
+    expect(options.headers.Authorization).toBe('Bearer NEW-ACCESS');
+    expect(options.credentials).toBe('omit');
+    expect(options.body).toBe('ticket=SIGNED-ACTION&decision=allow');
   });
 });

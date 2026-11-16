@@ -51,6 +51,7 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: ./backend
+          file: ./backend/docker/Dockerfile
           push: true
           tags: ${{ steps.images.outputs.backend }}:sha-${{ github.sha }}
       - name: Build frontend

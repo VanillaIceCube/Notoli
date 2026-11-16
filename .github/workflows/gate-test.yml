@@ -53,18 +53,21 @@ jobs:
             frontend:
               - 'frontend/**'
               - '.github/actions/read-versions/**'
+              - '.github/actions/setup-uv/**'
             backend:
               - 'backend/**'
-              - 'backend/check_app_mcp.py'
-              - 'backend/app_mcp/source.json'
               - '.github/workflows/gate-test.yml'
               - '.github/actions/read-versions/**'
+              - '.github/actions/setup-uv/**'
             development:
-              - 'backend/Dockerfile.dev'
-              - 'backend/environment.yml'
-              - 'backend/requirements.txt'
+              - 'backend/docker/Dockerfile.dev'
+              - 'backend/docker/Dockerfile.dockerignore'
+              - 'backend/docker/Dockerfile.dev.dockerignore'
+              - 'backend/pyproject.toml'
+              - 'backend/uv.lock'
               - 'frontend/docker/Dockerfile.dev'
-              - 'frontend/.dockerignore'
+              - 'frontend/docker/Dockerfile.dockerignore'
+              - 'frontend/docker/Dockerfile.dev.dockerignore'
               - 'frontend/package*.json'
               - '.github/workflows/gate-test.yml'
             automation:
@@ -193,20 +196,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Read versions
-        id: versions
-        uses: ./.github/actions/read-versions
-        with:
-          read_node: "false"
-
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
-        with:
-          python-version: ${{ steps.versions.outputs.python_version }}
-          cache: 'pip'
-          cache-dependency-path: backend/requirements.txt
-
-      - name: Install backend dependencies
-        run: pip install -r requirements.txt
+      - name: Synchronize locked backend dependencies
+        uses: ./.github/actions/setup-uv
 
       - name: Run backend tests
         id: test_run
@@ -214,7 +205,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          { python check_app_mcp.py && python -m unittest discover -s app_mcp/chatgpt -p 'test_*.py' && python manage.py test --verbosity=2; } 2>&1 | tee test_output.txt || status=$?
+          { uv run --locked python manage.py test --verbosity=2; } 2>&1 | tee test_output.txt || status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
       - name: Test summary
@@ -269,8 +260,8 @@ jobs:
         with:
           node-version: ${{ steps.versions.outputs.node_version }}
 
-      - name: Install the pinned safe YAML parser
-        run: python3 -m pip install --disable-pip-version-check PyYAML==6.0.3
+      - name: Synchronize locked repository dependencies
+        uses: ./.github/actions/setup-uv
 
       - name: Install verified workflow validator
         run: bash .github/tools/install_actionlint.sh
@@ -342,7 +333,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Build reviewed development images
         run: |
-          docker build --file backend/Dockerfile.dev --tag batch2-backend-dev backend
+          docker build --file backend/docker/Dockerfile.dev --tag batch2-backend-dev backend
           docker build --file frontend/docker/Dockerfile.dev --tag batch2-frontend-dev frontend
 
   test-results:

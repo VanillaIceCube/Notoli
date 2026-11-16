@@ -142,6 +142,28 @@ test("discovers a GitHub release from PyPI project metadata", async () => {
   assert.equal(evidence.release_sources[0].repository, "benoitc/gunicorn");
 });
 
+test("collects uv major-upgrade evidence from PyPI and the upstream release", async () => {
+  const registryCalls = [];
+  const evidence = await collectUpstreamMajorUpgradeEvidence({
+    updatedDependenciesJson: JSON.stringify([dependency("gunicorn", "uv", "22.0.0", "23.0.0")]),
+    fetchJson: async (url) => {
+      registryCalls.push(url);
+      return { info: { project_urls: { Source: "https://github.com/benoitc/gunicorn" } } };
+    },
+    getReleaseByTag: async ({ owner, repo, tag }) => ({
+      tag_name: tag,
+      html_url: `https://github.com/${owner}/${repo}/releases/tag/${tag}`,
+      body: "Upstream major release notes.",
+    }),
+  });
+
+  assert.deepEqual(registryCalls, ["https://pypi.org/pypi/gunicorn/23.0.0/json"]);
+  assert.equal(evidence.dependencies[0].package_ecosystem, "uv");
+  assert.equal(evidence.release_sources[0].repository, "benoitc/gunicorn");
+  assert.equal(evidence.release_sources[0].release_notes, "Upstream major release notes.");
+  assert.deepEqual(evidence.retrieval_notes, []);
+});
+
 test("records missing GitHub Action releases without failing the collector", async () => {
   const evidence = await collectUpstreamMajorUpgradeEvidence({
     updatedDependenciesJson: JSON.stringify([dependency("actions/checkout", "github-actions", "4.0.0", "5.0.0")]),

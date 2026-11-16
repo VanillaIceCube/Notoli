@@ -56,6 +56,26 @@ def environment():
 
 
 class BundleTests(unittest.TestCase):
+    def test_layout_email_backend_values_create_compatible_new_bundles(self):
+        legacy = "authentication.email_backends.ResendApiEmailBackend"
+        intermediate = "apps.authentication.email_backends.ResendApiEmailBackend"
+        separated = "apps.email.backends.ResendApiEmailBackend"
+        current = "anymail.backends.resend.EmailBackend"
+        smtp = "django.core.mail.backends.smtp.EmailBackend"
+        for supplied, expected in ((legacy, current), (intermediate, current), (separated, current), (current, current), (smtp, smtp)):
+            with self.subTest(backend=supplied), tempfile.TemporaryDirectory() as directory:
+                values = environment() | {"DJANGO_EMAIL_BACKEND": supplied}
+                target = Path(directory) / "incoming"
+                identity = builder.build(target, values)
+                emitted = (target / identity / ".backend.env").read_text()
+                self.assertIn("DJANGO_EMAIL_BACKEND=" + expected + "\n", emitted)
+                self.assertEqual(values["DJANGO_EMAIL_BACKEND"], supplied)
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(ValueError, "production email backend"):
+                builder.build(Path(directory) / "incoming", environment() | {
+                    "DJANGO_EMAIL_BACKEND": "custom.authentication.email_backends.UnreviewedBackend"
+                })
+
     def test_extra_app_required_secret_is_synthetic_and_still_required(self):
         key = "APP_SPECIFIC_REQUIRED_SECRET"
         with patch.object(builder, "REQUIRED", [*builder.REQUIRED, key]):

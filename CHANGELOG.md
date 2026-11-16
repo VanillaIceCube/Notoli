@@ -8,6 +8,12 @@ All notable changes to this project are documented in this file.
 
 - Discard JWT refresh results after logout or a new login, align post-refresh session expiry, and preserve pending connection navigation.
 - Validate notification lists before rendering and retain usable error and retry controls.
+- Return a newly signed action ticket after approval so the existing Cancel control works immediately without reloading; preserve the original action expiry and reject stale tickets.
+- Verify the backend production/development uv bootstrap against reviewed binary wheel hashes for every platform in the pinned Python base; reject altered artifacts and source distributions across all three applications.
+- Verify the CI uv bootstrap against a reviewed wheel SHA-256 before installation across all four repositories; reject unsupported runner targets and source distributions.
+- Bound MCP text and encoded responses with accurate adaptive pagination; retain truthful successful mutation outputs with explicit truncation metadata and sanitize unexpected failures.
+- Align authentication request validation, duplicate-registration handling and exact password preservation across applications; reject malformed reset credentials with HTTP 400 and roll back failed signup onboarding.
+- Require a nonblank production signing key consistently.
 
 ### Changed
 
@@ -15,6 +21,20 @@ All notable changes to this project are documented in this file.
 - Centralize the existing dark/yellow palette and shared Material UI appearance in `frontend/src/theme.js`; preserve document typography, page sizing and specialized component layouts.
 - Pair frontend tests with the owning source basename and extension, consolidate behavior and integration cases without losing coverage, and align applicable shared regression checks.
 - Use semantic authentication and Connected Apps links, align common frontend dependency ranges, and standardize Vite environment, router base and build-output configuration.
+- Adopt tiered MCP execution: ordinary changes and collaborator additions use durable UUID receipts directly; only deletions, collaborator removals and omitted list memberships require exact signed-in app approval with fresh scopes, five-minute expiry, cancellation and replay protection. Add the three private lifecycle models through an additive integrations migration; retain the existing approval UI/framework.
+- Clarify and regression-test MCP token scope resolution: omitted or blank scope continues to require the application's baseline scope, with identical framework coverage across applications.
+- Raise the complete source-diff limit for all three AI reviewers to 2 MB (2,000,000 bytes) across all four repositories; preserve fail-closed incomplete reviews and all other context, token and model settings.
+- Standardize MCP permissions, authenticated invocation, read queries, mutation dispatch and result-formatting modules; create a fresh 32-tool registry per factory call and retain the `integrations` app label.
+- Use only canonical framework origin/HTTPS checks and align structured reconnect challenges with the shared application contract.
+- Route REST and MCP board, list, item, sharing, ordering and notification operations through actor-scoped domain services; recheck live membership and ownership before writes, preserve activity behavior and remove synthetic REST view dispatch from MCP.
+- Organize backend tests into owning `tests/` packages with descriptive behavior names and fixture-only helpers; separate item lifecycle, access, membership and scoped ordering while retaining onboarding, notifications, OAuth and exact proxy-trust coverage.
+- Use shared MCP routing, OAuth defaults and token validation directly, consolidating proxy checks into existing configuration tests.
+- Use Django OAuth Toolkit's built-in MCP client registration, remove custom management commands and document explicit public-client onboarding and validation behavior (#1060).
+
+### Removed
+
+- Remove the obsolete static-file storage selector while preserving current storage behavior.
+- Remove MCP/proxy compatibility wrappers and the custom test runner; use Django's default test runner.
 
 ## 2026-11-14
 
@@ -46,6 +66,14 @@ All notable changes to this project are documented in this file.
 - Align shared agent instructions across the repository family while preserving application-specific contracts and Infrastructure authorization controls.
 - Move active CI helpers into `.github/tools/`, browser helpers beside `frontend/e2e/` journeys, and the MCP checker into `backend/`; update callers, path filters, regressions, and owning guides while preserving existing checks and isolation.
 - Remove the empty root script index after moving all active helpers to their owning folders.
+- Consolidate MCP framework, tools and ChatGPT guidance into one `apps/mcp/README.md`, preserving permissions, tool catalogs and connection instructions.
+- Replace the custom Resend email backend with Django-Anymail, retain existing credential and backend-selection variables, and keep password-reset failures generic without logging private provider details.
+- Move provider email delivery into `apps/email/` while retaining password-reset privacy coverage with authentication and preserving the existing delivery configuration and timeout contract.
+- Group backend applications under `apps/`, rename Django configuration to `config/`, and consolidate MCP framework, application tools and ChatGPT packaging under `apps/mcp/` while preserving existing app labels, migrations, tables and proxy behavior.
+- Move backend/frontend Docker exclusions beside each production/development Dockerfile as Dockerfile-specific ignore files, retaining context-relative exclusions and required frontend build inputs.
+- Select Python directly from `pyproject.toml` in uv and CI instead of maintaining a separate version file.
+- Replace Conda and requirements export with a Python 3.12 uv project and committed lockfile; use locked environments in local setup, CI and Docker while preserving application server and proxy policy (#1058).
+- Group backend Dockerfiles in `backend/docker/`; update Compose, build workflows and Docker dependency discovery while retaining the backend build context (FullStackTemplate #337).
 
 ### Removed
 
@@ -59,6 +87,10 @@ All notable changes to this project are documented in this file.
 - Remove frontend end-to-end suites, Playwright configuration and dependencies, browser-test helpers and CI jobs; retain component, backend, action-local and shared release checks.
 - Remove duplicate documentation indexes, redirects, stale narratives and historical receipts after preserving useful contracts.
 - Remove the root `tests/` directory and its CI invocations; retain backend, frontend/browser, action-local, and shared release suites.
+- Remove unused MCP framework source-pin and hash-manifest metadata; retain coordinated source review and runtime tests.
+- Remove the local ChatGPT package/listing builders and their test modules; retain source manifests/artwork and ordinary/MCP runtime checks.
+- Remove the repository MCP parity checker and its CI/docs integration; retain shared framework source pins, manifests and runtime tests.
+- Remove Conda environment definitions and the environment export helper after migrating dependency declarations to uv.
 
 ## 2026-11-13
 

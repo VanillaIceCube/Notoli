@@ -637,7 +637,7 @@ test("does not repeat an unavailable review for the same persona and commit", as
 test("reviewer identities explain truncated reviews before their checks fail", () => {
   const actionPath = path.resolve(__dirname, "../get-pr-diff/action.yml");
   const action = fs.readFileSync(actionPath, "utf8");
-  assert.match(action, /default: "524288"/);
+  assert.match(action, /default: "2000000"/);
   assert.match(action, /:\(exclude\)\*\*\/package-lock\.json/);
   assert.match(action, /:\(exclude\)\*\*\/pnpm-lock\.yaml/);
   assert.match(action, /echo "max_bytes=\$MAX_BYTES"/);
