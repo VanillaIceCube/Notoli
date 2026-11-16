@@ -5,20 +5,33 @@ permissions, notifications, and application integrations.
 
 ## 🧭 Structure
 
-- `app/`: settings and server entry points.
-- `notes/`: boards, lists, and notes.
-- `authentication/`, `notifications/`: accounts and notifications.
-- `integrations/`, `app_mcp/`: application tools and shared MCP.
+- `config/`: Django settings, URL configuration, and ASGI/WSGI entry points.
+- `docker/`: production/development Dockerfiles and their adjacent Dockerfile-specific ignore files; keep `backend/` as the build context.
+- `apps/notes/`: boards, lists, and notes; `services.py` owns actor-scoped queries, mutations, membership, ordering and activity events shared by REST and MCP.
+- `apps/authentication/`, `apps/notifications/`: accounts and notifications; recipient-scoped notification operations live in `apps/notifications/services.py`.
+- `apps/mcp/`: shared framework, Notoli tools and ChatGPT packaging in `framework/`, `tools/` and `chatgpt/`.
+
+REST views own HTTP authentication, serializer validation and responses. MCP tools
+retain OAuth scope checks, bounded results and deletion confirmation, validate
+with the same serializers using an actor context, and call domain services
+directly. Domain writes recheck live board membership and ownership under a
+transaction; caller-provided or previously fetched objects do not authorize a
+write. Removing a collaborator also removes access to lists and items they
+created on that board. List creation retains its existing successful-write
+behavior if activity delivery fails; other domain writes and their activity
+records roll back together.
 
 ## 💻 Local development
 
-Use Python 3.12 in an isolated environment. From the repository root:
+Install uv 0.13.8 using the [official installation guide](https://docs.astral.sh/uv/getting-started/installation/).
+uv manages Python 3.12 and the ignored `backend/.venv/`; Conda is not required.
+From the repository root:
 
 ```powershell
-python -m pip install -r backend/requirements.txt
-python backend/manage.py migrate
+uv sync --locked --project backend
+uv run --locked --project backend python backend/manage.py migrate
 Set-Location backend
-python -m uvicorn app.asgi:application --port 8000 --reload --no-proxy-headers
+uv run --locked uvicorn config.asgi:application --port 8000 --reload --no-proxy-headers
 ```
 
 Local settings can be supplied in ignored `backend/.env`.
@@ -28,9 +41,12 @@ Uvicorn serves both REST and MCP. Django `runserver` serves REST/auth only.
 
 ## ⚙️ Configuration
 
+Production (`DJANGO_DEBUG=0`) requires an explicit nonblank `DJANGO_SECRET_KEY`.
+Static files use Django's default storage and the retained WhiteNoise middleware.
+
 Local runs load ignored `backend/.env`. The database defaults to
 `backend/db.sqlite3`; set `DJANGO_SQLITE_PATH` to use another local database.
-Use `app/settings.py` for current defaults.
+Use `config/settings.py` for current defaults.
 
 | Setting | Purpose |
 | --- | --- |
@@ -67,6 +83,13 @@ Production serves these routes from the subdomain root at `https://notoli.judean
 
 ## 🔐 Authentication API
 
+Registration, login and reset preserve passwords exactly, including leading and
+trailing spaces. Request serializers reject malformed credential/link types with
+HTTP 400; email addresses are trimmed and normalized. Registration returns an
+explicit client error for duplicate identities and rolls back account creation,
+required onboarding and session creation together if any step fails. Recovery
+responses remain generic for valid email-shaped input.
+
 JWT auth is provided by `djangorestframework-simplejwt`.
 
 Common endpoints:
@@ -77,7 +100,7 @@ Common endpoints:
 - `POST /auth/forgot-password/` -> accepts `email`; sends a reset link if the account exists and returns a generic success message
 - `POST /auth/reset-password/` -> accepts `uid`, `token`, and `password`; sets a new password when the token is valid
 
-New users get a default board named after their username, such as `"andrew's Board"`, created automatically via a post-save signal in `notes/signals.py`. If the username is auto-derived from the email prefix, the board name uses that prefix with its first letter capitalized, such as `"Example_02's Board"` for `example_02@gmail.com`. The default personal board is also bootstrapped with ordered starter lists: `Grocery List`, `Chores List`, and `Todo List`, each with starter notes.
+New users get a default board named after their username, such as `"andrew's Board"`, created automatically via a post-save signal in `apps/notes/signals.py`. If the username is auto-derived from the email prefix, the board name uses that prefix with its first letter capitalized, such as `"Example_02's Board"` for `example_02@gmail.com`. The default personal board is also bootstrapped with ordered starter lists: `Grocery List`, `Chores List`, and `Todo List`, each with starter notes.
 
 All `/api/*` endpoints require:
 
@@ -106,61 +129,82 @@ Access scoping:
 
 ## ✉️ Email
 
-Local development uses Django's console email backend. The included
-Resend HTTPS backend is configured with:
+Local development uses Django's console email backend. Resend delivery uses
+Django-Anymail's maintained backend directly, with no application-owned email
+backend package. Configure it through the existing variables:
 
 ```env
-DJANGO_EMAIL_BACKEND=authentication.email_backends.ResendApiEmailBackend
+DJANGO_EMAIL_BACKEND=anymail.backends.resend.EmailBackend
 DJANGO_EMAIL_HOST_KEY=<resend-api-key>
 DJANGO_EMAIL_TIMEOUT=10
 DJANGO_DEFAULT_FROM_EMAIL=<sender-on-a-verified-domain>
 ```
 
-Keep `.localhost` senders with console delivery. Live delivery uses an approved
-sender domain and private credentials configured through the production guide.
-Plain text, HTML, multipart alternatives, `cc`, `bcc`, and `reply_to` are supported.
+The existing host key maps to `ANYMAIL.RESEND_API_KEY`; blank values are omitted
+so Anymail reports a configuration error before attempting provider HTTP. The
+three retired custom Resend backend paths are normalized to the maintained
+backend at startup. Console, SMTP and other explicitly configured backends retain
+their existing selection and variables. Keep `.localhost` senders with console
+delivery; live delivery requires an approved sender domain and private credentials.
 
-The socket-operation timeout defaults to 10 seconds and supports `0 < seconds <= 30`.
-The environment value is parsed as an integer. Invalid runtime timeout values fall
-back safely; malformed startup configuration fails visibly. A successful provider
-response means acceptance, not confirmed inbox delivery.
+`ANYMAIL.REQUESTS_TIMEOUT` defaults to 10 seconds. Integer environment values
+outside `0 < seconds <= 30` fall back to 10; malformed integer startup values
+continue to fail visibly. API request debugging is explicitly disabled to avoid
+printing keys, recipients, reset links or provider payloads. There are no inbound
+routes, webhook dependencies or automatic retries in this integration.
 
-Failures preserve `fail_silently`: false re-raises, while true skips failures and
-returns the number sent. Password reset returns a generic response for known and
-unknown accounts, including delivery failures. Logger `authentication.email_backends`
-records safe category/status fields: `configuration`, `request`, `rate_limit`,
-`provider`, `timeout`, `network`, or `unexpected`. Never log provider response
-bodies, recipient details, reset tokens, message contents, or credentials.
+Operational delivery failures respect `fail_silently`: false raises an Anymail
+exception, while true skips the failed message and returns the number sent.
+Configuration errors, including an absent API key, are raised during backend
+construction even when `fail_silently=True`; the project does not wrap or override
+that maintained behavior. Password reset catches failures and retains the same
+generic response for known and unknown accounts. Its application logger records
+only a fixed failure message without exception text or tracebacks. Never log an
+Anymail exception's text/repr, provider body, recipients, reset tokens or secrets.
 
-Diagnose failures using those categories and the existing provider dashboard.
-There is no automatic retry or resend: a timeout may occur after acceptance.
-Use mocked delivery tests; production email receipt requires separate verification.
+Plain text, HTML alternatives, `cc`, `bcc` and `reply_to` pass through Django's
+email API. A successful provider response means acceptance, not inbox delivery.
+Use the provider dashboard for delivery diagnosis and mocked request-boundary
+tests for local verification; production receipt requires separate acceptance.
 
 ## 🔌 MCP integration
 
-The shared-framework checker lives at `backend/check_app_mcp.py`, beside the backend
-and outside the hash-verified package. Run `python backend/check_app_mcp.py` from
-the repository root; use `--source-root <canonical-checkout>` for local offline
-verification. See the [framework guide](app_mcp/README.md) for source ownership.
-
-The [MCP README](app_mcp/README.md) explains shared transport,
+The [MCP README](apps/mcp/README.md#framework) explains shared transport,
 OAuth, configuration, and verification.
 
-Notoli tools and permissions live in the [integration README](integrations/README.md),
-which links to the [ChatGPT plugin guide](../backend/app_mcp/chatgpt/README.md).
+Notoli tools and permissions live in the [integration README](apps/mcp/README.md#application-tools),
+which links to the [ChatGPT plugin guide](apps/mcp/README.md#chatgpt).
 
-Connection manifests, artwork, and package builders live in
-[chatgpt/](app_mcp/chatgpt/README.md).
+Connection manifests and artwork live in
+[chatgpt/](apps/mcp/README.md#chatgpt).
 
 ## 🧪 Checks
+
+Backend tests live in an owning `tests/` package beside each app or configuration
+module. Use descriptive `test_*.py` filenames and behavior-based test class names,
+keep `__init__.py` empty, and put shared setup/builders in fixture-only modules
+such as `helpers.py`. Helpers must not define test cases or import test modules.
+Split independent behavior groups when that makes failures easier to locate;
+keep related end-to-end scenarios together.
+
+Authentication packages share registration, login, password recovery/reset and
+recovery-privacy groups. Configuration owns production settings and email
+configuration/delivery. The canonical MCP framework has identical profile, OAuth
+and transport test modules in all three applications; app tools remain app-owned.
+
+Notes tests separate board/list APIs from item lifecycle, access and membership;
+`apps/notes/tests/test_ordering.py` covers both board-list and per-list item order.
+Authentication retains onboarding and HTTP-method coverage. Notification events
+and bulk actions, app-owned MCP tools and exact proxy trust retain their own
+groups. Notoli always enables its MCP profile.
 
 From the repository root:
 
 ```powershell
-python backend/manage.py test
-ruff check backend
-ruff format backend --check
-python backend/manage.py makemigrations --check --dry-run
+uv run --locked --project backend python backend/manage.py test backend
+uv run --locked --project backend ruff check backend
+uv run --locked --project backend ruff format backend --check
+uv run --locked --project backend python backend/manage.py makemigrations --check --dry-run
 ```
 
 ## 🛠️ Maintenance
@@ -170,9 +214,13 @@ preserve password whitespace, and retain generic account-recovery responses.
 Notification operations remain recipient-scoped; bulk mutations are atomic.
 Preserve pending/error handling through response parsing in the frontend.
 
-Maintain the Python version in `environment.yml` and pip dependencies in
-`requirements.txt` together with CI and Docker. The test runner's fast password
-hasher applies only during tests; normal settings retain secure hashing.
+Declare runtime dependencies in `pyproject.toml` and test/lint tools in its
+`dev` group. Commit the generated `uv.lock`; `uv sync --locked` rejects stale
+locks. Add/remove dependencies with `uv add` / `uv remove` from `backend/`,
+and use `uv lock --upgrade-package <name>` for a deliberate upgrade. Keep
+`project.requires-python` aligned with Python 3.12 in CI and Docker.
+Django uses its default test runner and secure password hashing; focused tests may
+override hashing within their own test scope.
 See [Docker dependency maintenance](../deploy/README.md#development-dependency-reproducibility).
 
 ## 🚀 Production

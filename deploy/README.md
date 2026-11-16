@@ -42,7 +42,7 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart f
 Local MCP discovery uses the backend origin and no trusted proxy. ChatGPT
 connection testing requires a reachable HTTPS origin or secure tunnel with
 consistent issuer, allowed host and CSRF origin. See the
-[connection walkthrough](../backend/app_mcp/chatgpt/README.md).
+[connection walkthrough](../backend/apps/mcp/README.md#chatgpt).
 
 <a id="standalone-https-and-image-checks"></a>
 
@@ -74,7 +74,7 @@ openssl req -x509 -newkey rsa:2048 -nodes \
   -keyout certs/origin.key -out certs/origin.pem -days 365 \
   -subj "/CN=notoli.judeandrewalaba.com" \
   -addext "subjectAltName=DNS:notoli.judeandrewalaba.com,DNS:localhost,IP:127.0.0.1"
-docker build -t ghcr.io/vanillaicecube/notoli-backend:latest ./backend
+docker build --file backend/docker/Dockerfile -t ghcr.io/vanillaicecube/notoli-backend:latest ./backend
 docker build --file frontend/docker/Dockerfile --build-arg REACT_APP_API_BASE_URL= -t ghcr.io/vanillaicecube/notoli-frontend:latest ./frontend
 docker compose -f deploy/docker-compose.yml up -d
 docker compose -f deploy/docker-compose.yml exec -T backend python manage.py migrate
@@ -111,20 +111,37 @@ local hosts file.
 
 ## 🔌 Shared MCP framework
 
-The [MCP framework guide](../backend/app_mcp/README.md) defines opt-in ASGI/proxy/readiness requirements. Local development can call the backend directly; do not treat a local/legacy proxy as production MCP onboarding.
+The [MCP framework guide](../backend/apps/mcp/README.md#framework) defines opt-in ASGI/proxy/readiness requirements. Local development can call the backend directly; do not treat a local/legacy proxy as production MCP onboarding.
 
 <a id="development-dependency-reproducibility"></a>
 
 ## 📦 Development dependency reproducibility
 
-Development images pin reviewed multi-platform Node 26 and Miniforge 26.9.4-0
-registry digests. Production Dockerfiles and the independent release engine are
-unchanged by this development-image policy. Refresh tags/digests together after
-registry verification and a disposable build/configuration check.
+Both backend Dockerfiles install uv using isolated, binary-only pip with reviewed
+SHA-256 hashes from [PyPI's uv 0.13.8 release](https://pypi.org/pypi/uv/0.13.8/json).
+The allowlist covers every platform in the pinned Python image: Linux amd64,
+arm/v7, arm64/v8, 386 and ppc64le. Unlisted artifacts, altered wheels and source
+distributions fail installation. Requirements are passed through stdin; update
+the version and all compatible wheel hashes together after artifact verification.
 
-Frontend production/development Dockerfiles and Nginx configuration live in
-`frontend/docker/`. The build context remains
-`frontend/`; Compose and CI select the Dockerfile explicitly.
+Backend images pin the same reviewed Python 3.12 multi-platform image digest
+and bootstrap uv 0.13.8. Frontend development images retain their pinned Node 26 digest.
+Refresh matching tags/digests after registry verification and a disposable
+build/configuration check.
+
+Backend production/development Dockerfiles live in `backend/docker/`; frontend
+Dockerfiles and Nginx configuration live in `frontend/docker/`. Build contexts
+remain `backend/` and `frontend/`; Compose and CI select each Dockerfile explicitly.
+Each selected Dockerfile uses its adjacent `Dockerfile.dockerignore` or
+`Dockerfile.dev.dockerignore`; exclusion paths remain relative to its backend or
+frontend build context. Keep frontend Nginx configuration and any development
+entrypoint available to the build rather than excluding the whole Docker folder.
+Backend builds run `uv sync --locked` (`--no-dev` in production). The environment
+lives at `/opt/venv`, outside the source bind mount; local `.venv/` is excluded
+from the build context. The development command uses `uv run --locked` to
+synchronize that environment on container restart after changing `pyproject.toml`
+or `uv.lock`; source-only edits continue to hot reload. Rebuild after Python,
+uv or Dockerfile changes.
 
 The frontend starts Vite directly with `npm start`. Source hot reload and the
 persistent `frontend_node_modules` volume remain. Dependency changes require a

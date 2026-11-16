@@ -14,6 +14,39 @@ triggers, repository-specific gates and token permissions; the
 | [publish-ai-review](publish-ai-review/action.yml) | Current-head native review publication and conservative own-feedback reconciliation. |
 | [security-alerts](security-alerts/action.yml) | Validated alert classification, issue lifecycle and separate Project synchronization. |
 
+## 📏 Complete source-diff review limit
+
+All three reviewers (Obi-Wan Code-nobi, Lint Eastwood and RoboCop) inherit a
+2 MB (2,000,000-byte) source-diff limit from [`get-pr-diff`](get-pr-diff/action.yml)
+in all four repositories. No reviewer workflow overrides that limit. Existing
+repository-specific generated-lockfile exclusions and independent scanner gates
+still apply. A source diff at the limit is reviewed in full; a larger source diff
+withholds the model call, publishes an incomplete-review notice and fails the
+reviewer's check. Truncated content cannot produce an approval.
+
+This byte limit is not a token allowance or a guarantee of review quality. The
+180,000-byte changed-file context, 30,000-byte per-file context, 16,000 output-token
+limit and configured model/effort remain unchanged. Focused review remains useful
+for large changes; increasing this limit does not bypass any required reviewer or
+independent gate.
+
+## 🐍 Python toolchain bootstrap
+
+[`setup-uv`](setup-uv/action.yml) installs uv 0.13.8 for the current Ubuntu
+Linux X64 CI runners. Its reviewed manylinux x86_64 wheel SHA-256 is embedded in
+the action, independently of the downloaded artifact; pip requires that hash,
+permits only wheels, installs no dependencies and ignores cached/preinstalled uv.
+Unsupported runner targets fail before installation. Existing local Windows/macOS
+setup guidance is separate from this CI action.
+
+The hash was checked against [PyPI release metadata](https://pypi.org/pypi/uv/0.13.8/json)
+on 2026-11-15. Follow [pip's secure installation guidance](https://pip.pypa.io/en/stable/topics/secure-installs/).
+Toolchain upgrades must review the version and wheel hash together in all four
+repositories; never fetch a replacement expected hash during the CI run. A new
+runner target needs an explicitly reviewed wheel and regression coverage first.
+The application/tooling lockfile does not cover this bootstrap. Repository tokens,
+workflow permissions and locked environment synchronization remain unchanged.
+
 ## 🔐 Reviewer contract
 
 FullStackTemplate owns the reusable reviewer pattern. All four repositories use

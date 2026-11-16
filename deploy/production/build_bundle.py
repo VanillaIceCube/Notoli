@@ -37,9 +37,17 @@ def build(target, env):
         values[key] = env[key]
     if any(any(c in value for c in "\r\n\0") for value in values.values()):
         raise ValueError("Environment values must be single line")
+    # Existing approved repository variables may retain the pre-layout class path.
+    # Normalize only this known value in new bundles; retained recovery data is untouched.
+    if values["DJANGO_EMAIL_BACKEND"] in (
+        "authentication.email_backends.ResendApiEmailBackend",
+        "apps.authentication.email_backends.ResendApiEmailBackend",
+        "apps.email.backends.ResendApiEmailBackend",
+    ):
+        values["DJANGO_EMAIL_BACKEND"] = "anymail.backends.resend.EmailBackend"
     if values["DJANGO_EMAIL_BACKEND"] not in (
         "django.core.mail.backends.smtp.EmailBackend",
-        "authentication.email_backends.ResendApiEmailBackend",
+        "anymail.backends.resend.EmailBackend",
     ):
         raise ValueError("Configure a production email backend")
     release = {"app": APP, "id": identity, "revision": revision}

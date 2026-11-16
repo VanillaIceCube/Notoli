@@ -89,7 +89,7 @@ For `version-update:semver-major` updates, Obi-Wan publishes a **Major upgrade b
 
 The workflow uses pinned Dependabot metadata, the target and first release in the new major line from GitHub Releases, npm/PyPI repository metadata, the bounded Dependabot PR description, a bounded exact-match search of tracked repository text, and [Responses API web search](https://developers.openai.com/api/docs/guides/tools-web-search). Search runs only for semver-major code reviews; other reviews have no web tool. Missing releases, unsupported ecosystems such as Docker, registry and API failures are recorded as evidence gaps so the reviewer can search official sources and explain uncertainty rather than invent release rationale.
 
-Upstream release notes are capped at 12,000 characters per release, repository usage evidence at 30,000 bytes, and the PR description at 12,000 characters. The shared diff action follows MacroMapper's 512 KiB budget and excludes generated npm, Yarn, pnpm, and Poetry lockfiles from the diff for all three reviewers; Obi-Wan's separately bounded changed-file context retains MacroMapper's behavior. Each persona publishes an incomplete-review `COMMENT` and fails its check when the source diff is truncated, withholding the normal model call and verdict. This also ports the complete-diff behavior tracked in [#660](https://github.com/VanillaIceCube/Notoli/issues/660).
+Upstream release notes are capped at 12,000 characters per release, repository usage evidence at 30,000 bytes, and the PR description at 12,000 characters. The shared diff action follows MacroMapper's 2 MB (2,000,000-byte) budget and excludes generated npm, Yarn, pnpm, and Poetry lockfiles from the diff for all three reviewers; Obi-Wan's separately bounded changed-file context retains MacroMapper's behavior. Each persona publishes an incomplete-review `COMMENT` and fails its check when the source diff is truncated, withholding the normal model call and verdict. This also ports the complete-diff behavior tracked in [#660](https://github.com/VanillaIceCube/Notoli/issues/660).
 
 The publisher requires all major-brief fields before publishing a normal major-upgrade review. An incomplete brief produces one unavailable notice per persona/commit and fails the review job. An unchanged verdict retains its brief rather than collapsing to a summary. A native `REQUEST_CHANGES` review fails the corresponding reviewer check, matching MacroMapper. OpenAI requests cap combined reasoning and visible output at 16,000 tokens; invalid credentials, quota errors, and unusable model responses retain the existing visible failure behavior.
 
@@ -137,7 +137,8 @@ Security-alert aggregation:
 Version pins:
 
 - Node version is read from `frontend/package.json` (`engines.node`)
-- Python version is read from `backend/environment.yml` (`python=<version>`)
+- Python requirements are read from `project.requires-python` in `backend/pyproject.toml`; uv synchronizes `backend/uv.lock` against that project definition.
+- `.github/actions/setup-uv` installs uv 0.13.8, runs `uv sync --locked`, and exposes the project environment to Python subprocesses. Lint and parser-only jobs install only the `dev` group; the privileged policy workflow retains reviewed-main checkout and uses no dependency cache.
 - Third-party `dorny/paths-filter` workflow steps are pinned to an immutable commit hash.
 
 CodeQL details:
@@ -199,7 +200,7 @@ actionlint
 
 ### Shared MCP framework
 
-The backend test gate checks the pinned MCP framework manifest and each repository's documented ordinary/MCP-enabled profiles. Template sample fixtures do not create a production target; Notoli and MacroMapper retain their app-owned enabled protocol/domain acceptance. See [the framework guide](../../backend/app_mcp/README.md) and the application MCP guide where present.
+The backend test gate runs the documented ordinary/MCP-enabled profiles. Template sample fixtures do not create a production target; Notoli and MacroMapper retain their app-owned enabled protocol/domain acceptance. See [the framework guide](../../backend/apps/mcp/README.md#framework) and the application MCP guide where present.
 
 ## 🔒 Merge and dependency controls
 
@@ -213,7 +214,7 @@ Dependabot configuration:
   - npm (`/frontend`)
   - pip (`/backend`)
   - GitHub Actions (`/`)
-  - Docker (`/backend`, `/frontend/docker`)
+  - Docker (`/backend/docker`, `/frontend/docker`)
 
 Auto-merge behavior:
 
@@ -388,7 +389,9 @@ remain unchanged. Infrastructure adopts this guard and reviewer eligibility,
 retaining weekly updates, independent Required CI and owner merge.
 
 ```sh
-python -m pip install PyYAML==6.0.3
+uv sync --locked --project backend
+# Add backend/.venv/Scripts (Windows) or backend/.venv/bin (Unix) to PATH
+# for Node regression tests that spawn Python.
 node --test .github/actions/check-codeql-pins/*.test.js .github/actions/dependabot-auto-merge/*.test.js
 ```
 

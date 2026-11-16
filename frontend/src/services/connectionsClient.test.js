@@ -1,5 +1,12 @@
 import { apiFetch } from './requestClient';
-import { decideConsent, loadConsent, loadConnections, revokeConnection } from './connectionsClient';
+import {
+  loadActionApproval,
+  decideActionApproval,
+  decideConsent,
+  loadConsent,
+  loadConnections,
+  revokeConnection,
+} from './connectionsClient';
 vi.mock('./requestClient', () => ({
   apiFetch: vi.fn(),
 }));
@@ -55,6 +62,8 @@ test('backend errors are shown without treating them as successful responses', a
 });
 
 const operations = [
+  ['load action', () => loadActionApproval('ref', '?approval_id=ref')],
+  ['decide action', () => decideActionApproval('SIGNED', 'allow', '?approval_id=ref')],
   ['load consent', () => loadConsent('?state=original')],
   ['decide consent', () => decideConsent('SIGNED-TICKET', 'allow', '?state=original')],
   ['list connections', () => loadConnections()],
@@ -132,4 +141,22 @@ test.each([
 ])('returns the valid JSON %s result', async (_name, operation, data) => {
   mockResponse(200, JSON.stringify(data));
   await expect(operation()).resolves.toEqual(data);
+});
+
+test('action approval uses JWT-only requests, encoded opaque references and signed decisions', async () => {
+  await loadActionApproval('ref&injected=1', '?approval_id=ref');
+  expect(apiFetch.mock.calls[0][0]).toBe(
+    '/auth/mcp/action-approval/?approval_id=ref%26injected%3D1',
+  );
+  expect(apiFetch.mock.calls[0][1].headers.Authorization).toBe('Bearer JWT');
+  expect(apiFetch.mock.calls[0][1].credentials).toBe('omit');
+  await decideActionApproval('SIGNED+ACTION', 'allow', '?approval_id=ref');
+  const [path, options] = apiFetch.mock.calls[1];
+  expect(path).toBe('/auth/mcp/action-approval/');
+  expect(options.authReturnTo).toBe('/connections/authorize?approval_id=ref');
+  expect(options.credentials).toBe('omit');
+  expect(Object.fromEntries(new URLSearchParams(options.body))).toEqual({
+    ticket: 'SIGNED+ACTION',
+    decision: 'allow',
+  });
 });
