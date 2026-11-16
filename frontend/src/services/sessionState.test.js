@@ -150,20 +150,36 @@ test('a failed refresh write retains the coherent prior snapshot', () => {
 });
 
 test('notifies subscribers for relevant session-storage events and releases subscriptions', () => {
+  // The subscriber only consumes these read-only fields from a native storage event.
+  const storageEvent = (key, storageArea = sessionStorage) => {
+    const event = new Event('storage');
+    Object.defineProperties(event, {
+      key: { value: key },
+      storageArea: { value: storageArea },
+    });
+    return event;
+  };
   store.getSessionSnapshot();
   const listener = vi.fn();
   const unsubscribe = store.subscribeSession(listener);
   sessionStorage.setItem('accessToken', 'external');
-  window.dispatchEvent(
-    new StorageEvent('storage', { key: 'accessToken', storageArea: sessionStorage }),
-  );
+  window.dispatchEvent(storageEvent('accessToken'));
   expect(listener).toHaveBeenCalledTimes(1);
   expect(store.getSessionSnapshot().accessToken).toBe('external');
-  window.dispatchEvent(
-    new StorageEvent('storage', { key: 'unrelated', storageArea: sessionStorage }),
-  );
+
+  sessionStorage.setItem('accessToken', 'later-external');
+  window.dispatchEvent(storageEvent('unrelated'));
   expect(listener).toHaveBeenCalledTimes(1);
+  window.dispatchEvent(storageEvent('accessToken', localStorage));
+  expect(listener).toHaveBeenCalledTimes(1);
+
+  sessionStorage.clear();
+  window.dispatchEvent(storageEvent(null));
+  expect(listener).toHaveBeenCalledTimes(2);
+  expect(store.getSessionSnapshot().accessToken).toBeNull();
   unsubscribe();
+  sessionStorage.setItem('accessToken', 'after-unsubscribe');
+  window.dispatchEvent(storageEvent('accessToken'));
   store.clearSession();
-  expect(listener).toHaveBeenCalledTimes(1);
+  expect(listener).toHaveBeenCalledTimes(2);
 });
