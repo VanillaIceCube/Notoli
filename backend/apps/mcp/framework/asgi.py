@@ -6,13 +6,16 @@ from django.utils.module_loading import import_string
 
 
 def create_application(django_application, server=None, transport=None):
+    from .proxy import TrustedProxyHeadersMiddleware
+
     if not settings.MCP_ENABLED:
-        return django_application
+        return TrustedProxyHeadersMiddleware(
+            django_application, trusted_ips=settings.TRUSTED_PROXY_IPS
+        )
     from starlette.applications import Starlette
     from starlette.middleware import Middleware
     from starlette.routing import Mount, Route
 
-    from .proxy import TrustedProxyHeadersMiddleware
     from .server import http_application
 
     if server is None:

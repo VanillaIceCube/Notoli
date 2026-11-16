@@ -546,6 +546,12 @@ wording. FullStackTemplate's inactive target is not created for symmetry.
 
 ## 🧪 Checks and diagnostics
 
+The backend test gate runs the full ordinary suite with `DJANGO_MCP_ENABLED=0`,
+then the shared framework and app tools with `DJANGO_MCP_ENABLED=1` and a local
+test issuer. Either profile failing fails the existing backend check. Disabled
+MCP hides discovery/OAuth routes and skips app-owned OAuth tests; the enabled
+profile retains their full coverage. The production policy explicitly enables MCP.
+
 ### Repository validation and failure diagnostics
 
 The path-aware test gate includes `.github/**`, `deploy/**`, and maintained docs

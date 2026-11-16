@@ -1,5 +1,14 @@
 """Bounded domain-shaped responses retain pagination and committed outcomes."""
 
+# ruff: noqa: E402 -- skip before importing optional OAuth ORM models.
+from unittest import SkipTest
+
+from django.conf import settings
+
+if not settings.MCP_ENABLED:
+    raise SkipTest("Run the enabled app-owned OAuth profile")
+
+
 from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import uuid4

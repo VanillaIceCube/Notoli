@@ -1,10 +1,18 @@
 """Existing-account consent, scope approval and signed ticket validation."""
 
+# ruff: noqa: E402 -- skip before importing optional OAuth ORM models.
+from unittest import SkipTest
+
+from django.conf import settings
+
+if not settings.MCP_ENABLED:
+    raise SkipTest("Run the enabled app-owned OAuth profile")
+
+
 from datetime import timedelta
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlencode, urlsplit
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.utils import timezone

@@ -95,6 +95,7 @@
     },
     "fixed": {
       "DJANGO_DEBUG": "0",
+      "DJANGO_MCP_ENABLED": "1",
       "DJANGO_SQLITE_PATH": "/backend/db.sqlite3",
       "DJANGO_ALLOWED_HOSTS": "notoli.judeandrewalaba.com",
       "DJANGO_CORS_ALLOWED_ORIGINS": "https://notoli.judeandrewalaba.com",

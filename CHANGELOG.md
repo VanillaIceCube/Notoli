@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Default the local MCP example off across all three apps; retain the explicitly enabled production connector.
+- Align MCP enablement with the shared environment switch, preserve exact ASGI proxy trust while disabled, and retain explicit application enablement policies.
 - Align local deployment profiles across applications: loopback-only ports, private backend networks, exact proxy trust, Uvicorn/Vite reload, matching MCP/browser origins and streaming routes, safe forwarded headers, cache controls and local setup instructions.
 - Fold shared release verification and synchronization into the existing bundle builder; keep CI/deployment parity gates and store the immutable Infrastructure source pin in the existing app configuration.
 

@@ -394,6 +394,11 @@ The same immutable source commit is proposed for all three consumers. These
 source-pin PRs do not authorize merging, promotion, or deployment.
 
 
+The app policy fixes `DJANGO_MCP_ENABLED=1`; the frontend Dockerfile defaults
+`VITE_MCP_ENABLED=1`. Both retain the accepted production connector. Changing
+this reviewed profile requires updating its matching readiness policy, rather
+than overriding the fixed setting through release environment values.
+
 ## 🔌 Shared MCP framework
 
 Follow the [MCP framework contract](../../backend/apps/mcp/README.md#framework) before activating an optional app. Notoli and MacroMapper retain their app-owned production MCP profiles and readiness contracts; consult each app's policy and release evidence for the accepted state. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.

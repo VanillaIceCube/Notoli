@@ -51,13 +51,18 @@ describe('AppHeader', () => {
     expect(mockNavigate).toHaveBeenCalledTimes(1);
   });
 
-  test('Connected Apps is available from the existing profile menu', async () => {
+  test.each(['0', '1'])('shows Connected Apps only for enabled MCP (%s)', async (enabled) => {
+    vi.stubEnv('VITE_MCP_ENABLED', enabled);
     renderWithProviders(<AppHeader appBarHeader="Notoli" setDrawerOpen={setDrawerOpen} />);
     await userEvent.click(screen.getByLabelText('user profile'));
-    const connectionLink = screen.getByRole('menuitem', { name: 'Connected Apps' });
-    expect(connectionLink).toHaveAttribute('href', '/connections');
-    await userEvent.click(connectionLink);
-    expect(mockNavigate).not.toHaveBeenCalled();
+    if (enabled === '1') {
+      const connectionLink = screen.getByRole('menuitem', { name: 'Connected Apps' });
+      expect(connectionLink).toHaveAttribute('href', '/connections');
+      await userEvent.click(connectionLink);
+      expect(mockNavigate).not.toHaveBeenCalled();
+    } else {
+      expect(screen.queryByRole('menuitem', { name: 'Connected Apps' })).not.toBeInTheDocument();
+    }
   });
   const setDrawerOpen = vi.fn();
   const jsonResponse = (body, ok = true) => ({

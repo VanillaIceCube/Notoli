@@ -136,7 +136,11 @@ If needed, add `127.0.0.1 notoli.localhost` to your local hosts file.
 
 ## 🔌 MCP integration
 
-Notoli always serves its app-owned MCP connector; there is no local enable flag.
+The app-owned connector uses `DJANGO_MCP_ENABLED`, with the same switch as Template
+and MacroMapper. The local `backend.env` example sets it to `0`; set it to `1` to
+enable MCP. Compose applies the same value to `VITE_MCP_ENABLED`. Recreate the
+development containers or rebuild the HTTPS stack after changing the flag.
+Production policy explicitly fixes both sides on.
 
 Both profiles supply matching MCP/backend origins. Direct development serves
 ASGI with no trusted proxy. ChatGPT connection testing requires a reachable HTTPS
@@ -168,7 +172,7 @@ backend after changing the lockfile so `uv run --locked` synchronizes dependenci
 Host `.venv/` files are excluded from the image build. Conda is no longer required.
 Template and MacroMapper production startup selects Uvicorn when
 `DJANGO_MCP_ENABLED=1` and otherwise retains its app-owned Gunicorn profile.
-Notoli always uses Uvicorn. Local development uses Uvicorn in all three apps.
+Notoli retains Uvicorn in either profile; the app-level switch controls MCP routes. Local development uses Uvicorn in all three apps.
 
 Backend production/development Dockerfiles live in `backend/docker/`; frontend
 Dockerfiles and Nginx configuration live in `frontend/docker/`. Build contexts
