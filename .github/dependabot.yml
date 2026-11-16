@@ -6,7 +6,7 @@ updates:
       interval: "daily"
       time: "00:00"
       
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "/backend"
     schedule:
       interval: "daily"
@@ -26,7 +26,7 @@ updates:
         patterns: ["github/codeql-action", "github/codeql-action/*"]
 
   - package-ecosystem: "docker"
-    directory: "/backend"
+    directory: "/backend/docker"
     schedule:
       interval: "daily"
       time: "00:00"

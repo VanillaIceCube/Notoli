@@ -6,8 +6,8 @@ authentication, and the application shell.
 ## 🧭 Structure
 
 - `docker/`: production/development Dockerfiles and Nginx configuration.
-  Docker builds keep `frontend/` as their context; `.dockerignore` stays at the
-  frontend root.
+  Docker builds keep `frontend/` as their context; each Dockerfile has an adjacent
+  `<Dockerfile-name>.dockerignore` using paths relative to that context.
 - `src/index.css`: the single global stylesheet, loaded by `src/index.jsx`; keep
   theme tokens, document defaults, shared controls and app-specific rules here.
 - `src/components/`: reusable interface components.
@@ -87,8 +87,19 @@ Ordinary login lands on the preferred board; connection login preserves the
 validated pending consent path and query. Connection pages use explicit JWT
 headers and omit cookies. JWTs never enter OAuth callback URLs. Consent and
 revocation stay account-bound; scopes and current membership remain enforced by
-Django. See [Notoli's MCP integration](../backend/integrations/README.md) and
-[client setup](../backend/app_mcp/chatgpt/README.md).
+Django. See [Notoli's MCP integration](../backend/apps/mcp/README.md#application-tools) and
+[client setup](../backend/apps/mcp/README.md#chatgpt).
+
+The existing `/connections/authorize?approval_id=<opaque UUID>` screen supports
+app-owned action review. It loads the complete preview with the app JWT, renders
+untrusted text without HTML, and submits only the signed ticket plus explicit
+Approve/Cancel. It never auto-approves or puts credentials in links. Invalid/stale
+tickets clear controls and require fresh review. Framed action review is refused;
+frontend Nginx applies `frame-ancestors 'none'`, `X-Frame-Options: DENY`, no-store and
+no-referrer to the exact `/connections/authorize` page, preserving embedding policy
+elsewhere. Only MacroMapper configures the backend handler; FullStackTemplate and
+Notoli retain reusable plumbing with action approval unavailable and existing
+domain behavior unchanged.
 
 ### Connections response contract
 

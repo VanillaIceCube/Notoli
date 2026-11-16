@@ -309,8 +309,8 @@ proxy through an application release.
 
 The bundle fixes the issuer and frontend origin to `https://notoli.judeandrewalaba.com`.
 Changing an issuer invalidates resource-bound grants; coordinate client
-reconnection and `backend/app_mcp/chatgpt/mcp.json` updates explicitly. Listing metadata
-is published separately: follow the [listing workflow](../../backend/app_mcp/chatgpt/README.md#listing-metadata-and-updates).
+reconnection and `backend/apps/mcp/chatgpt/mcp.json` updates explicitly. Listing metadata
+is published separately: follow the [listing workflow](../../backend/apps/mcp/README.md#listing-metadata-and-updates).
 The following registration, write, mail and maintenance actions require the
 separately approved operator plan; they are not automatic release probes.
 
@@ -324,18 +324,23 @@ separately approved operator plan; they are not automatic release probes.
 2. Register the exact OAuth callback shown in ChatGPT's connection page:
 
    ```bash
-   docker exec -i notoli-backend python manage.py register_mcp_client \
-     --redirect-uri "<exact ChatGPT callback URI>"
+   docker exec -i notoli-backend python manage.py createapplication public authorization-code \
+     --client-id notoli-chatgpt --name "Notoli for ChatGPT" \
+     --redirect-uris "<exact ChatGPT callback URI>"
    ```
 
    Use client ID `notoli-chatgpt`, token authentication method `none`, and scopes
    `notoli:read notoli:write notoli:share notoli:organize notoli:notifications notoli:delete`
-   for complete coverage, or request a subset. No client secret is needed. Existing
+   for complete coverage, or request a subset. Keep consent enabled (omit
+   `--skip-authorization`) and leave any generated public-client secret unused.
+   Check the success message and Django admin: validation failures can exit zero,
+   and duplicate IDs leave existing registrations unchanged. Edit existing callback
+   allowlists explicitly in admin. Existing
    connections must reconnect and approve new permissions. Sharing affects all
    lists/items in the selected board and remains owner-only. Delete tools require
    explicit confirmation of their impact: board deletion removes all lists/items,
    item deletion removes every occurrence, and list deletion preserves items. See the
-   [personal connection walkthrough](../../backend/app_mcp/chatgpt/README.md).
+   [personal connection walkthrough](../../backend/apps/mcp/README.md#chatgpt).
 
 3. Verify discovery and an unauthenticated challenge before linking:
 
@@ -391,4 +396,4 @@ source-pin PRs do not authorize merging, promotion, or deployment.
 
 ## 🔌 Shared MCP framework
 
-Follow the [MCP framework contract](../../backend/app_mcp/README.md) before activating an optional app. Notoli and MacroMapper retain their app-owned production MCP profiles and readiness contracts; consult each app's policy and release evidence for the accepted state. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.
+Follow the [MCP framework contract](../../backend/apps/mcp/README.md#framework) before activating an optional app. Notoli and MacroMapper retain their app-owned production MCP profiles and readiness contracts; consult each app's policy and release evidence for the accepted state. Use this guide for immutable app releases and explicit recovery; framework adoption does not provision a new template instance.

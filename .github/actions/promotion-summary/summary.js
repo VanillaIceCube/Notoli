@@ -22,7 +22,7 @@ function classify(files) {
     const add = (group, condition) => { if (condition) { groups[group]++; known = true; } };
     add("backend", hit(/^backend\//));
     add("frontend", hit(/^frontend\//));
-    add("authentication_email", hit(/^(backend\/authentication\/|frontend\/src\/pages\/authentication\/)/));
+    add("authentication_email", hit(/^(backend\/(?:apps\/)?authentication\/|frontend\/src\/pages\/authentication\/)/));
     add("automation", hit(/^\.github\//));
     add("migrations", codeNames.some(p => /^backend\/.*\/migrations\/[^/]+\.py$/.test(p) && !p.endsWith("/__init__.py")));
     add("dependencies", hit(/(^|\/)(package(?:-lock)?\.json|pnpm-lock\.yaml|yarn\.lock|requirements[^/]*\.txt|environment\.ya?ml|pyproject\.toml|uv\.lock)$/));

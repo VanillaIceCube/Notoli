@@ -35,6 +35,20 @@ export function decideConsent(ticket, decision, query) {
   return request('/auth/mcp/authorize/', `/connections/authorize${query}`, { ticket, decision });
 }
 
+export function loadActionApproval(reference, query) {
+  return request(
+    `/auth/mcp/action-approval/?approval_id=${encodeURIComponent(reference)}`,
+    `/connections/authorize${query}`,
+  );
+}
+
+export function decideActionApproval(ticket, decision, query) {
+  return request('/auth/mcp/action-approval/', `/connections/authorize${query}`, {
+    ticket,
+    decision,
+  });
+}
+
 export function loadConnections() {
   return request('/auth/mcp/connections/', '/connections');
 }
