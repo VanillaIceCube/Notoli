@@ -1,4 +1,22 @@
 describe('requestClient', () => {
+  test('an unset production API base uses same-origin URLs', async () => {
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('DEV', false);
+    const { apiFetch } = await import('./requestClient');
+    await apiFetch('/api/example/');
+    expect(global.fetch).toHaveBeenCalledWith('/api/example/', {});
+  });
+
+  test('the fallback login redirect preserves the Vite deployment base', async () => {
+    vi.stubEnv('BASE_URL', '/sample/');
+    const { browserLocation, clearNavigate } = await import('./navigationService');
+    const replace = vi.spyOn(browserLocation, 'replace').mockImplementation(() => {});
+    clearNavigate();
+    const { logout } = await import('./requestClient');
+    logout();
+    expect(replace).toHaveBeenCalledWith(`${window.location.origin}/sample/login`);
+  });
+
   test('background requests preserve the active consent URL when authentication expires', async () => {
     const { setNavigate } = await import('./navigationService');
     const mockNavigate = vi.fn();
@@ -57,6 +75,7 @@ describe('requestClient', () => {
         ok: true,
         status: 200,
       });
+    sessionStorage.setItem('accessToken', 'EXPIRED');
     sessionStorage.setItem('refreshToken', 'REFRESH');
     const { apiFetch } = await import('./requestClient');
     await apiFetch('/auth/mcp/authorize/', {
@@ -77,7 +96,10 @@ describe('requestClient', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.unstubAllEnvs();
-    vi.stubEnv('REACT_APP_API_BASE_URL', undefined);
+    vi.stubEnv('VITE_API_BASE_URL', undefined);
+    vi.stubEnv('PROD', false);
+    vi.stubEnv('DEV', true);
+    vi.stubEnv('BASE_URL', '/');
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: true,
@@ -88,11 +110,12 @@ describe('requestClient', () => {
     window.history.replaceState({}, '', '/');
   });
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
-  test('when REACT_APP_API_BASE_URL is set, it prefixes the base URL', async () => {
-    vi.stubEnv('REACT_APP_API_BASE_URL', 'https://api.example.com');
+  test('when VITE_API_BASE_URL is set, it prefixes the base URL', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com');
     const { apiFetch } = await import('./requestClient');
     await apiFetch('/path', {
       method: 'GET',
@@ -101,8 +124,8 @@ describe('requestClient', () => {
       method: 'GET',
     });
   });
-  test('when REACT_APP_API_BASE_URL is blank, it uses same-origin relative URLs', async () => {
-    vi.stubEnv('REACT_APP_API_BASE_URL', '');
+  test('when VITE_API_BASE_URL is blank, it uses same-origin relative URLs', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '');
     const { apiFetch } = await import('./requestClient');
     await apiFetch('/api/boards/', {
       method: 'GET',
@@ -111,8 +134,8 @@ describe('requestClient', () => {
       method: 'GET',
     });
   });
-  test('when REACT_APP_API_BASE_URL is not set, it uses the default base URL', async () => {
-    vi.stubEnv('REACT_APP_API_BASE_URL', undefined);
+  test('when VITE_API_BASE_URL is not set, it uses the default base URL', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', undefined);
     const { apiFetch } = await import('./requestClient');
     await apiFetch('/path', {
       method: 'GET',
@@ -131,14 +154,14 @@ describe('requestClient', () => {
         ok: true,
       }),
     };
-    vi.stubEnv('REACT_APP_API_BASE_URL', undefined);
+    vi.stubEnv('VITE_API_BASE_URL', undefined);
     const { apiFetch } = await import('./requestClient');
     await apiFetch('/path', options);
     expect(global.fetch).toHaveBeenCalledWith('http://localhost:8000/path', options);
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
   test('when a non-auth endpoint and refresh token are invalid, it clears tokens and redirects to /login', async () => {
-    vi.stubEnv('REACT_APP_API_BASE_URL', undefined);
+    vi.stubEnv('VITE_API_BASE_URL', undefined);
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: false,
@@ -166,7 +189,7 @@ describe('requestClient', () => {
     });
   });
   test('when an access token expires, it refreshes once and retries without logging out', async () => {
-    vi.stubEnv('REACT_APP_API_BASE_URL', undefined);
+    vi.stubEnv('VITE_API_BASE_URL', undefined);
     global.fetch = vi
       .fn()
       .mockResolvedValueOnce({
@@ -206,7 +229,7 @@ describe('requestClient', () => {
     });
   });
   test('when refresh has a transient failure, it preserves the session and returns the original response', async () => {
-    vi.stubEnv('REACT_APP_API_BASE_URL', undefined);
+    vi.stubEnv('VITE_API_BASE_URL', undefined);
     global.fetch = vi
       .fn()
       .mockResolvedValueOnce({
@@ -230,7 +253,7 @@ describe('requestClient', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
   test('when /auth/login/ returns 401, it does not redirect or clear tokens', async () => {
-    vi.stubEnv('REACT_APP_API_BASE_URL', undefined);
+    vi.stubEnv('VITE_API_BASE_URL', undefined);
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: false,
@@ -252,7 +275,7 @@ describe('requestClient', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
   test('when /auth/forgot-password/ returns 401, it does not redirect or clear tokens', async () => {
-    vi.stubEnv('REACT_APP_API_BASE_URL', undefined);
+    vi.stubEnv('VITE_API_BASE_URL', undefined);
     global.fetch = vi.fn(() =>
       Promise.resolve({
         ok: false,
@@ -273,7 +296,7 @@ describe('requestClient', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
   test('when logout() is called, it clears tokens/profile and redirects to /login', async () => {
-    vi.stubEnv('REACT_APP_API_BASE_URL', undefined);
+    vi.stubEnv('VITE_API_BASE_URL', undefined);
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
     sessionStorage.setItem('username', 'judea');
@@ -297,7 +320,7 @@ describe('requestClient', () => {
     });
   });
   test('when logout() is called before navigate is registered, it still redirects', async () => {
-    vi.stubEnv('REACT_APP_API_BASE_URL', undefined);
+    vi.stubEnv('VITE_API_BASE_URL', undefined);
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
     const { browserLocation, clearNavigate } = await import('./navigationService');
@@ -456,4 +479,246 @@ describe('requestClient', () => {
       });
     }
   });
+});
+
+describe('session lifecycle', () => {
+  const deferred = () => {
+    let resolve;
+    const promise = new Promise((settle) => {
+      resolve = settle;
+    });
+    return { promise, resolve };
+  };
+  beforeEach(() => {
+    vi.resetModules();
+    sessionStorage.clear();
+    window.history.replaceState({}, '', '/dashboard');
+    vi.stubEnv('VITE_API_BASE_URL', '');
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  test.each([200, 401, 503])(
+    'an old refresh (%s) cannot restore a logged-out session',
+    async (status) => {
+      const pending = deferred();
+      const { persistAuthSession } = await import('./authSession');
+      persistAuthSession({ access: 'old', refresh: 'old-refresh' });
+      const { setNavigate } = await import('./navigationService');
+      const navigate = vi.fn();
+      setNavigate(navigate);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({ status: 401 }).mockReturnValueOnce(pending.promise),
+      );
+      const { apiFetch, logout } = await import('./requestClient');
+      const request = apiFetch('/api/private/');
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+      logout();
+      navigate.mockClear();
+      pending.resolve({
+        status,
+        ok: status === 200,
+        json: async () => ({ access: 'late', refresh: 'late-refresh' }),
+      });
+      await request;
+      expect(sessionStorage.getItem('accessToken')).toBeNull();
+      expect(sessionStorage.getItem('refreshToken')).toBeNull();
+      expect(navigate).not.toHaveBeenCalled();
+      expect(fetch).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  test.each([200, 401, 503])(
+    'an old refresh (%s) cannot overwrite or expire a new login',
+    async (status) => {
+      const pending = deferred();
+      const { persistAuthSession } = await import('./authSession');
+      persistAuthSession({ access: 'old', refresh: 'old-refresh' });
+      const { setNavigate } = await import('./navigationService');
+      const navigate = vi.fn();
+      setNavigate(navigate);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({ status: 401 }).mockReturnValueOnce(pending.promise),
+      );
+      const { apiFetch } = await import('./requestClient');
+      const request = apiFetch('/api/private/');
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+      persistAuthSession({ access: 'new-user', refresh: 'new-user-refresh' });
+      pending.resolve({
+        status,
+        ok: status === 200,
+        json: async () => ({ access: 'late', refresh: 'late-refresh' }),
+      });
+      await request;
+      expect(sessionStorage.getItem('accessToken')).toBe('new-user');
+      expect(sessionStorage.getItem('refreshToken')).toBe('new-user-refresh');
+      expect(navigate).not.toHaveBeenCalled();
+      expect(fetch).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  test('a late protected 401 cannot refresh or clear a newer login', async () => {
+    const pending = deferred();
+    const { persistAuthSession } = await import('./authSession');
+    persistAuthSession({ access: 'old', refresh: 'old-refresh' });
+    vi.stubGlobal('fetch', vi.fn().mockReturnValueOnce(pending.promise));
+    const { apiFetch } = await import('./requestClient');
+    const request = apiFetch('/api/private/');
+    persistAuthSession({ access: 'new-user', refresh: 'new-refresh' });
+    pending.resolve({ status: 401 });
+    await request;
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(sessionStorage.getItem('accessToken')).toBe('new-user');
+  });
+
+  test.each(['/api/private/', '/auth/mcp/connections/'])(
+    'a second 401 from %s expires the session and preserves pending consent',
+    async (path) => {
+      const pendingPath = '/connections/authorize?state=keep%26this';
+      window.history.replaceState({}, '', pendingPath);
+      const { persistAuthSession } = await import('./authSession');
+      persistAuthSession({ access: 'old', refresh: 'old-refresh' });
+      const { setNavigate } = await import('./navigationService');
+      const navigate = vi.fn();
+      setNavigate(navigate);
+      vi.stubGlobal(
+        'fetch',
+        vi
+          .fn()
+          .mockResolvedValueOnce({ status: 401 })
+          .mockResolvedValueOnce({ ok: true, json: async () => ({ access: 'fresh' }) })
+          .mockResolvedValueOnce({ status: 401 }),
+      );
+      const { apiFetch } = await import('./requestClient');
+      await apiFetch(path);
+      expect(sessionStorage.getItem('accessToken')).toBeNull();
+      expect(navigate).toHaveBeenCalledWith(`/login?next=${encodeURIComponent(pendingPath)}`, {
+        replace: true,
+      });
+      expect(fetch).toHaveBeenCalledTimes(3);
+    },
+  );
+
+  test('concurrent requests share one refresh and retry with the rotated token', async () => {
+    const pending = deferred();
+    const { persistAuthSession } = await import('./authSession');
+    persistAuthSession({ access: 'old', refresh: 'old-refresh' });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url, options) => {
+        if (url === '/auth/refresh/') return pending.promise;
+        return Promise.resolve(
+          options.headers.Authorization === 'Bearer fresh'
+            ? { ok: true, status: 200 }
+            : { status: 401 },
+        );
+      }),
+    );
+    const { apiFetch } = await import('./requestClient');
+    const first = apiFetch('/api/one/');
+    const second = apiFetch('/api/two/');
+    await vi.waitFor(() =>
+      expect(fetch.mock.calls.filter(([url]) => url === '/auth/refresh/')).toHaveLength(1),
+    );
+    pending.resolve({
+      ok: true,
+      json: async () => ({ access: 'fresh', refresh: 'rotated-refresh' }),
+    });
+    const results = await Promise.all([first, second]);
+    expect(results.every((result) => result.ok)).toBe(true);
+    expect(sessionStorage.getItem('refreshToken')).toBe('rotated-refresh');
+    expect(fetch.mock.calls.filter(([url]) => url === '/auth/refresh/')).toHaveLength(1);
+  });
+  test('a new login starts its own refresh while the prior session is still pending', async () => {
+    const oldRefresh = deferred();
+    const newRefresh = deferred();
+    const { persistAuthSession } = await import('./authSession');
+    persistAuthSession({ access: 'old', refresh: 'old-refresh' });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url, options) => {
+        if (url === '/auth/refresh/') {
+          return JSON.parse(options.body).refresh === 'old-refresh'
+            ? oldRefresh.promise
+            : newRefresh.promise;
+        }
+        return Promise.resolve(
+          options.headers.Authorization === 'Bearer fresh-new-user'
+            ? { status: 200, ok: true }
+            : { status: 401 },
+        );
+      }),
+    );
+    const { apiFetch } = await import('./requestClient');
+    const first = apiFetch('/api/old/');
+    await vi.waitFor(() =>
+      expect(fetch.mock.calls.filter(([url]) => url === '/auth/refresh/')).toHaveLength(1),
+    );
+    persistAuthSession({ access: 'new-user', refresh: 'new-refresh' });
+    const second = apiFetch('/api/new/');
+    await vi.waitFor(() =>
+      expect(fetch.mock.calls.filter(([url]) => url === '/auth/refresh/')).toHaveLength(2),
+    );
+    oldRefresh.resolve({ ok: true, json: async () => ({ access: 'late-old-user' }) });
+    await first;
+    expect(sessionStorage.getItem('accessToken')).toBe('new-user');
+    newRefresh.resolve({ ok: true, json: async () => ({ access: 'fresh-new-user' }) });
+    expect((await second).ok).toBe(true);
+    expect(sessionStorage.getItem('accessToken')).toBe('fresh-new-user');
+  });
+});
+
+describe('reactive session ownership', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    sessionStorage.clear();
+    window.history.replaceState({}, '', '/private');
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+  test('a foreign explicit Authorization 401 cannot refresh or expire the current user', async () => {
+    const { startSession, getSessionSnapshot } = await import('./sessionState');
+    startSession({ access: 'current', refresh: 'current-refresh' });
+    const session = getSessionSnapshot();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 401 }));
+    const { apiFetch } = await import('./requestClient');
+    await apiFetch('/api/private/', { headers: { Authorization: 'Bearer another-account' } });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0][1].headers.Authorization).toBe('Bearer another-account');
+    expect(getSessionSnapshot()).toBe(session);
+  });
+  test.each(['logout', 'expiry'])(
+    '%s queues feedback before publishing the anonymous session',
+    async (action) => {
+      const { startSession, getSessionSnapshot, subscribeSession } = await import('./sessionState');
+      startSession({ access: 'current', refresh: 'refresh' });
+      const { setNavigate } = await import('./navigationService');
+      setNavigate(vi.fn());
+      const messages = [];
+      const unsubscribe = subscribeSession(() => {
+        if (!getSessionSnapshot().accessToken)
+          messages.push(JSON.parse(sessionStorage.getItem('pendingSnackbar')));
+      });
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 401 }));
+      const { apiFetch, logout } = await import('./requestClient');
+      if (action === 'logout') logout();
+      else await apiFetch('/api/private/');
+      expect(messages).toEqual([
+        expect.objectContaining({
+          message:
+            action === 'logout'
+              ? 'Logout Successful :)'
+              : 'Your session expired. Please log in again.',
+        }),
+      ]);
+      unsubscribe();
+    },
+  );
 });

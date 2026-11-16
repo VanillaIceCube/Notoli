@@ -1,5 +1,11 @@
-import { screen } from '@testing-library/react';
-import { Route, Routes, useLocation, useNavigationType } from 'react-router-dom';
+import {
+  startSession,
+  clearSession,
+  rotateSessionTokens,
+  getSessionSnapshot,
+} from '../services/sessionState';
+import { act, fireEvent, screen } from '@testing-library/react';
+import { Route, Routes, useLocation, useNavigationType } from 'react-router';
 
 import AuthenticatedRoute from './AuthenticatedRoute';
 import { renderWithProviders } from '../test-helpers/utils';
@@ -68,4 +74,31 @@ describe('AuthenticatedRoute', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/login');
     expect(screen.queryByText('secret')).not.toBeInTheDocument();
   });
+});
+
+test('keeps private state across rotation, resets it for a new login and reacts to logout', () => {
+  startSession({ access: 'a', refresh: 'r' });
+  renderWithProviders(
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <AuthenticatedRoute>
+            <input aria-label="Private draft" defaultValue="" />
+          </AuthenticatedRoute>
+        }
+      />
+      <Route path="/login" element={<div>Signed out</div>} />
+    </Routes>,
+  );
+  fireEvent.change(screen.getByLabelText('Private draft'), {
+    target: { value: 'old account draft' },
+  });
+  const session = getSessionSnapshot();
+  act(() => rotateSessionTokens({ access: 'rotated' }, session.version, 'r'));
+  expect(screen.getByLabelText('Private draft')).toHaveValue('old account draft');
+  act(() => startSession({ access: 'new', refresh: 'new-r' }));
+  expect(screen.getByLabelText('Private draft')).toHaveValue('');
+  act(() => clearSession());
+  expect(screen.getByText('Signed out')).toBeVisible();
 });

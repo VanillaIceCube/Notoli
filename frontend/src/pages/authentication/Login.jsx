@@ -1,6 +1,7 @@
+import { getSessionVersion } from '../../services/sessionState';
 import { useState, useCallback, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
-import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
 import { fetchBoards as fetchBoardsApi, login } from '../../services/notoliApiClient';
 import { persistAuthSession, readOkJson } from '../../services/authSession';
 import { getPreferredBoardId } from '../../services/lastBoard';
@@ -36,14 +37,14 @@ export default function Login({ showSnackbar }) {
 
   // Pull Board List
   const fetchBoards = useCallback(
-    async (token, showError) => {
+    async (token, showError, sessionVersion) => {
       try {
         const response = await fetchBoardsApi(token);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         return data;
       } catch (err) {
-        if (showError) {
+        if (showError && getSessionVersion() === sessionVersion) {
           const isHttpError = typeof err?.message === 'string' && err.message.startsWith('HTTP ');
           showSnackbar('error', isHttpError ? 'Board load failed :(' : 'Network error :(');
         }
@@ -62,6 +63,7 @@ export default function Login({ showSnackbar }) {
 
       const data = await readOkJson(response, 'Login failed :(');
       persistAuthSession(data);
+      const sessionVersion = getSessionVersion();
 
       // Update Snackbar
       const welcomeName =
@@ -77,7 +79,8 @@ export default function Login({ showSnackbar }) {
       }
 
       // Navigate to first Board, if empty, navigate to root
-      const boards = await fetchBoards(data.access, true);
+      const boards = await fetchBoards(data.access, true, sessionVersion);
+      if (getSessionVersion() !== sessionVersion) return;
       const boardId = getPreferredBoardId(boards);
       if (boardId) {
         navigate(`/board/${boardId}`);
@@ -112,10 +115,7 @@ export default function Login({ showSnackbar }) {
       <Typography variant="h3" sx={{ mt: 2, fontWeight: 'bold', color: 'white' }}>
         notoli
       </Typography>
-      <Paper
-        elevation={3}
-        sx={{ p: 4, pb: 2, width: '100%', background: 'var(--secondary-background-color)' }}
-      >
+      <Paper elevation={3} sx={{ p: 4, pb: 2, width: '100%' }}>
         <Box
           component="form"
           autoComplete="on"
@@ -127,7 +127,6 @@ export default function Login({ showSnackbar }) {
         >
           <TextField
             fullWidth
-            sx={{ background: 'white' }}
             label="Email"
             type="email"
             name="email"
@@ -137,7 +136,6 @@ export default function Login({ showSnackbar }) {
           />
           <TextField
             fullWidth
-            sx={{ background: 'white' }}
             label="Password"
             type="password"
             name="password"
@@ -145,13 +143,7 @@ export default function Login({ showSnackbar }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button
-            fullWidth
-            sx={{ backgroundColor: 'var(--secondary-color)' }}
-            type="submit"
-            disabled={isSubmitting}
-            variant="contained"
-          >
+          <Button fullWidth type="submit" disabled={isSubmitting} variant="contained">
             <Typography variant="h5" align="center">
               {isSubmitting ? 'Logging in...' : 'Login'}
             </Typography>

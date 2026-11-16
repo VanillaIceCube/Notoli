@@ -1,4 +1,6 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { startSession } from '../services/sessionState';
+vi.mock('@mui/material', async () => await vi.importActual('@mui/material'));
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import BoardNavigationDrawer from './BoardNavigationDrawer';
@@ -18,8 +20,8 @@ const { mockNavigate, mockUseLocation } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockUseLocation: vi.fn(),
 }));
-vi.mock('react-router-dom', async () => ({
-  ...(await vi.importActual('react-router-dom')),
+vi.mock('react-router', async () => ({
+  ...(await vi.importActual('react-router')),
   useNavigate: () => mockNavigate,
   useLocation: () => mockUseLocation(),
 }));
@@ -683,4 +685,116 @@ describe('BoardNavigationDrawer', () => {
     expect(createBoard).not.toHaveBeenCalled();
     expect(showSnackbar).toHaveBeenCalledWith('error', 'Authentication required.');
   });
+  test('an old board-name response cannot change the new account label', async () => {
+    const pending = createDeferred();
+    fetchBoardApi
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValue({ ok: true, json: async () => ({ name: 'New account board' }) });
+    const { setDrawerBoardsLabel } = await renderDrawer();
+    act(() => startSession({ access: 'new', refresh: 'new-r' }));
+    await waitFor(() => expect(setDrawerBoardsLabel).toHaveBeenCalledWith('New account board'));
+    await act(async () => {
+      pending.resolve({ ok: true, json: async () => ({ name: 'Old account board' }) });
+    });
+    expect(setDrawerBoardsLabel).not.toHaveBeenCalledWith('Old account board');
+  });
+
+  test('a board-name response after unmount cannot publish a parent label', async () => {
+    const pending = createDeferred();
+    fetchBoardApi.mockReturnValueOnce(pending.promise);
+    const { unmount, setDrawerBoardsLabel } = await renderDrawer();
+    unmount();
+    await act(async () => {
+      pending.resolve({ ok: true, json: async () => ({ name: 'Old board' }) });
+    });
+    expect(setDrawerBoardsLabel).not.toHaveBeenCalled();
+  });
+
+  test('a delete finishing after account replacement cannot navigate or show a stale snackbar', async () => {
+    const pending = createDeferred();
+    deleteBoard.mockReturnValueOnce(pending.promise);
+    const { showSnackbar } = await renderDrawer();
+    await openBoardList();
+    await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /remove/i }));
+    expect(deleteBoard).toHaveBeenCalledWith(1, 'token');
+    act(() => startSession({ access: 'new', refresh: 'new-r' }));
+    await act(async () => {
+      pending.resolve({ ok: true });
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(showSnackbar).not.toHaveBeenCalled();
+  });
 });
+
+/* eslint-disable testing-library/no-node-access -- Real MUI portal/exit layout must be measured and its backdrop clicked. */
+describe('BoardNavigationDrawer menu transitions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionStorage.clear();
+    mockUseLocation.mockReturnValue({ pathname: '/' });
+    getBoardId.mockReturnValue(null);
+    fetchBoardApi.mockResolvedValue({ ok: true, json: async () => boardFixtures[0] });
+    fetchBoardsApi.mockResolvedValue({ ok: true, json: async () => boardFixtures });
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  async function openMenu() {
+    sessionStorage.setItem('accessToken', 'fixture');
+    sessionStorage.setItem('username', 'owner');
+    renderWithProviders(
+      <BoardNavigationDrawer
+        open
+        setDrawerOpen={vi.fn()}
+        drawerBoardsLabel=""
+        setDrawerBoardsLabel={vi.fn()}
+        showSnackbar={vi.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Board' }));
+    const icon = (await screen.findAllByTestId('MoreVertIcon'))[0];
+    const trigger = icon.closest('button') || icon;
+    vi.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+      top: 20,
+      left: 20,
+      right: 40,
+      bottom: 40,
+      width: 20,
+      height: 20,
+    });
+    await userEvent.click(trigger);
+    return trigger;
+  }
+
+  test.each(['escape', 'outside'])(
+    'all owner actions survive the entire %s dismissal transition',
+    async (method) => {
+      const trigger = await openMenu();
+      const menu = screen.getByRole('menu');
+      const actions = screen.getAllByRole('menuitem');
+      expect(actions.map((item) => item.textContent)).toEqual(['Share', 'Rename', 'Remove']);
+      // Force a measurable exit interval in jsdom (it does not lay out the paper).
+      vi.spyOn(menu.parentElement, 'clientHeight', 'get').mockReturnValue(180);
+      if (method === 'escape') fireEvent.keyDown(menu, { key: 'Escape' });
+      else fireEvent.click(menu.closest('.MuiModal-root').querySelector('.MuiBackdrop-root'));
+      for (const action of actions) expect(menu).toContainElement(action);
+      await waitFor(() => expect(menu).not.toBeInTheDocument());
+      expect(trigger).toHaveFocus();
+    },
+  );
+
+  test('rapid reopen cancels exit cleanup and keyboard actions stay available', async () => {
+    const trigger = await openMenu();
+    const menu = screen.getByRole('menu');
+    vi.spyOn(menu.parentElement, 'clientHeight', 'get').mockReturnValue(180);
+    // Reopen while the previous exit is pending, without waiting for its timeout.
+    fireEvent.keyDown(menu, { key: 'Escape' });
+    fireEvent.click(trigger);
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Rename' })).toBeVisible());
+    await userEvent.keyboard('{ArrowDown}{Enter}');
+    expect(screen.getByRole('textbox')).toHaveValue('test_board_01');
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+  });
+});
+/* eslint-enable testing-library/no-node-access */

@@ -14,6 +14,9 @@ describe('InlineTextEditor', () => {
       />,
     );
     expect(screen.getByPlaceholderText('New item...')).toHaveValue('Draft');
+    // eslint-disable-next-line testing-library/no-node-access -- Check the rendered standard field does not inherit the outlined-field white surface.
+    const field = screen.getByRole('textbox').closest('.MuiTextField-root');
+    expect(getComputedStyle(field).backgroundColor).toBe('rgba(0, 0, 0, 0)');
   });
   test('when text changes, it reports the next value to the parent', () => {
     const onChange = vi.fn();

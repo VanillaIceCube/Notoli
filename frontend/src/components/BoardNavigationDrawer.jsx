@@ -1,3 +1,5 @@
+import useSession, { useSessionGuard } from '../hooks/useSession';
+import { getSessionSnapshot } from '../services/sessionState';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
@@ -20,7 +22,7 @@ import MoreVert from '@mui/icons-material/MoreVert';
 import Share from '@mui/icons-material/Share';
 import Divider from '@mui/material/Divider';
 import { getBoardId } from '../utils/Navigation';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
@@ -50,9 +52,8 @@ export default function BoardNavigationDrawer({
 
   const boardId = getBoardId(location.pathname);
 
-  const token = sessionStorage.getItem('accessToken');
-  const currentUsername = sessionStorage.getItem('username');
-  const currentEmail = sessionStorage.getItem('email');
+  const { accessToken: token, username: currentUsername, email: currentEmail } = useSession();
+  const isCurrentSession = useSessionGuard();
 
   const fetchBoardName = useCallback(async () => {
     if (!boardId || !token) return '';
@@ -73,12 +74,12 @@ export default function BoardNavigationDrawer({
     (async () => {
       try {
         const name = await fetchBoardName();
-        setDrawerBoardsLabel(name);
+        if (isCurrentSession()) setDrawerBoardsLabel(name);
       } catch {
-        setDrawerBoardsLabel('');
+        if (isCurrentSession()) setDrawerBoardsLabel('');
       }
     })();
-  }, [fetchBoardName, setDrawerBoardsLabel]);
+  }, [fetchBoardName, setDrawerBoardsLabel, isCurrentSession]);
 
   // Fetch Board List
   const [boards, setBoards] = useState([]);
@@ -126,7 +127,7 @@ export default function BoardNavigationDrawer({
 
   const onAdd = async () => {
     if (!newBoardName.trim()) return;
-    const currentToken = sessionStorage.getItem('accessToken');
+    const currentToken = getSessionSnapshot().accessToken;
     if (!currentToken) {
       const message = 'Authentication required.';
       setError(message);
@@ -135,6 +136,7 @@ export default function BoardNavigationDrawer({
       }
       return;
     }
+    if (!isCurrentSession()) return;
     setError(null);
 
     try {
@@ -154,6 +156,7 @@ export default function BoardNavigationDrawer({
         throw new Error(errorMsg);
       }
       const created = await response.json();
+      if (!isCurrentSession()) return;
       setBoards((prev) => [...prev, created]);
 
       setIsAdding(false);
@@ -162,6 +165,7 @@ export default function BoardNavigationDrawer({
         showSnackbar('success', `Board "${created.name}" created!`);
       }
     } catch (err) {
+      if (!isCurrentSession()) return;
       const message = err?.message || err?.toString() || 'Unable to create board.';
       setError(err?.toString() || message);
       if (typeof showSnackbar === 'function') {
@@ -205,7 +209,7 @@ export default function BoardNavigationDrawer({
 
   const onEdit = async () => {
     if (!editBoardName.trim()) return;
-    const currentToken = sessionStorage.getItem('accessToken');
+    const currentToken = getSessionSnapshot().accessToken;
     if (!currentToken) {
       const message = 'Authentication required.';
       setError(message);
@@ -214,6 +218,7 @@ export default function BoardNavigationDrawer({
       }
       return;
     }
+    if (!isCurrentSession()) return;
     setError(null);
 
     try {
@@ -227,6 +232,7 @@ export default function BoardNavigationDrawer({
         throw new Error(errorMsg);
       }
       const updated = await response.json();
+      if (!isCurrentSession()) return;
       setBoards((prev) => prev.map((board) => (board.id === updated.id ? updated : board)));
 
       closeEdit();
@@ -234,6 +240,7 @@ export default function BoardNavigationDrawer({
         showSnackbar('success', `Board renamed to "${updated.name}".`);
       }
     } catch (err) {
+      if (!isCurrentSession()) return;
       const message = err?.message || err?.toString() || 'Unable to update board.';
       setError(err?.toString() || message);
       if (typeof showSnackbar === 'function') {
@@ -269,7 +276,7 @@ export default function BoardNavigationDrawer({
 
   // Remove board
   const onDelete = async (id) => {
-    const currentToken = sessionStorage.getItem('accessToken');
+    const currentToken = getSessionSnapshot().accessToken;
     if (!currentToken) {
       const message = 'Authentication required.';
       setError(message);
@@ -279,10 +286,12 @@ export default function BoardNavigationDrawer({
       handleTripleDotClose();
       return;
     }
+    if (!isCurrentSession()) return;
     setError(null);
 
     try {
       const response = await deleteBoard(id, currentToken);
+      if (!isCurrentSession()) return;
 
       if (!response.ok) {
         const errorMsg = await getResponseErrorMessage(
@@ -299,6 +308,7 @@ export default function BoardNavigationDrawer({
         navigate('/');
       }
     } catch (err) {
+      if (!isCurrentSession()) return;
       const message = err?.message || err?.toString() || 'Unable to delete board.';
       setError(err?.toString() || message);
       if (typeof showSnackbar === 'function') {
@@ -332,8 +342,6 @@ export default function BoardNavigationDrawer({
       ModalProps={{ keepMounted: true }}
       sx={{
         '& .MuiDrawer-paper': {
-          bgcolor: 'var(--secondary-background-color)',
-          color: 'var(--secondary-color)',
           borderTopLeftRadius: 15,
           borderBottomLeftRadius: 15,
         },
@@ -446,7 +454,6 @@ export default function BoardNavigationDrawer({
                                 input: {
                                   sx: {
                                     color: 'var(--secondary-color)',
-                                    '&:after': { borderBottomColor: 'var(--secondary-color)' },
                                   },
                                 },
                               }}
@@ -543,7 +550,6 @@ export default function BoardNavigationDrawer({
                       input: {
                         sx: {
                           color: 'var(--secondary-color)',
-                          '&:after': { borderBottomColor: 'var(--secondary-color)' },
                         },
                       },
                     }}
@@ -576,15 +582,6 @@ export default function BoardNavigationDrawer({
           transition: {
             onExited: () => {
               if (!tripleDotOpen) setSelectedBoard(null);
-            },
-          },
-          paper: {
-            sx: {
-              backgroundColor: 'var(--secondary-background-color)',
-              color: 'var(--secondary-color)',
-              boxShadow: 3,
-              border: '2.5px solid var(--background-color)',
-              borderRadius: 1.5,
             },
           },
         }}

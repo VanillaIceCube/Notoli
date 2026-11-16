@@ -8,11 +8,14 @@ authentication, and the application shell.
 - `docker/`: production/development Dockerfiles and Nginx configuration.
   Docker builds keep `frontend/` as their context; each Dockerfile has an adjacent
   `<Dockerfile-name>.dockerignore` using paths relative to that context.
-- `src/index.css`: the single global stylesheet, loaded by `src/index.jsx`; keep
-  theme tokens, document defaults, shared controls and app-specific rules here.
+- `src/theme.js`: application palette, document typography, shared Material UI defaults
+  and the existing CSS color variables, applied through `ThemeProvider` and `CssBaseline`.
+- `src/index.css`: platform font rendering and remaining app-specific global rules,
+  loaded by `src/index.jsx`. Keep responsive page geometry in the owning component.
 - `src/components/`: reusable interface components.
 - `src/pages/`: application pages and routes.
-- `src/services/`: API requests and session handling.
+- `src/services/`: API requests and centralized session storage.
+- `src/hooks/`: reactive session access and shared notification lifecycle behavior.
 - `src/test-helpers/`: shared test setup and reusable helpers.
   App, startup and feature tests stay beside the files they exercise.
 
@@ -32,24 +35,38 @@ Open `http://notoli.localhost:3000`. For Docker hot reload, follow the
 
 ## ⚙️ Configuration
 
-`REACT_APP_API_BASE_URL` controls the API origin. Leave it blank for production same-origin
+`VITE_API_BASE_URL` controls the API origin. Leave it blank for production same-origin
 requests; client-side settings must contain no secrets. The build output is
-`build/`.
+`dist/`.
 
-Development Compose supplies `REACT_APP_API_BASE_URL` through its `environment`
+Development Compose supplies `VITE_API_BASE_URL` through its `environment`
 settings. Production Docker builds pass the matching build argument, which is
 compiled into the static assets; a blank value selects same-origin requests.
-Local `.env` files are excluded from Docker build contexts.
+Local `.env` files are excluded from Docker build contexts. Update local shell and
+dotenv settings to `VITE_API_BASE_URL`; the retired `REACT_APP_API_BASE_URL` and
+`PUBLIC_URL` variables are no longer read. Router and asset prefixes use Vite's
+`base` setting.
 
 For direct `npm` development, an unset API origin uses `http://localhost:8000`.
 An explicit shell value overrides that default; an explicit blank uses same-origin.
-`PUBLIC_URL` supplies the router basename, defaulting to `/`. HTML asset URLs
-use `%BASE_URL%` from Vite's separate `base` setting. The API origin is independent
+Vite's `base` setting supplies the router basename through
+`import.meta.env.BASE_URL` and HTML asset URLs through `%BASE_URL%`. The API origin is independent
 of both. Production uses subdomain-root routing and Nginx's SPA fallback for deep
 links; changing one prefix alone does not configure a complete subdirectory
 deployment.
 
 ## 🗺️ Routes and behavior
+
+Route pages load through `React.lazy` and the shared `RouteContent` boundary.
+The application shell stays usable while a page loads. Authentication guards
+run before protected lazy pages render, and a failed import offers a full-page
+reload at the current URL, preserving its query and deployment base. Navigating
+to another route clears that route's error state. The build emits separate page
+chunks; shared vendor code remains part of the signed-out dependency graph.
+
+Notoli gives each active/pending notepad slot its own boundary. The active page
+stays visible while a pending chunk loads; a pending import failure activates
+its recovery UI instead of leaving it hidden behind the previous page.
 
 - `/` redirects authenticated users to their first board when one exists
 - `/board/:boardId` shows lists for a board
@@ -71,14 +88,40 @@ compatibility form, not an additional React route.
 
 ## 🔐 Sessions and connections
 
+`src/services/sessionState.js` is the sole owner of the compatible access/refresh
+and username/email storage keys. Its cached snapshots and subscriptions feed
+`useSession`; login/logout replace the account generation, while guarded refresh
+updates tokens without replacing that generation. Do not read or mutate auth
+storage in components or API adapters. Use the snapshot for request-time reads,
+the hook for rendering, and the store operations for writes. The unrelated
+`pendingSnackbar` key remains the login-message handoff.
+
+The application shell and protected content reset on account changes, including
+open menus, private drafts and Notoli's board drawer state. Async continuations
+use `useSessionGuard` before account-scoped navigation or global UI updates.
+Logout/expiry queue their login message before publishing the cleared session;
+root snackbar state preserves successful login/register feedback and excludes
+messages from an older generation.
+
+`useNotifications` owns loading, retries, unread state and synchronous item/bulk
+locks. Headers inject stable app-owned API adapters and keep presentation and
+target navigation local. Generation and unmount guards discard stale lists,
+mutations and errors; token rotation preserves pending work. An earlier list
+request cannot undo a newer mutation. MacroMapper retains its existing HTTP
+error-message adapter.
+
 Authentication forms disable submission while pending. Tokens and profile data
 live in `sessionStorage`; new sessions trim profile fields and clear absent values.
 Protected requests use the stored JWT when the caller omits Authorization.
 Public authentication forms do not receive an injected access token.
 
 The request wrapper preserves object, tuple-array, and native `Headers` values
-through one JWT refresh/retry. Invalid refresh credentials clear the session;
-temporary refresh failures retain it. Notification failures keep actions available
+through one JWT refresh/retry. Invalid refresh credentials or a second protected
+401 after refresh clear the session;
+temporary refresh failures retain it. Refresh results belong to the login that
+started them: logout or a new login invalidates pending work. Background failures
+preserve an active, validated connection path and query through login.
+Notification failures keep actions available
 for Retry, and malformed mark-read responses must not navigate away.
 Use semantic links for destinations and buttons for actions, with keyboard and
 native new-tab coverage.
@@ -111,8 +154,8 @@ HTTP failures use the first nonblank string in `error_description`, `detail`, th
 nested objects or unrelated JSON fields as fallback messages. Backend public error
 fields must be safe to display. Preserve JWT-only headers, omitted cookies, form
 encoding, signed consent tickets and validated callbacks. Invalid refresh credentials
-clear the session; transient proxy/refresh failures retain it for retry. Notoli
-retains its extra post-refresh 401 handling and legacy API-base compatibility.
+clear the session; transient proxy/refresh failures retain it for retry. All three applications share the same post-refresh 401
+and session-lifecycle contract.
 
 ## 🧩 Board and list behavior
 
@@ -156,6 +199,18 @@ immediately on route exit/unmount and once a disabled hook has settled.
 
 ## 🎨 Style guide
 
+`src/theme.js` owns the dark document background, pale-yellow paper surfaces and
+neutral gray controls. MUI uses light control semantics on these pale surfaces;
+body text remains white on the dark document. Preserve the system document font,
+Roboto MUI controls and content-box document sizing when changing the baseline.
+The four existing CSS color variables come from this theme, not duplicated CSS
+literals. App bars, overlay frames, outlined white fields and focus colors share
+theme defaults. Standard inline editors remain transparent; specialized field
+surfaces, divider emphasis/insets and responsive layout remain component-owned.
+MUI 9 applies the outlined surface through `MuiTextField.styleOverrides.root.variants`;
+the real startup test verifies the rendered white background, while standard editors stay transparent.
+Test helpers use the actual app theme with only ripple suppression added.
+
 ### Dividers
 
 - Dialog and modal dividers should be inset to align with the content padding.
@@ -169,15 +224,31 @@ immediately on route exit/unmount and once a disabled hook has settled.
 - In member lists, show a display name plus one secondary identifier when possible instead of separate labeled username and email rows.
 - Sharing dialogs should use a single `People with access` list with consistent user rows, avatars, role labels, and owner-only management controls.
 - When a section heading already labels an input group, prefer placeholder text plus an accessible `aria-label` over a floating visual input label.
-- Text field focus states should use the Notoli secondary color globally, never the default Material UI blue. Keep the global overrides in `src/index.css`.
+- Text field focus states use the Notoli control color globally. Keep input-label,
+  outline and underline overrides in `src/theme.js`.
 
 ## 🧪 Checks
+
+Keep every test beside its implementation with the same basename and extension:
+`Component.jsx` pairs with `Component.test.jsx`, and `service.js` pairs with
+`service.test.js`. Put behavior and integration scenarios in that owning suite
+using scoped `describe` blocks, rather than adding standalone behavior-named or
+`.integration.test` files. JavaScript hooks and components that return no JSX keep
+`.test.js` harnesses using `createElement` when necessary. Shared setup and reusable
+helpers belong in `src/test-helpers/`; tests of a domain package's public API pair
+with its `index.js` entry point.
+
+Keep shared session, request, connection and navigation regressions aligned across
+FullStackTemplate, MacroMapper and Notoli when the behavior applies. Preserve real
+React Router and Material UI keyboard/exit coverage when consolidating suites;
+app-specific domain and route expectations remain in their owning application.
 
 `src/index.test.jsx` boots the real entry point, React root and application in
 jsdom, then checks the signed-out login route and usable form without private API
 requests or uncaught startup errors. It unmounts the real root and restores test
-state afterward. Existing Material UI test shims still apply; browser layout and
-built HTML are outside this test's scope.
+state afterward. It also types into the themed login field and verifies shared
+focus/action colors, document sizing and font ownership. Existing Material UI test
+shims still apply; browser layout and built HTML are outside this test's scope.
 
 `npm run build` runs strict lint before Vite's production build. Use
 `npm run lint:fix` to apply available lint fixes.
@@ -192,6 +263,12 @@ npm run build
 ```
 
 ## 🛠️ Maintenance
+
+Shared frontend dependency ranges align across the template and both applications:
+React/React DOM 19.3.1, Material UI/icons 9.5, React Router 8.5.1, and Prettier 3.10.
+Use `react-router` imports. Testing Library belongs in development dependencies;
+TypeScript is explicitly pinned for the tooling peer graph. Keep app-specific
+packages, including Notoli drag-and-drop and its test lint plugin, app-owned.
 
 The frontend temporarily overrides `minimatch@>=9 <11.0.1` to `^11.0.1` for
 [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249).
@@ -208,8 +285,6 @@ parent or override changes. Review upstream API changes before widening the
 selector. Remove overrides once all parent ranges natively accept patched
 versions, regenerate the lockfile and repeat those checks.
 
-Notoli also overrides `glob@>=9 <14.0.2` to `^14.0.2` for
-[GHSA-3g3m-2fjr-6pw4](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4).
 Jest/Babel and their glob/deepmerge test-only graph were removed by the Vitest migration. Keep lockfile updates coupled to supported lint/test dependencies.
 
 Keep Material UI and icons on compatible versions and regenerate the lockfile

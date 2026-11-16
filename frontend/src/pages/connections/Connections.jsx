@@ -1,6 +1,7 @@
+import { useSessionGuard } from '../../hooks/useSession';
 import { useEffect, useState } from 'react';
 import { Alert, Box, Button, Paper, Stack, Typography } from '@mui/material';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router';
 import {
   decideActionApproval,
   decideConsent,
@@ -17,7 +18,7 @@ function ConnectionSurface({ title, children }) {
       <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
         {title}
       </Typography>
-      <Paper sx={{ p: 3, background: 'var(--secondary-background-color)' }}>
+      <Paper sx={{ p: 3 }}>
         <Stack spacing={2}>{children}</Stack>
       </Paper>
     </Stack>
@@ -25,6 +26,7 @@ function ConnectionSurface({ title, children }) {
 }
 
 function OAuthConnectionConsent() {
+  const isCurrentSession = useSessionGuard();
   const { search } = useLocation();
   const [consent, setConsent] = useState(null);
   const [error, setError] = useState('');
@@ -36,25 +38,27 @@ function OAuthConnectionConsent() {
     setError('');
     loadConsent(search)
       .then((data) => {
-        if (!active) return;
+        if (!active || !isCurrentSession()) return;
         if (data.redirect_url) followOAuthCallback(data.redirect_url);
         else setConsent(data);
       })
       .catch((err) => {
-        if (active) setError(err.message);
+        if (active && isCurrentSession()) setError(err.message);
       });
     return () => {
       active = false;
     };
-  }, [search]);
+  }, [search, isCurrentSession]);
 
   const decide = async (decision) => {
+    if (!isCurrentSession()) return;
     setBusy(true);
     setError('');
     try {
       const data = await decideConsent(consent.ticket, decision, search);
-      followOAuthCallback(data.redirect_url);
+      if (isCurrentSession()) followOAuthCallback(data.redirect_url);
     } catch (err) {
+      if (!isCurrentSession()) return;
       setError(err.message);
       setBusy(false);
     }
@@ -79,12 +83,7 @@ function OAuthConnectionConsent() {
             <Button disabled={busy} variant="outlined" onClick={() => decide('cancel')}>
               Cancel
             </Button>
-            <Button
-              disabled={busy}
-              variant="contained"
-              sx={{ backgroundColor: 'var(--secondary-color)' }}
-              onClick={() => decide('allow')}
-            >
+            <Button disabled={busy} variant="contained" onClick={() => decide('allow')}>
               Allow
             </Button>
           </Stack>
@@ -95,6 +94,7 @@ function OAuthConnectionConsent() {
 }
 
 function ActionApproval({ reference, search }) {
+  const isCurrentSession = useSessionGuard();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -105,27 +105,30 @@ function ActionApproval({ reference, search }) {
     let active = true;
     loadActionApproval(reference, search)
       .then((result) => {
-        if (active) setData(result);
+        if (active && isCurrentSession()) setData(result);
       })
       .catch((err) => {
-        if (active) setError(err.message);
+        if (active && isCurrentSession()) setError(err.message);
       });
     return () => {
       active = false;
     };
-  }, [reference, search, framed]);
+  }, [reference, search, framed, isCurrentSession]);
 
   const decide = async (decision) => {
+    if (!isCurrentSession()) return;
     setBusy(true);
     setError('');
     try {
-      setData(await decideActionApproval(data.ticket, decision, search));
+      const result = await decideActionApproval(data.ticket, decision, search);
+      if (isCurrentSession()) setData(result);
     } catch (err) {
+      if (!isCurrentSession()) return;
       setError(err.message);
       // A stale ticket must be reviewed again, never silently retried.
       setData(null);
     } finally {
-      setBusy(false);
+      if (isCurrentSession()) setBusy(false);
     }
   };
   const approval = data?.approval;
@@ -239,6 +242,7 @@ export function OAuthConsent() {
 }
 
 export default function ConnectedApps() {
+  const isCurrentSession = useSessionGuard();
   const navigate = useNavigate();
   const [applications, setApplications] = useState(null);
   const [error, setError] = useState('');
@@ -248,26 +252,29 @@ export default function ConnectedApps() {
     let active = true;
     loadConnections()
       .then((data) => {
-        if (active) setApplications(data.applications);
+        if (active && isCurrentSession()) setApplications(data.applications);
       })
       .catch((err) => {
-        if (active) setError(err.message);
+        if (active && isCurrentSession()) setError(err.message);
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [isCurrentSession]);
 
   const revoke = async (id) => {
+    if (!isCurrentSession()) return;
     setRevoking(id);
     setError('');
     try {
       await revokeConnection(id);
+      if (!isCurrentSession()) return;
       setApplications((apps) => apps.filter((app) => app.id !== id));
     } catch (err) {
+      if (!isCurrentSession()) return;
       setError(err.message);
     } finally {
-      setRevoking(null);
+      if (isCurrentSession()) setRevoking(null);
     }
   };
 

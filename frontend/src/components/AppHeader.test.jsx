@@ -1,3 +1,5 @@
+vi.mock('@mui/material', async () => await vi.importActual('@mui/material'));
+import { Route, Routes } from 'react-router';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AppHeader from './AppHeader';
@@ -11,14 +13,15 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from '../services/notoliApiClient';
-const { mockNavigate, mockUseLocation } = vi.hoisted(() => ({
+const { mockNavigate, mockUseLocation, mockNavigateHook } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockUseLocation: vi.fn(),
+  mockNavigateHook: vi.fn(),
 }));
-vi.mock('react-router-dom', async () => ({
-  ...(await vi.importActual('react-router-dom')),
-  useLocation: () => mockUseLocation(),
-  useNavigate: () => mockNavigate,
+vi.mock('react-router', async () => ({
+  ...(await vi.importActual('react-router')),
+  useLocation: mockUseLocation,
+  useNavigate: mockNavigateHook,
 }));
 vi.mock('../utils/Navigation', () => ({
   goBackToParent: vi.fn(),
@@ -31,15 +34,30 @@ vi.mock('../services/notoliApiClient', () => ({
   markNotificationRead: vi.fn(),
 }));
 describe('AppHeader', () => {
+  test('supports profile menu keyboard navigation, dismissal, and logout', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<AppHeader appBarHeader="Notoli" setDrawerOpen={setDrawerOpen} />);
+
+    await user.click(screen.getByLabelText('user profile'));
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    await user.keyboard('{End}');
+    expect(screen.getByRole('menuitem', { name: 'Logout' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument());
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    await user.click(screen.getByLabelText('user profile'));
+    await user.keyboard('{End}{Enter}');
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+  });
+
   test('Connected Apps is available from the existing profile menu', async () => {
     renderWithProviders(<AppHeader appBarHeader="Notoli" setDrawerOpen={setDrawerOpen} />);
     await userEvent.click(screen.getByLabelText('user profile'));
-    await userEvent.click(
-      screen.getByRole('menuitem', {
-        name: 'Connected Apps',
-      }),
-    );
-    expect(mockNavigate).toHaveBeenCalledWith('/connections');
+    const connectionLink = screen.getByRole('menuitem', { name: 'Connected Apps' });
+    expect(connectionLink).toHaveAttribute('href', '/connections');
+    await userEvent.click(connectionLink);
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
   const setDrawerOpen = vi.fn();
   const jsonResponse = (body, ok = true) => ({
@@ -49,6 +67,7 @@ describe('AppHeader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
+    mockNavigateHook.mockReturnValue(mockNavigate);
     setNavigate(mockNavigate);
     mockUseLocation.mockReturnValue({
       pathname: '/',
@@ -141,7 +160,7 @@ describe('AppHeader', () => {
     sessionStorage.setItem('email', 'judea@example.com');
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
     await userEvent.click(screen.getByLabelText('user profile'));
-    expect(screen.getByTestId('menu')).toBeInTheDocument();
+    expect(screen.getByRole('menu')).toBeInTheDocument();
     expect(screen.getByText('Logout')).toBeInTheDocument();
     expect(screen.getByText('judea')).toBeInTheDocument();
     expect(screen.getByText('judea@example.com')).toBeInTheDocument();
@@ -518,4 +537,118 @@ describe('AppHeader', () => {
       }),
     ).toBeEnabled();
   });
+});
+
+describe('AppHeader response and navigation integration', () => {
+  const notification = {
+    id: 1,
+    title: 'Notification title',
+    message: 'Notification message',
+    is_read: false,
+    target_path: '/notification-target',
+  };
+
+  beforeEach(async () => {
+    const actual = await vi.importActual('react-router');
+    mockUseLocation.mockImplementation(actual.useLocation);
+    mockNavigateHook.mockImplementation(actual.useNavigate);
+    vi.clearAllMocks();
+    sessionStorage.clear();
+    sessionStorage.setItem('accessToken', 'access');
+  });
+  test.each([
+    null,
+    {},
+    'unexpected',
+    1,
+    ...['title', 'message'].flatMap((field) =>
+      [{ text: 'bad' }, ['bad'], 42, true].map((value) => [{ ...notification, [field]: value }]),
+    ),
+  ])('keeps the header usable for malformed notification JSON: %j', async (body) => {
+    fetchNotifications
+      .mockResolvedValueOnce({ ok: true, json: async () => body })
+      .mockResolvedValue({ ok: true, json: async () => [notification] });
+    const user = userEvent.setup();
+    renderWithProviders(<AppHeader appBarHeader="Application" setDrawerOpen={vi.fn()} />);
+    await user.click(screen.getByLabelText('notifications'));
+    expect(await screen.findByText('Notifications are unavailable right now.')).toBeVisible();
+    expect(screen.getByRole('button', { name: /Retry/i })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: /Retry/i }));
+    expect(await screen.findByText(notification.message)).toBeVisible();
+    expect(screen.queryByText('Notifications are unavailable right now.')).not.toBeInTheDocument();
+  });
+
+  test.each([
+    ['title', {}],
+    ['message', []],
+    ['target_path', {}],
+    ['is_read', 'true'],
+    ['board_name', {}],
+    ['list_name', {}],
+  ])(
+    'keeps the cached row and prevents navigation after malformed %s in mark-read',
+    async (field, value) => {
+      fetchNotifications.mockResolvedValue({ ok: true, json: async () => [notification] });
+      markNotificationRead
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ ...notification, is_read: true, [field]: value }),
+        })
+        .mockResolvedValue({ ok: true, json: async () => ({ ...notification, is_read: true }) });
+      const user = userEvent.setup();
+      renderWithProviders(
+        <Routes>
+          <Route
+            path="/"
+            element={<AppHeader appBarHeader="Application" setDrawerOpen={vi.fn()} />}
+          />
+          <Route path="/notification-target" element={<h1>Notification destination</h1>} />
+        </Routes>,
+      );
+      await user.click(screen.getByLabelText('notifications'));
+      await user.click(await screen.findByText(notification.message));
+      expect(await screen.findByText('Could not update that notification.')).toBeVisible();
+      expect(screen.getByText(notification.message)).toBeVisible();
+      expect(
+        screen.queryByRole('heading', { name: 'Notification destination' }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Clear notification')).toBeEnabled();
+      await user.click(screen.getByText(notification.message));
+      expect(
+        await screen.findByRole('heading', { name: 'Notification destination' }),
+      ).toBeVisible();
+      expect(markNotificationRead).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  test.each(['click', 'keyboard'])(
+    'Connected Apps supports %s navigation through its real link',
+    async (activation) => {
+      vi.stubEnv('VITE_MCP_ENABLED', '1');
+      fetchNotifications.mockResolvedValue({ ok: true, json: async () => [] });
+      const user = userEvent.setup();
+      renderWithProviders(
+        <Routes>
+          <Route
+            path="/"
+            element={<AppHeader appBarHeader="Application" setDrawerOpen={vi.fn()} />}
+          />
+          <Route path="/connections" element={<h1>Connected Apps destination</h1>} />
+        </Routes>,
+      );
+      await user.click(screen.getByLabelText('user profile'));
+      const link = screen.getByRole('menuitem', { name: 'Connected Apps' });
+      expect(link).toHaveAttribute('href', '/connections');
+      if (activation === 'keyboard') {
+        await screen.findByRole('menu');
+        await user.keyboard('{ArrowDown}');
+        expect(link).toHaveFocus();
+        await user.keyboard('{Enter}');
+      } else await user.click(link);
+      expect(
+        await screen.findByRole('heading', { name: 'Connected Apps destination' }),
+      ).toBeVisible();
+    },
+  );
+  afterEach(() => vi.unstubAllEnvs());
 });
