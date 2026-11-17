@@ -87,6 +87,19 @@ def check_local_policy(model, development):
         raise ValueError("Standalone browser, OAuth and trusted origins must agree")
 
 
+def check_local_static_routes():
+    proxy = (ROOT / "deploy/nginx-proxy.conf").read_text(encoding="utf-8")
+    for prefix in ("/static/admin/", "/static/rest_framework/"):
+        location = re.search(
+            r"^\s*location\s+\^~\s+" + re.escape(prefix) + r"\s*\{([^{}]*)\}",
+            proxy, re.M,
+        )
+        if location is None or not re.search(
+            r"^\s*proxy_pass\s+http://backend:8000\s*;", location[1], re.M
+        ):
+            raise ValueError(f"Standalone HTTPS must route {prefix} to backend:8000")
+
+
 def check_release_documentation():
     policy = json.loads((ROOT / "deploy/production/app.json").read_text(encoding="utf-8"))
     pin = policy["shared_source"]["commit"]
@@ -172,6 +185,7 @@ def main():
                     cwd=ROOT, env=env, text=True,
                 ))
                 check_local_policy(model, source.name == "docker-compose.dev.yml")
+    check_local_static_routes()
     check_release_documentation()
     check_whitespace()
     print("Repository files: workflow/composite syntax, script parsers and synthetic Compose validation passed")
