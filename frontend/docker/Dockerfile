@@ -11,7 +11,9 @@ RUN npm ci
 # Copy your React project code
 COPY . .
 
-# Build-time API setting, explicitly exposed by Vite
+# Build-time API and connector settings, explicitly exposed by Vite.
+ARG VITE_MCP_ENABLED=1
+ENV VITE_MCP_ENABLED=$VITE_MCP_ENABLED
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 

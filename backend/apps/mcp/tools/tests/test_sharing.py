@@ -1,5 +1,14 @@
 """Sharing tools preserve ownership, membership and notification boundaries."""
 
+# ruff: noqa: E402 -- skip before importing optional OAuth ORM models.
+from unittest import SkipTest
+
+from django.conf import settings
+
+if not settings.MCP_ENABLED:
+    raise SkipTest("Run the enabled app-owned OAuth profile")
+
+
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model

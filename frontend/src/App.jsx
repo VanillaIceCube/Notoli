@@ -4,7 +4,7 @@ import RouteContent from './components/RouteContent';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import notoliTheme from './theme';
 import { lazy, useCallback, useEffect, useState } from 'react';
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router';
+import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from 'react-router';
 import AuthenticatedRoute from './components/AuthenticatedRoute';
 import AppHeader from './components/AppHeader';
 import AppSnackbar from './components/AppSnackbar';
@@ -155,23 +155,28 @@ function ApplicationSession({ showSnackbar }) {
           <Route path="/register" element={<Register showSnackbar={showSnackbar} />} />
           <Route path="/forgot-password" element={<ForgotPassword showSnackbar={showSnackbar} />} />
           <Route path="/reset-password" element={<ResetPassword showSnackbar={showSnackbar} />} />
-          <Route
-            path="/connections/authorize"
-            element={
-              <AuthenticatedRoute>
-                <OAuthConsent />
-              </AuthenticatedRoute>
-            }
-          />
-          <Route
-            path="/connections"
-            element={
-              <AuthenticatedRoute>
-                <ConnectedApps />
-              </AuthenticatedRoute>
-            }
-          />
+          {import.meta.env.VITE_MCP_ENABLED === '1' && (
+            <>
+              <Route
+                path="/connections/authorize"
+                element={
+                  <AuthenticatedRoute>
+                    <OAuthConsent />
+                  </AuthenticatedRoute>
+                }
+              />
+              <Route
+                path="/connections"
+                element={
+                  <AuthenticatedRoute>
+                    <ConnectedApps />
+                  </AuthenticatedRoute>
+                }
+              />
+            </>
+          )}
 
+          <Route path="/connections/*" element={<Navigate to="/" replace />} />
           <Route path="*" element={<NotepadRoutes setAppBarHeader={setAppBarHeader} />} />
         </Routes>
       </RouteContent>

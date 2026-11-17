@@ -342,6 +342,19 @@ describe('real session route lifecycle', () => {
     expect(await screen.findByText('Your session expired. Please log in again.')).toBeVisible();
   });
 
+  test('disabled MCP redirects old connection links without fetching consent', async () => {
+    vi.stubEnv('VITE_MCP_ENABLED', '0');
+    window.history.replaceState({}, '', '/connections/authorize?client_id=reader');
+    render(<SessionApp />);
+    expect(await screen.findByRole('heading', { name: 'Login' })).toBeVisible();
+    expect(screen.queryByText('Connect to Notoli')).not.toBeInTheDocument();
+    expect(fetch.mock.calls.some(([url]) => url.includes('/auth/mcp/'))).toBe(false);
+    expect(window.location.pathname).toBe('/login');
+    expect(new URLSearchParams(window.location.search).get('next') || '').not.toContain(
+      '/connections',
+    );
+  });
+
   test('retains the complete consent query through lazy login and account publication', async () => {
     const pending = '/connections/authorize?state=keep%26this&client_id=reader';
     window.history.replaceState({}, '', pending);

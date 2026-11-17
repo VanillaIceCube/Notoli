@@ -317,14 +317,16 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
               variant="middle"
               sx={{ my: 0.25, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
             />
-            <MenuItem
-              sx={{ py: 0.5, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
-              component={RouterLink}
-              to="/connections"
-              onClick={() => setProfileAnchorEl(null)}
-            >
-              Connected Apps
-            </MenuItem>
+            {import.meta.env.VITE_MCP_ENABLED === '1' && (
+              <MenuItem
+                sx={{ py: 0.5, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
+                component={RouterLink}
+                to="/connections"
+                onClick={() => setProfileAnchorEl(null)}
+              >
+                Connected Apps
+              </MenuItem>
+            )}
             <MenuItem
               sx={{ py: 0.5, px: 1.5, minHeight: 'auto', fontWeight: 'bold' }}
               onClick={() => {

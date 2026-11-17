@@ -1,5 +1,9 @@
 {
   "contract_version": 1,
+  "shared_source": {
+    "repository": "VanillaIceCube/JudeAndrewAlabaInfrastructure",
+    "commit": "9c1102c4ac866c4925fa13260dbdc27eec1199b1"
+  },
   "app": "notoli",
   "domain": "notoli.judeandrewalaba.com",
   "root_hint": "/root/apps/notoli",
@@ -29,7 +33,9 @@
   "backend_required_env": [
     "DJANGO_TRUSTED_PROXY_IPS=172.30.88.2"
   ],
-  "frontend_port_bindings": [[]],
+  "frontend_port_bindings": [
+    []
+  ],
   "gateway": {
     "container": "host-ingress-proxy",
     "project": "host-ingress",
@@ -91,6 +97,7 @@
     },
     "fixed": {
       "DJANGO_DEBUG": "0",
+      "DJANGO_MCP_ENABLED": "1",
       "DJANGO_SQLITE_PATH": "/backend/db.sqlite3",
       "DJANGO_ALLOWED_HOSTS": "notoli.judeandrewalaba.com",
       "DJANGO_CORS_ALLOWED_ORIGINS": "https://notoli.judeandrewalaba.com",
@@ -119,6 +126,7 @@
       {
         "path": "/.well-known/oauth-authorization-server",
         "status": 200,
+        "content_type": "application/json",
         "json_equals": {
           "issuer": "https://notoli.judeandrewalaba.com"
         }
@@ -126,6 +134,7 @@
       {
         "path": "/.well-known/oauth-protected-resource/mcp",
         "status": 200,
+        "content_type": "application/json",
         "json_equals": {
           "resource": "https://notoli.judeandrewalaba.com/mcp"
         }
@@ -134,7 +143,7 @@
         "path": "/mcp",
         "status": 401,
         "header_contains": {
-          "WWW-Authenticate": "resource_metadata"
+          "WWW-Authenticate": "resource_metadata=\"https://notoli.judeandrewalaba.com/.well-known/oauth-protected-resource/mcp\""
         }
       }
     ]

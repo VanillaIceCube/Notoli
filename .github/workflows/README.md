@@ -523,9 +523,9 @@ are not production release inputs.
 
 ### Shared deployment action update
 
-Docker login v4.8.0 (`8aa5831fb8d48d8f76594c7ddde61ae58019f550`) is rendered from Infrastructure commit
-`d9ab394bb38d2bdce38088ac952c53704c5bae5a`. Keep `deploy/shared-source.json` and
-the generated workflow synchronized; deployment parity remains mandatory.
+Docker login v4.8.0 is rendered from the immutable Infrastructure revision
+recorded under `shared_source` in `deploy/production/app.json`. Keep the pin
+and generated workflow synchronized; deployment parity remains mandatory.
 
 ### Architecture and production summaries
 
@@ -545,6 +545,12 @@ merge, release or recovery authorization. Infrastructure uses gateway-specific
 wording. FullStackTemplate's inactive target is not created for symmetry.
 
 ## 🧪 Checks and diagnostics
+
+The backend test gate runs the full ordinary suite with `DJANGO_MCP_ENABLED=0`,
+then the shared framework and app tools with `DJANGO_MCP_ENABLED=1` and a local
+test issuer. Either profile failing fails the existing backend check. Disabled
+MCP hides discovery/OAuth routes and skips app-owned OAuth tests; the enabled
+profile retains their full coverage. The production policy explicitly enables MCP.
 
 ### Repository validation and failure diagnostics
 

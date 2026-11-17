@@ -1,8 +1,16 @@
 """OAuth code exchange, PKCE, refresh rotation and token revocation."""
 
-from urllib.parse import parse_qs, urlencode, urlsplit
+# ruff: noqa: E402 -- skip before importing optional OAuth ORM models.
+from unittest import SkipTest
 
 from django.conf import settings
+
+if not settings.MCP_ENABLED:
+    raise SkipTest("Run the enabled app-owned OAuth profile")
+
+
+from urllib.parse import parse_qs, urlencode, urlsplit
+
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 from oauth2_provider.models import RefreshToken

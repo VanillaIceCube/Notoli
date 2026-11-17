@@ -44,6 +44,25 @@ class ProductionSecretContractTests(SimpleTestCase):
                 ):
                     self.settings_values(secret)
 
+    def test_retired_script_prefix_does_not_change_root_static_urls(self):
+        import runpy
+
+        environment = {
+            "DJANGO_DEBUG": "0",
+            "DJANGO_SECRET_KEY": "disposable-prefix-test-key",
+            "DJANGO_ALLOWED_HOSTS": "app.example.com",
+            "DJANGO_FORCE_SCRIPT_NAME": "/retired",
+        }
+        with (
+            patch.dict(os.environ, environment, clear=True),
+            patch("dotenv.load_dotenv"),
+        ):
+            result = runpy.run_path(
+                str(Path(__file__).resolve().parents[1] / "settings.py")
+            )
+        self.assertNotIn("FORCE_SCRIPT_NAME", result)
+        self.assertEqual(result["STATIC_URL"].strip("/"), "static")
+
     def test_production_accepts_an_explicit_secret(self):
         value = "isolated-production-settings-contract-key"
         settings = self.settings_values(value)

@@ -205,7 +205,11 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          { uv run --locked python manage.py test --verbosity=2; } 2>&1 | tee test_output.txt || status=$?
+          {
+            DJANGO_MCP_ENABLED=0 uv run --locked python manage.py test --verbosity=2 || status=$?
+            DJANGO_MCP_ENABLED=1 DJANGO_MCP_BASE_URL=http://localhost:8000 uv run --locked python manage.py test apps.mcp.framework apps.mcp.tools --verbosity=2 || status=$?
+            exit "$status"
+          } 2>&1 | tee test_output.txt || status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
       - name: Test summary
@@ -284,7 +288,7 @@ jobs:
             2>&1 | tee automation_test_output.txt || status=$?
           python3 .github/tools/validate_repository.py \
             2>&1 | tee -a automation_test_output.txt || status=$?
-          python3 deploy/check_parity.py \
+          python3 deploy/production/build_bundle.py --check-parity \
             2>&1 | tee -a automation_test_output.txt || status=$?
           python3 -m unittest discover -s deploy/tests -v \
             2>&1 | tee -a automation_test_output.txt || status=$?

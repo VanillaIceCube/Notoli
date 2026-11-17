@@ -6,9 +6,11 @@ services:
       context: ../backend
       dockerfile: docker/Dockerfile.dev
     container_name: notoli-backend-dev
+    command: ["uv", "run", "--locked", "uvicorn", "config.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--reload", "--no-proxy-headers"]
     env_file: ./.env
     environment:
-      # This fallback is development-only. Production must set its own secret.
+      DJANGO_DEBUG: "1"
+      # Stable local sessions; production still requires an explicit private key.
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-notoli-development-only-secret-key-keep-production-secrets-out-of-source}
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend,notoli.localhost
       DJANGO_CORS_ALLOWED_ORIGINS: http://localhost:${NOTOLI_DEV_FRONTEND_PORT:-3000},http://notoli.localhost:${NOTOLI_DEV_FRONTEND_PORT:-3000}
@@ -19,7 +21,12 @@ services:
       DJANGO_SQLITE_PATH: /backend/db.sqlite3
     volumes:
       - ../backend:/backend
-      - ./db.sqlite3:/backend/db.sqlite3
+      # Requires an existing file; follow missing-only setup in deploy/README.md.
+      - type: bind
+        source: ./db.sqlite3
+        target: /backend/db.sqlite3
+        bind:
+          create_host_path: false
     ports:
       - "127.0.0.1:${NOTOLI_DEV_BACKEND_PORT:-8000}:8000"
 
@@ -31,6 +38,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       HOST: 0.0.0.0
+      VITE_MCP_ENABLED: ${DJANGO_MCP_ENABLED:-0}
       VITE_API_BASE_URL: http://notoli.localhost:${NOTOLI_DEV_BACKEND_PORT:-8000}
     volumes:
       - ../frontend:/frontend

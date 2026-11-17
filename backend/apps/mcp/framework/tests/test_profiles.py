@@ -25,9 +25,11 @@ class MCPProfileTests(SimpleTestCase):
         self.assertFalse(apps.is_installed("oauth2_provider"))
         self.assertNotIn("createapplication", get_commands())
         from ..asgi import create_application
+        from ..proxy import TrustedProxyHeadersMiddleware
 
-        sentinel = object()
-        self.assertIs(create_application(sentinel), sentinel)
+        self.assertIsInstance(
+            create_application(object()), TrustedProxyHeadersMiddleware
+        )
         for path in (
             "/.well-known/oauth-authorization-server",
             "/.well-known/oauth-protected-resource/mcp",
@@ -58,3 +60,65 @@ class MCPProfileTests(SimpleTestCase):
             self.assertIn(
                 "mcp_framework.E004", [e.id for e in mcp_settings_check(None)]
             )
+
+    def test_enable_switch_selects_the_same_optional_profile(self):
+        import os
+        import runpy
+        from pathlib import Path
+        from unittest.mock import patch
+
+        for value in (None, "0", "1", "true"):
+            environment = {
+                "DJANGO_DEBUG": "1",
+                "DJANGO_SECRET_KEY": "disposable-profile-settings-key",
+                "DJANGO_MCP_BASE_URL": "http://localhost:8000",
+            }
+            if value is not None:
+                environment["DJANGO_MCP_ENABLED"] = value
+            with (
+                self.subTest(value=value),
+                patch.dict(os.environ, environment, clear=True),
+                patch("dotenv.load_dotenv"),
+            ):
+                result = runpy.run_path(
+                    str(Path(__file__).resolve().parents[4] / "config/settings.py")
+                )
+                self.assertEqual(result["MCP_ENABLED"], value == "1")
+                self.assertEqual(
+                    "oauth2_provider" in result["INSTALLED_APPS"], value == "1"
+                )
+
+    @override_settings(MCP_ENABLED=False, TRUSTED_PROXY_IPS=["192.0.2.2"])
+    def test_disabled_transport_retains_exact_proxy_validation(self):
+        from asgiref.sync import async_to_sync
+
+        from ..asgi import create_application
+
+        captured = []
+
+        async def ordinary_rest(scope, receive, send):
+            captured.append(scope)
+
+        application = create_application(ordinary_rest)
+        for peer, expected_scheme, expected_client in (
+            ("192.0.2.2", "https", "198.51.100.7"),
+            ("192.0.2.3", "http", "192.0.2.3"),
+        ):
+            scope = {
+                "type": "http",
+                "scheme": "http",
+                "client": (peer, 1234),
+                "headers": [
+                    (b"host", b"app.example"),
+                    (b"x-forwarded-proto", b"https"),
+                    (b"x-forwarded-for", b"198.51.100.7"),
+                    (b"x-forwarded-host", b"attacker.invalid"),
+                    (b"forwarded", b"proto=https;host=attacker.invalid"),
+                ],
+            }
+            async_to_sync(application)(scope, None, None)
+            self.assertEqual(captured[-1]["scheme"], expected_scheme)
+            self.assertEqual(captured[-1]["client"][0], expected_client)
+            headers = dict(captured[-1]["headers"])
+            self.assertNotIn(b"x-forwarded-host", headers)
+            self.assertNotIn(b"forwarded", headers)
