@@ -87,6 +87,27 @@ def check_local_policy(model, development):
         raise ValueError("Standalone browser, OAuth and trusted origins must agree")
 
 
+def check_release_documentation():
+    policy = json.loads((ROOT / "deploy/production/app.json").read_text(encoding="utf-8"))
+    pin = policy["shared_source"]["commit"]
+    guide = (ROOT / "deploy/production/README.md").read_text(encoding="utf-8")
+    stated = re.findall(
+        r"`shared_source` in `app\.json` pins that source to immutable commit\s+`([^`]+)`",
+        guide,
+    )
+    links = re.findall(
+        r"\[((?:Infrastructure )?release standard)\]\("
+        r"https://github\.com/VanillaIceCube/JudeAndrewAlabaInfrastructure"
+        r"/blob/([^/]+)/app-release/README\.md\)",
+        guide,
+    )
+    expected_links = {("release standard", pin), ("Infrastructure release standard", pin)}
+    if stated != [pin] or set(links) != expected_links:
+        raise ValueError(
+            "Production guide release pin and canonical links must match deploy/production/app.json"
+        )
+
+
 def main():
     run("actionlint", "-ignore", 'unknown permission scope "vulnerability-alerts"')
     # The single compatibility exception is for GitHub's existing new scope;
@@ -151,6 +172,7 @@ def main():
                     cwd=ROOT, env=env, text=True,
                 ))
                 check_local_policy(model, source.name == "docker-compose.dev.yml")
+    check_release_documentation()
     check_whitespace()
     print("Repository files: workflow/composite syntax, script parsers and synthetic Compose validation passed")
 

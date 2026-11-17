@@ -46,11 +46,11 @@ environment, networks, database and readiness policy; [compose.yml](compose.yml)
 defines its two services. Common release and bundle code has no app-name branches.
 Infrastructure owns `app-release/v1`, its manifest, tests and workflow template.
 `shared_source` in `app.json` pins that source to immutable commit
-`3f925e1ea88be8f2bac65426f4e1d6af8682e666` across all three consumers. CI verifies
+`9c1102c4ac866c4925fa13260dbdc27eec1199b1` across all three consumers. CI verifies
 the common files and generated workflow, failing on drift or unavailable source.
 Change the Infrastructure source, regenerate its manifest, then synchronize all
 consumers; never edit only a vendored common file. See the
-[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/3f925e1ea88be8f2bac65426f4e1d6af8682e666/app-release/README.md)
+[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/9c1102c4ac866c4925fa13260dbdc27eec1199b1/app-release/README.md)
 for the parity matrix and coordinated update procedure.
 
 Required Actions access variables: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`,
@@ -548,4 +548,4 @@ production status.
 - [Workflow guide](../../.github/workflows/README.md)
 - [App policy](app.json), [Compose](compose.yml), [bundle builder](build_bundle.py),
   [release controller](release.py) and [deployment workflow](../../.github/workflows/ci-deploy.yml)
-- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/3f925e1ea88be8f2bac65426f4e1d6af8682e666/app-release/README.md)
+- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/9c1102c4ac866c4925fa13260dbdc27eec1199b1/app-release/README.md)

@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Keep the production release guide's source pin and canonical links aligned with app configuration, and reject documentation drift during repository validation.
 - Remove the retired consumer parity checker only after successful shared-source synchronization; preserve it on failed validation and reject unsafe cleanup paths before writes.
 - Clarify missing-only SQLite initialization and file checks before either local Compose profile starts, preserving existing databases.
 
