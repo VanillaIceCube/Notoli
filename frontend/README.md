@@ -39,6 +39,13 @@ Open `http://notoli.localhost:3000`. For Docker hot reload, follow the
 requests; client-side settings must contain no secrets. The build output is
 `dist/`.
 
+`VITE_MCP_ENABLED=1` enables Connected Apps, OAuth consent routes and the profile
+menu link. With the flag off, stale connection URLs return to the normal app
+landing flow. Match it to backend `DJANGO_MCP_ENABLED`; local Compose derives it
+from the same setting. The production Dockerfile defaults this build argument to
+`1`, matching the production backend policy. For direct npm development, set
+`VITE_MCP_ENABLED=1` alongside an enabled backend before starting Vite.
+
 Development Compose supplies `VITE_API_BASE_URL` through its `environment`
 settings. Production Docker builds pass the matching build argument, which is
 compiled into the static assets; a blank value selects same-origin requests.

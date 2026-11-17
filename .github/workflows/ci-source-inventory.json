@@ -204,7 +204,7 @@
         "contents": "read",
         "packages": "write"
       },
-      "source_sha256": "42c11e1e3f4c1e8d7a5a9f15295601c4eefcd6011f3fa1c607d53e4b364d67a4",
+      "source_sha256": "f7ff5aff2b0957de550eac5f34e137f8c27fefb1f810528dae234e5d2b19fdf7",
       "variable_names": [
         "DEPLOY_HOST",
         "DEPLOY_HOST_FINGERPRINT",
@@ -617,7 +617,7 @@
         "contents": "read",
         "pull-requests": "read"
       },
-      "source_sha256": "78319eca86fb63baa02f9a92f6b8003fd7d77234c7097e74487750411bf51279",
+      "source_sha256": "24baac794657c94191c4b0e7ec1eb96216c0b1856fd4cce698b617207d39df63",
       "variable_names": []
     },
     "gate-vulnerability.yml": {

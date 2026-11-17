@@ -1,10 +1,18 @@
 """Board, list, item and notification tool actions preserve domain rules."""
 
+# ruff: noqa: E402 -- skip before importing optional OAuth ORM models.
+from unittest import SkipTest
+
+from django.conf import settings
+
+if not settings.MCP_ENABLED:
+    raise SkipTest("Run the enabled app-owned OAuth profile")
+
+
 from datetime import timedelta
 from unittest.mock import patch
 from uuid import uuid4
 
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.test import Client, TestCase

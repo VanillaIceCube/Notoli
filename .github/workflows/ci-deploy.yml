@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Verify shared release standard
-        run: python3 deploy/check_parity.py
+        run: python3 deploy/production/build_bundle.py --check-parity
       - name: Validate deployment destination
         env:
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}

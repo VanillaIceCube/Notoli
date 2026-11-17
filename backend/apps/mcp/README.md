@@ -38,6 +38,14 @@ owned. Ordinary website login/REST JWTs retain their existing local behavior.
 The previous external-issuer extension and centralized rollout are withdrawn;
 template scaffolding remains disabled until an app implements its own tools.
 
+All applications read the same `DJANGO_MCP_ENABLED` switch: only `1` enables
+MCP discovery, OAuth routes and transport. Disabled ASGI profiles retain exact
+proxy validation for ordinary REST traffic. `VITE_MCP_ENABLED=1` enables the
+matching browser routes/menu; disabling it redirects stale connection links to
+the app's normal landing flow. Bare backend settings and all local env examples
+default MCP off. Reviewed MacroMapper and Notoli production policies explicitly
+enable MCP; Template's production policy leaves it off.
+
 Client setup and branding live in [chatgpt/](#chatgpt).
 
 ### 🧭 Framework files

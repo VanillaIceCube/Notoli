@@ -1,5 +1,14 @@
 """Core item tools enforce scopes, access, validation and pagination."""
 
+# ruff: noqa: E402 -- skip before importing optional OAuth ORM models.
+from unittest import SkipTest
+
+from django.conf import settings
+
+if not settings.MCP_ENABLED:
+    raise SkipTest("Run the enabled app-owned OAuth profile")
+
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase

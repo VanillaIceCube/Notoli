@@ -40,7 +40,7 @@ uv run --locked uvicorn config.asgi:application --port 8000 --reload --no-proxy-
 Local settings can be supplied in ignored `backend/.env`.
 For Docker hot reload, follow the [deployment guide](../deploy/README.md).
 
-Uvicorn serves both REST and MCP. Django `runserver` serves REST/auth only.
+Uvicorn serves REST and, when `DJANGO_MCP_ENABLED=1`, MCP. Django `runserver` serves REST/auth only.
 
 ## ⚙️ Configuration
 
@@ -57,6 +57,7 @@ Use `config/settings.py` for current defaults.
 | `DJANGO_ALLOWED_HOSTS` | Comma-separated accepted hosts. |
 | `DJANGO_CORS_ALLOWED_ORIGINS`, `DJANGO_CSRF_TRUSTED_ORIGINS` | Explicit frontend origins, including the port during development. |
 | `DJANGO_FRONTEND_BASE_URL` | Browser redirects and password-reset links. |
+| `DJANGO_MCP_ENABLED` | Only `1` enables MCP; backend and local Docker example default off. Production policy explicitly enables it. |
 | `DJANGO_EMAIL_BACKEND`, `DJANGO_DEFAULT_FROM_EMAIL` | Delivery backend and sender. |
 | `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`, `DJANGO_EMAIL_USE_TLS` | SMTP configuration when using an SMTP backend. |
 | `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_HOST_KEY`, `DJANGO_EMAIL_TIMEOUT` | Delivery credentials and timeout; keep credentials out of source control. |
@@ -199,7 +200,9 @@ Notes tests separate board/list APIs from item lifecycle, access and membership;
 `apps/notes/tests/test_ordering.py` covers both board-list and per-list item order.
 Authentication retains onboarding and HTTP-method coverage. Notification events
 and bulk actions, app-owned MCP tools and exact proxy trust retain their own
-groups. Notoli always enables its MCP profile.
+groups. The ordinary profile defaults MCP off. Run the app-owned MCP suites
+separately with `DJANGO_MCP_ENABLED=1 DJANGO_MCP_BASE_URL=http://localhost:8000`
+from `backend/`, targeting `apps.mcp.framework apps.mcp.tools`. CI runs both profiles.
 
 From the repository root:
 
