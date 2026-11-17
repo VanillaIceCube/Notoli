@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -274,6 +275,10 @@ class ContractTests(unittest.TestCase):
     def test_parity_uses_embedded_pin_and_offline_sync_restores_drift(self):
         with tempfile.TemporaryDirectory() as directory:
             root, source_root = self.parity_fixture(directory)
+            retired = root / "deploy/check_parity.py"
+            retired.write_text("retired checker", encoding="utf-8")
+            unrelated = root / "deploy/local-helper.py"
+            unrelated.write_text("local helper", encoding="utf-8")
             with patch.object(
                 builder.urllib.request,
                 "urlopen",
@@ -283,6 +288,7 @@ class ContractTests(unittest.TestCase):
                     builder.check_parity(root, source_root),
                     builder.CONFIG["shared_source"]["commit"],
                 )
+                self.assertEqual(retired.read_text(encoding="utf-8"), "retired checker")
                 (root / "deploy/production/release.py").write_text(
                     "drift", encoding="utf-8"
                 )
@@ -292,7 +298,51 @@ class ContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "Shared release drift"):
                     builder.check_parity(root, source_root)
                 builder.check_parity(root, source_root, sync=True)
+                self.assertFalse(retired.exists())
+                self.assertEqual(unrelated.read_text(encoding="utf-8"), "local helper")
+                builder.check_parity(root, source_root, sync=True)
                 builder.check_parity(root, source_root)
+
+    def test_sync_rejects_unsafe_retired_checker_paths_before_writing(self):
+        kinds = ["directory"]
+        if os.name == "posix":
+            kinds += ["symlink", "dangling_symlink", "parent_symlink"]
+        for kind in kinds:
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory:
+                root, source_root = self.parity_fixture(directory)
+                retired = root / "deploy/check_parity.py"
+                external = Path(directory) / "external"
+                if kind == "directory":
+                    retired.mkdir()
+                    (retired / "keep").write_text("keep", encoding="utf-8")
+                elif kind == "parent_symlink":
+                    (root / "deploy").rename(external)
+                    (root / "deploy").symlink_to(external, target_is_directory=True)
+                    retired.write_text("keep", encoding="utf-8")
+                else:
+                    if kind == "symlink":
+                        external.write_text("keep", encoding="utf-8")
+                    retired.symlink_to(external)
+                target = root / "deploy/production/release.py"
+                target.write_text("consumer drift", encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "regular file in deploy/"):
+                    builder.check_parity(root, source_root, sync=True)
+                self.assertEqual(target.read_text(encoding="utf-8"), "consumer drift")
+                self.assertTrue(retired.exists() or retired.is_symlink())
+                if kind == "symlink":
+                    self.assertEqual(external.read_text(encoding="utf-8"), "keep")
+
+    def test_failed_verification_keeps_the_retired_checker(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, source_root = self.parity_fixture(directory)
+            retired = root / "deploy/check_parity.py"
+            retired.write_text("retired checker", encoding="utf-8")
+            with (
+                patch.object(builder, "verify", side_effect=ValueError("verification failed")),
+                self.assertRaisesRegex(ValueError, "verification failed"),
+            ):
+                builder.check_parity(root, source_root, sync=True)
+            self.assertEqual(retired.read_text(encoding="utf-8"), "retired checker")
 
     def test_parity_rejects_invalid_embedded_source_before_fetching(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -315,6 +365,8 @@ class ContractTests(unittest.TestCase):
     def test_failed_shared_download_never_partially_syncs_consumer(self):
         with tempfile.TemporaryDirectory() as directory:
             root, source_root = self.parity_fixture(directory)
+            retired = root / "deploy/check_parity.py"
+            retired.write_text("retired checker", encoding="utf-8")
             source = source_root / builder.SOURCE
             target = root / "deploy/production/release.py"
             target.write_text("consumer drift", encoding="utf-8")
@@ -323,6 +375,7 @@ class ContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Shared source checksum mismatch"):
                 builder.check_parity(root, source_root, sync=True)
             self.assertEqual(target.read_text(encoding="utf-8"), "consumer drift")
+            self.assertEqual(retired.read_text(encoding="utf-8"), "retired checker")
 
     def test_parity_rejects_bad_manifest_and_workflow_checksum(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -41,6 +41,7 @@ services:
     image: ghcr.io/vanillaicecube/notoli-backend:latest
     container_name: notoli-backend
     volumes:
+      # Requires an existing file; follow missing-only setup in deploy/README.md.
       - type: bind
         source: ./db.sqlite3
         target: /backend/db.sqlite3

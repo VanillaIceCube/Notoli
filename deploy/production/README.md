@@ -471,6 +471,9 @@ workflow. For local source development only, add
 `--source-root <infrastructure-checkout>` to `--check-parity` to verify local
 common hashes offline; that does not verify the remote pin. Use `--sync` only
 after reviewing a coordinated source/pin update across all three consumers.
+Successful synchronization also removes the retired `deploy/check_parity.py`.
+Check-only and failed validation runs preserve it; unsafe cleanup paths are
+rejected before writes.
 CI always checks the immutable pin.
 
 The full release suite needs Linux and a disposable local/CI Docker daemon,

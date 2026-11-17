@@ -24,11 +24,14 @@ See the [production guide](production/README.md) for source synchronization.
 
 ## 💻 Local Docker with `notoli.localhost`
 
-From the repository root, initialize only missing local files:
+Both local Compose profiles require `deploy/db.sqlite3` to exist as a file before
+startup (`create_host_path: false`). From the repository root, initialize only
+missing files and reject a directory at the database path; existing data is preserved:
 
 ```powershell
 if (-not (Test-Path deploy/.env)) { Copy-Item deploy/backend.env deploy/.env }
 if (-not (Test-Path deploy/db.sqlite3)) { New-Item -ItemType File -Path deploy/db.sqlite3 }
+if (-not (Test-Path deploy/db.sqlite3 -PathType Leaf)) { throw "deploy/db.sqlite3 must be a file; inspect any directory before continuing." }
 docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml up --build -d
 docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate
 ```
@@ -48,8 +51,17 @@ No certificate, Nginx or shared local ingress is needed.
 
 ## 🔐 Standalone HTTPS and image checks
 
-Use this profile only on your workstation. Prepare the same local `.env`/database
-and set a nonblank private `DJANGO_SECRET_KEY` in `.env` for stable sessions.
+Use this profile only on your workstation. Stop the development profile before
+switching because both profiles use the same database. From the repository root,
+initialize only missing files and check the database before starting HTTPS:
+
+```powershell
+if (-not (Test-Path deploy/.env)) { Copy-Item deploy/backend.env deploy/.env }
+if (-not (Test-Path deploy/db.sqlite3)) { New-Item -ItemType File -Path deploy/db.sqlite3 }
+if (-not (Test-Path deploy/db.sqlite3 -PathType Leaf)) { throw "deploy/db.sqlite3 must be a file; inspect any directory before continuing." }
+```
+
+Set a nonblank private `DJANGO_SECRET_KEY` in `deploy/.env` for stable sessions.
 Install `mkcert`; reuse existing certificates or create the first local pair:
 
 ```powershell

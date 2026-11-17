@@ -21,6 +21,7 @@ services:
       DJANGO_SQLITE_PATH: /backend/db.sqlite3
     volumes:
       - ../backend:/backend
+      # Requires an existing file; follow missing-only setup in deploy/README.md.
       - type: bind
         source: ./db.sqlite3
         target: /backend/db.sqlite3

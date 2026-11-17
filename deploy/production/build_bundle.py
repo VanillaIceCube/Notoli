@@ -174,6 +174,7 @@ def check_parity(root, source_root=None, sync=False):
     if digest(template_bytes) != manifest["workflow_sha256"]:
         raise ValueError("Shared workflow template checksum mismatch")
     template = template_bytes.decode("utf-8").replace("\r\n", "\n")
+    retired_checker = root / "deploy/check_parity.py"
     if sync:
         # Validate every download before replacing any consumer files.
         downloads = {}
@@ -183,12 +184,20 @@ def check_parity(root, source_root=None, sync=False):
                 raise ValueError("Shared source checksum mismatch: " + source)
             downloads[target] = data.replace(b"\r\n", b"\n")
         workflow = render_workflow(template, config)
+        if (
+            retired_checker.parent.resolve() != root.resolve() / "deploy"
+            or retired_checker.is_symlink()
+            or (retired_checker.exists() and not retired_checker.is_file())
+        ):
+            raise ValueError("Retired release checker must be a regular file in deploy/")
         for target, data in downloads.items():
             (root / target).write_bytes(data)
         (root / ".github/workflows/ci-deploy.yml").write_text(
             workflow, encoding="utf-8", newline="\n"
         )
     verify(root, manifest, template)
+    if sync:
+        retired_checker.unlink(missing_ok=True)
     return pin["commit"]
 
 
