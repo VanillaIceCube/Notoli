@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { TextField } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router';
 import { login } from '../../services/notoliApiClient';
-import { persistAuthSession } from '../../services/authSession';
+import { isAuthNetworkError, persistAuthSession } from '../../services/authSession';
 import { connectionReturnTo } from '../../services/authRedirect';
 import AuthForm, { AuthLink } from './AuthForm';
 
@@ -49,10 +49,7 @@ export default function Login({ showSnackbar }) {
 
       navigate(returnTo || '/', { replace: true });
     } catch (err) {
-      const isNetworkError =
-        err instanceof TypeError ||
-        (typeof err?.message === 'string' && err.message.toLowerCase().includes('network'));
-      showSnackbar('error', isNetworkError ? 'Network error :(' : 'Login failed :(');
+      showSnackbar('error', isAuthNetworkError(err) ? 'Network error :(' : 'Login failed :(');
       console.error(err);
     } finally {
       setIsSubmitting(false);

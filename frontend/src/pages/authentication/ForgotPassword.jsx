@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { TextField } from '@mui/material';
 import { useNavigate } from 'react-router';
 import { forgotPassword } from '../../services/notoliApiClient';
+import { isAuthNetworkError } from '../../services/authSession';
 import AuthForm, { AuthLink } from './AuthForm';
 
 export default function ForgotPassword({ showSnackbar }) {
@@ -20,12 +21,11 @@ export default function ForgotPassword({ showSnackbar }) {
       );
       navigate('/login');
     } catch (err) {
-      const isNetworkError =
-        err instanceof TypeError ||
-        (typeof err?.message === 'string' && err.message.toLowerCase().includes('network'));
       showSnackbar(
         'error',
-        isNetworkError ? 'Network error :(' : err?.message || 'Password reset request failed :(',
+        isAuthNetworkError(err)
+          ? 'Network error :('
+          : err?.message || 'Password reset request failed :(',
       );
       console.error(err);
     } finally {

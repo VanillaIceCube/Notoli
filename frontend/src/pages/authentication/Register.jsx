@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { TextField } from '@mui/material';
 import { useNavigate } from 'react-router';
 import { register } from '../../services/notoliApiClient';
-import { persistAuthSession } from '../../services/authSession';
+import { isAuthNetworkError, persistAuthSession } from '../../services/authSession';
 import AuthForm, { AuthLink } from './AuthForm';
 
 export default function Register({ showSnackbar }) {
@@ -33,12 +33,9 @@ export default function Register({ showSnackbar }) {
         navigate('/');
       }
     } catch (err) {
-      const isNetworkError =
-        err instanceof TypeError ||
-        (typeof err?.message === 'string' && err.message.toLowerCase().includes('network'));
       showSnackbar(
         'error',
-        isNetworkError ? 'Network error :(' : err?.message || 'Registration failed :(',
+        isAuthNetworkError(err) ? 'Network error :(' : err?.message || 'Registration failed :(',
       );
       console.error(err);
     } finally {
