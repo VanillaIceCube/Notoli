@@ -524,12 +524,19 @@ class TransactionTests(unittest.TestCase):
         self.assertEqual(len(self.events), events)
 
     def test_success_full_private_recovery_and_commit_after_health(self):
-        release.deploy(self.root, self.bundle)
+        self.assertFalse((self.root / "current.json").exists())
+        with patch.object(
+            release, "recovery_controller", wraps=release.recovery_controller
+        ) as saved_controller:
+            release.deploy(self.root, self.bundle)
+        saved_controller.assert_not_called()
         self.assertEqual(self.values(), ["original", "migration"])
         self.assertFalse((self.root / "FAILED.json").exists())
         current = json.loads((self.root / "current.json").read_text())
         self.assertTrue(current["healthy"])
         recovery = self.root / "recovery" / self.identity
+        self.assertEqual(json.loads((recovery / "previous.json").read_text()), {})
+        self.assertFalse((recovery / "previous-release").exists())
         self.assertTrue((recovery / "db.sqlite3").is_file())
         self.assertFalse((recovery / "legacy-evidence").exists())
         self.assertEqual((self.root / ".env").read_text(), "ORIGINAL=private")

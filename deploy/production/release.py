@@ -584,6 +584,7 @@ def capture_recovery(root, candidate, recovery):
     write_private(
         recovery / "previous.json", current.read_text() if current.exists() else "{}"
     )
+    # First adoption has no accepted controller; validate only recorded releases.
     if current.exists():
         old_dir = saved_controller_directory(
             root, json.loads(regular(current).read_text())
