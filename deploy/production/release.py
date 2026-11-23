@@ -312,8 +312,10 @@ def preflight(root):
         != gateway_config["project"]
     ):
         raise ReleaseError("Approved host ingress must already be active")
-    if set(gateway["NetworkSettings"]["Networks"]) != set(expected):
-        raise ReleaseError("Ingress network boundary changed")
+    # App releases check their own routes; Infrastructure checks the full host
+    # topology in nginx/check_host.py. Other app networks are not prerequisites.
+    if not set(expected) <= set(gateway["NetworkSettings"]["Networks"]):
+        raise ReleaseError("Ingress is missing an application route network")
     for network, address in gateway_config["addresses"].items():
         if gateway["NetworkSettings"]["Networks"][network]["IPAddress"] != address:
             raise ReleaseError("Ingress trusted peer changed")

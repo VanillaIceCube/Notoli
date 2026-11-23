@@ -344,5 +344,11 @@ class PreflightTests(unittest.TestCase):
                         previous
                     )
                 gateway["NetworkSettings"]["Networks"]["unexpected-network"] = {}
-                with self.assertRaises(release.ReleaseError):
+                # Infrastructure validates unrelated gateway networks. The app
+                # still requires each of its own routes and exact trusted peer.
+                release.preflight(root)
+                route = next(iter(policy["networks"]))
+                endpoint = gateway["NetworkSettings"]["Networks"].pop(route)
+                with self.assertRaisesRegex(release.ReleaseError, "missing an application route"):
                     release.preflight(root)
+                gateway["NetworkSettings"]["Networks"][route] = endpoint
