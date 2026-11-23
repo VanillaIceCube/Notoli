@@ -22,7 +22,7 @@ export const listFixtures = [
   { id: 11, name: 'test_list_02' },
 ];
 
-export const noteFixtures = [
-  { id: 101, note: 'test_note_01', status: 'Not Started' },
-  { id: 102, note: 'test_note_02', status: 'Complete' },
+export const taskFixtures = [
+  { id: 101, text: 'test_task_01', status: 'Not Started' },
+  { id: 102, text: 'test_task_02', status: 'Complete' },
 ];

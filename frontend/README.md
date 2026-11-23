@@ -13,11 +13,28 @@ authentication, and the application shell.
 - `src/index.css`: platform font rendering and remaining app-specific global rules,
   loaded by `src/index.jsx`. Keep responsive page geometry in the owning component.
 - `src/components/`: reusable interface components.
+  Standard components maintained across the three apps live in [src/components/app-core/](src/components/app-core/).
+  App-specific layout and navigation live in [src/components/app/](src/components/app/).
 - `src/pages/`: application pages and routes.
-- `src/services/`: API requests and centralized session storage.
-- `src/hooks/`: reactive session access and shared notification lifecycle behavior.
+- `src/services/`: API requests, response parsing in `http/apiResponse.js` and session storage in `authentication/sessionState.js`.
+- `src/hooks/`: reactive session access, notifications, the session’s board list and pull-to-refresh gestures.
 - `src/test-helpers/`: shared test setup and reusable helpers.
   App, startup and feature tests stay beside the files they exercise.
+
+Under `components/`, `pages/`, `hooks/` and `services/`, put every module and its
+adjacent test in exactly one purpose-named subfolder. Use lowercase names with hyphens between words.
+
+### Where to change things
+
+| To change                                       | Start here                                                                                                                         |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Routes and layout                               | [App](src/App.jsx)                                                                                                                 |
+| Header and notifications                        | [AppHeader](src/components/app-core/AppHeader.jsx), [NotificationsMenu](src/components/app-core/NotificationsMenu.jsx)             |
+| Sign-in, registration, and password reset       | [AuthForm](src/components/app-core/AuthForm.jsx) and [route pages](src/pages/authentication/)                                      |
+| Shared colors, typography, and component styles | [Theme](src/theme.js)                                                                                                              |
+| Preferred board on sign-in                      | [BoardHomeRedirect](src/components/app/BoardHomeRedirect.js)                                                                       |
+| Board navigation and sharing                    | [BoardNavigationDrawer](src/components/app/BoardNavigationDrawer.jsx), [BoardShareDialog](src/components/app/BoardShareDialog.jsx) |
+| Lists and tasks                                 | [BoardListsPage](src/pages/notepad/BoardListsPage.jsx), [ListTasksPage](src/pages/notepad/ListTasksPage.jsx)                       |
 
 ## 💻 Local development
 
@@ -71,18 +88,19 @@ reload at the current URL, preserving its query and deployment base. Navigating
 to another route clears that route's error state. The build emits separate page
 chunks; shared vendor code remains part of the signed-out dependency graph.
 
-Notoli gives each active/pending notepad slot its own boundary. The active page
-stays visible while a pending chunk loads; a pending import failure activates
-its recovery UI instead of leaving it hidden behind the previous page.
+Board and list pages have separate boundaries for the active page and the next
+page. The active page stays visible until the next page is ready. A failed
+import shows recovery controls for the next page.
 
-- `/` redirects authenticated users to their first board when one exists
+- `/` opens the last accessible board or the first accessible board by ID
 - `/board/:boardId` shows lists for a board
-- `/board/:boardId/list/:listId` shows notes for a list
+- `/board/:boardId/list/:listId` shows tasks for a list
 - Public auth routes: `/login`, `/register`, `/forgot-password`, `/reset-password?uid=<...>&token=<...>`
 - `/connections/authorize` displays OAuth consent for a pending application request
 - `/connections` lists and revokes Connected Apps (also available in the profile menu)
 - Everything else requires auth
 
+All four authentication pages use the shared `AuthForm` for layout and submit controls.
 Authentication-page navigation uses Material UI `Link` with React Router `Link`,
 so each destination has a real `href`, Tab/Enter access, and native new-tab
 behavior without submitting its form. Regression tests cover all five links
@@ -95,7 +113,7 @@ compatibility form, not an additional React route.
 
 ## 🔐 Sessions and connections
 
-`src/services/sessionState.js` is the sole owner of the compatible access/refresh
+`src/services/authentication/sessionState.js` is the sole owner of the compatible access/refresh
 and username/email storage keys. Its cached snapshots and subscriptions feed
 `useSession`; login/logout replace the account generation, while guarded refresh
 updates tokens without replacing that generation. Do not read or mutate auth
@@ -105,17 +123,16 @@ the hook for rendering, and the store operations for writes. The unrelated
 
 The application shell and protected content reset on account changes, including
 open menus, private drafts and Notoli's board drawer state. Async continuations
-use `useSessionGuard` before account-scoped navigation or global UI updates.
+use `useSessionGuard` before account-scoped navigation or global UI updates. Authentication forms also check the current URL so a late response cannot take over after navigation starts.
 Logout/expiry queue their login message before publishing the cleared session;
 root snackbar state preserves successful login/register feedback and excludes
 messages from an older generation.
 
 `useNotifications` owns loading, retries, unread state and synchronous item/bulk
-locks. Headers inject stable app-owned API adapters and keep presentation and
-target navigation local. Generation and unmount guards discard stale lists,
-mutations and errors; token rotation preserves pending work. An earlier list
-request cannot undo a newer mutation. MacroMapper retains its existing HTTP
-error-message adapter.
+locks. `NotificationsMenu` connects the hook to the app's notification API and
+handles presentation and navigation. The hook discards stale results after
+account changes or unmount. Token rotation preserves pending work, and an
+earlier list request cannot undo a newer mutation.
 
 Authentication forms disable submission while pending. Tokens and profile data
 live in `sessionStorage`; new sessions trim profile fields and clear absent values.
@@ -133,8 +150,10 @@ for Retry, and malformed mark-read responses must not navigate away.
 Use semantic links for destinations and buttons for actions, with keyboard and
 native new-tab coverage.
 
-Ordinary login lands on the preferred board; connection login preserves the
-validated pending consent path and query. Connection pages use explicit JWT
+Ordinary login goes to the home route, which chooses the preferred board.
+The session layout loads the board list for both the home redirect and drawer.
+Token rotation refreshes that list, and drawer mutations keep the shared result current.
+Connection login preserves the validated pending consent path and query. Connection pages use explicit JWT
 headers and omit cookies. JWTs never enter OAuth callback URLs. Consent and
 revocation stay account-bound; scopes and current membership remain enforced by
 Django. See [Notoli's MCP integration](../backend/apps/mcp/README.md#application-tools) and
@@ -147,9 +166,9 @@ Approve/Cancel. It never auto-approves or puts credentials in links. Invalid/sta
 tickets clear controls and require fresh review. Framed action review is refused;
 frontend Nginx applies `frame-ancestors 'none'`, `X-Frame-Options: DENY`, no-store and
 no-referrer to the exact `/connections/authorize` page, preserving embedding policy
-elsewhere. Only MacroMapper configures the backend handler; FullStackTemplate and
-Notoli retain reusable plumbing with action approval unavailable and existing
-domain behavior unchanged.
+elsewhere. MacroMapper and Notoli configure app-owned approval handlers.
+FullStackTemplate supplies the reusable flow for applications that register a
+handler.
 
 ### Connections response contract
 
@@ -172,9 +191,11 @@ and session-lifecycle contract.
 
 Board management lives in the right sidebar. Open the Board list, use a board row's action menu, and choose Share. The Share dialog displays the board owner and collaborators. Owners can add collaborators by username/email and remove collaborators; non-owners can view access in read-only mode.
 
-### Notes checklist items
+### Task checklist items
 
-Notes in a list render as checklist rows. Checking a note updates its `status` to `Complete` through the notes API, immediately reflects the change in the UI, and shows complete note text with a strikethrough. Unchecked notes use `Not Started`, and the API also supports `In Progress`.
+Tasks in a list render as checklist rows. Checking a task sets its `status` to `Complete` and strikes through the task text immediately. Unchecking sets it to `Not Started`. The API also supports `In Progress`.
+
+Authentication and notification requests live in `src/services/authentication/authApiClient.js` and `src/services/notifications/notificationApiClient.js`. The board, list and task client `src/services/notepad/notoliApiClient.js` translates between task `text` and the existing `note` field on `/api/notes/` routes.
 
 ### In-app notifications
 
@@ -182,7 +203,7 @@ The app bar notification icon opens a popover with the newest notifications firs
 
 ### Drag-and-drop reordering
 
-List and note pages include a top-right page action menu for entering reorder mode. Reorder mode hides row action menus, shows right-side drag handles, hides Add New, and exits through Done. Dragging only starts from the handle and persists the final order through the reorder API after drop.
+To reorder lists or tasks, open a row’s action menu and choose **Reorder**. Drag items by the handles on the right. Each drop saves the new order. Select **Done Reordering** to return to the regular list.
 
 Loaded board/list pages may report readiness again when their parent renders. The route coordinator keeps an already active single-page state unchanged, preventing a render feedback loop that can make controls unresponsive. Unit tests exercise automatic and repeated readiness. See issue #1022.
 
@@ -206,6 +227,11 @@ immediately on route exit/unmount and once a disabled hook has settled.
 
 ## 🎨 Style guide
 
+Use `--page-background` and `--page-text` for the document, and
+`--surface-background` and `--surface-text` for panels and controls. The app theme
+defines these colors. Keep sibling JSX sections in the order they appear on
+screen so keyboard navigation follows the layout.
+
 `src/theme.js` owns the dark document background, pale-yellow paper surfaces and
 neutral gray controls. MUI uses light control semantics on these pale surfaces;
 body text remains white on the dark document. Preserve the system document font,
@@ -222,7 +248,7 @@ Test helpers use the actual app theme with only ripple suppression added.
 
 - Dialog and modal dividers should be inset to align with the content padding.
 - Avoid full-bleed divider lines inside dialogs unless the surrounding surface also uses full-bleed sectioning.
-- Use the app divider color (`var(--secondary-color)`) and a visible weight (`borderBottomWidth: 2`) for consistency with sidebar and list surfaces.
+- Use the app divider color (`var(--surface-text)`) and a visible weight (`borderBottomWidth: 2`) for consistency with sidebar and list surfaces.
 
 ### Dialog density
 

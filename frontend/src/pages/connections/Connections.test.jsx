@@ -1,17 +1,20 @@
-import { startSession } from '../../services/sessionState';
+import { startSession } from '../../services/authentication/sessionState';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes, useLocation } from 'react-router';
 import { renderWithProviders } from '../../test-helpers/utils';
-import AuthenticatedRoute from '../../components/AuthenticatedRoute';
+import AuthenticatedRoute from '../../components/app-core/AuthenticatedRoute';
 import ConnectedApps, { OAuthConsent } from './Connections';
 import Login from '../authentication/Login';
-import * as connections from '../../services/connectionsClient';
-import { fetchBoards, login } from '../../services/notoliApiClient';
-vi.mock('../../services/connectionsClient');
-vi.mock('../../services/notoliApiClient', () => ({
-  login: vi.fn(),
+import * as connections from '../../services/connections/connectionsClient';
+import { login } from '../../services/authentication/authApiClient';
+import { fetchBoards } from '../../services/notepad/notoliApiClient';
+vi.mock('../../services/connections/connectionsClient');
+vi.mock('../../services/notepad/notoliApiClient', () => ({
   fetchBoards: vi.fn(),
+}));
+vi.mock('../../services/authentication/authApiClient', () => ({
+  login: vi.fn(),
 }));
 const query =
   '?client_id=notoli-chatgpt&state=a%26b%3D%3F&resource=https%3A%2F%2Fnotoli.example%2Fmcp';
@@ -97,12 +100,9 @@ beforeEach(() => {
     revoked: true,
   });
   login.mockResolvedValue({
-    ok: true,
-    json: async () => ({
-      access: 'NEW-JWT',
-      refresh: 'REFRESH',
-      username: 'alice',
-    }),
+    access: 'NEW-JWT',
+    refresh: 'REFRESH',
+    username: 'alice',
   });
 });
 test('an authenticated user goes directly to consent with application, identity and permissions', async () => {
@@ -175,10 +175,6 @@ test('signed-out users use existing login, preserve the exact request, and retur
 });
 test('an external login next parameter cannot redirect the user off-site', async () => {
   sessionStorage.clear();
-  fetchBoards.mockResolvedValue({
-    ok: true,
-    json: async () => [],
-  });
   renderFlow('/login?next=https%3A%2F%2Fattacker.example%2Fconnections');
   await userEvent.type(screen.getByLabelText('Email'), 'alice@example.com');
   await userEvent.type(screen.getByLabelText('Password'), 'password');

@@ -1,19 +1,20 @@
-import { getSessionVersion } from '../../services/sessionState';
-import { useState, useCallback, useEffect } from 'react';
-import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
-import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
-import { fetchBoards as fetchBoardsApi, login } from '../../services/notoliApiClient';
-import { persistAuthSession, readOkJson } from '../../services/authSession';
-import { getPreferredBoardId } from '../../services/lastBoard';
-import { connectionReturnTo } from '../../services/authRedirect';
+import { useState, useEffect } from 'react';
+import { TextField } from '@mui/material';
+import { useLocation, useNavigate } from 'react-router';
+import { login } from '../../services/authentication/authApiClient';
+import { isAuthNetworkError } from '../../services/http/apiResponse';
+import { startSession } from '../../services/authentication/sessionState';
+import { connectionReturnTo } from '../../services/authentication/authRedirect';
+import { useSessionGuard } from '../../hooks/authentication/useSession';
+import AuthForm, { AuthLink } from '../../components/app-core/AuthForm';
 
 export default function Login({ showSnackbar }) {
-  // Basics
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const navigate = useNavigate();
+  const isCurrentSession = useSessionGuard({ trackLocation: true });
   const location = useLocation();
   const returnTo = connectionReturnTo(new URLSearchParams(location.search).get('next'));
 
@@ -35,37 +36,16 @@ export default function Login({ showSnackbar }) {
     }
   }, [showSnackbar]);
 
-  // Pull Board List
-  const fetchBoards = useCallback(
-    async (token, showError, sessionVersion) => {
-      try {
-        const response = await fetchBoardsApi(token);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        return data;
-      } catch (err) {
-        if (showError && getSessionVersion() === sessionVersion) {
-          const isHttpError = typeof err?.message === 'string' && err.message.startsWith('HTTP ');
-          showSnackbar('error', isHttpError ? 'Board load failed :(' : 'Network error :(');
-        }
-        return [];
-      }
-    },
-    [showSnackbar],
-  );
-
-  // Login function
   const handleLogin = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+    let acceptedResponse = false;
     try {
-      const response = await login({ email: email.trim(), password });
+      const data = await login({ email: email.trim(), password });
+      if (!isCurrentSession()) return;
+      acceptedResponse = true;
+      startSession(data);
 
-      const data = await readOkJson(response, 'Login failed :(');
-      persistAuthSession(data);
-      const sessionVersion = getSessionVersion();
-
-      // Update Snackbar
       const welcomeName =
         data?.username ||
         data?.email?.split?.('@')?.[0] ||
@@ -73,26 +53,11 @@ export default function Login({ showSnackbar }) {
         'there';
       showSnackbar('success', `Welcome ${welcomeName}!`);
 
-      if (returnTo) {
-        navigate(returnTo, { replace: true });
-        return;
-      }
-
-      // Navigate to first Board, if empty, navigate to root
-      const boards = await fetchBoards(data.access, true, sessionVersion);
-      if (getSessionVersion() !== sessionVersion) return;
-      const boardId = getPreferredBoardId(boards);
-      if (boardId) {
-        navigate(`/board/${boardId}`);
-      } else {
-        navigate('/');
-      }
+      navigate(returnTo || '/', { replace: true });
     } catch (err) {
-      // Update Snackbar
-      const isNetworkError =
-        err instanceof TypeError ||
-        (typeof err?.message === 'string' && err.message.toLowerCase().includes('network'));
-      showSnackbar('error', isNetworkError ? 'Network error :(' : 'Login failed :(');
+      // A session storage failure can also advance the session version.
+      if (!acceptedResponse && !isCurrentSession()) return;
+      showSnackbar('error', isAuthNetworkError(err) ? 'Network error :(' : 'Login failed :(');
       console.error(err);
     } finally {
       setIsSubmitting(false);
@@ -100,92 +65,37 @@ export default function Login({ showSnackbar }) {
   };
 
   return (
-    <Stack
-      spacing={2}
-      sx={{
-        maxWidth: 'sm',
-        p: 5.5,
-        mx: 'auto',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '85vh',
-      }}
+    <AuthForm
+      title="Login"
+      onSubmit={handleLogin}
+      isSubmitting={isSubmitting}
+      submitLabel={isSubmitting ? 'Logging in...' : 'Login'}
+      footer={
+        <>
+          <AuthLink to="/forgot-password">Forgot Password?</AuthLink>
+          {' | '}
+          <AuthLink to="/register">Create Account!</AuthLink>
+        </>
+      }
     >
-      <Typography variant="h3" sx={{ mt: 2, fontWeight: 'bold', color: 'white' }}>
-        notoli
-      </Typography>
-      <Paper elevation={3} sx={{ p: 4, pb: 2, width: '100%' }}>
-        <Box
-          component="form"
-          autoComplete="on"
-          sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleLogin();
-          }}
-        >
-          <TextField
-            fullWidth
-            label="Email"
-            type="email"
-            name="email"
-            autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            label="Password"
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <Button fullWidth type="submit" disabled={isSubmitting} variant="contained">
-            <Typography variant="h5" align="center">
-              {isSubmitting ? 'Logging in...' : 'Login'}
-            </Typography>
-          </Button>
-          <Box
-            sx={{
-              mt: 0.5,
-              pt: 1.5,
-              borderTop: '1px solid rgba(0,0,0,0.2)',
-              textAlign: 'center',
-            }}
-          >
-            <Typography
-              variant="caption"
-              sx={{
-                color: 'var(--secondary-color)',
-                width: '100%',
-              }}
-            >
-              <Link
-                component={RouterLink}
-                variant="caption"
-                underline="always"
-                to="/forgot-password"
-                sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
-              >
-                Forgot Password?
-              </Link>
-              {' | '}
-              <Link
-                component={RouterLink}
-                variant="caption"
-                underline="always"
-                to="/register"
-                sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
-              >
-                Create Account!
-              </Link>
-            </Typography>
-          </Box>
-        </Box>
-      </Paper>
-    </Stack>
+      <TextField
+        fullWidth
+        label="Email"
+        type="email"
+        name="email"
+        autoComplete="username"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <TextField
+        fullWidth
+        label="Password"
+        type="password"
+        name="password"
+        autoComplete="current-password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+    </AuthForm>
   );
 }

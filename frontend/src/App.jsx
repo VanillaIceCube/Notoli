@@ -1,23 +1,24 @@
-import { getSessionVersion } from './services/sessionState';
-import useSession, { useSessionGuard } from './hooks/useSession';
-import RouteContent from './components/RouteContent';
+import { getSessionVersion } from './services/authentication/sessionState';
+import useSession, { useSessionGuard } from './hooks/authentication/useSession';
+import useBoardList from './hooks/notepad/useBoardList';
+import RouteContent from './components/app-core/RouteContent';
 import { CssBaseline, ThemeProvider } from '@mui/material';
-import notoliTheme from './theme';
+import appTheme from './theme';
 import { lazy, useCallback, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from 'react-router';
-import AuthenticatedRoute from './components/AuthenticatedRoute';
-import AppHeader from './components/AppHeader';
-import AppSnackbar from './components/AppSnackbar';
-import BoardNavigationDrawer from './components/BoardNavigationDrawer';
-import NavigationBridge from './components/NavigationBridge';
-import BoardHomeRedirect from './components/BoardHomeRedirect';
+import AuthenticatedRoute from './components/app-core/AuthenticatedRoute';
+import AppHeader from './components/app-core/AppHeader';
+import AppSnackbar from './components/app-core/AppSnackbar';
+import BoardNavigationDrawer from './components/app/BoardNavigationDrawer';
+import NavigationBridge from './components/app-core/NavigationBridge';
+import BoardHomeRedirect from './components/app/BoardHomeRedirect';
 
 const Login = lazy(() => import('./pages/authentication/Login'));
 const Register = lazy(() => import('./pages/authentication/Register'));
 const ForgotPassword = lazy(() => import('./pages/authentication/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/authentication/ResetPassword'));
-const BoardListsPage = lazy(() => import('./pages/boards/BoardListsPage'));
-const ListTasksPage = lazy(() => import('./pages/lists/ListTasksPage'));
+const BoardListsPage = lazy(() => import('./pages/notepad/BoardListsPage'));
+const ListTasksPage = lazy(() => import('./pages/notepad/ListTasksPage'));
 const ConnectedApps = lazy(() => import('./pages/connections/Connections'));
 const OAuthConsent = lazy(() =>
   import('./pages/connections/Connections').then((module) => ({ default: module.OAuthConsent })),
@@ -28,7 +29,7 @@ function getLocationSignature(location) {
 }
 
 function isNotepadRoute(pathname) {
-  return pathname === '/' || /^\/board\/[^/]+(?:\/list\/[^/]+)?$/.test(pathname);
+  return /^\/board\/[^/]+(?:\/list\/[^/]+)?$/.test(pathname);
 }
 
 function NotepadRoutes({ setAppBarHeader }) {
@@ -86,15 +87,6 @@ function NotepadRoutes({ setAppBarHeader }) {
       <RouteContent routeKey={slot.signature} onError={() => handlePageReady(slot.signature)}>
         <Routes location={slot.location}>
           <Route
-            path="/"
-            element={
-              <AuthenticatedRoute>
-                <BoardHomeRedirect />
-              </AuthenticatedRoute>
-            }
-          />
-
-          <Route
             path="/board/:boardId"
             element={
               <AuthenticatedRoute>
@@ -127,12 +119,12 @@ function NotepadRoutes({ setAppBarHeader }) {
 
 function ApplicationSession({ showSnackbar }) {
   const isCurrentSession = useSessionGuard();
+  const boardList = useBoardList();
   // App Bar
   const [appBarHeader, setAppBarHeader] = useState('');
 
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerBoardsLabel, setDrawerBoardsLabel] = useState('');
 
   const showSessionSnackbar = (severity, message) => {
     if (isCurrentSession()) showSnackbar(severity, message);
@@ -143,14 +135,21 @@ function ApplicationSession({ showSnackbar }) {
       <NavigationBridge />
       <AppHeader appBarHeader={appBarHeader} setDrawerOpen={setDrawerOpen} />
       <BoardNavigationDrawer
+        boardList={boardList}
         open={drawerOpen}
         setDrawerOpen={setDrawerOpen}
-        drawerBoardsLabel={drawerBoardsLabel}
-        setDrawerBoardsLabel={setDrawerBoardsLabel}
         showSnackbar={showSessionSnackbar}
       />
       <RouteContent>
         <Routes>
+          <Route
+            path="/"
+            element={
+              <AuthenticatedRoute>
+                <BoardHomeRedirect boardList={boardList} showSnackbar={showSnackbar} />
+              </AuthenticatedRoute>
+            }
+          />
           <Route path="/login" element={<Login showSnackbar={showSnackbar} />} />
           <Route path="/register" element={<Register showSnackbar={showSnackbar} />} />
           <Route path="/forgot-password" element={<ForgotPassword showSnackbar={showSnackbar} />} />
@@ -191,7 +190,7 @@ export default function App() {
     setSnackbar({ open: true, severity, message, version: getSessionVersion() });
   }, []);
   return (
-    <ThemeProvider theme={notoliTheme}>
+    <ThemeProvider theme={appTheme}>
       <CssBaseline />
       <Router basename={import.meta.env.BASE_URL}>
         <ApplicationSession key={version} showSnackbar={showSnackbar} />
