@@ -85,22 +85,29 @@ class NotesDomainServiceTests(TestCase):
                 operation()
         self.assertEqual(list(self.note_list.notes.all()), [self.item])
 
-    def test_membership_replacement_and_activity_roll_back_together(self):
+    def test_list_update_keeps_item_changes_when_activity_fails(self):
         other = services.create_note(
             self.owner, {"board": self.board, "note": "Replacement"}
         )
         Notification.objects.all().delete()
+
+        def fail_after_writing_activity(*args, **kwargs):
+            Notification.objects.create(
+                recipient=self.owner, event_type="test", title="Partial activity"
+            )
+            raise RuntimeError("unavailable")
+
         with patch(
             "apps.notes.services.notify_board_members",
-            side_effect=RuntimeError("unavailable"),
+            side_effect=fail_after_writing_activity,
         ):
-            with self.assertRaises(RuntimeError):
+            with self.assertLogs("apps.notes.services", level="ERROR"):
                 services.update_list(
                     self.member, {"name": "Changed", "notes": [other]}, self.note_list
                 )
         self.note_list.refresh_from_db()
-        self.assertEqual(self.note_list.name, "Tasks")
-        self.assertEqual(list(self.note_list.notes.all()), [self.item])
+        self.assertEqual(self.note_list.name, "Changed")
+        self.assertEqual(list(self.note_list.notes.all()), [other])
         self.assertFalse(Notification.objects.exists())
 
     def test_sharing_and_notifications_roll_back_together(self):

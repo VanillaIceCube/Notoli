@@ -2,6 +2,7 @@
 
 Callers validate transport fields with serializers. These services recheck live
 board access and own mutations, memberships, ordering and activity events.
+Items are stored as Note records and linked to lists through ListNote.
 """
 
 import logging
@@ -21,13 +22,12 @@ from apps.notifications.models import Notification
 from apps.notifications.services import (
     board_path,
     display_name,
-    first_note_list,
+    first_item_list,
     list_path,
     notify_board_members,
 )
 
-from .models import Board, ListNote, Note
-from .models import List as NoteList
+from .models import Board, List, ListNote, Note
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -56,8 +56,6 @@ def _locked_board(actor, board_id):
 
 
 def _locked_instance(actor, instance, model):
-    if model is Board:
-        return _locked_board(actor, instance.pk)
     current = get_object_or_404(model, pk=instance.pk)
     _locked_board(actor, current.board_id)
     return get_object_or_404(
@@ -82,25 +80,25 @@ def require_board_access(actor, board_id):
 
 
 def lists_for(actor, *, board_id=None):
-    rows = NoteList.objects.filter(board__in=boards_for(actor))
+    board_lists = List.objects.filter(board__in=boards_for(actor))
     if board_id:
         require_board_access(actor, board_id)
-        rows = rows.filter(board_id=board_id)
-    return rows.distinct().order_by("position", "created_at", "id")
+        board_lists = board_lists.filter(board_id=board_id)
+    return board_lists.distinct().order_by("position", "created_at", "id")
 
 
 def notes_for(actor, *, board_id=None, list_id=None):
-    rows = Note.objects.filter(board__in=boards_for(actor))
+    items = Note.objects.filter(board__in=boards_for(actor))
     if board_id:
         require_board_access(actor, board_id)
-        rows = rows.filter(board_id=board_id)
+        items = items.filter(board_id=board_id)
     if list_id:
         return (
-            rows.filter(list_memberships__list_id=list_id)
+            items.filter(list_memberships__list_id=list_id)
             .distinct()
             .order_by("list_memberships__position", "list_memberships__id", "id")
         )
-    return rows.distinct()
+    return items.distinct()
 
 
 def require_owner(actor, board, message="Only the board owner can manage access."):
@@ -108,89 +106,75 @@ def require_owner(actor, board, message="Only the board owner can manage access.
         raise PermissionDenied(message)
 
 
-def _save(model, instance, data):
-    data = dict(data)
-    # Board collaborators are the sole direct many-to-many model input.
-    collaborators = data.pop("collaborators", None)
-    if instance is None:
-        instance = model.objects.create(**data)
-    else:
-        for field, value in data.items():
-            setattr(instance, field, value)
-        instance.save()
-    if collaborators is not None:
-        instance.collaborators.set(collaborators)
-    return instance
+def _notify_board_activity(board, actor, event_type, title, message, **context):
+    """Roll back failed activity notifications independently of the edit."""
+    try:
+        with transaction.atomic():
+            notify_board_members(board, actor, event_type, title, message, **context)
+    except Exception:
+        logger.error(
+            "Could not save %s activity notification for board_id=%s",
+            event_type,
+            board.pk,
+        )
 
 
-def _set_notes(note_list, notes):
-    ListNote.objects.filter(list=note_list).delete()
+def _replace_list_items(board_list, items):
+    ListNote.objects.filter(list=board_list).delete()
     ListNote.objects.bulk_create(
         [
-            ListNote(list=note_list, note=note, position=position)
-            for position, note in enumerate(notes)
+            ListNote(list=board_list, note=item, position=position)
+            for position, item in enumerate(items)
         ]
     )
 
 
-def _attach_note(note_list, note):
-    max_position = ListNote.objects.filter(list=note_list).aggregate(Max("position"))[
+def _add_item_to_list(board_list, item):
+    max_position = ListNote.objects.filter(list=board_list).aggregate(Max("position"))[
         "position__max"
     ]
     ListNote.objects.get_or_create(
-        list=note_list,
-        note=note,
+        list=board_list,
+        note=item,
         defaults={"position": (max_position if max_position is not None else -1) + 1},
     )
 
 
-def validate_list_data(data, instance=None):
+def validate_list_data(data, board_list=None):
     if (
-        instance is not None
+        board_list is not None
         and "board" in data
-        and data["board"].pk != instance.board_id
+        and data["board"].pk != board_list.board_id
     ):
         raise ValidationError({"board": ["Cannot change board of a list."]})
-    board = data.get("board") or getattr(instance, "board", None)
-    notes = data.get("notes")
-    if notes is not None and len(notes) > 1000:
+    board = data.get("board") or getattr(board_list, "board", None)
+    items = data.get("notes")
+    if items is not None and len(items) > 1000:
         raise ValidationError({"notes": ["Use at most 1000 ids."]})
-    if notes is not None and len({note.pk for note in notes}) != len(notes):
+    if items is not None and len({item.pk for item in items}) != len(items):
         raise ValidationError({"notes": ["Duplicate ids are not allowed."]})
-    if board is not None and notes is not None:
-        if any(note.board_id != board.pk for note in notes):
+    if board is not None and items is not None:
+        if any(item.board_id != board.pk for item in items):
             raise ValidationError(
                 {"notes": ["All notes must belong to the same board as the list."]}
             )
 
 
-def validate_note_data(actor, data, instance=None):
-    note_list = data.get("list")
-    board = data.get("board")
-    instance_board = getattr(instance, "board", None)
-    if note_list is not None and actor is not None:
-        if not lists_for(actor).filter(pk=note_list.pk).exists():
+def validate_note_data(actor, data, item=None):
+    board_list = data.get("list")
+    requested_board = data.get("board")
+    item_board = getattr(item, "board", None)
+    if board_list is not None and actor is not None:
+        if not lists_for(actor).filter(pk=board_list.pk).exists():
             raise PermissionDenied("You cannot add notes to this list.")
-    if (
-        instance is not None
-        and "board" in data
-        and data["board"].pk != instance.board_id
-    ):
+    if item is not None and "board" in data and data["board"].pk != item.board_id:
         raise ValidationError({"board": ["Cannot change board of an existing note."]})
-    effective_board = instance_board if instance is not None else board
-    if (
-        note_list is None
-        and board is None
-        and (instance is None or instance_board is None)
-    ):
+    board = item_board if item is not None else requested_board
+    if board_list is None and requested_board is None and item_board is None:
         raise ValidationError(
             {"list": ["This field is required when board is not provided."]}
         )
-    if (
-        note_list is not None
-        and effective_board is not None
-        and note_list.board_id != effective_board.pk
-    ):
+    if board_list is not None and board is not None and board_list.board_id != board.pk:
         raise ValidationError({"list": ["List must be in the same board as the note."]})
 
 
@@ -336,10 +320,10 @@ def _default_board_base_name(user):
 
 def seed_default_personal_board(board, user):
     database = board._state.db
-    for list_position, (list_name, note_texts) in enumerate(
+    for list_position, (list_name, item_titles) in enumerate(
         DEFAULT_PERSONAL_BOARD_CONTENT
     ):
-        note_list, _ = NoteList.objects.using(database).get_or_create(
+        board_list, _ = List.objects.using(database).get_or_create(
             board=board,
             name=list_name,
             defaults={
@@ -348,16 +332,16 @@ def seed_default_personal_board(board, user):
             },
         )
 
-        for note_position, note_text in enumerate(note_texts):
-            note, _ = Note.objects.using(database).get_or_create(
+        for item_position, item_title in enumerate(item_titles):
+            item, _ = Note.objects.using(database).get_or_create(
                 board=board,
-                note=note_text,
+                note=item_title,
                 defaults={"created_by": user},
             )
             ListNote.objects.using(database).get_or_create(
-                list=note_list,
-                note=note,
-                defaults={"position": note_position},
+                list=board_list,
+                note=item,
+                defaults={"position": item_position},
             )
 
 
@@ -378,18 +362,30 @@ def create_starter_board(user):
 @transaction.atomic
 def create_board(actor, data):
     _require_actor(actor)
-    data = {**data, "owner": actor, "created_by": actor}
-    return _save(Board, None, data)
+    fields = {**data, "owner": actor, "created_by": actor}
+    collaborators = fields.pop("collaborators", None)
+    board = Board.objects.create(**fields)
+    if collaborators is not None:
+        board.collaborators.set(collaborators)
+    return board
 
 
 @transaction.atomic
 def update_board(actor, data, instance):
-    instance = _locked_instance(actor, instance, Board)
-    require_owner(actor, instance, "Only the board owner can update this board.")
-    previous_name = instance.name
-    board = _save(Board, instance, data)
+    board = _locked_board(actor, instance.pk)
+    require_owner(actor, board, "Only the board owner can update this board.")
+    previous_name = board.name
+
+    fields = dict(data)
+    collaborators = fields.pop("collaborators", None)
+    for field, value in fields.items():
+        setattr(board, field, value)
+    board.save()
+    if collaborators is not None:
+        board.collaborators.set(collaborators)
+
     if board.name != previous_name:
-        notify_board_members(
+        _notify_board_activity(
             board,
             actor,
             Notification.EVENT_BOARD_UPDATED,
@@ -401,189 +397,168 @@ def update_board(actor, data, instance):
 
 @transaction.atomic
 def delete_board(actor, instance):
-    instance = _locked_instance(actor, instance, Board)
-    require_owner(actor, instance, "Only the board owner can delete this board.")
-    notify_board_members(
-        instance,
+    board = _locked_board(actor, instance.pk)
+    require_owner(actor, board, "Only the board owner can delete this board.")
+    _notify_board_activity(
+        board,
         actor,
         Notification.EVENT_BOARD_DELETED,
-        f"Board deleted: {instance.name}",
-        f'{display_name(actor)} deleted the shared board "{instance.name}".',
+        f"Board deleted: {board.name}",
+        f'{display_name(actor)} deleted the shared board "{board.name}".',
     )
-    instance.delete()
+    board.delete()
 
 
 @transaction.atomic
 def create_list(actor, data):
     _require_actor(actor)
-    validate_list_data(data, None)
+    validate_list_data(data)
     board = get_object_or_404(Board.objects.select_for_update(), pk=data["board"].pk)
 
     # Ensure user access to specified board
     if not Board.objects.accessible_to(actor).filter(pk=board.pk).exists():
         raise PermissionDenied("You cannot add lists to this board.")
 
-    max_position = NoteList.objects.filter(board=board).aggregate(Max("position"))[
+    max_position = List.objects.filter(board=board).aggregate(Max("position"))[
         "position__max"
     ]
     next_position = (max_position if max_position is not None else -1) + 1
 
-    note_list = _persist_list(
-        None, {**data, "created_by": actor, "board": board, "position": next_position}
+    fields = {**data, "created_by": actor, "board": board, "position": next_position}
+    items = fields.pop("notes", None)
+    board_list = List.objects.create(**fields)
+    if items is not None:
+        _replace_list_items(board_list, items)
+
+    _notify_board_activity(
+        board,
+        actor,
+        Notification.EVENT_LIST_CREATED,
+        f"New list in {board.name}",
+        f'{display_name(actor)} created the list "{board_list.name}".',
+        note_list=board_list,
+        target_path=list_path(board_list),
     )
-    try:
-        with transaction.atomic():
-            notify_board_members(
-                board,
-                actor,
-                Notification.EVENT_LIST_CREATED,
-                f"New list in {board.name}",
-                f'{display_name(actor)} created the list "{note_list.name}".',
-                note_list=note_list,
-                target_path=list_path(note_list),
-            )
-    except Exception:
-        # A notification failure must not turn a successful list write into a
-        # misleading 500 response. The list is already persisted, so log the
-        # failure and let the API return the created resource.
-        logger.exception(
-            "List creation notification failed for list_id=%s", note_list.pk
-        )
-    return note_list
+    return board_list
 
 
 @transaction.atomic
 def update_list(actor, data, instance):
-    instance = _locked_instance(actor, instance, NoteList)
-    validate_list_data(data, instance)
-    note_list = _persist_list(instance, data)
-    notify_board_members(
-        note_list.board,
+    board_list = _locked_instance(actor, instance, List)
+    validate_list_data(data, board_list)
+    fields = dict(data)
+    items = fields.pop("notes", None)
+    for field, value in fields.items():
+        setattr(board_list, field, value)
+    board_list.save()
+    if items is not None:
+        _replace_list_items(board_list, items)
+
+    _notify_board_activity(
+        board_list.board,
         actor,
         Notification.EVENT_LIST_UPDATED,
-        f"List updated in {note_list.board.name}",
-        f'{display_name(actor)} updated the list "{note_list.name}".',
-        note_list=note_list,
-        target_path=list_path(note_list),
+        f"List updated in {board_list.board.name}",
+        f'{display_name(actor)} updated the list "{board_list.name}".',
+        note_list=board_list,
+        target_path=list_path(board_list),
     )
-    return note_list
+    return board_list
 
 
 @transaction.atomic
 def delete_list(actor, instance):
-    instance = _locked_instance(actor, instance, NoteList)
-    board = instance.board
-    list_name = instance.name
-    notify_board_members(
+    board_list = _locked_instance(actor, instance, List)
+    board = board_list.board
+    _notify_board_activity(
         board,
         actor,
         Notification.EVENT_LIST_DELETED,
         f"List deleted in {board.name}",
-        f'{display_name(actor)} deleted the list "{list_name}".',
+        f'{display_name(actor)} deleted the list "{board_list.name}".',
         target_path=board_path(board),
     )
-    instance.delete()
+    board_list.delete()
 
 
 @transaction.atomic
 def create_note(actor, data):
     validate_note_data(actor, data)
-    _locked_board(
-        actor,
-        (
-            data.get("list").board_id
-            if data.get("list") is not None
-            else data["board"].pk
-        ),
-    )
-    note_list = data.get("list")
+    fields = {**data, "created_by": actor}
+    board_list = fields.pop("list", None)
+    board_id = board_list.board_id if board_list is not None else fields["board"].pk
+    board = _locked_board(actor, board_id)
+    fields["board"] = board
+    item = Note.objects.create(**fields)
+    if board_list is not None:
+        _add_item_to_list(board_list, item)
 
-    note = _persist_note(None, {**data, "created_by": actor})
-    notify_board_members(
-        note.board,
+    _notify_board_activity(
+        board,
         actor,
         Notification.EVENT_NOTE_CREATED,
-        f"New note in {note.board.name}",
-        f'{display_name(actor)} created "{note.note}".',
-        note_list=note_list,
-        note=note,
-        target_path=list_path(note_list)
-        if note_list is not None
-        else board_path(note.board),
+        f"New note in {board.name}",
+        f'{display_name(actor)} created "{item.note}".',
+        note_list=board_list,
+        note=item,
+        target_path=list_path(board_list)
+        if board_list is not None
+        else board_path(board),
     )
-    return note
+    return item
 
 
 @transaction.atomic
 def update_note(actor, data, instance):
-    instance = _locked_instance(actor, instance, Note)
-    validate_note_data(actor, data, instance)
-    previous_status = instance.status
-    note = _persist_note(instance, data)
-    note_list = data.get("list") or first_note_list(note)
-    target_path = (
-        list_path(note_list) if note_list is not None else board_path(note.board)
-    )
-    if previous_status != Note.STATUS_COMPLETE and note.status == Note.STATUS_COMPLETE:
-        notify_board_members(
-            note.board,
-            actor,
-            Notification.EVENT_NOTE_COMPLETED,
-            f"Item completed in {note.board.name}",
-            f'{display_name(actor)} completed "{note.note}".',
-            note_list=note_list,
-            note=note,
-            target_path=target_path,
-        )
-        return note
+    item = _locked_instance(actor, instance, Note)
+    validate_note_data(actor, data, item)
+    previous_status = item.status
+    fields = dict(data)
+    board_list = fields.pop("list", None)
+    for field, value in fields.items():
+        setattr(item, field, value)
+    item.save()
+    if board_list is not None:
+        _add_item_to_list(board_list, item)
 
-    notify_board_members(
-        note.board,
+    board = item.board
+    board_list = board_list or first_item_list(item)
+    if previous_status != Note.STATUS_COMPLETE and item.status == Note.STATUS_COMPLETE:
+        event_type = Notification.EVENT_NOTE_COMPLETED
+        title = f"Item completed in {board.name}"
+        action = "completed"
+    else:
+        event_type = Notification.EVENT_NOTE_UPDATED
+        title = f"Note updated in {board.name}"
+        action = "updated"
+    _notify_board_activity(
+        board,
         actor,
-        Notification.EVENT_NOTE_UPDATED,
-        f"Note updated in {note.board.name}",
-        f'{display_name(actor)} updated "{note.note}".',
-        note_list=note_list,
-        note=note,
-        target_path=target_path,
+        event_type,
+        title,
+        f'{display_name(actor)} {action} "{item.note}".',
+        note_list=board_list,
+        note=item,
+        target_path=list_path(board_list)
+        if board_list is not None
+        else board_path(board),
     )
-    return note
+    return item
 
 
 @transaction.atomic
 def delete_note(actor, instance):
-    instance = _locked_instance(actor, instance, Note)
-    board = instance.board
-    note_text = instance.note
-    notify_board_members(
+    item = _locked_instance(actor, instance, Note)
+    board = item.board
+    _notify_board_activity(
         board,
         actor,
         Notification.EVENT_NOTE_DELETED,
         f"Note deleted in {board.name}",
-        f'{display_name(actor)} deleted "{note_text}".',
+        f'{display_name(actor)} deleted "{item.note}".',
         target_path=board_path(board),
     )
-    instance.delete()
-
-
-def _persist_list(instance, data):
-    data = dict(data)
-    notes = data.pop("notes", None)
-    note_list = _save(NoteList, instance, data)
-    if notes is not None:
-        _set_notes(note_list, notes)
-    return note_list
-
-
-def _persist_note(instance, data):
-    data = dict(data)
-    note_list = data.pop("list", None)
-    if instance is None and data.get("board") is None and note_list is not None:
-        data["board"] = note_list.board
-    note = _save(Note, instance, data)
-    if note_list is not None:
-        _attach_note(note_list, note)
-    return note
+    item.delete()
 
 
 def ordered_ids(value):
@@ -606,8 +581,8 @@ def reorder_lists(actor, board_id, ids):
         raise ValidationError({"board": ["This field is required."]})
     ids = ordered_ids(ids)
     _locked_board(actor, board_id)
-    rows = lists_for(actor, board_id=board_id)
-    if set(ids) != set(rows.values_list("id", flat=True)):
+    board_lists = lists_for(actor, board_id=board_id)
+    if set(ids) != set(board_lists.values_list("id", flat=True)):
         raise ValidationError(
             {
                 "ordered_ids": [
@@ -616,8 +591,8 @@ def reorder_lists(actor, board_id, ids):
             }
         )
     for position, list_id in enumerate(ids):
-        rows.filter(pk=list_id).update(position=position)
-    return rows.order_by("position", "created_at", "id")
+        board_lists.filter(pk=list_id).update(position=position)
+    return board_lists.order_by("position", "created_at", "id")
 
 
 @transaction.atomic
@@ -625,12 +600,13 @@ def reorder_notes(actor, list_id, ids):
     if list_id is None:
         raise ValidationError({"list": ["This field is required."]})
     ids = ordered_ids(ids)
-    note_list = get_object_or_404(NoteList, pk=list_id)
+    board_list = get_object_or_404(List, pk=list_id)
     try:
-        note_list = _locked_instance(actor, note_list, NoteList)
+        board_list = _locked_instance(actor, board_list, List)
     except PermissionDenied:
         raise PermissionDenied("You do not have access to this list.") from None
-    memberships = ListNote.objects.filter(list=note_list, note__in=notes_for(actor))
+    items = notes_for(actor)
+    memberships = ListNote.objects.filter(list=board_list, note__in=items)
     if set(ids) != set(memberships.values_list("note_id", flat=True)):
         raise ValidationError(
             {
@@ -639,7 +615,7 @@ def reorder_notes(actor, list_id, ids):
                 ]
             }
         )
-    for position, note_id in enumerate(ids):
-        memberships.filter(note_id=note_id).update(position=position)
-    by_id = {note.pk: note for note in notes_for(actor).filter(pk__in=ids)}
-    return [by_id[pk] for pk in ids]
+    for position, item_id in enumerate(ids):
+        memberships.filter(note_id=item_id).update(position=position)
+    items_by_id = {item.pk: item for item in items.filter(pk__in=ids)}
+    return [items_by_id[item_id] for item_id in ids]
