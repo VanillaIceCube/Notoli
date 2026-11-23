@@ -3,11 +3,12 @@
 from unittest.mock import patch
 
 from django.test import override_settings
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.notes.models import Board, List, ListNote, Note
-from apps.notes.signals import (
+from apps.notes.services import (
     DEFAULT_PERSONAL_BOARD_CONTENT,
     seed_default_personal_board,
 )
@@ -112,6 +113,54 @@ class RegistrationOnboardingTests(APITestCase):
 
 @override_settings(PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"])
 class AtomicOnboardingTests(APITestCase):
+    def test_admin_add_creates_a_starter_board(self):
+        admin = User.objects.create_superuser(
+            username="admin", email="admin@example.com", password="Admin-Password-93!"
+        )
+        self.assertEqual(Board.objects.get(owner=admin).lists.count(), 3)
+        self.client.force_login(admin)
+        response = self.client.post(
+            reverse("admin:authentication_user_add"),
+            {
+                "username": "admin_added",
+                "usable_password": "true",
+                "password1": "Local-Account-93!",
+                "password2": "Local-Account-93!",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        new_user = User.objects.get(username="admin_added")
+        board = Board.objects.get(owner=new_user)
+        self.assertEqual(board.name, "admin_added's Board")
+        self.assertEqual(
+            list(board.lists.values_list("name", flat=True)),
+            ["Grocery List", "Chores List", "Todo List"],
+        )
+
+    def test_saving_existing_user_does_not_recreate_a_deleted_starter_board(self):
+        user = User.objects.create_user(
+            username="existing", email="existing@example.com"
+        )
+        Board.objects.get(owner=user).delete()
+        user.first_name = "Updated"
+        user.save()
+        self.assertFalse(Board.objects.filter(owner=user).exists())
+
+    def test_failed_direct_save_can_retry_with_the_same_user(self):
+        user = User(username="retry", email="retry@example.com")
+        with patch(
+            "apps.notes.services.seed_default_personal_board",
+            side_effect=RuntimeError("onboarding unavailable"),
+        ):
+            with self.assertRaisesMessage(RuntimeError, "onboarding unavailable"):
+                user.save()
+
+        self.assertIsNone(user.pk)
+        self.assertFalse(User.objects.filter(username="retry").exists())
+        user.save()
+        self.assertEqual(Board.objects.get(owner=user).lists.count(), 3)
+
     def test_seeding_failure_rolls_back_all_signup_data_and_allows_retry(self):
         before = {
             model: model.objects.count()
@@ -127,7 +176,7 @@ class AtomicOnboardingTests(APITestCase):
             raise RuntimeError("onboarding unavailable")
 
         with patch(
-            "apps.notes.signals.seed_default_personal_board",
+            "apps.notes.services.seed_default_personal_board",
             side_effect=fail_after_seed,
         ):
             with self.assertRaisesMessage(RuntimeError, "onboarding unavailable"):

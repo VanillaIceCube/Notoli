@@ -104,7 +104,13 @@ Common endpoints:
 - `POST /auth/forgot-password/` -> accepts `email`; sends a reset link if the account exists and returns a generic success message
 - `POST /auth/reset-password/` -> accepts `uid`, `token`, and `password`; sets a new password when the token is valid
 
-New users get a default board named after their username, such as `"andrew's Board"`, created automatically via a post-save signal in `apps/notes/signals.py`. If the username is auto-derived from the email prefix, the board name uses that prefix with its first letter capitalized, such as `"Example_02's Board"` for `example_02@gmail.com`. The default personal board is also bootstrapped with ordered starter lists: `Grocery List`, `Chores List`, and `Todo List`, each with starter notes.
+Signup explicitly saves the account and creates its starter board before issuing
+session tokens. Registration returns the ID of that board. Django admin and
+ordinary new-user saves use the same account setup. The starter board is named
+after the username, such as `"andrew's Board"`. An email-derived name capitalizes
+the first letter of the prefix, such as `"Example_02's Board"` for
+`example_02@gmail.com`. The lists `Grocery List`, `Chores List`, and `Todo List`
+contain sample notes defined in [notes services](apps/notes/services.py).
 
 All `/api/*` endpoints require:
 

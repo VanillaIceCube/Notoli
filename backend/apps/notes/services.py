@@ -287,6 +287,94 @@ def find_collaborator(identifier):
     return matches[0] if matches else None
 
 
+DEFAULT_PERSONAL_BOARD_CONTENT = [
+    (
+        "Grocery List",
+        [
+            "Large Tortillas",
+            "Carne Asada",
+            "Fries",
+            "Shredded Mexican Cheese",
+            "Sour Cream",
+            "Guac",
+        ],
+    ),
+    (
+        "Chores List",
+        [
+            "Sweep up the beach sand somehow still in the house",
+            "Wipe down the entire condo, shouldn't take long",
+            "Throw away the cold brew collection from every coffee shop nearby",
+        ],
+    ),
+    (
+        "Todo List",
+        [
+            "Volleyball",
+            "Build Furniture",
+            "Oceanside Hike",
+            "Date Night with the wifey :)",
+            "More Volleyball",
+        ],
+    ),
+]
+
+
+def _capitalize_first(value):
+    if not value:
+        return value
+    return value[0].upper() + value[1:]
+
+
+def _default_board_base_name(user):
+    username = (user.get_username() or "").strip()
+    fallback = (user.email or "").split("@", 1)[0].strip()
+    if username and username != fallback:
+        return username
+    return _capitalize_first(fallback or username) or "My"
+
+
+def seed_default_personal_board(board, user):
+    database = board._state.db
+    for list_position, (list_name, note_texts) in enumerate(
+        DEFAULT_PERSONAL_BOARD_CONTENT
+    ):
+        note_list, _ = NoteList.objects.using(database).get_or_create(
+            board=board,
+            name=list_name,
+            defaults={
+                "created_by": user,
+                "position": list_position,
+            },
+        )
+
+        for note_position, note_text in enumerate(note_texts):
+            note, _ = Note.objects.using(database).get_or_create(
+                board=board,
+                note=note_text,
+                defaults={"created_by": user},
+            )
+            ListNote.objects.using(database).get_or_create(
+                list=note_list,
+                note=note,
+                defaults={"position": note_position},
+            )
+
+
+def create_starter_board(user):
+    """Create the personal board within account setup and return it."""
+    boards = Board.objects.using(user._state.db)
+    board = boards.filter(owner=user).order_by("id").first()
+    if board is None:
+        board = boards.create(
+            name=f"{_default_board_base_name(user)}'s Board",
+            owner=user,
+            created_by=user,
+        )
+        seed_default_personal_board(board, user)
+    return board
+
+
 @transaction.atomic
 def create_board(actor, data):
     _require_actor(actor)
