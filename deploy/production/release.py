@@ -78,6 +78,7 @@ def report_failure(error):
                 flush=True,
             )
     except OSError:
+        # Failure reporting must not replace the original transaction outcome.
         pass
 
 
@@ -305,10 +306,12 @@ def preflight(root):
         != gateway_config["project"]
     ):
         raise ReleaseError("Approved host ingress must already be active")
-    # App releases check their own routes; Infrastructure checks the full host
-    # topology in nginx/check_host.py. Other app networks are not prerequisites.
-    if not set(expected) <= set(gateway["NetworkSettings"]["Networks"]):
-        raise ReleaseError("Ingress is missing an application route network")
+    # Require this app's routes and reject unreviewed ingress attachments.
+    # Approved companion routes may be absent during independent app recovery.
+    attached = set(gateway["NetworkSettings"]["Networks"])
+    allowed = set(gateway_config.get("allowed_networks", expected))
+    if not set(expected) <= attached <= allowed:
+        raise ReleaseError("Ingress route network boundary changed")
     for network, address in gateway_config["addresses"].items():
         if gateway["NetworkSettings"]["Networks"][network]["IPAddress"] != address:
             raise ReleaseError("Ingress trusted peer changed")

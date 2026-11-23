@@ -67,6 +67,13 @@ class ContractTests(unittest.TestCase):
             expected = set(network["allowed"]) & (own | {policy["container"]})
             self.assertEqual(set(network["required"]), expected)
         self.assertLessEqual(set(policy["addresses"]), set(policy["networks"]))
+        allowed = set(policy.get("allowed_networks", policy["networks"]))
+        self.assertLessEqual(set(policy["networks"]), allowed)
+        if release.APP in {"notoli", "macromapper"}:
+            self.assertEqual(
+                allowed,
+                {"notoli_backend_private", "notoli_default", "macromapper-ingress"},
+            )
         self.assertEqual(release.DB_TARGET, "/backend/db.sqlite3")
         self.assertEqual(release.DB_FILE, "db.sqlite3")
         if release.APP == "notoli":

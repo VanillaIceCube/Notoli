@@ -166,17 +166,20 @@ audit reconciled historical promotion merges without reverting reviewed source.
 [app.json](app.json) owns the app's services, container names, domain,
 environment, networks, database and readiness policy; [compose.yml](compose.yml)
 defines its two services. Common release and bundle code has no app-name branches.
-The gateway section describes only this app's route networks and trusted peers.
-Infrastructure's `nginx/check_host.py` owns full-host topology checks, including
-other apps' networks. `workflow.extra_env` adds only app-specific Actions inputs;
+The gateway section describes this app's route networks and trusted peers.
+`gateway.allowed_networks`, when present, lists all approved gateway attachments;
+otherwise only this app's route networks are allowed. Unknown attachments and
+missing app routes fail preflight; approved companion routes may be absent.
+Infrastructure's `nginx/check_host.py` retains detailed full-host topology checks.
+`workflow.extra_env` adds only app-specific Actions inputs;
 all frontend builds use `VITE_API_BASE_URL=` for same-origin API requests.
 Infrastructure owns `app-release/v1`, its manifest, tests and workflow template.
 `shared_source` in `app.json` pins that source to immutable commit
-`4d5afa9f7fd0a4e742d97fc8d56b062dfe04c958` across all three consumers. CI verifies
+`96134004e40f38ae76bdad25eb785eeeedd5db51` across all three consumers. CI verifies
 the common files and generated workflow, failing on drift or unavailable source.
 Change the Infrastructure source, regenerate its manifest, then synchronize all
 consumers; never edit only a vendored common file. See the
-[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/4d5afa9f7fd0a4e742d97fc8d56b062dfe04c958/app-release/README.md)
+[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/96134004e40f38ae76bdad25eb785eeeedd5db51/app-release/README.md)
 for the parity matrix and coordinated update procedure.
 
 Required Actions access variables: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`,
@@ -589,4 +592,4 @@ production status.
 - [Workflow guide](../../.github/workflows/README.md)
 - [App policy](app.json), [Compose](compose.yml), [bundle builder](build_bundle.py),
   [release controller](release.py) and [deployment workflow](../../.github/workflows/ci-deploy.yml)
-- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/4d5afa9f7fd0a4e742d97fc8d56b062dfe04c958/app-release/README.md)
+- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/96134004e40f38ae76bdad25eb785eeeedd5db51/app-release/README.md)

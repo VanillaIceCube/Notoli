@@ -2,7 +2,7 @@
   "contract_version": 1,
   "shared_source": {
     "repository": "VanillaIceCube/JudeAndrewAlabaInfrastructure",
-    "commit": "4d5afa9f7fd0a4e742d97fc8d56b062dfe04c958"
+    "commit": "96134004e40f38ae76bdad25eb785eeeedd5db51"
   },
   "app": "notoli",
   "domain": "notoli.judeandrewalaba.com",
@@ -38,6 +38,11 @@
   "gateway": {
     "container": "host-ingress-proxy",
     "project": "host-ingress",
+    "allowed_networks": [
+      "notoli_backend_private",
+      "notoli_default",
+      "macromapper-ingress"
+    ],
     "addresses": {
       "notoli_backend_private": "172.30.88.2"
     },

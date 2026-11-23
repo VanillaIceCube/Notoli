@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-23
+
+### Fixed
+
+- Reject unreviewed gateway network attachments during app release preflight while allowing approved companion routes to be absent; retain app-specific network and trusted-peer checks.
+- Explain why failure-reporting stream errors preserve the original release outcome.
+
 ## 2026-11-22
 
 ### Changed
