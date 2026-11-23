@@ -88,7 +88,7 @@ def check_local_policy(model, development):
 
 
 def check_local_static_routes():
-    proxy = (ROOT / "deploy/nginx-proxy.conf").read_text(encoding="utf-8")
+    proxy = (ROOT / "deploy/nginx.conf").read_text(encoding="utf-8")
     for prefix in ("/static/admin/", "/static/rest_framework/"):
         location = re.search(
             r"^\s*location\s+\^~\s+" + re.escape(prefix) + r"\s*\{([^{}]*)\}",
@@ -156,7 +156,7 @@ def main():
         temp = Path(directory)
         fixture = temp / "synthetic.env"
         fixture.write_text("DJANGO_SECRET_KEY=disposable-fixture-only\n", encoding="utf-8")
-        for name in ("deploy/docker-compose.yml", "deploy/docker-compose.dev.yml", "deploy/production/compose.yml"):
+        for name in ("deploy/compose.yml", "deploy/compose.hotswap.yml", "deploy/production/compose.yml"):
             source = ROOT / name
             if not source.exists():
                 continue
@@ -184,7 +184,7 @@ def main():
                     [*command, "--format", "json", "--no-env-resolution"],
                     cwd=ROOT, env=env, text=True,
                 ))
-                check_local_policy(model, source.name == "docker-compose.dev.yml")
+                check_local_policy(model, source.name == "compose.hotswap.yml")
     check_local_static_routes()
     check_release_documentation()
     check_whitespace()

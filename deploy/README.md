@@ -8,12 +8,17 @@ Nginx files operate local development stacks only.
 
 | File or folder | Purpose |
 | --- | --- |
-| `backend.env` | Committed local example; copy to ignored `.env` |
-| `docker-compose.dev.yml` | Source mounts, Uvicorn/Vite reload and direct HTTP |
-| `docker-compose.yml` | Standalone local HTTPS using checkout-built images |
-| `nginx-proxy.conf` | Proxy template expanded by official Nginx startup |
+| `.env.example` | Committed local example; copy to ignored `.env` |
+| `compose.hotswap.yml` | Source mounts, Uvicorn/Vite reload and direct HTTP |
+| `compose.yml` | Standalone local HTTPS using checkout-built images |
+| `nginx.conf` | Proxy template expanded by official Nginx startup |
 | `production/` | Pinned shared release engine and app-owned production policy |
 | `tests/` | Release, configuration and recovery checks |
+
+Use `compose.hotswap.yml` while coding: mounted source reloads automatically.
+Use `compose.yml` to run built images behind local HTTPS; rebuild after source
+changes. Both use private `deploy/.env` and the same local SQLite file, so stop
+one stack before starting the other. Production uses `production/compose.yml`.
 
 Shared release verification runs through
 `python deploy/production/build_bundle.py --check-parity`; the immutable
@@ -29,11 +34,11 @@ startup (`create_host_path: false`). From the repository root, initialize only
 missing files and reject a directory at the database path; existing data is preserved:
 
 ```powershell
-if (-not (Test-Path deploy/.env)) { Copy-Item deploy/backend.env deploy/.env }
+if (-not (Test-Path deploy/.env)) { Copy-Item deploy/.env.example deploy/.env }
 if (-not (Test-Path deploy/db.sqlite3)) { New-Item -ItemType File -Path deploy/db.sqlite3 }
 if (-not (Test-Path deploy/db.sqlite3 -PathType Leaf)) { throw "deploy/db.sqlite3 must be a file; inspect any directory before continuing." }
-docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml up --build -d
-docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T backend python manage.py migrate
+docker compose --env-file deploy/.env -f deploy/compose.hotswap.yml up --build -d
+docker compose --env-file deploy/.env -f deploy/compose.hotswap.yml exec -T backend python manage.py migrate
 ```
 
 Open `http://notoli.localhost:3000`; the backend is
@@ -56,7 +61,7 @@ switching because both profiles use the same database. From the repository root,
 initialize only missing files and check the database before starting HTTPS:
 
 ```powershell
-if (-not (Test-Path deploy/.env)) { Copy-Item deploy/backend.env deploy/.env }
+if (-not (Test-Path deploy/.env)) { Copy-Item deploy/.env.example deploy/.env }
 if (-not (Test-Path deploy/db.sqlite3)) { New-Item -ItemType File -Path deploy/db.sqlite3 }
 if (-not (Test-Path deploy/db.sqlite3 -PathType Leaf)) { throw "deploy/db.sqlite3 must be a file; inspect any directory before continuing." }
 ```
@@ -67,8 +72,8 @@ Install `mkcert`; reuse existing certificates or create the first local pair:
 ```powershell
 New-Item -ItemType Directory -Path certs -Force | Out-Null
 mkcert -cert-file certs/origin.pem -key-file certs/origin.key "notoli.localhost" localhost 127.0.0.1 ::1
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml up --build -d
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml exec -T backend python manage.py migrate
+docker compose --env-file deploy/.env -f deploy/compose.yml up --build -d
+docker compose --env-file deploy/.env -f deploy/compose.yml exec -T backend python manage.py migrate
 ```
 
 Open `https://notoli.localhost`. Install your local mkcert CA if the browser
@@ -106,7 +111,7 @@ proxy/backend addresses and exact proxy trust together in Compose.
 
 The env example uses localhost origins and console email. Reset messages stay in
 local logs unless you explicitly configure a real backend. Keep real credentials
-in ignored `.env`; never add them to `backend.env`.
+in ignored `.env`; never add them to `.env.example`.
 
 Both profiles override their own URL, database and proxy settings. Direct HTTP
 trusts no proxy; HTTPS trusts the exact private Nginx address. Nginx replaces
@@ -134,9 +139,9 @@ uses the approved application database path and private recovery procedure;
 review managed-database adoption before adding backend replicas.
 
 ```powershell
-docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml ps
-docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml logs --tail 100 backend frontend
-docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml down
+docker compose --env-file deploy/.env -f deploy/compose.hotswap.yml ps
+docker compose --env-file deploy/.env -f deploy/compose.hotswap.yml logs --tail 100 backend frontend
+docker compose --env-file deploy/.env -f deploy/compose.hotswap.yml down
 ```
 
 Stop the other profile before switching; both mount the same SQLite file. Use
@@ -149,7 +154,7 @@ If needed, add `127.0.0.1 notoli.localhost` to your local hosts file.
 ## 🔌 MCP integration
 
 The app-owned connector uses `DJANGO_MCP_ENABLED`, with the same switch as Template
-and MacroMapper. The local `backend.env` example sets it to `0`; set it to `1` to
+and MacroMapper. The local `.env.example` example sets it to `0`; set it to `1` to
 enable MCP. Compose applies the same value to `VITE_MCP_ENABLED`. Recreate the
 development containers or rebuild the HTTPS stack after changing the flag.
 Production policy explicitly fixes both sides on.
@@ -195,8 +200,8 @@ persistent `frontend_node_modules` volume remain. Dependency changes require a
 manual install in the running frontend container, followed by a restart:
 
 ```powershell
-docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml exec -T frontend npm ci
-docker compose --env-file deploy/.env -f deploy/docker-compose.dev.yml restart frontend
+docker compose --env-file deploy/.env -f deploy/compose.hotswap.yml exec -T frontend npm ci
+docker compose --env-file deploy/.env -f deploy/compose.hotswap.yml restart frontend
 ```
 
 If the frontend is stopped, use `run --rm --no-deps frontend npm ci` with the same

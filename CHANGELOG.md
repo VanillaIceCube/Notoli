@@ -2,6 +2,32 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-23
+
+### Fixed
+
+- Reject unreviewed gateway network attachments during app release preflight while allowing approved companion routes to be absent; retain app-specific network and trusted-peer checks.
+- Explain why failure-reporting stream errors preserve the original release outcome.
+
+## 2026-11-22
+
+### Changed
+
+- Use `anymail.backends.resend.EmailBackend` directly in the repository Actions `DJANGO_EMAIL_BACKEND` variable.
+- Select the verified saved app controller and policy automatically for rollback; preserve their original readiness through recovery and later deployments while retaining explicit database choices and deployment locks.
+- Limit production preflight policy to this app's route networks and exact trusted peers; Infrastructure retains full-host topology checks.
+- Add readable production release and recovery progress, failing-step context, command exit codes and private-record pointers from the shared engine; preserve transaction order and private subprocess output.
+- Put routine production release and recovery steps first in the existing guide; retain detailed setup, migration history, commands, section links and operational prerequisites in the same README.
+- Rename local deployment files to `compose.yml`, `compose.hotswap.yml`, `.env.example` and `nginx.conf`; update setup, validation and test references while preserving configuration and runtime behavior.
+- Align local Compose descriptions, readable startup-command formatting and environment-example sections across applications; preserve app-specific identities, isolated subnets and MacroMapper AI settings.
+
+### Removed
+
+- Stop recopying retired root-level Compose, proxy, script and environment files into new recovery sets; retain effective runtime, matched previous releases and SQLite recovery data.
+- Remove the incoming port-policy fallback for recovered releases without a saved policy; require their checksummed accepted policy instead.
+- Remove retired Resend backend-name conversion from Django settings and the shared bundle builder; new production bundles require an explicit maintained Anymail or SMTP backend.
+- Remove the unused deployment root hint, repeated frontend build-argument selector and completed parity-checker cleanup migration.
+
 ## 2026-11-16
 
 ### Fixed

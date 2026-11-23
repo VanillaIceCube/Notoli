@@ -2,9 +2,11 @@
 
 import copy
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
+import shutil
 import sqlite3
 import subprocess
 import tempfile
@@ -56,25 +58,39 @@ def environment():
 
 
 class BundleTests(unittest.TestCase):
-    def test_layout_email_backend_values_create_compatible_new_bundles(self):
-        legacy = "authentication.email_backends.ResendApiEmailBackend"
-        intermediate = "apps.authentication.email_backends.ResendApiEmailBackend"
-        separated = "apps.email.backends.ResendApiEmailBackend"
-        current = "anymail.backends.resend.EmailBackend"
-        smtp = "django.core.mail.backends.smtp.EmailBackend"
-        for supplied, expected in ((legacy, current), (intermediate, current), (separated, current), (current, current), (smtp, smtp)):
-            with self.subTest(backend=supplied), tempfile.TemporaryDirectory() as directory:
+    def test_supported_email_backend_names_are_preserved_in_new_bundles(self):
+        for supplied in (
+            "anymail.backends.resend.EmailBackend",
+            "django.core.mail.backends.smtp.EmailBackend",
+        ):
+            with (
+                self.subTest(backend=supplied),
+                tempfile.TemporaryDirectory() as directory,
+            ):
                 values = environment() | {"DJANGO_EMAIL_BACKEND": supplied}
                 target = Path(directory) / "incoming"
                 identity = builder.build(target, values)
                 emitted = (target / identity / ".backend.env").read_text()
-                self.assertIn("DJANGO_EMAIL_BACKEND=" + expected + "\n", emitted)
+                self.assertIn("DJANGO_EMAIL_BACKEND=" + supplied + "\n", emitted)
                 self.assertEqual(values["DJANGO_EMAIL_BACKEND"], supplied)
-        with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(ValueError, "production email backend"):
-                builder.build(Path(directory) / "incoming", environment() | {
-                    "DJANGO_EMAIL_BACKEND": "custom.authentication.email_backends.UnreviewedBackend"
-                })
+
+    def test_retired_and_unknown_email_backends_fail_before_creating_a_bundle(self):
+        for supplied in (
+            "authentication.email_backends.ResendApiEmailBackend",
+            "apps.authentication.email_backends.ResendApiEmailBackend",
+            "apps.email.backends.ResendApiEmailBackend",
+            "custom.authentication.email_backends.UnreviewedBackend",
+        ):
+            with (
+                self.subTest(backend=supplied),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                target = Path(directory) / "incoming"
+                with self.assertRaisesRegex(ValueError, "production email backend"):
+                    builder.build(
+                        target, environment() | {"DJANGO_EMAIL_BACKEND": supplied}
+                    )
+                self.assertFalse(target.exists())
 
     def test_extra_app_required_secret_is_synthetic_and_still_required(self):
         key = "APP_SPECIFIC_REQUIRED_SECRET"
@@ -323,10 +339,12 @@ class TransactionTests(unittest.TestCase):
             ),
             patch.object(release, "manage", side_effect=self.manage),
             patch.object(release, "readiness", side_effect=self.ready),
+            patch.object(release.sys, "stderr", new_callable=io.StringIO),
         ]
         for item in self.patches:
             item.start()
             self.addCleanup(item.stop)
+        self.addCleanup(setattr, release, "CURRENT_STEP", release.CURRENT_STEP)
 
     def compose(self, directory, *args):
         self.events.append(("compose",) + args)
@@ -376,6 +394,8 @@ class TransactionTests(unittest.TestCase):
 
     def ready(self, directory):
         self.assertFalse((self.root / "current.json").exists())
+        self.assertNotIn("Release: Release accepted", release.sys.stderr.getvalue())
+        self.assertNotIn("Release: Recovery accepted", release.sys.stderr.getvalue())
         self.events.append(("ready",))
         if self.fail_readiness:
             raise release.ReleaseError("simulated readiness failure")
@@ -384,16 +404,144 @@ class TransactionTests(unittest.TestCase):
         with sqlite3.connect(self.root / "db.sqlite3") as db:
             return [row[0] for row in db.execute("SELECT value FROM items")]
 
+    def accepted_baseline(self):
+        identity = "a" * 40 + "-122-1"
+        baseline = self.root / "releases" / identity
+        shutil.copytree(self.bundle, baseline)
+        policy = copy.deepcopy(release.CONFIG)
+        policy["environment"]["fixed"]["DJANGO_MCP_ENABLED"] = "0"
+        policy["readiness"]["public"] = policy["readiness"]["public"][:2]
+        (baseline / "app.json").write_text(json.dumps(policy))
+        metadata = json.loads((baseline / "release.json").read_text()) | {
+            "id": identity
+        }
+        (baseline / "release.json").write_text(json.dumps(metadata))
+        import hashlib
+
+        (baseline / "manifest.json").write_text(
+            json.dumps(
+                {
+                    name: hashlib.sha256((baseline / name).read_bytes()).hexdigest()
+                    for name in release.PAYLOAD
+                }
+            )
+        )
+        release.write_private(baseline / ".release.env", "")
+        release.atomic_json(
+            self.root / "current.json",
+            {
+                "id": identity,
+                "directory": str(baseline),
+                "healthy": True,
+            },
+        )
+        return baseline
+
+    def recover_saved(self, restore_database, keep_database=False):
+        load = release.recovery_controller
+        probes = []
+
+        def selected(root, identity):
+            saved = load(root, identity)
+            # Use the existing host/Docker fault fixture, but execute the
+            # saved controller's actual rollback and actual old readiness.
+            for name in (
+                "app_writers",
+                "stop_writers",
+                "snapshot_writer",
+                "stop_management",
+                "inspect",
+                "docker",
+            ):
+                saved[name] = getattr(release, name)
+            saved["compose"] = lambda directory, *args, **kwargs: self.compose(
+                directory, *args
+            )
+            saved["check_response"] = lambda path, *args: probes.append(path)
+            return saved
+
+        with patch.object(release, "recovery_controller", side_effect=selected):
+            release.recover(self.root, self.identity, restore_database, keep_database)
+        return probes
+
+    def test_automatic_recovery_uses_old_readiness_and_preserves_it_for_next_deploy(
+        self,
+    ):
+        baseline = self.accepted_baseline()
+        self.fail_migration = True
+        with self.assertRaises(release.ReleaseError):
+            release.deploy(self.root, self.bundle)
+        probes = self.recover_saved(True)
+        self.assertEqual(
+            probes, [rule["path"] for rule in release.CONFIG["readiness"]["public"][:2]]
+        )
+        self.assertEqual(self.values(), ["original"])
+        self.assertFalse((self.root / "FAILED.json").exists())
+        next_recovery = self.root / "recovery" / ("a" * 40 + "-124-1")
+        release.capture_recovery(
+            self.root, self.root / "releases" / self.identity, next_recovery
+        )
+        for name in ("release.py", "app.json", "manifest.json"):
+            self.assertEqual(
+                (next_recovery / "previous-release" / name).read_bytes(),
+                (baseline / name).read_bytes(),
+            )
+        saved = release.recovery_controller(self.root, next_recovery.name)
+        self.assertEqual(
+            saved["CONFIG"]["environment"]["fixed"]["DJANGO_MCP_ENABLED"], "0"
+        )
+
+    def test_changed_saved_controller_blocks_deploy_before_writers_stop(self):
+        baseline = self.accepted_baseline()
+        (baseline / "release.py").write_text("raise RuntimeError('private')")
+        with self.assertRaisesRegex(release.ReleaseError, "checksum mismatch"):
+            release.deploy(self.root, self.bundle)
+        self.assertNotIn(("stop-writers",), self.events)
+        self.assertFalse(any(event[:1] == ("manage",) for event in self.events))
+        self.assertEqual(self.values(), ["original"])
+        self.assertFalse((self.root / "FAILED.json").exists())
+
+    def test_automatic_keep_data_recovery_retains_pre_migration_gate(self):
+        self.accepted_baseline()
+        with patch.object(
+            release, "snapshot", side_effect=release.ReleaseError("backup failed")
+        ):
+            with self.assertRaises(release.ReleaseError):
+                release.deploy(self.root, self.bundle)
+        self.recover_saved(False, True)
+        self.assertEqual(self.values(), ["original"])
+        self.assertFalse((self.root / "FAILED.json").exists())
+        release.atomic_json(
+            self.root / "FAILED.json",
+            {
+                "recovery": str(self.root / "recovery" / self.identity),
+                "stage": "migration-started",
+            },
+        )
+        events = len(self.events)
+        with self.assertRaisesRegex(release.ReleaseError, "only before migration"):
+            self.recover_saved(False, True)
+        self.assertEqual(len(self.events), events)
+
     def test_success_full_private_recovery_and_commit_after_health(self):
-        release.deploy(self.root, self.bundle)
+        self.assertFalse((self.root / "current.json").exists())
+        with patch.object(
+            release, "recovery_controller", wraps=release.recovery_controller
+        ) as saved_controller:
+            release.deploy(self.root, self.bundle)
+        saved_controller.assert_not_called()
         self.assertEqual(self.values(), ["original", "migration"])
         self.assertFalse((self.root / "FAILED.json").exists())
         current = json.loads((self.root / "current.json").read_text())
         self.assertTrue(current["healthy"])
         recovery = self.root / "recovery" / self.identity
+        self.assertEqual(json.loads((recovery / "previous.json").read_text()), {})
+        self.assertFalse((recovery / "previous-release").exists())
         self.assertTrue((recovery / "db.sqlite3").is_file())
+        self.assertFalse((recovery / "legacy-evidence").exists())
+        self.assertEqual((self.root / ".env").read_text(), "ORIGINAL=private")
         self.assertEqual(
-            (recovery / "legacy-evidence/.env").read_text(), "ORIGINAL=private"
+            (self.root / "docker-compose.yml").read_text(), "legacy proxy config"
         )
         model = json.loads((recovery / "compose.yml").read_text())
         self.assertEqual(set(model["services"]), set(release.SERVICES))
@@ -406,6 +554,18 @@ class TransactionTests(unittest.TestCase):
             self.events.index(("stop-writers",)),
             self.events.index(("manage", "migrate", "--noinput")),
         )
+        log = release.sys.stderr.getvalue()
+        self.assertTrue(log.endswith("Release: Release accepted\n"))
+        for private_value in (
+            "ORIGINAL=private", "original-$literal", environment()["DJANGO_SECRET_KEY"]
+        ):
+            self.assertNotIn(private_value, log)
+
+    def test_disconnected_progress_stream_does_not_interrupt_release(self):
+        with patch.object(release.sys.stderr, "write", side_effect=BrokenPipeError):
+            release.deploy(self.root, self.bundle)
+        self.assertTrue(json.loads((self.root / "current.json").read_text())["healthy"])
+        self.assertFalse((self.root / "FAILED.json").exists())
 
     def test_running_port_drift_prevents_accepting_release(self):
         self.model["services"][release.FRONTEND]["ports"] = []
@@ -438,14 +598,22 @@ class TransactionTests(unittest.TestCase):
 
     def test_migration_failure_preserves_old_db_config_and_explicit_rollback(self):
         self.fail_migration = True
-        with self.assertRaises(release.ReleaseError):
+        with self.assertRaises(release.ReleaseError) as failure:
             release.deploy(self.root, self.bundle)
+        release.report_failure(failure.exception)
+        self.assertIn(
+            "Release failed during: Applying database migrations. simulated migration failure",
+            release.sys.stderr.getvalue(),
+        )
         self.assertFalse((self.root / "current.json").exists())
         self.assertTrue((self.root / "FAILED.json").exists())
         self.assertEqual(self.events[-1], ("stop-writers",))
         with self.assertRaises(release.ReleaseError):
             release.rollback(self.root, self.identity, False, True)
         release.rollback(self.root, self.identity, True)
+        self.assertTrue(
+            release.sys.stderr.getvalue().endswith("Release: Recovery accepted\n")
+        )
         self.assertEqual(self.values(), ["original"])
         self.assertTrue(json.loads((self.root / "current.json").read_text())["healthy"])
         self.assertFalse((self.root / "FAILED.json").exists())

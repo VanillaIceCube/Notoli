@@ -1,6 +1,7 @@
 """Real single-file SQLite recovery across inode swaps and interrupted recreation."""
 
 from contextlib import closing, ExitStack
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -24,10 +25,11 @@ class GenerationRecoveryTests(unittest.TestCase):
             patch.dict(
                 release.CONFIG,
                 {
+                    "app": project,
                     "containers": {
                         "backend": project + "-backend",
                         "frontend": project + "-frontend",
-                    }
+                    },
                 },
             ),
             ExitStack() as stack,
@@ -131,6 +133,33 @@ class GenerationRecoveryTests(unittest.TestCase):
                 gateway_before = original_inspect(gateway)
                 release.compose(candidate, "up", "-d", "--no-deps", *release.SERVICES)
                 release.capture_recovery(root, candidate, recovery)
+                # A self-contained accepted controller, using only disposable
+                # fixture identities, exercises the automatic selector offline.
+                saved_directory = recovery / "previous-release"
+                saved_directory.mkdir(mode=0o700)
+                release.write_private(
+                    saved_directory / "app.json", json.dumps(release.CONFIG)
+                )
+                release.write_private(
+                    saved_directory / "release.py", Path(release.__file__).read_text()
+                )
+                release.atomic_json(
+                    saved_directory / "manifest.json",
+                    {
+                        name: hashlib.sha256(
+                            (saved_directory / name).read_bytes()
+                        ).hexdigest()
+                        for name in ("release.py", "app.json")
+                    },
+                )
+                release.atomic_json(
+                    recovery / "previous.json",
+                    {
+                        "id": "b" * 40 + "-1-1",
+                        "directory": str(root / "releases" / ("b" * 40 + "-1-1")),
+                        "healthy": True,
+                    },
+                )
                 release.begin_data_state(root)
                 release.stop_writers()
                 release.snapshot_writer(root, recovery / "db.sqlite3")
@@ -201,12 +230,22 @@ class GenerationRecoveryTests(unittest.TestCase):
                     )
                     self.assertEqual(json.loads(rows), [])
 
+                load = release.recovery_controller
+
+                def selected(root, identity):
+                    saved = load(root, identity)
+                    saved["compose"] = compose
+                    saved["readiness"] = readiness
+                    return saved
+
+                recover = release.recover if os.name == "posix" else release.rollback
                 with (
                     patch.object(release, "compose", side_effect=compose),
                     patch.object(release, "readiness", side_effect=readiness),
+                    patch.object(release, "recovery_controller", side_effect=selected),
                 ):
                     with self.assertRaises(release.ReleaseError):
-                        release.rollback(root, identity, True)
+                        recover(root, identity, True)
                     # Restored inode must never be paired with retained migration WAL.
                     rescue = root / "after-restore.sqlite3"
                     release.snapshot_writer(root, rescue)
@@ -217,10 +256,10 @@ class GenerationRecoveryTests(unittest.TestCase):
                     release.docker("rm", project + "-backend")
                     phase = "temporary-name"
                     with self.assertRaises(release.ReleaseError):
-                        release.rollback(root, identity, True)
+                        recover(root, identity, True)
                     self.assertFalse(original_inspect(temporary)["State"]["Running"])
                     phase = "success"
-                    release.rollback(root, identity, True)
+                    recover(root, identity, True)
                 self.assertFalse((root / "FAILED.json").exists())
                 self.assertTrue(
                     json.loads((root / "current.json").read_text())["healthy"]

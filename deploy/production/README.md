@@ -5,6 +5,128 @@ For local development, use the [deployment README](../README.md). Infrastructure
 owns the shared release engine and host ingress; each app owns its configuration,
 credentials and operational acceptance.
 
+| Task | Section |
+| --- | --- |
+| Release an already prepared app | [Release sequence](#-release-sequence) |
+| Resolve a failed release | [Failure and recovery](#-failure-and-explicit-recovery) |
+| Prepare a host or change settings | [Host preparation](#-host-preparation-and-activation) and [configuration](#-configuration) |
+| Review detailed behavior | [Transaction and data capture](#transaction-and-data-capture) |
+
+For an existing deployment, confirm required CI/review on `main`, the exact
+reviewed source tree, applicable owner/operator authorization and accepted host
+prerequisites before promotion through the existing `env-prod` process. Merging
+`main` does not deploy. Initial adoption and migrations retain their specific
+procedures below; this guide does not establish their live completion.
+
+## 🚀 Release sequence
+
+1. CI verifies parity before destination credentials or image publication, builds
+   full-SHA-tagged backend/frontend images and records their actual immutable
+   digests. Every pull, migration and startup uses those digests, never `latest`.
+2. CI builds a private bundle identified by `<source-sha>-<run-id>-<attempt>`.
+   It contains only app Compose, `app.json`, `release.py`, environment,
+   release identity and checksums; never ingress files or certificates.
+3. CI reserves a fresh `incoming/<release-id>` directory and uploads only that
+   bundle. It never overwrites active files before locking or reuses an attempt.
+4. The common transaction validates the candidate, captures matched recovery
+   data and verifies backup/restore before migrating. It starts only the two app
+   services and records success only after bounded readiness checks.
+
+The staged bundle checksums `app.json`. Release and rollback run offline without
+an Infrastructure checkout or code downloads. One transaction file keeps failure
+ordering and crash barriers reviewable; app policy is separate from that state
+machine.
+
+### Authorized deploy command
+
+Set `app_root=/root/apps/notoli` and resolve `release_id` from the exact reviewed private
+release/recovery record. Use a retained, reviewed copy of this release tool,
+never a legacy proxy-owning deploy script.
+
+CI invokes the equivalent of:
+
+```bash
+python3 "$app_root/incoming/$release_id/release.py" deploy \
+  --root "$app_root" --bundle "$app_root/incoming/$release_id"
+```
+
+## 🛟 Failure and explicit recovery
+
+The release tool writes plain progress steps to stderr, such as
+`Release: Applying database migrations`. Errors name the current step; failed commands
+include their exit code, while command output and credentials stay private.
+Readiness timeouts distinguish the direct backend API from public routes.
+On failure, inspect the app's `FAILED.json` if present and `recovery/` privately;
+early failures may leave no complete recovery set. Preserve existing records
+before retrying or choosing recovery below.
+
+`FAILED.json` is written **before stopping writers**, so process death also
+blocks the next deploy. The success record `current.json` is replaced only
+after readiness. On migration/startup/readiness failure the backend is stopped,
+recovery is preserved, and the operator must select recovery explicitly.
+No automatic DB restore can silently discard later writes.
+A SIGKILL/host crash still requires the operator to inspect containers and stop
+writers before recovery; the persistent marker does not itself stop a process.
+
+The private recovery set contains captured effective runtime (including Env),
+app-only Compose, raw old service environment, immutable old local image IDs,
+matched previous release files/record, and verified DB backup. New captures omit
+retired root-level Compose/proxy/env files; older recovery archives retain them.
+Retain these plus cached images. The tool never prunes them. Keep recovery files
+private and out of logs/tickets. Retained management containers also contain raw
+environment and possible DB journals; treat them as private recovery evidence.
+Command errors intentionally withhold captured output; diagnose privately using the saved configuration.
+
+<a id="operator-commands-after-separate-authorization"></a>
+
+<a id="-operator-commands-after-separate-authorization"></a>
+
+### Authorized recovery commands
+
+Use the same `app_root` and selected `release_id` from the private record.
+Run the failed attempt's retained, reviewed `incoming/$release_id/release.py`.
+It automatically selects the checksummed `release.py` and `app.json` saved under
+`recovery/$release_id/previous-release/`, while holding the existing deployment
+locks. The recovered app uses its own readiness policy, including a previously
+disabled MCP profile. You still choose the recovery ID and database mode.
+
+Missing, changed, foreign or unrecorded controller/policy data stops recovery
+before Docker or database changes; no latest-script or candidate-policy fallback
+is guessed. Legacy recovery without an accepted saved release still requires
+its separately reviewed procedure. Retain incoming bundles and recovery records.
+Older tools that predate automatic selection retain their documented manual
+controller choice; do not overwrite those immutable bundles.
+
+For an approved rollback that can lose post-snapshot writes:
+
+```bash
+python3 "$app_root/incoming/$release_id/release.py" rollback \
+  --root "$app_root" --recovery "$release_id" --restore-database
+```
+
+Recovery verifies cached images before stopping the backend, saves the current
+DB/journals from the stopped writer too, restores the selected DB with its
+original ownership/mode, and recreates **only app services**, no pull. It runs
+the saved release's readiness gates and records success only afterward. Failed rollback
+stops backend writers and leaves the failure marker/recovery data intact.
+
+If backup/check failed **before migration started**, the operator may instead
+restart the captured previous app configuration with all current data (no older
+snapshot selection). Current journals are consolidated before container recreation:
+
+```bash
+python3 "$app_root/incoming/$release_id/release.py" rollback \
+  --root "$app_root" --recovery "$release_id" --keep-database
+```
+
+That mode is rejected after the recorded migration-started stage. Its safe-data
+flag persists through rollback failure, allowing a retry after transient readiness
+failure without editing markers or choosing an unnecessary old snapshot. If a crash
+occurred before the marker/recovery set was complete, inspect privately and use
+a specifically approved recovery plan; do not fabricate a success record.
+Rollback is not a substitute for off-host backups and a full functional restore
+drill. Both remain deployment acceptance gates.
+
 <a id="-main-first-promotion"></a>
 
 <a id="main-first-promotion"></a>
@@ -44,13 +166,20 @@ audit reconciled historical promotion merges without reverting reviewed source.
 [app.json](app.json) owns the app's services, container names, domain,
 environment, networks, database and readiness policy; [compose.yml](compose.yml)
 defines its two services. Common release and bundle code has no app-name branches.
+The gateway section describes this app's route networks and trusted peers.
+`gateway.allowed_networks`, when present, lists all approved gateway attachments;
+otherwise only this app's route networks are allowed. Unknown attachments and
+missing app routes fail preflight; approved companion routes may be absent.
+Infrastructure's `nginx/check_host.py` retains detailed full-host topology checks.
+`workflow.extra_env` adds only app-specific Actions inputs;
+all frontend builds use `VITE_API_BASE_URL=` for same-origin API requests.
 Infrastructure owns `app-release/v1`, its manifest, tests and workflow template.
 `shared_source` in `app.json` pins that source to immutable commit
-`9c1102c4ac866c4925fa13260dbdc27eec1199b1` across all three consumers. CI verifies
+`4a7c8549875c7fc596d509a01b1facf92f3951ec` across all three consumers. CI verifies
 the common files and generated workflow, failing on drift or unavailable source.
 Change the Infrastructure source, regenerate its manifest, then synchronize all
 consumers; never edit only a vendored common file. See the
-[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/9c1102c4ac866c4925fa13260dbdc27eec1199b1/app-release/README.md)
+[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/4a7c8549875c7fc596d509a01b1facf92f3951ec/app-release/README.md)
 for the parity matrix and coordinated update procedure.
 
 Required Actions access variables: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`,
@@ -59,8 +188,9 @@ Optional `DEPLOY_PORT` defaults to 22. Required access secret: `DEPLOY_SSH_KEY`.
 Required app secrets: `DJANGO_SECRET_KEY`, `DJANGO_EMAIL_HOST_KEY`.
 Required app variables: `DJANGO_EMAIL_BACKEND`, `DJANGO_DEFAULT_FROM_EMAIL`.
 Use `anymail.backends.resend.EmailBackend` or
-`django.core.mail.backends.smtp.EmailBackend`. The builder normalizes known
-legacy Resend class paths to the current Anymail backend for new bundles only.
+`django.core.mail.backends.smtp.EmailBackend` explicitly. New bundles reject
+retired custom Resend class paths; saved recovery bundles keep their original
+settings and matched images/controllers.
 Optional mail settings: `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`,
 `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_TIMEOUT`.
 Defaults are `smtp.resend.com`, port 587, TLS enabled, user `resend`, timeout 10
@@ -112,7 +242,7 @@ cutover acceptance still requires both apps.
 
 Releases never create/delete networks, publish a backend port, upload TLS/vhosts,
 reload the gateway, run whole-project `down`/`remove-orphans` or prune host images.
-Local `deploy/docker-compose.yml` and `deploy/nginx-proxy.conf` are local/legacy
+Local `deploy/compose.yml` and `deploy/nginx.conf` are local/legacy
 inputs, never production release inputs. The retired shared-proxy deployment
 must not be restored. Preserve installed legacy evidence until the separately
 approved transfer/recovery is verified.
@@ -152,16 +282,18 @@ from every app release.
 
 The port-removal release requires a healthy accepted Notoli release record
 (current.json) whose checksummed app policy permits the existing bindings.
-A recovered release can use its retained previous-release app.json and
-manifest. When those records are absent, preflight checks the running
-ports against the incoming policy and rejects a direct transition from
-legacy port 3000 to no host ports.
+A recovered release requires its retained previous-release app.json and
+manifest. Missing saved policy fails preflight; the incoming candidate cannot
+substitute for the accepted recovery policy. Use the matched historical
+recovery/adoption procedure to establish a verified baseline when records are
+incomplete; never fabricate or guess an accepted policy.
 
-For an unrecorded legacy deployment or a recovered release without a saved
-app policy, first use the existing app adoption process. Review a baseline
-release that keeps the live approved bindings in both Compose and app.json,
-and deploy it through env-prod with the current database. Once that release
-records its healthy policy, promote the separate port-removal change.
+For an unrecorded legacy deployment, first use the existing app adoption process.
+Review a baseline release that keeps the live approved bindings in both Compose
+and app.json, and deploy it through env-prod with the current database. With no
+accepted record, preflight uses the incoming policy and rejects a direct change
+from legacy port 3000 to no host ports. Once the baseline records its healthy
+policy, promote the separate port-removal change.
 The Infrastructure #23 migration notes recorded a healthy, checksum-verified
 baseline release. Verify the retained record again before a transition.
 
@@ -192,153 +324,6 @@ Existing production paths require operator-reviewed access; do not infer that
 a non-root uploader works or change database/key ownership blindly. Review
 permission changes in the production plan. Initially serialize different-app
 releases operationally until peak/concurrent capacity is verified.
-
-## 🚀 Release sequence
-
-1. CI verifies parity before destination credentials or image publication, builds
-   full-SHA-tagged backend/frontend images and records their actual immutable
-   digests. Every pull, migration and startup uses those digests, never `latest`.
-2. CI builds a private bundle identified by `<source-sha>-<run-id>-<attempt>`.
-   It contains only app Compose, `app.json`, `release.py`, environment,
-   release identity and checksums; never ingress files or certificates.
-3. CI reserves a fresh `incoming/<release-id>` directory and uploads only that
-   bundle. It never overwrites active files before locking or reuses an attempt.
-4. The common transaction validates the candidate, captures matched recovery
-   data and verifies backup/restore before migrating. It starts only the two app
-   services and records success only after bounded readiness checks.
-
-The staged bundle checksums `app.json`. Release and rollback run offline without
-an Infrastructure checkout or code downloads. One transaction file keeps failure
-ordering and crash barriers reviewable; app policy is separate from that state
-machine.
-
-<a id="transaction-and-failure-states"></a>
-
-<a id="-transaction-and-failure-states"></a>
-
-### Transaction and data capture
-
-`release.py deploy` acquires shared maintenance then exclusive app lock,
-rejecting conflicts rather than waiting indefinitely. The host operator uses
-the maintenance lock exclusively for cutover. Initially serialize different-app
-releases operationally until peak/concurrent capacity is verified.
-
-Before stopping writers the script checks the payload manifest, immutable app
-image identities, topology, fixed trust, existing DB bind, 512 MiB available
-memory and 20% disk headroom after allowance for recovery copies. These floors
-do not certify representative peak capacity. It resolves/pulls images, captures
-private runtime state and produces an **app-only recovery Compose model** pinned
-to cached previous image IDs. Original legacy files are retained as private
-evidence; they are never executed as rollback scripts.
-
-The backend and any surviving app-labelled management containers stop before
-SQLite backup. Private `data-state.json` records the exact writer ID or a unique
-generation label plus a checksummed complete checkpoint. Capture never guesses by container
-start time. It discovers all backend/management writers by labels, including
-temporary Compose names, stops them, and copies the selected generation's
-DB plus WAL/rollback journal from the stopped container into a private isolated
-directory, and recovers that copy. This matters because only the main DB file is
-bind-mounted; sidecars can be in the container filesystem. A backup and isolated
-restore copy must both pass integrity checks before production checks/migrations. SQLite
-copy/restore operations have a 60-second progress deadline. Management
-containers carry app/release identity labels and unique names. They are stopped
-and verified after Docker CLI timeout; rollback quiesces surviving labelled
-containers too. Stopped containers are retained because their journals can be
-recovery evidence. Cleanup needs explicit operator review, like image retention.
-Management containers join only the app's backend egress network; they do not
-contend with reserved backend addresses. Before migration and again before app
-startup, verified data is consolidated into the main host DB with its original owner/mode. Before an inode swap, the
-complete checkpoint and consumed writer IDs are persisted; their old journals
-are retired from future selection. A missing/unstarted replacement uses that
-checkpoint, while a started temporary-name container is captured by its generation.
-Unknown or multiple current writers fail closed. Copies use DELETE journal
-mode; this does not enable WAL or relocate storage. Migration/startup use the
-selected digest, no pull at startup.
-
-Readiness includes direct Django `/api/notifications/` returning 401, HTTPS HTML
-root returning 200 and public JSON API returning 401. Enabled app policies add
-issuer/resource discovery and an unauthenticated MCP challenge; see
-[MCP integration](#-mcp-integration) for each app's exact contract. Public probes
-use `JudeAppRelease/1.0` and request uncached responses; Cloudflare protections
-and policy response checks remain enabled. Attempts use a 90-second retry window
-plus at most one in-flight round of bounded requests. Docker exec times out at
-10 seconds and HTTP at 5 seconds; ordinary Docker commands default to 300 seconds
-with shorter explicit stop/management limits. These readiness checks do not
-establish full functional or operator acceptance.
-
-### Authorized deploy command
-
-Set `app_root=/root/apps/notoli` and resolve `release_id` from the exact reviewed private
-release/recovery record. Use a retained, reviewed copy of this release tool,
-never a legacy proxy-owning deploy script.
-
-CI invokes the equivalent of:
-
-```bash
-python3 "$app_root/incoming/$release_id/release.py" deploy \
-  --root "$app_root" --bundle "$app_root/incoming/$release_id"
-```
-
-## 🛟 Failure and explicit recovery
-
-`FAILED.json` is written **before stopping writers**, so process death also
-blocks the next deploy. The success record `current.json` is replaced only
-after readiness. On migration/startup/readiness failure the backend is stopped,
-recovery is preserved, and the operator must select recovery explicitly.
-No automatic DB restore can silently discard later writes.
-A SIGKILL/host crash still requires the operator to inspect containers and stop
-writers before recovery; the persistent marker does not itself stop a process.
-
-The private recovery set contains captured effective runtime (including Env),
-app-only Compose, raw old environment, immutable old local image IDs, original
-config/script/env evidence, previous release files/record, and verified DB backup.
-Retain these plus cached images. The tool never prunes them. Keep recovery files
-private and out of logs/tickets. Retained management containers also contain raw
-environment and possible DB journals; treat them as private recovery evidence.
-Command errors intentionally withhold captured output; diagnose privately using the saved configuration.
-
-<a id="operator-commands-after-separate-authorization"></a>
-
-<a id="-operator-commands-after-separate-authorization"></a>
-
-### Authorized recovery commands
-
-Use the same `app_root` and selected `release_id` from the private record.
-The examples use the retained release directory. If failure occurred before that
-directory existed, select the verified retained incoming controller or a reviewed
-compatible controller; do not assume `releases/$release_id` exists. Preserve its
-app policy and readiness contract. MacroMapper's first-enable exception is
-covered in its [MCP recovery guidance](https://github.com/VanillaIceCube/MacroMapper/blob/main/deploy/production/README.md#-first-enable-recovery).
-
-For an approved rollback that can lose post-snapshot writes:
-
-```bash
-python3 "$app_root/releases/$release_id/release.py" rollback \
-  --root "$app_root" --recovery "$release_id" --restore-database
-```
-
-Recovery verifies cached images before stopping the backend, saves the current
-DB/journals from the stopped writer too, restores the selected DB with its
-original ownership/mode, and recreates **only app services**, no pull. It runs
-the same readiness gates and records success only afterward. Failed rollback
-stops backend writers and leaves the failure marker/recovery data intact.
-
-If backup/check failed **before migration started**, the operator may instead
-restart the captured previous app configuration with all current data (no older
-snapshot selection). Current journals are consolidated before container recreation:
-
-```bash
-python3 "$app_root/releases/$release_id/release.py" rollback \
-  --root "$app_root" --recovery "$release_id" --keep-database
-```
-
-That mode is rejected after the recorded migration-started stage. Its safe-data
-flag persists through rollback failure, allowing a retry after transient readiness
-failure without editing markers or choosing an unnecessary old snapshot. If a crash
-occurred before the marker/recovery set was complete, inspect privately and use
-a specifically approved recovery plan; do not fabricate a success record.
-Rollback is not a substitute for off-host backups and a full functional restore
-drill. Both remain deployment acceptance gates.
 
 <a id="-chatgpt-mcp-deployment"></a>
 
@@ -471,9 +456,9 @@ workflow. For local source development only, add
 `--source-root <infrastructure-checkout>` to `--check-parity` to verify local
 common hashes offline; that does not verify the remote pin. Use `--sync` only
 after reviewing a coordinated source/pin update across all three consumers.
-Successful synchronization also removes the retired `deploy/check_parity.py`.
-Check-only and failed validation runs preserve it; unsafe cleanup paths are
-rejected before writes.
+Synchronization replaces only the verified common files and rendered workflow;
+other local files remain untouched. A linked `deploy/` directory is rejected
+before writes.
 CI always checks the immutable pin.
 
 The full release suite needs Linux and a disposable local/CI Docker daemon,
@@ -490,7 +475,66 @@ committed WAL-only row after an unclean exit with the actual single-file bind.
 A real recovery retry then replaces the host inode, fails before new startup,
 removes the canonical backend, fails during a temporary-name replacement, and
 retries successfully without replaying a retired journal or touching a companion.
-Shared vhost routing and proxy endpoint reversal are tested in Infrastructure.
+Infrastructure's root routing and proxy-reversal suites were retired;
+current repository checks do not establish gateway runtime acceptance.
+
+## Transaction details
+
+<a id="transaction-and-failure-states"></a>
+
+<a id="-transaction-and-failure-states"></a>
+
+### Transaction and data capture
+
+`release.py deploy` acquires shared maintenance then exclusive app lock,
+rejecting conflicts rather than waiting indefinitely. The host operator uses
+the maintenance lock exclusively for cutover. Initially serialize different-app
+releases operationally until peak/concurrent capacity is verified.
+
+Before stopping writers the script checks the payload manifest, immutable app
+image identities, topology, fixed trust, existing DB bind, 512 MiB available
+memory and 20% disk headroom after allowance for recovery copies. These floors
+do not certify representative peak capacity. It resolves/pulls images, captures
+private runtime state and produces an **app-only recovery Compose model** pinned
+to cached previous image IDs, alongside the matched previous release bundle.
+Retired root-level stack files are no longer copied into new recovery sets.
+Existing historical archives remain private and use their reviewed procedures;
+proxy-owning legacy scripts are not app recovery controllers.
+
+The backend and any surviving app-labelled management containers stop before
+SQLite backup. Private `data-state.json` records the exact writer ID or a unique
+generation label plus a checksummed complete checkpoint. Capture never guesses by container
+start time. It discovers all backend/management writers by labels, including
+temporary Compose names, stops them, and copies the selected generation's
+DB plus WAL/rollback journal from the stopped container into a private isolated
+directory, and recovers that copy. This matters because only the main DB file is
+bind-mounted; sidecars can be in the container filesystem. A backup and isolated
+restore copy must both pass integrity checks before production checks/migrations. SQLite
+copy/restore operations have a 60-second progress deadline. Management
+containers carry app/release identity labels and unique names. They are stopped
+and verified after Docker CLI timeout; rollback quiesces surviving labelled
+containers too. Stopped containers are retained because their journals can be
+recovery evidence. Cleanup needs explicit operator review, like image retention.
+Management containers join only the app's backend egress network; they do not
+contend with reserved backend addresses. Before migration and again before app
+startup, verified data is consolidated into the main host DB with its original owner/mode. Before an inode swap, the
+complete checkpoint and consumed writer IDs are persisted; their old journals
+are retired from future selection. A missing/unstarted replacement uses that
+checkpoint, while a started temporary-name container is captured by its generation.
+Unknown or multiple current writers fail closed. Copies use DELETE journal
+mode; this does not enable WAL or relocate storage. Migration/startup use the
+selected digest, no pull at startup.
+
+Readiness includes direct Django `/api/notifications/` returning 401, HTTPS HTML
+root returning 200 and public JSON API returning 401. Enabled app policies add
+issuer/resource discovery and an unauthenticated MCP challenge; see
+[MCP integration](#-mcp-integration) for each app's exact contract. Public probes
+use `JudeAppRelease/1.0` and request uncached responses; Cloudflare protections
+and policy response checks remain enabled. Attempts use a 90-second retry window
+plus at most one in-flight round of bounded requests. Docker exec times out at
+10 seconds and HTTP at 5 seconds; ordinary Docker commands default to 300 seconds
+with shorter explicit stop/management limits. These readiness checks do not
+establish full functional or operator acceptance.
 
 ## 🔎 Independent production verification
 
@@ -548,4 +592,4 @@ production status.
 - [Workflow guide](../../.github/workflows/README.md)
 - [App policy](app.json), [Compose](compose.yml), [bundle builder](build_bundle.py),
   [release controller](release.py) and [deployment workflow](../../.github/workflows/ci-deploy.yml)
-- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/9c1102c4ac866c4925fa13260dbdc27eec1199b1/app-release/README.md)
+- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/4a7c8549875c7fc596d509a01b1facf92f3951ec/app-release/README.md)

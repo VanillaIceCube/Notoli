@@ -182,8 +182,8 @@ The generic framework supplies no production subnet or ingress attachment.
 Each application retains its reviewed exact proxy addresses and network policy;
 consult its deployment guide rather than inferring addresses from the framework.
 
-Infrastructure owns gateway routing and the optional
-`nginx/snippets/mcp-locations.conf` contract. Coordinate exact `/mcp`, discovery,
+Infrastructure owns gateway routing; each file under `nginx/vhosts/` shows its
+MCP and discovery locations directly. Coordinate exact `/mcp`, discovery,
 `/auth/mcp/` forwarding, no caching or interactive edge challenges, HTTP/1.1,
 buffering off and the 120-second upstream idle timeout. JSON mode does not require
 WebSockets. Test REST/frontend routes and cross-app isolation as well as MCP.

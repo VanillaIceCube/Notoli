@@ -47,14 +47,6 @@ def build(target, env):
         values[key] = env[key]
     if any(any(c in value for c in "\r\n\0") for value in values.values()):
         raise ValueError("Environment values must be single line")
-    # Existing approved repository variables may retain the pre-layout class path.
-    # Normalize only this known value in new bundles; retained recovery data is untouched.
-    if values["DJANGO_EMAIL_BACKEND"] in (
-        "authentication.email_backends.ResendApiEmailBackend",
-        "apps.authentication.email_backends.ResendApiEmailBackend",
-        "apps.email.backends.ResendApiEmailBackend",
-    ):
-        values["DJANGO_EMAIL_BACKEND"] = "anymail.backends.resend.EmailBackend"
     if values["DJANGO_EMAIL_BACKEND"] not in (
         "django.core.mail.backends.smtp.EmailBackend",
         "anymail.backends.resend.EmailBackend",
@@ -121,7 +113,6 @@ def render_workflow(template, config):
     )
     return (
         template.replace("__APP__", config["app"])
-        .replace("__FRONTEND_BUILD_ARG__", config["workflow"]["frontend_build_arg"])
         .replace("__EXTRA_ENV__\n", extras)
     )
 
@@ -174,8 +165,9 @@ def check_parity(root, source_root=None, sync=False):
     if digest(template_bytes) != manifest["workflow_sha256"]:
         raise ValueError("Shared workflow template checksum mismatch")
     template = template_bytes.decode("utf-8").replace("\r\n", "\n")
-    retired_checker = root / "deploy/check_parity.py"
     if sync:
+        if (root / "deploy").resolve() != root.resolve() / "deploy":
+            raise ValueError("Release source directory must not be a symlink")
         # Validate every download before replacing any consumer files.
         downloads = {}
         for target, source in FILES.items():
@@ -184,20 +176,12 @@ def check_parity(root, source_root=None, sync=False):
                 raise ValueError("Shared source checksum mismatch: " + source)
             downloads[target] = data.replace(b"\r\n", b"\n")
         workflow = render_workflow(template, config)
-        if (
-            retired_checker.parent.resolve() != root.resolve() / "deploy"
-            or retired_checker.is_symlink()
-            or (retired_checker.exists() and not retired_checker.is_file())
-        ):
-            raise ValueError("Retired release checker must be a regular file in deploy/")
         for target, data in downloads.items():
             (root / target).write_bytes(data)
         (root / ".github/workflows/ci-deploy.yml").write_text(
             workflow, encoding="utf-8", newline="\n"
         )
     verify(root, manifest, template)
-    if sync:
-        retired_checker.unlink(missing_ok=True)
     return pin["commit"]
 
 

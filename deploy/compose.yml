@@ -1,4 +1,5 @@
-# Standalone local HTTPS only; Infrastructure owns production ingress.
+# Built application images with local HTTPS; rebuild after source changes.
+# Infrastructure owns production ingress.
 name: notoli
 
 services:
@@ -11,7 +12,7 @@ services:
       NGINX_ENVSUBST_FILTER: ^LOCAL_(SERVER_NAME|HTTPS_ORIGIN)$$
     volumes:
       - type: bind
-        source: ./nginx-proxy.conf
+        source: ./nginx.conf
         target: /etc/nginx/templates/default.conf.template
         read_only: true
         bind:

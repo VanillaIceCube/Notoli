@@ -145,9 +145,9 @@ DJANGO_DEFAULT_FROM_EMAIL=<sender-on-a-verified-domain>
 ```
 
 The existing host key maps to `ANYMAIL.RESEND_API_KEY`; blank values are omitted
-so Anymail reports a configuration error before attempting provider HTTP. The
-three retired custom Resend backend paths are normalized to the maintained
-backend at startup. Console, SMTP and other explicitly configured backends retain
+so Anymail reports a configuration error before attempting provider HTTP.
+Set the maintained backend name explicitly; retired custom Resend paths are no
+longer translated at startup. Console, SMTP and other configured backends retain
 their existing selection and variables. Keep `.localhost` senders with console
 delivery; live delivery requires an approved sender domain and private credentials.
 
