@@ -10,6 +10,10 @@ All notable changes to this project are documented in this file.
 - Explain why failure-reporting stream errors preserve the original release outcome.
 - Update the board drawer label immediately when the current board is renamed.
 
+### Changed
+
+- Use “Task” consistently in the checklist labels, empty state, and reorder screen.
+
 ## 2026-11-22
 
 ### Changed

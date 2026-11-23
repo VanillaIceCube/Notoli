@@ -26,7 +26,7 @@ export const getParentPath = (path) => {
   if (typeof path !== 'string') return undefined;
   const cleanPath = normalizePath(path);
 
-  //  list <-- notes
+  //  list <-- tasks
   //  /board/:boardId/list/:listId or /boards/:boardId/list/:listId
   const listPath = cleanPath.match(/^(\/boards?\/[^/]+)\/list\/[^/]+$/);
   if (listPath) return `${listPath[1]}`;

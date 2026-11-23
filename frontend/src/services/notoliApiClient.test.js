@@ -16,11 +16,11 @@ import {
   updateList,
   deleteList,
   reorderLists,
-  fetchNotes,
-  createNote,
-  updateNote,
-  deleteNote,
-  reorderNotes,
+  fetchTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  reorderTasks,
   fetchNotifications,
   markNotificationRead,
   clearNotification,
@@ -273,58 +273,66 @@ describe('notoliApiClient', () => {
       }),
     });
   });
-  test('when fetching notes, it calls the list query endpoint', async () => {
-    await fetchNotes(7);
+  test('fetchTasks reads existing notes as tasks with text', async () => {
+    apiFetch.mockResolvedValueOnce(
+      Response.json([{ id: 2, note: 'Hello', status: 'Not Started' }]),
+    );
+
+    await expect(fetchTasks(7)).resolves.toEqual([{ id: 2, text: 'Hello', status: 'Not Started' }]);
     expect(apiFetch).toHaveBeenCalledWith('/api/notes/?list=7', undefined);
   });
-  test('when creating a note, it posts JSON', async () => {
-    await createNote(7, {
-      note: 'Hello',
-    });
+
+  test('createTask sends text as the note field and returns a task', async () => {
+    apiFetch.mockResolvedValueOnce(Response.json({ id: 2, note: 'Hello' }));
+
+    await expect(createTask(7, 'Hello')).resolves.toEqual({ id: 2, text: 'Hello' });
     expect(apiFetch).toHaveBeenCalledWith('/api/notes/?list=7', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        note: 'Hello',
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note: 'Hello', list: 7, description: '' }),
     });
   });
-  test('when updating a note, it patches JSON', async () => {
-    await updateNote(2, {
-      note: 'Updated',
-    });
+
+  test.each([
+    [{ text: 'Updated' }, { note: 'Updated' }, 'Updated', 'Not Started'],
+    [{ status: 'Complete' }, { status: 'Complete' }, 'Original', 'Complete'],
+  ])('updateTask patches only the supplied fields %o', async (changes, payload, text, status) => {
+    apiFetch.mockResolvedValueOnce(Response.json({ id: 2, note: text, status }));
+
+    await expect(updateTask(2, changes)).resolves.toEqual({ id: 2, text, status });
     expect(apiFetch).toHaveBeenCalledWith('/api/notes/2/', {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        note: 'Updated',
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
   });
-  test('when deleting a note, it deletes', async () => {
-    await deleteNote(2);
+
+  test('deleteTask deletes through the notes endpoint', async () => {
+    apiFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    await expect(deleteTask(2)).resolves.toBeUndefined();
     expect(apiFetch).toHaveBeenCalledWith('/api/notes/2/', {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
     });
   });
-  test('when reordering notes, it patches the reorder endpoint', async () => {
-    await reorderNotes(7, [102, 101]);
+
+  test('reorderTasks returns the reordered tasks using frontend fields', async () => {
+    apiFetch.mockResolvedValueOnce(
+      Response.json([
+        { id: 102, note: 'Second' },
+        { id: 101, note: 'First' },
+      ]),
+    );
+
+    await expect(reorderTasks(7, [102, 101])).resolves.toEqual([
+      { id: 102, text: 'Second' },
+      { id: 101, text: 'First' },
+    ]);
     expect(apiFetch).toHaveBeenCalledWith('/api/notes/reorder/', {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        list: 7,
-        ordered_ids: [102, 101],
-      }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ list: 7, ordered_ids: [102, 101] }),
     });
   });
   test('when fetching notifications, it calls the notifications endpoint', async () => {

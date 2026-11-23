@@ -13,7 +13,7 @@ function getElementTestId(element) {
 function getElementLayoutHeight(element) {
   const testId = getElementTestId(element);
 
-  if (/^(note|list)-(reorder-)?row-\d+$/.test(testId)) {
+  if (/^(task|list)-(reorder-)?row-\d+$/.test(testId)) {
     return DEFAULT_ROW_HEIGHT;
   }
 

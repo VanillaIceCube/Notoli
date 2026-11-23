@@ -111,23 +111,43 @@ export const reorderLists = (boardId, orderedIds) =>
     jsonRequest('PATCH', { board: boardId, ordered_ids: orderedIds }),
   );
 
-export const fetchNotes = (listId) => requestData(`/api/notes/?list=${listId}`);
+// The REST API calls these records notes. The frontend uses tasks.
+function toTask({ note, ...task }) {
+  return { ...task, text: note };
+}
 
-export const createNote = (listId, payload) =>
-  requestData(`/api/notes/?list=${listId}`, jsonRequest('POST', payload));
+export async function fetchTasks(listId) {
+  const notes = await requestData(`/api/notes/?list=${listId}`);
+  return notes.map(toTask);
+}
 
-export const updateNote = (noteId, payload) =>
-  requestData(`/api/notes/${noteId}/`, jsonRequest('PATCH', payload));
+export async function createTask(listId, text) {
+  const note = await requestData(
+    `/api/notes/?list=${listId}`,
+    jsonRequest('POST', { note: text, list: listId, description: '' }),
+  );
+  return toTask(note);
+}
 
-export const deleteNote = async (noteId) => {
-  await requestNotoli(`/api/notes/${noteId}/`, deleteOptions);
-};
+export async function updateTask(taskId, { text, status }) {
+  const note = await requestData(
+    `/api/notes/${taskId}/`,
+    jsonRequest('PATCH', { note: text, status }),
+  );
+  return toTask(note);
+}
 
-export const reorderNotes = (listId, orderedIds) =>
-  requestData(
+export async function deleteTask(taskId) {
+  await requestNotoli(`/api/notes/${taskId}/`, deleteOptions);
+}
+
+export async function reorderTasks(listId, orderedIds) {
+  const notes = await requestData(
     '/api/notes/reorder/',
     jsonRequest('PATCH', { list: listId, ordered_ids: orderedIds }),
   );
+  return notes.map(toTask);
+}
 
 export const fetchNotifications = () => apiFetch('/api/notifications/');
 

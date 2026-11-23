@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router';
 import ListTasksPage from './ListTasksPage';
-import { noteFixtures, boardFixtures } from '../../test-helpers/fixtures';
+import { taskFixtures, boardFixtures } from '../../test-helpers/fixtures';
 import { collectRowStartPixels } from '../../test-helpers/layout';
 import {
   createDeferred,
@@ -10,12 +10,12 @@ import {
   waitForLoadingToFinish,
 } from '../../test-helpers/utils';
 import {
-  createNote,
-  deleteNote,
-  fetchNotes as fetchNotesApi,
+  createTask,
+  deleteTask,
+  fetchTasks,
   fetchList as fetchListApi,
   fetchBoard as fetchBoardApi,
-  updateNote,
+  updateTask,
 } from '../../services/notoliApiClient';
 const { mockUseParams } = vi.hoisted(() => ({
   mockUseParams: vi.fn(),
@@ -25,19 +25,19 @@ vi.mock('react-router', async () => ({
   useParams: () => mockUseParams(),
 }));
 vi.mock('../../services/notoliApiClient', () => ({
-  createNote: vi.fn(),
-  deleteNote: vi.fn(),
-  fetchNotes: vi.fn(),
+  createTask: vi.fn(),
+  deleteTask: vi.fn(),
+  fetchTasks: vi.fn(),
   fetchList: vi.fn(),
   fetchBoard: vi.fn(),
-  reorderNotes: vi.fn(),
-  updateNote: vi.fn(),
+  reorderTasks: vi.fn(),
+  updateTask: vi.fn(),
 }));
 function LocationDisplay() {
   const location = useLocation();
   return <div data-testid="location">{location.pathname}</div>;
 }
-async function renderNotes(routeEntries = ['/board/1/list/5']) {
+async function renderTaskPage(routeEntries = ['/board/1/list/5']) {
   const setAppBarHeader = vi.fn();
   const view = renderWithProviders(
     <>
@@ -49,7 +49,7 @@ async function renderNotes(routeEntries = ['/board/1/list/5']) {
     },
   );
   await waitFor(() => {
-    expect(fetchNotesApi).toHaveBeenCalledWith('5');
+    expect(fetchTasks).toHaveBeenCalledWith('5');
   });
   await waitForLoadingToFinish();
   return {
@@ -79,7 +79,7 @@ describe('ListTasksPage', () => {
       boardId: '1',
       listId: '5',
     });
-    fetchNotesApi.mockResolvedValue(noteFixtures);
+    fetchTasks.mockResolvedValue(taskFixtures);
     fetchListApi.mockResolvedValue({
       name: 'List 5',
     });
@@ -87,18 +87,18 @@ describe('ListTasksPage', () => {
   });
   test('when the page loads, it shows a loading state', async () => {
     const deferred = createDeferred();
-    fetchNotesApi.mockReturnValueOnce(deferred.promise);
+    fetchTasks.mockReturnValueOnce(deferred.promise);
     renderWithProviders(<ListTasksPage setAppBarHeader={vi.fn()} />, {
       routeEntries: ['/board/1/list/5'],
     });
     expect(screen.getByText(/loading/i)).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', {
-        name: /^notes$/i,
+        name: /^tasks$/i,
       }),
     ).not.toBeInTheDocument();
     deferred.resolve([]);
-    expect(await screen.findByText(/no notes found/i)).toBeInTheDocument();
+    expect(await screen.findByText(/no tasks found/i)).toBeInTheDocument();
   });
   test('activating a loaded list updates the header without fetching its data again', async () => {
     const setAppBarHeader = vi.fn();
@@ -109,17 +109,17 @@ describe('ListTasksPage', () => {
       },
     );
 
-    await screen.findByText('test_note_01');
+    await screen.findByText('test_task_01');
     expect(setAppBarHeader).not.toHaveBeenCalled();
     rerender(<ListTasksPage active setAppBarHeader={setAppBarHeader} />);
 
     expect(setAppBarHeader).toHaveBeenLastCalledWith('test_board_01');
-    expect(fetchNotesApi).toHaveBeenCalledTimes(1);
+    expect(fetchTasks).toHaveBeenCalledTimes(1);
     expect(fetchListApi).toHaveBeenCalledTimes(1);
     expect(fetchBoardApi).toHaveBeenCalledTimes(1);
   });
   test('when the list fetch succeeds, it shows the list name as the page title', async () => {
-    await renderNotes();
+    await renderTaskPage();
     expect(
       screen.getByRole('heading', {
         name: 'List 5',
@@ -127,61 +127,57 @@ describe('ListTasksPage', () => {
     ).toBeInTheDocument();
   });
   test('when the fetch succeeds, it renders the list items', async () => {
-    await renderNotes();
-    expect(await screen.findByText('test_note_01')).toBeInTheDocument();
-    expect(screen.getByText('test_note_02')).toBeInTheDocument();
+    await renderTaskPage();
+    expect(await screen.findByText('test_task_01')).toBeInTheDocument();
+    expect(screen.getByText('test_task_02')).toBeInTheDocument();
     expect(
       screen.getByRole('checkbox', {
-        name: /mark test_note_01 complete/i,
+        name: /mark test_task_01 complete/i,
       }),
     ).not.toBeChecked();
     expect(
       screen.getByRole('checkbox', {
-        name: /mark test_note_02 complete/i,
+        name: /mark test_task_02 complete/i,
       }),
     ).toBeChecked();
   });
   test('when the fetch fails, it shows an error message', async () => {
-    fetchNotesApi.mockRejectedValueOnce(new Error('HTTP 500'));
-    await renderNotes();
+    fetchTasks.mockRejectedValueOnce(new Error('HTTP 500'));
+    await renderTaskPage();
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
   test('when the add flow is opened, it shows the input', async () => {
-    await renderNotes();
+    await renderTaskPage();
     await userEvent.click(
       screen.getByRole('button', {
         name: /add new/i,
       }),
     );
-    expect(screen.getByPlaceholderText(/new note/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/new task/i)).toBeInTheDocument();
   });
   test('when a valid add is submitted, it creates and renders the new item', async () => {
-    createNote.mockResolvedValueOnce({
+    createTask.mockResolvedValueOnce({
       id: 103,
-      note: 'test_note_03',
+      text: 'test_task_03',
     });
-    await renderNotes();
+    await renderTaskPage();
     await userEvent.click(
       screen.getByRole('button', {
         name: /add new/i,
       }),
     );
-    const input = screen.getByPlaceholderText(/new note/i);
-    await userEvent.type(input, 'test_note_03{enter}');
+    const input = screen.getByPlaceholderText(/new task/i);
+    await userEvent.type(input, 'test_task_03{enter}');
     await waitFor(() => {
-      expect(createNote).toHaveBeenCalledWith('5', {
-        note: 'test_note_03',
-        list: '5',
-        description: '',
-      });
+      expect(createTask).toHaveBeenCalledWith('5', 'test_task_03');
     });
-    expect(await screen.findByText('test_note_03')).toBeInTheDocument();
+    expect(await screen.findByText('test_task_03')).toBeInTheDocument();
   });
   test('when rename is opened, it shows the edit input prefilled', async () => {
-    await renderNotes();
+    await renderTaskPage();
     await userEvent.click(
       await screen.findByRole('button', {
-        name: /note actions for test_note_01/i,
+        name: /task actions for test_task_01/i,
       }),
     );
     await userEvent.click(
@@ -190,13 +186,13 @@ describe('ListTasksPage', () => {
       }),
     );
     const input = screen.getByRole('textbox');
-    expect(input).toHaveValue('test_note_01');
+    expect(input).toHaveValue('test_task_01');
   });
   test('when row actions are opened, edit, reorder, and delete actions include icons', async () => {
-    await renderNotes();
+    await renderTaskPage();
     await userEvent.click(
       await screen.findByRole('button', {
-        name: /note actions for test_note_01/i,
+        name: /task actions for test_task_01/i,
       }),
     );
     expect(
@@ -216,15 +212,15 @@ describe('ListTasksPage', () => {
     ).toContainElement(screen.getByTestId('DeleteIcon'));
   });
   test('when a valid edit is submitted, it updates the item', async () => {
-    updateNote.mockResolvedValueOnce({
+    updateTask.mockResolvedValueOnce({
       id: 101,
-      note: 'test_note_01 Updated',
+      text: 'test_task_01 Updated',
       status: 'Not Started',
     });
-    await renderNotes();
+    await renderTaskPage();
     await userEvent.click(
       await screen.findByRole('button', {
-        name: /note actions for test_note_01/i,
+        name: /task actions for test_task_01/i,
       }),
     );
     await userEvent.click(
@@ -234,39 +230,39 @@ describe('ListTasksPage', () => {
     );
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
-    await userEvent.type(input, 'test_note_01 Updated{enter}');
+    await userEvent.type(input, 'test_task_01 Updated{enter}');
     await waitFor(() => {
-      expect(updateNote).toHaveBeenCalledWith(101, {
-        note: 'test_note_01 Updated',
+      expect(updateTask).toHaveBeenCalledWith(101, {
+        text: 'test_task_01 Updated',
       });
     });
-    expect(await screen.findByText('test_note_01 Updated')).toBeInTheDocument();
+    expect(await screen.findByText('test_task_01 Updated')).toBeInTheDocument();
   });
   test('when a checkbox is toggled, it updates the status immediately', async () => {
-    updateNote.mockResolvedValueOnce({
+    updateTask.mockResolvedValueOnce({
       id: 101,
-      note: 'test_note_01',
+      text: 'test_task_01',
       status: 'Complete',
     });
-    await renderNotes();
+    await renderTaskPage();
     const checkbox = screen.getByRole('checkbox', {
-      name: /mark test_note_01 complete/i,
+      name: /mark test_task_01 complete/i,
     });
     await userEvent.click(checkbox);
     expect(checkbox).toBeChecked();
     await waitFor(() => {
-      expect(updateNote).toHaveBeenCalledWith(101, {
+      expect(updateTask).toHaveBeenCalledWith(101, {
         status: 'Complete',
       });
     });
-    expect(screen.getByText('test_note_01')).toHaveStyle('text-decoration: line-through');
+    expect(screen.getByText('test_task_01')).toHaveStyle('text-decoration: line-through');
   });
   test('when delete is confirmed, it removes the item', async () => {
-    deleteNote.mockResolvedValueOnce(undefined);
-    await renderNotes();
+    deleteTask.mockResolvedValueOnce(undefined);
+    await renderTaskPage();
     await userEvent.click(
       await screen.findByRole('button', {
-        name: /note actions for test_note_01/i,
+        name: /task actions for test_task_01/i,
       }),
     );
     await userEvent.click(
@@ -275,33 +271,33 @@ describe('ListTasksPage', () => {
       }),
     );
     await waitFor(() => {
-      expect(deleteNote).toHaveBeenCalledWith(101);
+      expect(deleteTask).toHaveBeenCalledWith(101);
     });
     await waitFor(() => {
-      expect(screen.queryByText('test_note_01')).not.toBeInTheDocument();
+      expect(screen.queryByText('test_task_01')).not.toBeInTheDocument();
     });
   });
   test('when an item is clicked, it keeps the current route', async () => {
-    await renderNotes();
+    await renderTaskPage();
     const locationBefore = screen.getByTestId('location').textContent;
-    await userEvent.click(await screen.findByText('test_note_01'));
+    await userEvent.click(await screen.findByText('test_task_01'));
     expect(screen.getByTestId('location')).toHaveTextContent(locationBefore);
   });
-  test('when reorder mode is opened, it shows drag handles and hides note actions and add', async () => {
-    await renderNotes();
+  test('when reorder mode is opened, it shows drag handles and hides task actions and add', async () => {
+    await renderTaskPage();
     expect(
       screen.queryByRole('button', {
-        name: /notes page actions/i,
+        name: /tasks page actions/i,
       }),
     ).not.toBeInTheDocument();
-    expect(screen.getByTestId('note-list')).toHaveStyle('gap: 8px');
-    const normalRowStartPixels = collectRowStartPixels(screen.getByTestId('note-list'), [
-      'note-row-101',
-      'note-row-102',
+    expect(screen.getByTestId('task-list')).toHaveStyle('gap: 8px');
+    const normalRowStartPixels = collectRowStartPixels(screen.getByTestId('task-list'), [
+      'task-row-101',
+      'task-row-102',
     ]);
     await userEvent.click(
       await screen.findByRole('button', {
-        name: /note actions for test_note_01/i,
+        name: /task actions for test_task_01/i,
       }),
     );
     await userEvent.click(
@@ -311,24 +307,24 @@ describe('ListTasksPage', () => {
     );
     expect(
       screen.getByRole('heading', {
-        name: /reorder notes/i,
+        name: /reorder tasks/i,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByTestId('note-reorder-list')).toHaveStyle('gap: 8px');
-    const reorderRowStartPixels = collectRowStartPixels(screen.getByTestId('note-reorder-list'), [
-      'note-reorder-row-101',
-      'note-reorder-row-102',
+    expect(screen.getByTestId('task-reorder-list')).toHaveStyle('gap: 8px');
+    const reorderRowStartPixels = collectRowStartPixels(screen.getByTestId('task-reorder-list'), [
+      'task-reorder-row-101',
+      'task-reorder-row-102',
     ]);
     expect([
-      reorderRowStartPixels['note-reorder-row-101'],
-      reorderRowStartPixels['note-reorder-row-102'],
-    ]).toEqual([normalRowStartPixels['note-row-101'], normalRowStartPixels['note-row-102']]);
-    expect(screen.getByTestId('note-drag-handle-101')).toBeInTheDocument();
-    expect(screen.getByTestId('note-drag-handle-101').style.touchAction).toBe('none');
-    expect(screen.getByTestId('note-drag-handle-102')).toBeInTheDocument();
+      reorderRowStartPixels['task-reorder-row-101'],
+      reorderRowStartPixels['task-reorder-row-102'],
+    ]).toEqual([normalRowStartPixels['task-row-101'], normalRowStartPixels['task-row-102']]);
+    expect(screen.getByTestId('task-drag-handle-101')).toBeInTheDocument();
+    expect(screen.getByTestId('task-drag-handle-101').style.touchAction).toBe('none');
+    expect(screen.getByTestId('task-drag-handle-102')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', {
-        name: /note actions for test_note_01/i,
+        name: /task actions for test_task_01/i,
       }),
     ).not.toBeInTheDocument();
     expect(
@@ -343,16 +339,16 @@ describe('ListTasksPage', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('checkbox', {
-        name: /mark test_note_01 complete/i,
+        name: /mark test_task_01 complete/i,
       }),
     ).not.toBeChecked();
     expect(
       screen.getByRole('checkbox', {
-        name: /mark test_note_02 complete/i,
+        name: /mark test_task_02 complete/i,
       }),
     ).toBeChecked();
-    expect(screen.getByText('test_note_02')).toHaveStyle('text-decoration: line-through');
-    expect(screen.getByTestId('note-reorder-row-102')).toHaveStyle('opacity: 0.72');
+    expect(screen.getByText('test_task_02')).toHaveStyle('text-decoration: line-through');
+    expect(screen.getByTestId('task-reorder-row-102')).toHaveStyle('opacity: 0.72');
     await userEvent.click(
       screen.getByRole('button', {
         name: /done reordering/i,
@@ -400,7 +396,7 @@ describe('ListTasksPage', () => {
   });
   test('when the list fetch fails, it shows an error and does not show the old hardcoded title', async () => {
     const deferred = createDeferred();
-    fetchNotesApi.mockReturnValueOnce(deferred.promise);
+    fetchTasks.mockReturnValueOnce(deferred.promise);
     fetchListApi.mockRejectedValueOnce(new Error('HTTP 500'));
     const setAppBarHeader = vi.fn();
     renderWithProviders(<ListTasksPage setAppBarHeader={setAppBarHeader} />, {
@@ -409,30 +405,30 @@ describe('ListTasksPage', () => {
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', {
-        name: /^notes$/i,
+        name: /^tasks$/i,
       }),
     ).not.toBeInTheDocument();
     await act(async () => {
-      deferred.resolve(noteFixtures);
+      deferred.resolve(taskFixtures);
     });
     await waitForLoadingToFinish();
   });
   test('when add is opened and Escape is pressed, it closes the add input', async () => {
-    await renderNotes();
+    await renderTaskPage();
     await userEvent.click(
       screen.getByRole('button', {
         name: /add new/i,
       }),
     );
-    const input = screen.getByPlaceholderText(/new note/i);
-    await userEvent.type(input, 'test_note_03{Escape}');
-    expect(screen.queryByPlaceholderText(/new note/i)).not.toBeInTheDocument();
+    const input = screen.getByPlaceholderText(/new task/i);
+    await userEvent.type(input, 'test_task_03{Escape}');
+    expect(screen.queryByPlaceholderText(/new task/i)).not.toBeInTheDocument();
   });
   test('when rename is opened and Escape is pressed, it closes the edit input', async () => {
-    await renderNotes();
+    await renderTaskPage();
     await userEvent.click(
       await screen.findByRole('button', {
-        name: /note actions for test_note_01/i,
+        name: /task actions for test_task_01/i,
       }),
     );
     await userEvent.click(
@@ -445,23 +441,23 @@ describe('ListTasksPage', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
   test('when create fails, it shows an error message', async () => {
-    createNote.mockRejectedValueOnce(new Error('HTTP 500'));
-    await renderNotes();
+    createTask.mockRejectedValueOnce(new Error('HTTP 500'));
+    await renderTaskPage();
     await userEvent.click(
       screen.getByRole('button', {
         name: /add new/i,
       }),
     );
-    const input = screen.getByPlaceholderText(/new note/i);
-    await userEvent.type(input, 'test_note_03{enter}');
+    const input = screen.getByPlaceholderText(/new task/i);
+    await userEvent.type(input, 'test_task_03{enter}');
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
   test('when update fails, it shows an error message', async () => {
-    updateNote.mockRejectedValueOnce(new Error('HTTP 500'));
-    await renderNotes();
+    updateTask.mockRejectedValueOnce(new Error('HTTP 500'));
+    await renderTaskPage();
     await userEvent.click(
       await screen.findByRole('button', {
-        name: /note actions for test_note_01/i,
+        name: /task actions for test_task_01/i,
       }),
     );
     await userEvent.click(
@@ -471,15 +467,15 @@ describe('ListTasksPage', () => {
     );
     const input = screen.getByRole('textbox');
     await userEvent.clear(input);
-    await userEvent.type(input, 'test_note_01 Updated{enter}');
+    await userEvent.type(input, 'test_task_01 Updated{enter}');
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
   test('when delete fails, it shows an error message', async () => {
-    deleteNote.mockRejectedValueOnce(new Error('HTTP 500'));
-    await renderNotes();
+    deleteTask.mockRejectedValueOnce(new Error('HTTP 500'));
+    await renderTaskPage();
     await userEvent.click(
       await screen.findByRole('button', {
-        name: /note actions for test_note_01/i,
+        name: /task actions for test_task_01/i,
       }),
     );
     await userEvent.click(
@@ -489,11 +485,11 @@ describe('ListTasksPage', () => {
     );
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
-  test('when the last note is gone, the empty row keeps Add New at one complete note-item height', async () => {
-    fetchNotesApi.mockResolvedValueOnce([]);
-    await renderNotes();
-    expect(await screen.findByText(/no notes found/i)).toBeInTheDocument();
-    expect(screen.getByTestId('note-empty-state')).toHaveStyle({
+  test('when the last task is gone, the empty row keeps Add New at one complete task-item height', async () => {
+    fetchTasks.mockResolvedValueOnce([]);
+    await renderTaskPage();
+    expect(await screen.findByText(/no tasks found/i)).toBeInTheDocument();
+    expect(screen.getByTestId('task-empty-state')).toHaveStyle({
       minHeight: '52px',
       boxSizing: 'border-box',
     });
@@ -503,10 +499,10 @@ describe('ListTasksPage', () => {
       }),
     ).toBeInTheDocument();
   });
-  test('when a mobile user pulls down from the top, it refreshes the notes', async () => {
+  test('when a mobile user pulls down from the top, it refreshes the tasks', async () => {
     setMobilePullViewport();
-    await renderNotes();
-    const list = screen.getByTestId('note-list');
+    await renderTaskPage();
+    const list = screen.getByTestId('task-list');
     fireEvent.touchStart(list, {
       touches: [
         {
@@ -537,15 +533,15 @@ describe('ListTasksPage', () => {
       ],
     });
     await waitFor(() => {
-      expect(fetchNotesApi).toHaveBeenCalledTimes(2);
+      expect(fetchTasks).toHaveBeenCalledTimes(2);
     });
   });
-  test('when a mobile refresh is pending, it keeps existing notes visible', async () => {
+  test('when a mobile refresh is pending, it keeps existing tasks visible', async () => {
     setMobilePullViewport();
-    await renderNotes();
+    await renderTaskPage();
     const deferred = createDeferred();
-    fetchNotesApi.mockReturnValueOnce(deferred.promise);
-    const list = screen.getByTestId('note-list');
+    fetchTasks.mockReturnValueOnce(deferred.promise);
+    const list = screen.getByTestId('task-list');
     fireEvent.touchStart(list, {
       touches: [
         {
@@ -571,25 +567,25 @@ describe('ListTasksPage', () => {
       ],
     });
     await waitFor(() => {
-      expect(fetchNotesApi).toHaveBeenCalledTimes(2);
+      expect(fetchTasks).toHaveBeenCalledTimes(2);
     });
-    expect(screen.getByText('test_note_01')).toBeInTheDocument();
-    expect(screen.getByText('test_note_02')).toBeInTheDocument();
+    expect(screen.getByText('test_task_01')).toBeInTheDocument();
+    expect(screen.getByText('test_task_02')).toBeInTheDocument();
     expect(screen.queryByText(/^loading/i)).not.toBeInTheDocument();
     deferred.resolve([
       {
         id: 103,
-        note: 'test_note_03',
+        text: 'test_task_03',
         status: 'Not Started',
       },
     ]);
-    expect(await screen.findByText('test_note_03')).toBeInTheDocument();
+    expect(await screen.findByText('test_task_03')).toBeInTheDocument();
   });
-  test('when a mobile refresh fails, it keeps existing notes visible with the error', async () => {
+  test('when a mobile refresh fails, it keeps existing tasks visible with the error', async () => {
     setMobilePullViewport();
-    await renderNotes();
-    fetchNotesApi.mockRejectedValueOnce(new Error('HTTP 500'));
-    const list = screen.getByTestId('note-list');
+    await renderTaskPage();
+    fetchTasks.mockRejectedValueOnce(new Error('HTTP 500'));
+    const list = screen.getByTestId('task-list');
     fireEvent.touchStart(list, {
       touches: [
         {
@@ -615,12 +611,12 @@ describe('ListTasksPage', () => {
       ],
     });
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
-    expect(screen.getByText('test_note_01')).toBeInTheDocument();
-    expect(screen.getByText('test_note_02')).toBeInTheDocument();
+    expect(screen.getByText('test_task_01')).toBeInTheDocument();
+    expect(screen.getByText('test_task_02')).toBeInTheDocument();
   });
-  test('when a mobile user pulls down from page whitespace, it refreshes the notes', async () => {
+  test('when a mobile user pulls down from page whitespace, it refreshes the tasks', async () => {
     setMobilePullViewport();
-    await renderNotes();
+    await renderTaskPage();
     fireEvent.touchStart(document.body, {
       touches: [
         {
@@ -646,15 +642,15 @@ describe('ListTasksPage', () => {
       ],
     });
     await waitFor(() => {
-      expect(fetchNotesApi).toHaveBeenCalledTimes(2);
+      expect(fetchTasks).toHaveBeenCalledTimes(2);
     });
   });
-  test('when editing a note, pull down does not refresh', async () => {
+  test('when editing a task, pull down does not refresh', async () => {
     setMobilePullViewport();
-    await renderNotes();
+    await renderTaskPage();
     await userEvent.click(
       await screen.findByRole('button', {
-        name: /note actions for test_note_01/i,
+        name: /task actions for test_task_01/i,
       }),
     );
     await userEvent.click(
@@ -688,7 +684,7 @@ describe('ListTasksPage', () => {
       ],
     });
     await waitFor(() => {
-      expect(fetchNotesApi).toHaveBeenCalledTimes(1);
+      expect(fetchTasks).toHaveBeenCalledTimes(1);
     });
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });

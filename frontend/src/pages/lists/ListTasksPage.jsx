@@ -15,20 +15,20 @@ import SortableNotepadItems, {
   DRAG_HANDLE_TOUCH_STYLE,
 } from '../../components/notepadPages/SortableNotepadItems';
 import {
-  createNote,
-  deleteNote,
-  fetchNotes as fetchNotesApi,
+  createTask,
+  deleteTask,
+  fetchTasks,
   fetchList as fetchListApi,
   fetchBoard as fetchBoardApi,
-  reorderNotes,
-  updateNote,
+  reorderTasks,
+  updateTask,
 } from '../../services/notoliApiClient';
 import { rememberLastBoard } from '../../services/lastBoard';
 import { usePullToRefresh } from '../../hooks/useMobileGestures';
 
-const NOTE_STATUS_NOT_STARTED = 'Not Started';
-const NOTE_STATUS_COMPLETE = 'Complete';
-const isTaskComplete = (task) => task.status === NOTE_STATUS_COMPLETE;
+const TASK_STATUS_NOT_STARTED = 'Not Started';
+const TASK_STATUS_COMPLETE = 'Complete';
+const isTaskComplete = (task) => task.status === TASK_STATUS_COMPLETE;
 const formatDocumentTitle = (boardName, listName) =>
   boardName && listName ? `Notoli - ${boardName} - ${listName}` : 'Notoli';
 
@@ -66,9 +66,9 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
   const [actionMenuAnchorEl, setActionMenuAnchorEl] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [newTask, setNewTask] = useState('');
+  const [newTaskText, setNewTaskText] = useState('');
   const [editingTaskId, setEditingTaskId] = useState(null);
-  const [editTask, setEditTask] = useState('');
+  const [editedTaskText, setEditedTaskText] = useState('');
   const actionMenuOpen = Boolean(actionMenuAnchorEl);
 
   // Preserve the AppBar's existing board-only behavior; its title is unrelated to the browser tab.
@@ -91,12 +91,12 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
     }
   }, [loading, onPageReady]);
 
-  const fetchTasks = useCallback(async () => {
+  const loadTasks = useCallback(async () => {
     if (!token || !isCurrentSession()) return;
     setLoading(true);
     try {
-      const data = await fetchNotesApi(listId);
-      setTasks(data);
+      const loadedTasks = await fetchTasks(listId);
+      setTasks(loadedTasks);
       setError(null);
     } catch (err) {
       setError(err.toString());
@@ -136,13 +136,13 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
     }
 
     rememberLastBoard(boardId);
-    fetchTasks();
+    loadTasks();
     fetchListName();
     loadBoardName();
     return () => {
       cancelled = true;
     };
-  }, [boardId, listId, token, fetchTasks, fetchListName, isCurrentSession]);
+  }, [boardId, listId, token, loadTasks, fetchListName, isCurrentSession]);
 
   const closeActionMenu = () => {
     setActionMenuAnchorEl(null);
@@ -151,10 +151,10 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
 
   const closeEdit = () => {
     setEditingTaskId(null);
-    setEditTask('');
+    setEditedTaskText('');
   };
 
-  const startReordering = () => {
+  const enterReorderMode = () => {
     closeEdit();
     setIsAdding(false);
     closeActionMenu();
@@ -166,34 +166,34 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
     setSelectedTask(task);
   };
 
-  const onAdd = async () => {
+  const addTask = async () => {
     if (!token || !isCurrentSession()) return;
-    if (!newTask.trim()) return;
+    if (!newTaskText.trim()) return;
     setError(null);
 
     try {
-      const created = await createNote(listId, { note: newTask, list: listId, description: '' });
+      const created = await createTask(listId, newTaskText);
       setTasks((prev) => [...prev, created]);
       setIsAdding(false);
-      setNewTask('');
+      setNewTaskText('');
     } catch (err) {
       setError(err.toString());
     }
   };
 
-  const startEditing = () => {
+  const startEditingTask = () => {
     setEditingTaskId(selectedTask.id);
-    setEditTask(selectedTask.note);
+    setEditedTaskText(selectedTask.text);
     closeActionMenu();
   };
 
-  const onEdit = async () => {
+  const saveTaskEdit = async () => {
     if (!token || !isCurrentSession()) return;
-    if (!editTask.trim()) return;
+    if (!editedTaskText.trim()) return;
     setError(null);
 
     try {
-      const updated = await updateNote(editingTaskId, { note: editTask });
+      const updated = await updateTask(editingTaskId, { text: editedTaskText });
       setTasks((prev) =>
         prev.map((task) => (task.id === updated.id ? { ...task, ...updated } : task)),
       );
@@ -203,17 +203,17 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
     }
   };
 
-  const onToggleStatus = async (event, taskToToggle) => {
+  const toggleTaskCompletion = async (event, taskToToggle) => {
     if (!token || !isCurrentSession()) return;
     event.stopPropagation();
-    const status = event.target.checked ? NOTE_STATUS_COMPLETE : NOTE_STATUS_NOT_STARTED;
+    const status = event.target.checked ? TASK_STATUS_COMPLETE : TASK_STATUS_NOT_STARTED;
     setError(null);
     setTasks((prev) =>
       prev.map((task) => (task.id === taskToToggle.id ? { ...task, status } : task)),
     );
 
     try {
-      const updated = await updateNote(taskToToggle.id, { status });
+      const updated = await updateTask(taskToToggle.id, { status });
       setTasks((prev) =>
         prev.map((task) => (task.id === updated.id ? { ...task, ...updated } : task)),
       );
@@ -232,15 +232,15 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
   const { isRefreshing, pullDistance, refreshReady } = usePullToRefresh({
     enabled: !pullToRefreshDisabled,
     active,
-    onRefresh: fetchTasks,
+    onRefresh: loadTasks,
   });
 
-  const onDelete = async (id) => {
+  const removeTask = async (id) => {
     if (!token || !isCurrentSession()) return;
     setError(null);
 
     try {
-      await deleteNote(id);
+      await deleteTask(id);
       setTasks((prev) => prev.filter((task) => task.id !== id));
     } catch (err) {
       setError(err.toString());
@@ -249,7 +249,7 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
     }
   };
 
-  const onDragEnd = async ({ active, over }) => {
+  const reorderTasksAfterDrag = async ({ active, over }) => {
     if (!token || !isCurrentSession()) return;
     if (!over || active.id === over.id) return;
 
@@ -263,7 +263,7 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
     setError(null);
 
     try {
-      const updatedTasks = await reorderNotes(
+      const updatedTasks = await reorderTasks(
         listId,
         reorderedTasks.map((task) => task.id),
       );
@@ -278,9 +278,9 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
     if (editingTaskId === task.id) {
       return (
         <InlineTextEditor
-          value={editTask}
-          onChange={setEditTask}
-          onSubmit={onEdit}
+          value={editedTaskText}
+          onChange={setEditedTaskText}
+          onSubmit={saveTaskEdit}
           onCancel={closeEdit}
         />
       );
@@ -291,13 +291,13 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
 
     return (
       <Box
-        data-testid={`${isReordering ? 'note-reorder-row' : 'note-row'}-${task.id}`}
+        data-testid={`${isReordering ? 'task-reorder-row' : 'task-row'}-${task.id}`}
         sx={taskRowSx}
       >
         <Checkbox
           checked={complete}
           onClick={(event) => event.stopPropagation()}
-          onChange={isReordering ? undefined : (event) => onToggleStatus(event, task)}
+          onChange={isReordering ? undefined : (event) => toggleTaskCompletion(event, task)}
           sx={{
             color: 'var(--secondary-color)',
             p: 0.5,
@@ -306,7 +306,7 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
             '&.Mui-checked': { color: 'var(--secondary-color)' },
           }}
           slotProps={{
-            input: { 'aria-label': `Mark ${task.note} complete` },
+            input: { 'aria-label': `Mark ${task.text} complete` },
           }}
         />
         <Typography
@@ -319,13 +319,13 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
             textDecoration: complete ? 'line-through' : 'none',
           }}
         >
-          {task.note}
+          {task.text}
         </Typography>
         {isReordering ? (
           <IconButton
             size="small"
-            aria-label={`Drag ${task.note}`}
-            data-testid={`note-drag-handle-${task.id}`}
+            aria-label={`Drag ${task.text}`}
+            data-testid={`task-drag-handle-${task.id}`}
             sx={{ color: 'var(--secondary-color)', cursor: 'grab' }}
             style={DRAG_HANDLE_TOUCH_STYLE}
             {...handleProps}
@@ -335,7 +335,7 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
         ) : (
           <IconButton
             size="small"
-            aria-label={`Note actions for ${task.note}`}
+            aria-label={`Task actions for ${task.text}`}
             onClick={(event) => {
               event.stopPropagation();
               openActionMenu(event, task);
@@ -352,7 +352,7 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
   return (
     <>
       <NotepadPageShell
-        title={isReordering ? 'Reorder Notes' : listName}
+        title={isReordering ? 'Reorder Tasks' : listName}
         loading={loading}
         error={error}
         hasContent={tasks.length > 0}
@@ -362,11 +362,11 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
       >
         <SortableNotepadItems
           items={tasks}
-          emptyMessage="No notes found."
+          emptyMessage="No tasks found."
           isReordering={isReordering}
-          onDragEnd={onDragEnd}
+          onDragEnd={reorderTasksAfterDrag}
           renderItem={renderTaskRow}
-          testIdPrefix="note"
+          testIdPrefix="task"
         />
         {isReordering ? (
           <Button variant="text" sx={pageActionButtonSx} onClick={() => setIsReordering(false)}>
@@ -401,10 +401,10 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
           </Button>
         ) : (
           <InlineTextEditor
-            placeholder="New Note..."
-            value={newTask}
-            onChange={setNewTask}
-            onSubmit={onAdd}
+            placeholder="New Task…"
+            value={newTaskText}
+            onChange={setNewTaskText}
+            onSubmit={addTask}
             onCancel={() => setIsAdding(false)}
           />
         )}
@@ -414,9 +414,9 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
         anchorEl={actionMenuAnchorEl}
         open={actionMenuOpen}
         onClose={closeActionMenu}
-        onRename={startEditing}
-        onReorder={startReordering}
-        onRemove={() => onDelete(selectedTask.id)}
+        onRename={startEditingTask}
+        onReorder={enterReorderMode}
+        onRemove={() => removeTask(selectedTask.id)}
         reorderDisabled={tasks.length < 2}
       />
     </>

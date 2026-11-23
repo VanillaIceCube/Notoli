@@ -77,7 +77,7 @@ its recovery UI instead of leaving it hidden behind the previous page.
 
 - `/` redirects authenticated users to their first board when one exists
 - `/board/:boardId` shows lists for a board
-- `/board/:boardId/list/:listId` shows notes for a list
+- `/board/:boardId/list/:listId` shows tasks for a list
 - Public auth routes: `/login`, `/register`, `/forgot-password`, `/reset-password?uid=<...>&token=<...>`
 - `/connections/authorize` displays OAuth consent for a pending application request
 - `/connections` lists and revokes Connected Apps (also available in the profile menu)
@@ -172,9 +172,11 @@ and session-lifecycle contract.
 
 Board management lives in the right sidebar. Open the Board list, use a board row's action menu, and choose Share. The Share dialog displays the board owner and collaborators. Owners can add collaborators by username/email and remove collaborators; non-owners can view access in read-only mode.
 
-### Notes checklist items
+### Task checklist items
 
-Notes in a list render as checklist rows. Checking a note updates its `status` to `Complete` through the notes API, immediately reflects the change in the UI, and shows complete note text with a strikethrough. Unchecked notes use `Not Started`, and the API also supports `In Progress`.
+Tasks in a list render as checklist rows. Checking a task sets its `status` to `Complete` and strikes through the task text immediately. Unchecking sets it to `Not Started`. The API also supports `In Progress`.
+
+The frontend API client translates between task `text` and the existing `note` field on `/api/notes/` routes.
 
 ### In-app notifications
 
@@ -182,7 +184,7 @@ The app bar notification icon opens a popover with the newest notifications firs
 
 ### Drag-and-drop reordering
 
-List and note pages include a top-right page action menu for entering reorder mode. Reorder mode hides row action menus, shows right-side drag handles, hides Add New, and exits through Done. Dragging only starts from the handle and persists the final order through the reorder API after drop.
+To reorder lists or tasks, open a row’s action menu and choose **Reorder**. Drag items by the handles on the right. Each drop saves the new order. Select **Done Reordering** to return to the regular list.
 
 Loaded board/list pages may report readiness again when their parent renders. The route coordinator keeps an already active single-page state unchanged, preventing a render feedback loop that can make controls unresponsive. Unit tests exercise automatic and repeated readiness. See issue #1022.
 
