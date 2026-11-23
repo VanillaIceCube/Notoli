@@ -8,6 +8,7 @@ can decide whether restoring a database and losing later writes is acceptable.
 import argparse
 from contextlib import closing, contextmanager
 import hashlib
+import inspect as python_inspect
 import json
 import os
 from pathlib import Path
@@ -41,10 +42,44 @@ RUN_ID = re.compile(r"[0-9a-f]{40}-[0-9]+-[0-9]+")
 DIGEST = re.compile(
     r"ghcr\.io/[a-z0-9-]+/" + APP + r"-(backend|frontend)@sha256:[0-9a-f]{64}"
 )
+CURRENT_STEP = "Validating command arguments"
+REPORT_ROOT = None
 
 
 class ReleaseError(RuntimeError):
     pass
+
+
+def progress(step):
+    global CURRENT_STEP
+    CURRENT_STEP = step
+    try:
+        print("Release: " + step, file=sys.stderr, flush=True)
+    except OSError:
+        # A disconnected log stream must not interrupt the release transaction.
+        pass
+
+
+def report_failure(error):
+    # Show our safe error messages, never parsed values or subprocess output.
+    detail = str(error) if isinstance(error, ReleaseError) else type(error).__name__
+    try:
+        print(
+            "Release failed during: " + CURRENT_STEP + ". " + detail,
+            file=sys.stderr,
+            flush=True,
+        )
+        if REPORT_ROOT is not None:
+            print(
+                f"Inspect {REPORT_ROOT / 'FAILED.json'} if present and "
+                f"{REPORT_ROOT / 'recovery'} privately. "
+                "Recovery capture may be incomplete; preserve existing records before retrying.",
+                file=sys.stderr,
+                flush=True,
+            )
+    except OSError:
+        # Failure reporting must not replace the original transaction outcome.
+        pass
 
 
 def run(args, timeout=300):
@@ -55,7 +90,11 @@ def run(args, timeout=300):
         raise ReleaseError("Command timed out: " + args[0]) from error
     if result.returncode:
         raise ReleaseError(
-            "Command failed: " + args[0] + " (output withheld; inspect privately)"
+            "Command failed: "
+            + args[0]
+            + " (exit "
+            + str(result.returncode)
+            + "; output withheld; inspect privately)"
         )
     return result.stdout
 
@@ -210,14 +249,6 @@ def current_frontend_port_policy(root):
         private_dir(parent)
         private_dir(directory)
         directory = directory / "previous-release"
-        if not directory.exists() and not directory.is_symlink():
-            # Legacy recovery had no earlier app policy. Require the incoming one.
-            return CONFIG["frontend_port_bindings"]
-        if (
-            not (directory / "app.json").exists()
-            and not (directory / "app.json").is_symlink()
-        ):
-            return CONFIG["frontend_port_bindings"]
     else:
         parent = root / "releases"
         if not RUN_ID.fullmatch(current["id"]) or directory != parent / current["id"]:
@@ -275,8 +306,12 @@ def preflight(root):
         != gateway_config["project"]
     ):
         raise ReleaseError("Approved host ingress must already be active")
-    if set(gateway["NetworkSettings"]["Networks"]) != set(expected):
-        raise ReleaseError("Ingress network boundary changed")
+    # Require this app's routes and reject unreviewed ingress attachments.
+    # Approved companion routes may be absent during independent app recovery.
+    attached = set(gateway["NetworkSettings"]["Networks"])
+    allowed = set(gateway_config.get("allowed_networks", expected))
+    if not set(expected) <= attached <= allowed:
+        raise ReleaseError("Ingress route network boundary changed")
     for network, address in gateway_config["addresses"].items():
         if gateway["NetworkSettings"]["Networks"][network]["IPAddress"] != address:
             raise ReleaseError("Ingress trusted peer changed")
@@ -549,28 +584,13 @@ def capture_recovery(root, candidate, recovery):
     write_private(
         recovery / "previous.json", current.read_text() if current.exists() else "{}"
     )
-    # Preserve original artifacts as evidence, NEVER execute old proxy-owning scripts.
-    evidence = recovery / "legacy-evidence"
-    evidence.mkdir(mode=0o700)
-    for name in (
-        "docker-compose.yml",
-        "docker-compose.override.yml",
-        "docker-compose.shared.yml",
-        "deploy-production.sh",
-        ".env",
-        ".backend.env",
-        "nginx-proxy.conf",
-        "nginx-shared.conf",
-    ):
-        path = root / name
-        if path.exists():
-            regular(path)
-            shutil.copyfile(path, evidence / name)
-            (evidence / name).chmod(0o600)
+    # First adoption has no accepted controller; validate only recorded releases.
     if current.exists():
-        old_dir = Path(json.loads(current.read_text())["directory"])
-        if not old_dir.is_relative_to(root) or old_dir.is_symlink():
-            raise ReleaseError("Invalid previous release directory")
+        old_dir = saved_controller_directory(
+            root, json.loads(regular(current).read_text())
+        )
+        private_dir(old_dir.parent)
+        private_dir(old_dir)
         previous = recovery / "previous-release"
         previous.mkdir(mode=0o700)
         for name in (
@@ -587,6 +607,97 @@ def capture_recovery(root, candidate, recovery):
                 regular(old_dir / name)
                 shutil.copyfile(old_dir / name, previous / name)
                 (previous / name).chmod(0o600)
+        # Discover an incomplete or altered saved controller before stopping
+        # writers or starting migrations, rather than during a later rollback.
+        recovery_controller(root, recovery.name)
+
+
+def saved_controller_directory(root, record):
+    """A recovered runtime keeps its original controller in previous-release/."""
+    if not isinstance(record, dict) or not isinstance(record.get("id", ""), str):
+        raise ReleaseError("Invalid saved release record")
+    identity = record.get("id", "")
+    recovered = identity.startswith("recovered-")
+    release_id = identity.removeprefix("recovered-") if recovered else identity
+    if record.get("healthy") is not True or not RUN_ID.fullmatch(release_id):
+        raise ReleaseError(
+            "A saved accepted release is required for automatic recovery"
+        )
+    directory = root / ("recovery" if recovered else "releases") / release_id
+    if record.get("directory") != str(directory):
+        raise ReleaseError("Invalid saved controller directory")
+    return directory / "previous-release" if recovered else directory
+
+
+def recovery_controller(root, recovery_id):
+    """Load only the checksummed app controller saved with this recovery set."""
+    private_dir(root)
+    private_dir(root / "recovery")
+    if not RUN_ID.fullmatch(recovery_id):
+        raise ReleaseError("Invalid recovery identity")
+    recovery = private_dir(root / "recovery" / recovery_id)
+    record = json.loads(regular(recovery / "previous.json").read_text())
+    saved_controller_directory(root, record)
+    directory = private_dir(recovery / "previous-release")
+    manifest = json.loads(regular(directory / "manifest.json").read_text())
+    if not isinstance(manifest, dict):
+        raise ReleaseError("Invalid saved controller manifest")
+    contents = {}
+    for name in ("release.py", "app.json"):
+        path = regular(directory / name)
+        contents[name] = path.read_bytes()
+        if path.stat().st_mode & 0o077:
+            raise ReleaseError("Saved controller files must have mode 0600")
+        if hashlib.sha256(contents[name]).hexdigest() != manifest.get(name):
+            raise ReleaseError("Saved controller checksum mismatch")
+    policy = json.loads(contents["app.json"])
+    if not isinstance(policy, dict):
+        raise ReleaseError("Invalid saved application policy")
+    for name in ("contract_version", "app", "services", "containers", "database"):
+        if policy.get(name) != CONFIG[name]:
+            raise ReleaseError("Saved controller does not match this application")
+    saved = {"__file__": str(directory / "release.py"), "__name__": "saved_app_release"}
+    # Execute the verified bytes, never legacy-evidence or a neighboring checkout.
+    try:
+        exec(compile(contents["release.py"], saved["__file__"], "exec"), saved)
+    except Exception:
+        raise ReleaseError("Saved controller could not be loaded") from None
+    if saved.get("CONFIG") != policy:
+        raise ReleaseError("Saved controller loaded a different application policy")
+    error_type = saved.get("ReleaseError")
+    if not isinstance(error_type, type) or not issubclass(error_type, Exception):
+        raise ReleaseError("Saved controller has an unsupported error contract")
+    return saved
+
+
+def recover(root, recovery_id, restore_database, keep_database=False):
+    global CURRENT_STEP
+    if restore_database == keep_database:
+        raise ReleaseError("Choose exactly one database recovery mode")
+    progress("Selecting the saved recovery controller and policy")
+    try:
+        saved = recovery_controller(root, recovery_id)
+    except (OSError, ValueError, KeyError):
+        raise ReleaseError(
+            "Saved recovery script or policy is missing or invalid; inspect private recovery records"
+        ) from None
+    try:
+        python_inspect.signature(saved["rollback"]).bind(
+            root, recovery_id, restore_database, keep_database
+        )
+    except (KeyError, TypeError, ValueError):
+        raise ReleaseError(
+            "Saved controller does not support this recovery command"
+        ) from None
+    progress("Running the saved recovery controller")
+    try:
+        saved["rollback"](root, recovery_id, restore_database, keep_database)
+    except saved["ReleaseError"] as error:
+        raise ReleaseError(str(error)) from None
+    finally:
+        CURRENT_STEP = saved.get(
+            "CURRENT_STEP", "Running the saved recovery controller"
+        )
 
 
 def check_response(path, status, predicate):
@@ -645,8 +756,10 @@ def readiness(directory):
     )
     deadline = time.monotonic() + 90
     while True:
+        probe = "direct backend API"
         try:
             compose(directory, "exec", "-T", BACKEND, "python", "-c", check, timeout=10)
+            probe = "public routes"
             for rule in policy["public"]:
                 check_response(
                     rule["path"],
@@ -659,7 +772,7 @@ def readiness(directory):
         except (ReleaseError, OSError, ValueError, KeyError, urllib.error.URLError):
             if time.monotonic() >= deadline:
                 raise ReleaseError(
-                    "Readiness failed within the bounded retry window"
+                    "Readiness failed within the bounded retry window: " + probe
                 ) from None
             time.sleep(2)
 
@@ -707,9 +820,12 @@ def manage(directory, image, *args):
 
 
 def deploy(root, bundle):
+    progress("Validating release bundle")
     release = validate_bundle(bundle)
+    progress("Checking host prerequisites")
     preflight(root)
     stop_management()
+    progress("Preparing release files")
     for name in ("releases", "recovery"):
         private_dir(root / name)
     candidate = root / "releases" / release["id"]
@@ -729,9 +845,12 @@ def deploy(root, bundle):
         + "\n",
     )
     validate_candidate_ports(candidate)
+    progress("Downloading backend and frontend images")
     compose(candidate, "pull", *SERVICES)
+    progress("Checking host capacity after image download")
     preflight(root)  # disk policy must still pass after image staging
     recovery = root / "recovery" / release["id"]
+    progress("Capturing recovery configuration")
     capture_recovery(root, candidate, recovery)
     begin_data_state(root)
     record = {
@@ -743,23 +862,27 @@ def deploy(root, bundle):
         root / "FAILED.json", record
     )  # also prevents a new deploy after process death
     try:
+        progress("Stopping writers and backing up the database")
         stop_writers()
         snapshot_writer(root, recovery / "db.sqlite3")
         record["stage"] = "backup-verified"
         atomic_json(root / "FAILED.json", record)
         replace_database(root, recovery / "db.sqlite3")
+        progress("Checking Django production settings")
         manage(candidate, release["backend"], "check", "--deploy")
         checked = candidate / "checked.sqlite3"
         snapshot_writer(root, checked)
         replace_database(root, checked)
         record["stage"] = "migration-started"
         atomic_json(root / "FAILED.json", record)
+        progress("Applying database migrations")
         manage(candidate, release["backend"], "migrate", "--noinput")
         # Consolidate committed container-local journals before a new app container
         # mounts the database. Keep its original ownership and mode.
         migrated = candidate / "migrated.sqlite3"
         snapshot_writer(root, migrated)
         replace_database(root, migrated)
+        progress("Starting backend and frontend")
         prepare_backend(root, candidate)
         compose(
             candidate,
@@ -788,7 +911,9 @@ def deploy(root, bundle):
                     file=sys.stderr,
                 )
             raise
+        progress("Checking backend and public readiness")
         readiness(candidate)
+        progress("Recording accepted release")
         atomic_json(
             root / "current.json",
             {
@@ -802,6 +927,7 @@ def deploy(root, bundle):
             },
         )
         (root / "FAILED.json").unlink()
+        progress("Release accepted")
     except Exception:
         # Do not let newly migrated writers run while the operator assesses recovery.
         try:
@@ -831,6 +957,7 @@ def replace_database(root, source):
 
 
 def rollback(root, recovery_id, restore_database, keep_database=False):
+    progress("Validating recovery records and database choice")
     private_dir(root)
     private_dir(root / "recovery")
     if not RUN_ID.fullmatch(recovery_id):
@@ -854,6 +981,7 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
         regular(recovery / "db.sqlite3")
     compose(recovery, "config", "--quiet")
     # Verify cached recovery images BEFORE stopping any current writer.
+    progress("Checking cached recovery images")
     for container in json.loads((recovery / "runtime.json").read_text()).values():
         docker("image", "inspect", container["Image"])
     atomic_json(
@@ -865,13 +993,18 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
         },
     )
     try:
+        progress("Stopping writers and saving current data before recovery")
         stop_management()
         stop_writers()
         # Preserve all current committed data, including container-local journals.
         rescue = recovery / ("before-rollback-" + str(time.time_ns()) + ".sqlite3")
         snapshot_writer(root, rescue)
         # Keep mode consolidates the SAME data before recreation, never an older DB.
+        progress(
+            "Restoring saved database" if restore_database else "Keeping current database"
+        )
         replace_database(root, recovery / "db.sqlite3" if restore_database else rescue)
+        progress("Starting previous backend and frontend")
         prepare_backend(root, recovery)
         compose(
             recovery,
@@ -883,7 +1016,9 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
             "--force-recreate",
             *SERVICES,
         )
+        progress("Checking recovered backend and public readiness")
         readiness(recovery)
+        progress("Recording accepted recovery")
         atomic_json(
             root / "current.json",
             {
@@ -894,6 +1029,7 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
             },
         )
         (root / "FAILED.json").unlink()
+        progress("Recovery accepted")
     except Exception:
         try:
             stop_writers()
@@ -906,6 +1042,7 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
 
 
 def main():
+    global REPORT_ROOT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("operation", choices=["deploy", "rollback"])
     parser.add_argument("--root", required=True, type=Path)
@@ -919,14 +1056,16 @@ def main():
     root = args.root.resolve()
     if not re.fullmatch(r"/[A-Za-z0-9_/-]+", str(root)) or root == Path("/"):
         raise ReleaseError("Unsafe root path")
+    REPORT_ROOT = root
     os.umask(0o077)
+    progress("Acquiring deployment locks")
     with locks():
         if args.operation == "deploy":
             if args.bundle is None or args.bundle.parent != root / "incoming":
                 raise ReleaseError("Bundle must be the app's unique incoming directory")
             deploy(root, args.bundle)
         else:
-            rollback(
+            recover(
                 root, args.recovery or "", args.restore_database, args.keep_database
             )
 
@@ -936,9 +1075,5 @@ if __name__ == "__main__":
         main()
     except (ReleaseError, OSError, ValueError, KeyError) as error:
         # Exceptions from parsed secrets or subprocess outputs must not expose their values.
-        print(
-            "Release failed; preserve recovery artifacts and inspect private state. "
-            + (str(error) if isinstance(error, ReleaseError) else type(error).__name__),
-            file=sys.stderr,
-        )
+        report_failure(error)
         sys.exit(1)

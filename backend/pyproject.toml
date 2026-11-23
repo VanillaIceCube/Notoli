@@ -13,7 +13,7 @@ dependencies = [
     "whitenoise==6.12.0",
     "django-oauth-toolkit==3.4.1",
     "mcp==2.3.0",
-    "httpx2==2.16.0",
+    "httpx2==2.16.2",
     "uvicorn==0.54.0",
     "django-anymail==15.2",
 ]
@@ -21,7 +21,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "PyYAML==6.0.3",
-    "ruff==0.17.5",
+    "ruff==0.17.6",
 ]
 
 [tool.uv]

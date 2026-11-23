@@ -74,7 +74,7 @@ class EmailConfigurationTests(SimpleTestCase):
         ]:
             with self.subTest(legacy=legacy):
                 self.assertEqual(
-                    self.result(DJANGO_EMAIL_BACKEND=legacy)["backend"], BACKEND
+                    self.result(DJANGO_EMAIL_BACKEND=legacy)["backend"], legacy
                 )
 
     def test_existing_key_variable_maps_only_nonblank_values_without_debug_output(self):

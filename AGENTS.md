@@ -115,7 +115,7 @@ reload. After dependency changes, run `npm ci` explicitly in the frontend
 container, then restart it; follow the commands in the local Docker guide. Keep
 the reviewed development base-image digest and lockfile in sync.
 
-`deploy/docker-compose.yml` and `deploy/nginx-proxy.conf` are local/legacy-only.
+`deploy/compose.yml` and `deploy/nginx.conf` are local/legacy-only.
 Do not use them on the shared production host. The
 [production guide](deploy/production/README.md) is the sole app release/recovery
 procedure; Infrastructure owns gateway, certificates and host routing.
@@ -203,7 +203,7 @@ settings and allowlist/base-URL variables when domains or routes change.
 Retain prior release images and matched private recovery data; no host-wide Docker
 pruning. Cleanup requires the host operator to review disk usage and select unused
 app images explicitly. Releases manage only the app's backend/frontend; local
-`deploy/docker-compose.yml` and `deploy/nginx-proxy.conf` are local/legacy-only.
+`deploy/compose.yml` and `deploy/nginx.conf` are local/legacy-only.
 
 Preserve branch ownership recorded in
 [FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262)

@@ -1,6 +1,9 @@
 """Configuration, offline recovery packaging and shared-source drift regressions."""
 
+from contextlib import contextmanager
+import copy
 import hashlib
+import io
 import json
 import os
 import re
@@ -57,21 +60,24 @@ class ContractTests(unittest.TestCase):
             self.assertIn("rollback", result.stdout)
             self.assertNotIn("shared-source", manifest)
 
-    def test_gateway_and_own_app_are_required_without_requiring_companion(self):
+    def test_gateway_and_own_app_routes_are_required_without_companion_topology(self):
         policy = release.CONFIG["gateway"]
         own = set(release.CONFIG["containers"].values())
         for network in policy["networks"].values():
             expected = set(network["allowed"]) & (own | {policy["container"]})
             self.assertEqual(set(network["required"]), expected)
         self.assertLessEqual(set(policy["addresses"]), set(policy["networks"]))
-        self.assertEqual(release.DB_TARGET, "/backend/db.sqlite3")
-        self.assertEqual(release.DB_FILE, "db.sqlite3")
+        allowed = set(policy.get("allowed_networks", policy["networks"]))
+        self.assertLessEqual(set(policy["networks"]), allowed)
         if release.APP in {"notoli", "macromapper"}:
             self.assertEqual(
-                set(policy["networks"]),
+                allowed,
                 {"notoli_backend_private", "notoli_default", "macromapper-ingress"},
             )
+        self.assertEqual(release.DB_TARGET, "/backend/db.sqlite3")
+        self.assertEqual(release.DB_FILE, "db.sqlite3")
         if release.APP == "notoli":
+            self.assertEqual(set(policy["networks"]), {"notoli_backend_private", "notoli_default"})
             self.assertEqual(
                 policy["addresses"], {"notoli_backend_private": "172.30.88.2"}
             )
@@ -86,7 +92,8 @@ class ContractTests(unittest.TestCase):
             self.assertEqual(release.CONFIG["frontend_port_bindings"], [[]])
             self.assertNotIn("MACROMAPPER_OPENAI_API_KEY", builder.REQUIRED)
         elif release.APP == "macromapper":
-            addresses = {"notoli_backend_private": "172.30.88.2"}
+            self.assertEqual(set(policy["networks"]), {"macromapper-ingress"})
+            addresses = {}
             if builder.FIXED.get("DJANGO_MCP_ENABLED") == "1":
                 addresses["macromapper-ingress"] = "172.20.0.3"
                 self.assertEqual(
@@ -275,8 +282,6 @@ class ContractTests(unittest.TestCase):
     def test_parity_uses_embedded_pin_and_offline_sync_restores_drift(self):
         with tempfile.TemporaryDirectory() as directory:
             root, source_root = self.parity_fixture(directory)
-            retired = root / "deploy/check_parity.py"
-            retired.write_text("retired checker", encoding="utf-8")
             unrelated = root / "deploy/local-helper.py"
             unrelated.write_text("local helper", encoding="utf-8")
             with patch.object(
@@ -288,7 +293,6 @@ class ContractTests(unittest.TestCase):
                     builder.check_parity(root, source_root),
                     builder.CONFIG["shared_source"]["commit"],
                 )
-                self.assertEqual(retired.read_text(encoding="utf-8"), "retired checker")
                 (root / "deploy/production/release.py").write_text(
                     "drift", encoding="utf-8"
                 )
@@ -298,51 +302,22 @@ class ContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "Shared release drift"):
                     builder.check_parity(root, source_root)
                 builder.check_parity(root, source_root, sync=True)
-                self.assertFalse(retired.exists())
                 self.assertEqual(unrelated.read_text(encoding="utf-8"), "local helper")
                 builder.check_parity(root, source_root, sync=True)
                 builder.check_parity(root, source_root)
 
-    def test_sync_rejects_unsafe_retired_checker_paths_before_writing(self):
-        kinds = ["directory"]
-        if os.name == "posix":
-            kinds += ["symlink", "dangling_symlink", "parent_symlink"]
-        for kind in kinds:
-            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory:
-                root, source_root = self.parity_fixture(directory)
-                retired = root / "deploy/check_parity.py"
-                external = Path(directory) / "external"
-                if kind == "directory":
-                    retired.mkdir()
-                    (retired / "keep").write_text("keep", encoding="utf-8")
-                elif kind == "parent_symlink":
-                    (root / "deploy").rename(external)
-                    (root / "deploy").symlink_to(external, target_is_directory=True)
-                    retired.write_text("keep", encoding="utf-8")
-                else:
-                    if kind == "symlink":
-                        external.write_text("keep", encoding="utf-8")
-                    retired.symlink_to(external)
-                target = root / "deploy/production/release.py"
-                target.write_text("consumer drift", encoding="utf-8")
-                with self.assertRaisesRegex(ValueError, "regular file in deploy/"):
-                    builder.check_parity(root, source_root, sync=True)
-                self.assertEqual(target.read_text(encoding="utf-8"), "consumer drift")
-                self.assertTrue(retired.exists() or retired.is_symlink())
-                if kind == "symlink":
-                    self.assertEqual(external.read_text(encoding="utf-8"), "keep")
-
-    def test_failed_verification_keeps_the_retired_checker(self):
+    @unittest.skipUnless(os.name == "posix", "Symlink boundary requires POSIX")
+    def test_sync_rejects_linked_deploy_directory_before_writing(self):
         with tempfile.TemporaryDirectory() as directory:
             root, source_root = self.parity_fixture(directory)
-            retired = root / "deploy/check_parity.py"
-            retired.write_text("retired checker", encoding="utf-8")
-            with (
-                patch.object(builder, "verify", side_effect=ValueError("verification failed")),
-                self.assertRaisesRegex(ValueError, "verification failed"),
-            ):
+            external = Path(directory) / "external"
+            (root / "deploy").rename(external)
+            (root / "deploy").symlink_to(external, target_is_directory=True)
+            target = external / "production/release.py"
+            target.write_text("consumer drift", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "must not be a symlink"):
                 builder.check_parity(root, source_root, sync=True)
-            self.assertEqual(retired.read_text(encoding="utf-8"), "retired checker")
+            self.assertEqual(target.read_text(encoding="utf-8"), "consumer drift")
 
     def test_parity_rejects_invalid_embedded_source_before_fetching(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -365,8 +340,6 @@ class ContractTests(unittest.TestCase):
     def test_failed_shared_download_never_partially_syncs_consumer(self):
         with tempfile.TemporaryDirectory() as directory:
             root, source_root = self.parity_fixture(directory)
-            retired = root / "deploy/check_parity.py"
-            retired.write_text("retired checker", encoding="utf-8")
             source = source_root / builder.SOURCE
             target = root / "deploy/production/release.py"
             target.write_text("consumer drift", encoding="utf-8")
@@ -375,7 +348,6 @@ class ContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Shared source checksum mismatch"):
                 builder.check_parity(root, source_root, sync=True)
             self.assertEqual(target.read_text(encoding="utf-8"), "consumer drift")
-            self.assertEqual(retired.read_text(encoding="utf-8"), "retired checker")
 
     def test_parity_rejects_bad_manifest_and_workflow_checksum(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -433,3 +405,257 @@ class ContractTests(unittest.TestCase):
                 self.assertRaisesRegex(ValueError, "download limit"),
             ):
                 builder.check_parity(root)
+
+
+@unittest.skipUnless(os.name == "posix", "Saved host permissions require POSIX")
+class RecoveryControllerTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name) / "app"
+        self.root.mkdir(mode=0o700)
+        (self.root / "recovery").mkdir(mode=0o700)
+        self.identity = "a" * 40 + "-123-1"
+        self.previous_id = "b" * 40 + "-122-1"
+        self.recovery = self.root / "recovery" / self.identity
+        self.recovery.mkdir(mode=0o700)
+        self.saved = self.recovery / "previous-release"
+        self.saved.mkdir(mode=0o700)
+        self.record = {
+            "id": self.previous_id,
+            "directory": str(self.root / "releases" / self.previous_id),
+            "healthy": True,
+        }
+        release.write_private(self.recovery / "previous.json", json.dumps(self.record))
+        self.policy = copy.deepcopy(release.CONFIG)
+        self.policy["domain"] = "saved.example.invalid"
+        self.policy["environment"]["fixed"]["DJANGO_MCP_ENABLED"] = "0"
+        self.policy["readiness"]["public"] = self.policy["readiness"]["public"][:2]
+        release.write_private(self.saved / "app.json", json.dumps(self.policy))
+        release.write_private(
+            self.saved / "release.py",
+            (ROOT / "deploy/production/release.py").read_text(encoding="utf-8"),
+        )
+        self.rehash()
+        self.addCleanup(setattr, release, "CURRENT_STEP", release.CURRENT_STEP)
+
+    def rehash(self):
+        release.atomic_json(
+            self.saved / "manifest.json",
+            {
+                name: hashlib.sha256((self.saved / name).read_bytes()).hexdigest()
+                for name in ("release.py", "app.json")
+            },
+        )
+
+    def test_uses_saved_policy_offline_without_the_original_release_directory(self):
+        self.assertFalse(Path(self.record["directory"]).exists())
+        with patch.object(
+            release.urllib.request,
+            "urlopen",
+            side_effect=AssertionError("No downloads"),
+        ):
+            saved = release.recovery_controller(self.root, self.identity)
+        self.assertEqual(saved["CONFIG"], self.policy)
+        self.assertEqual(saved["ORIGIN"], "https://saved.example.invalid")
+        self.assertEqual(release.CONFIG["domain"], builder.CONFIG["domain"])
+        with patch.dict(saved, {"compose": lambda *args, **kwargs: ""}):
+            with patch.dict(saved, {"check_response": lambda *args: None}):
+                saved["readiness"](self.recovery)
+
+    def test_rejects_changed_missing_linked_or_public_controller_files_before_execution(
+        self,
+    ):
+        for name in ("release.py", "app.json", "manifest.json"):
+            path = self.saved / name
+            original = path.read_bytes()
+            for change in ("changed", "missing", "symlink", "permissions"):
+                if change == "permissions" and name == "manifest.json":
+                    continue
+                with self.subTest(file=name, change=change):
+                    if change == "changed":
+                        path.write_text(
+                            "{}"
+                            if name != "release.py"
+                            else "raise RuntimeError('private')"
+                        )
+                    elif change == "missing":
+                        path.unlink()
+                    elif change == "symlink":
+                        path.unlink()
+                        path.symlink_to(self.saved / "missing-target")
+                    else:
+                        path.chmod(0o644)
+                    try:
+                        with (
+                            patch("builtins.exec") as execute,
+                            patch.object(release, "docker") as docker,
+                            self.assertRaises(
+                                (release.ReleaseError, OSError, ValueError)
+                            ),
+                        ):
+                            release.recovery_controller(self.root, self.identity)
+                        execute.assert_not_called()
+                        docker.assert_not_called()
+                    finally:
+                        if path.is_symlink():
+                            path.unlink()
+                        path.write_bytes(original)
+                        path.chmod(0o600)
+
+    def test_rejects_foreign_policy_even_when_its_checksums_match(self):
+        for field, value in (
+            ("app", "other"),
+            ("services", {"backend": "other", "frontend": "other"}),
+            ("containers", {"backend": "other", "frontend": "other"}),
+            ("database", {"filename": "other.sqlite3", "target": "/other.sqlite3"}),
+            ("contract_version", 2),
+        ):
+            with self.subTest(field=field):
+                (self.saved / "app.json").write_text(
+                    json.dumps(self.policy | {field: value})
+                )
+                self.rehash()
+                with (
+                    patch("builtins.exec") as execute,
+                    self.assertRaisesRegex(release.ReleaseError, "does not match"),
+                ):
+                    release.recovery_controller(self.root, self.identity)
+                execute.assert_not_called()
+
+    def test_rejects_unrecorded_unsafe_or_unaccepted_previous_releases(self):
+        for record in (
+            {},
+            [],
+            self.record | {"id": 42},
+            self.record | {"healthy": False},
+            self.record | {"id": "../outside"},
+            self.record | {"directory": "/outside"},
+        ):
+            with self.subTest(record=record):
+                (self.recovery / "previous.json").write_text(json.dumps(record))
+                with (
+                    patch("builtins.exec") as execute,
+                    self.assertRaises(release.ReleaseError),
+                ):
+                    release.recovery_controller(self.root, self.identity)
+                execute.assert_not_called()
+        with self.assertRaisesRegex(release.ReleaseError, "Invalid recovery identity"):
+            release.recovery_controller(self.root, "../outside")
+
+    def test_rejects_linked_saved_directory_and_hides_loading_errors(self):
+        external = self.recovery / "external"
+        self.saved.rename(external)
+        self.saved.symlink_to(external, target_is_directory=True)
+        with self.assertRaisesRegex(release.ReleaseError, "private directory"):
+            release.recovery_controller(self.root, self.identity)
+        self.saved.unlink()
+        external.rename(self.saved)
+        (self.saved / "release.py").write_text("raise ValueError('private value')")
+        self.rehash()
+        with self.assertRaisesRegex(
+            release.ReleaseError, "Saved controller could not be loaded"
+        ):
+            release.recovery_controller(self.root, self.identity)
+
+    def test_requires_one_explicit_database_mode_before_selecting_a_controller(self):
+        for restore, keep in ((False, False), (True, True)):
+            with (
+                patch.object(release, "recovery_controller") as select,
+                self.assertRaisesRegex(release.ReleaseError, "exactly one"),
+            ):
+                release.recover(self.root, self.identity, restore, keep)
+            select.assert_not_called()
+
+    def test_main_selects_and_runs_under_the_existing_locks_for_both_modes(self):
+        active = False
+
+        @contextmanager
+        def locks():
+            nonlocal active
+            active = True
+            try:
+                yield
+            finally:
+                active = False
+
+        select = release.recovery_controller
+        calls = []
+
+        def selected(root, identity):
+            self.assertTrue(active)
+            saved = select(root, identity)
+
+            def rollback(root, identity, restore, keep):
+                self.assertTrue(active)
+                calls.append((root, identity, restore, keep, saved["CONFIG"]))
+
+            saved["rollback"] = rollback
+            return saved
+
+        for mode in ("--restore-database", "--keep-database"):
+            with (
+                patch.object(release, "locks", side_effect=locks),
+                patch.object(release, "recovery_controller", side_effect=selected),
+                patch.object(release.os, "umask"),
+                patch.object(release, "REPORT_ROOT", None),
+                patch.object(release.sys, "stderr", new_callable=io.StringIO),
+                patch.object(
+                    release.sys,
+                    "argv",
+                    [
+                        "release.py",
+                        "rollback",
+                        "--root",
+                        str(self.root),
+                        "--recovery",
+                        self.identity,
+                        mode,
+                    ],
+                ),
+            ):
+                release.main()
+            self.assertFalse(active)
+        self.assertEqual(
+            calls,
+            [
+                (self.root, self.identity, True, False, self.policy),
+                (self.root, self.identity, False, True, self.policy),
+            ],
+        )
+
+    def test_older_controller_errors_are_reported_and_unsupported_signatures_never_run(
+        self,
+    ):
+        prefix = """import json
+from pathlib import Path
+CONFIG = json.loads((Path(__file__).parent / "app.json").read_text())
+class ReleaseError(RuntimeError):
+    pass
+"""
+        path = self.saved / "release.py"
+        path.write_text(
+            prefix
+            + """def rollback(root, identity, restore, keep):
+    raise ReleaseError("Saved recovery failed")
+"""
+        )
+        self.rehash()
+        with (
+            patch.object(release.sys, "stderr", new_callable=io.StringIO),
+            self.assertRaisesRegex(release.ReleaseError, "Saved recovery failed"),
+        ):
+            release.recover(self.root, self.identity, True)
+        self.assertEqual(release.CURRENT_STEP, "Running the saved recovery controller")
+        path.write_text(
+            prefix
+            + """def rollback(root, identity, restore):
+    raise AssertionError("Unsupported controller must not run")
+"""
+        )
+        self.rehash()
+        with (
+            patch.object(release.sys, "stderr", new_callable=io.StringIO),
+            self.assertRaisesRegex(release.ReleaseError, "does not support"),
+        ):
+            release.recover(self.root, self.identity, True)
