@@ -1,6 +1,4 @@
-"""Explicit per-application policy; no application models or domains live here."""
-
-import os
+"""OAuth defaults shared by all applications."""
 
 
 def oauth_settings(
@@ -34,28 +32,4 @@ def oauth_settings(
         "REFRESH_TOKEN_REUSE_PROTECTION": True,
         "REFRESH_TOKEN_GRACE_PERIOD_SECONDS": 0,
         "REQUIRE_FORM_ENCODED_REQUEST_BODY": True,
-    }
-
-
-def optional_settings(name, namespace, *, sample=False):
-    enabled = os.getenv("DJANGO_MCP_ENABLED", "0") == "1"
-    base = os.getenv("DJANGO_MCP_BASE_URL", "http://localhost:8000").rstrip("/")
-    scope = f"{namespace}:connect"
-    return {
-        "MCP_ENABLED": enabled,
-        "MCP_NAME": name,
-        "MCP_BASE_URL": base,
-        "MCP_RESOURCE_URL": f"{base}/mcp",
-        "MCP_REQUIRED_SCOPES": [scope],
-        "MCP_CONSENT_SALT": f"{namespace}.mcp.consent",
-        "MCP_SERVER_FACTORY": os.getenv("DJANGO_MCP_SERVER_FACTORY")
-        or ("apps.mcp.tools.server.create_server" if sample else None),
-        "TRUSTED_PROXY_IPS": [
-            v.strip()
-            for v in os.getenv("DJANGO_TRUSTED_PROXY_IPS", "").split(",")
-            if v.strip()
-        ],
-        "OAUTH2_PROVIDER": oauth_settings(
-            base, {scope: "Check this connection; no application data access"}, [scope]
-        ),
     }

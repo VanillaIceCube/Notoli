@@ -17,6 +17,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
 
+from apps.mcp.framework.config import oauth_settings
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -132,29 +134,34 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 # MCP uses its own OAuth tokens. These are never accepted by the REST API.
-from apps.mcp.framework.config import oauth_settings, optional_settings  # noqa: E402
-
-MCP_SETTINGS = optional_settings("Notoli", "notoli", sample=False)
-MCP_SETTINGS.update(
-    MCP_SERVER_FACTORY=os.getenv("DJANGO_MCP_SERVER_FACTORY")
-    or "apps.mcp.tools.server.create_server",
-    MCP_REQUIRED_SCOPES=["notoli:read"],
-    MCP_ACTION_APPROVAL_HANDLER="apps.mcp.tools.services.action_approval",
-    OAUTH2_PROVIDER=oauth_settings(
-        MCP_SETTINGS["MCP_BASE_URL"],
-        {
-            "notoli:read": "Read your accessible Notoli boards, lists, and items, including board owner and collaborator IDs, usernames, and email addresses",
-            "notoli:write": "Add and update items in your accessible Notoli boards and lists",
-            "notoli:share": "Add collaborators directly to boards you own, granting access to every list and item; removing a collaborator requires your separate approval in Notoli",
-            "notoli:organize": "Create and edit boards and lists, reorder lists and items, and add list memberships directly; removing any existing list membership requires your separate approval in Notoli",
-            "notoli:notifications": "Read your activity notifications and mark them read or unread",
-            "notoli:delete": "Prepare permanent deletion of accessible items and lists, owned boards with their contents, and your notifications; each deletion requires your separate approval in Notoli",
-        },
-        ["notoli:read"],
-    ),
+MCP_ENABLED = os.getenv("DJANGO_MCP_ENABLED", "0") == "1"
+MCP_NAME = "Notoli"
+MCP_BASE_URL = os.getenv("DJANGO_MCP_BASE_URL", "http://localhost:8000").rstrip("/")
+MCP_RESOURCE_URL = f"{MCP_BASE_URL}/mcp"
+MCP_SERVER_FACTORY = (
+    os.getenv("DJANGO_MCP_SERVER_FACTORY") or "apps.mcp.tools.server.create_server"
 )
-globals().update(MCP_SETTINGS)
-if MCP_SETTINGS["MCP_ENABLED"]:
+TRUSTED_PROXY_IPS = [
+    address.strip()
+    for address in os.getenv("DJANGO_TRUSTED_PROXY_IPS", "").split(",")
+    if address.strip()
+]
+MCP_CONSENT_SALT = "notoli.mcp.consent"
+MCP_REQUIRED_SCOPES = ["notoli:read"]
+MCP_ACTION_APPROVAL_HANDLER = "apps.mcp.tools.services.action_approval"
+OAUTH2_PROVIDER = oauth_settings(
+    base_url=MCP_BASE_URL,
+    scopes={
+        "notoli:read": "Read your accessible Notoli boards, lists, and items, including board owner and collaborator IDs, usernames, and email addresses",
+        "notoli:write": "Add and update items in your accessible Notoli boards and lists",
+        "notoli:share": "Add collaborators directly to boards you own, granting access to every list and item; removing a collaborator requires your separate approval in Notoli",
+        "notoli:organize": "Create and edit boards and lists, reorder lists and items, and add list memberships directly; removing any existing list membership requires your separate approval in Notoli",
+        "notoli:notifications": "Read your activity notifications and mark them read or unread",
+        "notoli:delete": "Prepare permanent deletion of accessible items and lists, owned boards with their contents, and your notifications; each deletion requires your separate approval in Notoli",
+    },
+    required_scopes=MCP_REQUIRED_SCOPES,
+)
+if MCP_ENABLED:
     INSTALLED_APPS += ["oauth2_provider"]
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
