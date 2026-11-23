@@ -44,3 +44,19 @@ test('guards old continuations after replacement and unmount while allowing toke
   unmount();
   expect(currentGuard()).toBe(false);
 });
+
+test('a form response expires when navigation starts while the old screen is still mounted', () => {
+  const originalUrl = window.location.href;
+  try {
+    window.history.replaceState({}, '', '/login');
+    const { result } = renderHook(() => ({
+      form: useSessionGuard({ trackLocation: true }),
+      session: useSessionGuard(),
+    }));
+    window.history.replaceState({}, '', '/register');
+    expect(result.current.form()).toBe(false);
+    expect(result.current.session()).toBe(true);
+  } finally {
+    window.history.replaceState({}, '', originalUrl);
+  }
+});

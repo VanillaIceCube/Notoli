@@ -2,7 +2,8 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-helpers/utils';
 import Login from './Login';
-import { fetchBoards, login } from '../../services/notoliApiClient';
+import { login } from '../../services/authApiClient';
+import { fetchBoards } from '../../services/notoliApiClient';
 import { Route, Routes, useNavigate } from 'react-router';
 vi.mock('react-router', async () => ({
   ...(await vi.importActual('react-router')),
@@ -10,6 +11,8 @@ vi.mock('react-router', async () => ({
 }));
 vi.mock('../../services/notoliApiClient', () => ({
   fetchBoards: vi.fn(() => Promise.resolve([])),
+}));
+vi.mock('../../services/authApiClient', () => ({
   login: vi.fn(() =>
     Promise.resolve({
       access: 'ACCESS',

@@ -6,6 +6,8 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Ignore late authentication responses after leaving the form or changing sessions.
+- Share one board list request between the home redirect and board drawer.
 - Reject unreviewed gateway network attachments during app release preflight while allowing approved companion routes to be absent; retain app-specific network and trusted-peer checks.
 - Explain why failure-reporting stream errors preserve the original release outcome.
 - Update the board drawer label immediately when the current board is renamed.

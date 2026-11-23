@@ -7,11 +7,14 @@ import AuthenticatedRoute from '../../components/app-core/AuthenticatedRoute';
 import ConnectedApps, { OAuthConsent } from './Connections';
 import Login from '../authentication/Login';
 import * as connections from '../../services/connectionsClient';
-import { fetchBoards, login } from '../../services/notoliApiClient';
+import { login } from '../../services/authApiClient';
+import { fetchBoards } from '../../services/notoliApiClient';
 vi.mock('../../services/connectionsClient');
 vi.mock('../../services/notoliApiClient', () => ({
-  login: vi.fn(),
   fetchBoards: vi.fn(),
+}));
+vi.mock('../../services/authApiClient', () => ({
+  login: vi.fn(),
 }));
 const query =
   '?client_id=notoli-chatgpt&state=a%26b%3D%3F&resource=https%3A%2F%2Fnotoli.example%2Fmcp';

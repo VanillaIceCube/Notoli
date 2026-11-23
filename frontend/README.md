@@ -16,8 +16,8 @@ authentication, and the application shell.
   Standard components maintained across the three apps live in [src/components/app-core/](src/components/app-core/).
   App-specific layout and navigation live in [src/components/app/](src/components/app/).
 - `src/pages/`: application pages and routes.
-- `src/services/`: API requests and centralized session storage.
-- `src/hooks/`: reactive session access and shared notification lifecycle behavior.
+- `src/services/`: API requests, response parsing in `apiResponse.js` and session storage in `sessionState.js`.
+- `src/hooks/`: reactive session access, notifications, the session’s board list and pull-to-refresh gestures.
 - `src/test-helpers/`: shared test setup and reusable helpers.
   App, startup and feature tests stay beside the files they exercise.
 
@@ -120,7 +120,7 @@ the hook for rendering, and the store operations for writes. The unrelated
 
 The application shell and protected content reset on account changes, including
 open menus, private drafts and Notoli's board drawer state. Async continuations
-use `useSessionGuard` before account-scoped navigation or global UI updates.
+use `useSessionGuard` before account-scoped navigation or global UI updates. Authentication forms also check the current URL so a late response cannot take over after navigation starts.
 Logout/expiry queue their login message before publishing the cleared session;
 root snackbar state preserves successful login/register feedback and excludes
 messages from an older generation.
@@ -148,6 +148,8 @@ Use semantic links for destinations and buttons for actions, with keyboard and
 native new-tab coverage.
 
 Ordinary login goes to the home route, which chooses the preferred board.
+The session layout loads the board list for both the home redirect and drawer.
+Token rotation refreshes that list, and drawer mutations keep the shared result current.
 Connection login preserves the validated pending consent path and query. Connection pages use explicit JWT
 headers and omit cookies. JWTs never enter OAuth callback URLs. Consent and
 revocation stay account-bound; scopes and current membership remain enforced by
@@ -190,7 +192,7 @@ Board management lives in the right sidebar. Open the Board list, use a board ro
 
 Tasks in a list render as checklist rows. Checking a task sets its `status` to `Complete` and strikes through the task text immediately. Unchecking sets it to `Not Started`. The API also supports `In Progress`.
 
-The frontend API client translates between task `text` and the existing `note` field on `/api/notes/` routes.
+Authentication and notification requests live in `authApiClient.js` and `notificationApiClient.js`. The board, list and task client `notoliApiClient.js` translates between task `text` and the existing `note` field on `/api/notes/` routes.
 
 ### In-app notifications
 

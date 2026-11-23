@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { TextField } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router';
-import { resetPassword } from '../../services/notoliApiClient';
-import { isAuthNetworkError } from '../../services/authSession';
+import { resetPassword } from '../../services/authApiClient';
+import { isAuthNetworkError } from '../../services/apiResponse';
+import { useSessionGuard } from '../../hooks/useSession';
 import AuthForm, { AuthLink } from '../../components/app-core/AuthForm';
 
 export default function ResetPassword({ showSnackbar }) {
@@ -10,6 +11,7 @@ export default function ResetPassword({ showSnackbar }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const navigate = useNavigate();
+  const isCurrentSession = useSessionGuard({ trackLocation: true });
   const location = useLocation();
 
   const params = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -32,9 +34,11 @@ export default function ResetPassword({ showSnackbar }) {
     setIsSubmitting(true);
     try {
       const data = await resetPassword({ uid, token, password });
+      if (!isCurrentSession()) return;
       showSnackbar('success', data?.message || 'Password reset successful.');
       navigate('/login');
     } catch (err) {
+      if (!isCurrentSession()) return;
       showSnackbar(
         'error',
         isAuthNetworkError(err) ? 'Network error :(' : err?.message || 'Password reset failed :(',

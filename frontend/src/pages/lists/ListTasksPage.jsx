@@ -24,7 +24,7 @@ import {
   updateTask,
 } from '../../services/notoliApiClient';
 import { rememberLastBoard } from '../../services/lastBoard';
-import { usePullToRefresh } from '../../hooks/useMobileGestures';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 const TASK_STATUS_NOT_STARTED = 'Not Started';
 const TASK_STATUS_COMPLETE = 'Complete';

@@ -1,5 +1,5 @@
 import { apiFetch } from './requestClient';
-import { getResponseErrorMessage, readOkJson } from './authSession';
+import { getResponseErrorMessage } from './apiResponse';
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
 const deleteOptions = { method: 'DELETE', headers: jsonHeaders };
@@ -22,41 +22,6 @@ async function requestData(path, options, errorMessage) {
   const response = await requestNotoli(path, options, errorMessage);
   return response.json();
 }
-
-async function postAuthForm(path, payload, invalidResponseMessage) {
-  const response = await apiFetch(path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  return readOkJson(response, invalidResponseMessage);
-}
-
-export const login = ({ email, username, password }) => {
-  const payload = { password };
-  if (email) payload.email = email;
-  else if (username) payload.username = username;
-
-  return postAuthForm('/auth/login/', payload, 'Login failed :(');
-};
-
-export const register = ({ email, username, password }) => {
-  const payload = { email: email?.trim(), password };
-  const trimmedUsername = username?.trim();
-  if (trimmedUsername) payload.username = trimmedUsername;
-
-  return postAuthForm('/auth/register/', payload, 'Registration failed :(');
-};
-
-export const forgotPassword = ({ email }) =>
-  postAuthForm(
-    '/auth/forgot-password/',
-    { email: email?.trim() },
-    'Password reset request failed :(',
-  );
-
-export const resetPassword = ({ uid, token, password }) =>
-  postAuthForm('/auth/reset-password/', { uid, token, password }, 'Password reset failed :(');
 
 export const fetchBoards = () =>
   requestData('/api/boards/', undefined, (response) =>
@@ -148,30 +113,3 @@ export async function reorderTasks(listId, orderedIds) {
   );
   return notes.map(toTask);
 }
-
-export const fetchNotifications = () => apiFetch('/api/notifications/');
-
-export const markNotificationRead = (notificationId) =>
-  apiFetch(`/api/notifications/${notificationId}/`, {
-    method: 'PATCH',
-    headers: jsonHeaders,
-    body: JSON.stringify({ is_read: true }),
-  });
-
-export const clearNotification = (notificationId) =>
-  apiFetch(`/api/notifications/${notificationId}/`, {
-    method: 'DELETE',
-    headers: jsonHeaders,
-  });
-
-export const clearAllNotifications = () =>
-  apiFetch('/api/notifications/clear-all/', {
-    method: 'DELETE',
-    headers: jsonHeaders,
-  });
-
-export const markAllNotificationsRead = () =>
-  apiFetch('/api/notifications/mark-all-read/', {
-    method: 'PATCH',
-    headers: jsonHeaders,
-  });

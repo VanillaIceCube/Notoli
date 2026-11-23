@@ -23,7 +23,7 @@ import {
   updateList,
 } from '../../services/notoliApiClient';
 import { rememberLastBoard } from '../../services/lastBoard';
-import { usePullToRefresh } from '../../hooks/useMobileGestures';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 const rowSx = {
   display: 'flex',

@@ -17,6 +17,8 @@ export default defineConfig({
             'src/services/authRedirect.test.js',
             'src/services/navigationService.test.js',
             'src/services/notoliApiClient.test.js',
+            'src/services/authApiClient.test.js',
+            'src/services/notificationApiClient.test.js',
             'src/utils/Navigation.test.js',
           ],
         },
@@ -32,6 +34,8 @@ export default defineConfig({
             'src/services/authRedirect.test.js',
             'src/services/navigationService.test.js',
             'src/services/notoliApiClient.test.js',
+            'src/services/authApiClient.test.js',
+            'src/services/notificationApiClient.test.js',
             'src/utils/Navigation.test.js',
           ],
           deps: {

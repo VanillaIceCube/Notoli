@@ -28,54 +28,19 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import BoardShareDialog from './BoardShareDialog';
 
-import {
-  createBoard,
-  deleteBoard,
-  fetchBoards as fetchBoardsApi,
-  updateBoard,
-} from '../../services/notoliApiClient';
+import { createBoard, deleteBoard, updateBoard } from '../../services/notoliApiClient';
 
-export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackbar }) {
+export default function BoardNavigationDrawer({ boardList, open, setDrawerOpen, showSnackbar }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const boardId = getBoardId(pathname);
   const { accessToken: token, username: currentUsername, email: currentEmail } = useSession();
   const isCurrentSession = useSessionGuard();
 
-  const [boards, setBoards] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { boards, loading, loadError, updateBoards } = boardList;
+  const [actionError, setError] = useState(null);
+  const error = actionError || loadError?.toString();
   const activeBoardName = boards.find((board) => String(board.id) === boardId)?.name;
-
-  useEffect(() => {
-    if (!token) {
-      setBoards([]);
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    const canShowBoards = () => !cancelled && isCurrentSession();
-
-    async function loadBoards() {
-      setLoading(true);
-      try {
-        const data = await fetchBoardsApi();
-        if (canShowBoards()) {
-          setBoards(data);
-          setError(null);
-        }
-      } catch (err) {
-        if (canShowBoards()) setError(err?.toString() || 'Error loading boards.');
-      } finally {
-        if (canShowBoards()) setLoading(false);
-      }
-    }
-
-    loadBoards();
-    return () => {
-      cancelled = true;
-    };
-  }, [token, isCurrentSession]);
 
   // Add New Board
   const [isAdding, setIsAdding] = useState(false);
@@ -104,7 +69,9 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
     try {
       const created = await createBoard({ name: newBoardName, description: '' });
       if (!isCurrentSession()) return;
-      setBoards((prev) => [...prev, created]);
+      updateBoards((prev) =>
+        prev.some((board) => board.id === created.id) ? prev : [...prev, created],
+      );
 
       setIsAdding(false);
       setNewBoardName('');
@@ -168,7 +135,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
     try {
       const updated = await updateBoard(editingBoardId, { name: editBoardName });
       if (!isCurrentSession()) return;
-      setBoards((prev) => prev.map((board) => (board.id === updated.id ? updated : board)));
+      updateBoards((prev) => prev.map((board) => (board.id === updated.id ? updated : board)));
 
       closeEdit();
       if (typeof showSnackbar === 'function') {
@@ -200,7 +167,9 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
   };
 
   const updateSharedBoard = (updatedBoard) => {
-    setBoards((prev) => prev.map((board) => (board.id === updatedBoard.id ? updatedBoard : board)));
+    updateBoards((prev) =>
+      prev.map((board) => (board.id === updatedBoard.id ? updatedBoard : board)),
+    );
     setSharingBoard(updatedBoard);
   };
 
@@ -226,7 +195,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
       await deleteBoard(id);
       if (!isCurrentSession()) return;
 
-      setBoards((prev) => prev.filter((board) => board.id !== id));
+      updateBoards((prev) => prev.filter((board) => board.id !== id));
       if (typeof showSnackbar === 'function') {
         showSnackbar('success', 'Board deleted.');
       }

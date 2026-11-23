@@ -1,3 +1,5 @@
+import useBoardList from '../../hooks/useBoardList';
+import useSession from '../../hooks/useSession';
 import { getSessionVersion, rotateSessionTokens, startSession } from '../../services/sessionState';
 vi.mock('@mui/material', async () => await vi.importActual('@mui/material'));
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
@@ -33,10 +35,18 @@ vi.mock('../../services/notoliApiClient', () => ({
   updateBoard: vi.fn(),
 }));
 const defaultBoards = boardFixtures;
+function DrawerWithBoards(props) {
+  const boardList = useBoardList();
+  return <BoardNavigationDrawer {...props} boardList={boardList} />;
+}
+function SessionDrawer(props) {
+  const { version } = useSession();
+  return <DrawerWithBoards key={version} {...props} />;
+}
 async function renderDrawer({ open = true, showSnackbar = vi.fn() } = {}) {
   const setDrawerOpen = vi.fn();
   const view = renderWithProviders(
-    <BoardNavigationDrawer open={open} setDrawerOpen={setDrawerOpen} showSnackbar={showSnackbar} />,
+    <SessionDrawer open={open} setDrawerOpen={setDrawerOpen} showSnackbar={showSnackbar} />,
   );
   await waitFor(() => {
     expect(fetchBoardsApi).toHaveBeenCalledWith();
@@ -543,9 +553,7 @@ describe('BoardNavigationDrawer', () => {
   });
   test('when unauthenticated, it does not call board API endpoints', async () => {
     sessionStorage.removeItem('accessToken');
-    renderWithProviders(
-      <BoardNavigationDrawer open setDrawerOpen={vi.fn()} showSnackbar={vi.fn()} />,
-    );
+    renderWithProviders(<SessionDrawer open setDrawerOpen={vi.fn()} showSnackbar={vi.fn()} />);
     await waitFor(() => {
       expect(fetchBoardsApi).not.toHaveBeenCalled();
     });
@@ -622,9 +630,7 @@ describe('BoardNavigationDrawer menu transitions', () => {
   async function openMenu() {
     sessionStorage.setItem('accessToken', 'fixture');
     sessionStorage.setItem('username', 'owner');
-    renderWithProviders(
-      <BoardNavigationDrawer open setDrawerOpen={vi.fn()} showSnackbar={vi.fn()} />,
-    );
+    renderWithProviders(<SessionDrawer open setDrawerOpen={vi.fn()} showSnackbar={vi.fn()} />);
     await userEvent.click(screen.getByRole('button', { name: 'Board' }));
     const icon = (await screen.findAllByTestId('MoreVertIcon'))[0];
     const trigger = icon.closest('button') || icon;

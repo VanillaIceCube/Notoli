@@ -1,6 +1,6 @@
 import { createElement } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
-import { usePullToRefresh } from './useMobileGestures';
+import { usePullToRefresh } from './usePullToRefresh';
 function setTouchViewport({ width = 375, maxTouchPoints = 1, scrollY = 0 } = {}) {
   Object.defineProperty(window, 'innerWidth', {
     configurable: true,

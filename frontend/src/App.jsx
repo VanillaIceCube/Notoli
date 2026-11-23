@@ -1,5 +1,6 @@
 import { getSessionVersion } from './services/sessionState';
 import useSession, { useSessionGuard } from './hooks/useSession';
+import useBoardList from './hooks/useBoardList';
 import RouteContent from './components/app-core/RouteContent';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import appTheme from './theme';
@@ -118,6 +119,7 @@ function NotepadRoutes({ setAppBarHeader }) {
 
 function ApplicationSession({ showSnackbar }) {
   const isCurrentSession = useSessionGuard();
+  const boardList = useBoardList();
   // App Bar
   const [appBarHeader, setAppBarHeader] = useState('');
 
@@ -133,6 +135,7 @@ function ApplicationSession({ showSnackbar }) {
       <NavigationBridge />
       <AppHeader appBarHeader={appBarHeader} setDrawerOpen={setDrawerOpen} />
       <BoardNavigationDrawer
+        boardList={boardList}
         open={drawerOpen}
         setDrawerOpen={setDrawerOpen}
         showSnackbar={showSessionSnackbar}
@@ -143,7 +146,7 @@ function ApplicationSession({ showSnackbar }) {
             path="/"
             element={
               <AuthenticatedRoute>
-                <BoardHomeRedirect showSnackbar={showSnackbar} />
+                <BoardHomeRedirect boardList={boardList} showSnackbar={showSnackbar} />
               </AuthenticatedRoute>
             }
           />

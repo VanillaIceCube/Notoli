@@ -1,38 +1,33 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useSessionGuard } from '../../hooks/useSession';
-import { fetchBoards } from '../../services/notoliApiClient';
 import { getPreferredBoardId } from '../../services/lastBoard';
 
-export default function BoardHomeRedirect({ showSnackbar }) {
+export default function BoardHomeRedirect({ boardList, showSnackbar }) {
   const navigate = useNavigate();
   const isCurrentSession = useSessionGuard();
+  const handledRef = useRef(false);
+  const { boards, loading, loadError, retry } = boardList;
+  const failedBeforeArrivalRef = useRef(Boolean(loadError));
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function openPreferredBoard() {
-      try {
-        const boards = await fetchBoards();
-        if (cancelled || !isCurrentSession()) return;
-
-        const boardId = getPreferredBoardId(boards);
-        if (boardId) navigate(`/board/${boardId}`, { replace: true });
-      } catch (error) {
-        if (cancelled || !isCurrentSession()) return;
-
-        const message = Number.isInteger(error?.status)
-          ? 'Board load failed :('
-          : 'Network error :(';
-        showSnackbar('error', message);
-      }
+    if (loading || handledRef.current || !isCurrentSession()) return;
+    if (loadError && failedBeforeArrivalRef.current) {
+      failedBeforeArrivalRef.current = false;
+      retry();
+      return;
     }
-
-    openPreferredBoard();
-    return () => {
-      cancelled = true;
-    };
-  }, [navigate, isCurrentSession, showSnackbar]);
+    handledRef.current = true;
+    if (loadError) {
+      showSnackbar(
+        'error',
+        Number.isInteger(loadError.status) ? 'Board load failed :(' : 'Network error :(',
+      );
+      return;
+    }
+    const boardId = getPreferredBoardId(boards);
+    if (boardId) navigate(`/board/${boardId}`, { replace: true });
+  }, [boards, loading, loadError, retry, navigate, isCurrentSession, showSnackbar]);
 
   return null;
 }

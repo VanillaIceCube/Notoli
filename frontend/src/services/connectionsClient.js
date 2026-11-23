@@ -1,6 +1,6 @@
 import { getSessionSnapshot } from './sessionState';
 import { apiFetch } from './requestClient';
-import { safeReadJson } from './authSession';
+import { safeReadJson } from './apiResponse';
 
 async function request(path, returnTo, body) {
   const response = await apiFetch(path, {

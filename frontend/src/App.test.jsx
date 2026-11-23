@@ -1,5 +1,5 @@
 import App from './App';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { Link, MemoryRouter } from 'react-router';
@@ -99,6 +99,10 @@ function renderApp(route) {
 }
 describe('App', () => {
   beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json([])),
+    );
     sessionStorage.clear();
     delete globalThis.__notoliListPageReady;
     delete globalThis.__notoliAutoReady;
@@ -291,6 +295,80 @@ describe('real session route lifecycle', () => {
     vi.restoreAllMocks();
   });
 
+  async function submitPendingAuthRequest(page) {
+    const pending = Promise.withResolvers();
+    const defaultFetch = fetch.getMockImplementation();
+    fetch.mockImplementation((url, options) =>
+      url.endsWith('/auth/' + page + '/') ? pending.promise : defaultFetch(url, options),
+    );
+    const query = page === 'reset-password' ? '?uid=user&token=reset' : '';
+    window.history.replaceState({}, '', '/' + page + query);
+    render(<SessionApp />);
+    const form = await screen.findByRole('form');
+    for (const label of ['Email', 'Password', 'Confirm Password', 'New Password']) {
+      const input = screen.queryByLabelText(label, { exact: true });
+      if (input)
+        fireEvent.change(input, {
+          target: { value: label === 'Email' ? credentials.email : 'password123' },
+        });
+    }
+    fireEvent.submit(form);
+    expect(fetch.mock.calls.some(([url]) => url.endsWith('/auth/' + page + '/'))).toBe(true);
+    return pending;
+  }
+
+  describe.each(['login', 'register', 'forgot-password', 'reset-password'])(
+    '%s request lifecycle',
+    (page) => {
+      test.each(['success', 'failure'])(
+        'ignores a late %s after leaving the form',
+        async (outcome) => {
+          const pending = await submitPendingAuthRequest(page);
+          const destination = page === 'login' ? '/register' : '/login';
+          await userEvent.click(
+            screen.getByRole('link', {
+              name: page === 'login' ? /create account/i : /sign in|login|log in/i,
+            }),
+          );
+          expect(window.location.pathname).toBe(destination);
+          await act(async () => {
+            if (outcome === 'success') pending.resolve(reply(credentials));
+            else pending.reject(new Error('Abandoned request'));
+          });
+          expect(window.location.pathname).toBe(destination);
+          expect(sessionStorage.getItem('accessToken')).toBeNull();
+          expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        },
+      );
+    },
+  );
+
+  test('a late login response cannot replace the new account', async () => {
+    const pending = await submitPendingAuthRequest('login');
+    const { startSession } = await import('./services/sessionState');
+    act(() => startSession({ access: 'new-access', refresh: 'new-refresh' }));
+    await act(async () => pending.resolve(reply(credentials)));
+    expect(sessionStorage.getItem('accessToken')).toBe('new-access');
+    expect(window.location.pathname).toBe('/login');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  test.each(['login', 'register'])(
+    '%s reports a current request’s storage failure',
+    async (page) => {
+      const pending = await submitPendingAuthRequest(page);
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('Storage unavailable');
+      });
+      await act(async () => pending.resolve(reply(credentials)));
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        page === 'login' ? 'Login failed :(' : 'Unable to access browser session storage.',
+      );
+      expect(sessionStorage.getItem('accessToken')).toBeNull();
+      expect(window.location.pathname).toBe('/' + page);
+    },
+  );
+
   test.each(['login', 'register'])(
     'keeps the real %s success message across the session transition',
     async (page) => {
@@ -344,6 +422,38 @@ describe('real session route lifecycle', () => {
 
     expect(await screen.findByRole('heading', { name: 'Remembered' })).toBeVisible();
     expect(window.location.pathname).toBe('/board/12');
+    expect(fetch.mock.calls.filter(([url]) => url.endsWith('/api/boards/'))).toHaveLength(1);
+  });
+
+  test('returning home retries an earlier failed board list request', async () => {
+    const { startSession } = await import('./services/sessionState');
+    startSession(credentials);
+    window.history.replaceState({}, '', '/');
+    const defaultFetch = fetch.getMockImplementation();
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce(reply({}, 503))
+      .mockResolvedValueOnce(reply([{ id: 12, name: 'Recovered' }]));
+    fetch.mockImplementation((url, ...options) => {
+      if (url.endsWith('/api/boards/')) return list();
+      if (url.endsWith('/api/boards/12/'))
+        return Promise.resolve(reply({ id: 12, name: 'Recovered' }));
+      return defaultFetch(url, ...options);
+    });
+    render(<SessionApp />);
+    expect(await screen.findByText('Board load failed :(')).toBeVisible();
+    expect(list).toHaveBeenCalledTimes(1);
+    act(() => {
+      window.history.pushState({}, '', '/login');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(await screen.findByRole('heading', { name: 'Login' })).toBeVisible();
+    act(() => {
+      window.history.pushState({}, '', '/');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    expect(await screen.findByRole('heading', { name: 'Recovered' })).toBeVisible();
+    expect(list).toHaveBeenCalledTimes(2);
   });
 
   test('shows the queued logout message after the session shell and lazy Login change', async () => {

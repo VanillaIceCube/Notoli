@@ -1,10 +1,6 @@
 // @vitest-environment node
 
 import {
-  login,
-  register,
-  forgotPassword,
-  resetPassword,
   fetchBoards,
   fetchBoard,
   createBoard,
@@ -21,11 +17,6 @@ import {
   updateTask,
   deleteTask,
   reorderTasks,
-  fetchNotifications,
-  markNotificationRead,
-  clearNotification,
-  clearAllNotifications,
-  markAllNotificationsRead,
 } from './notoliApiClient';
 import { apiFetch } from './requestClient';
 vi.mock('./requestClient', () => ({
@@ -35,125 +26,6 @@ describe('notoliApiClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     apiFetch.mockResolvedValue(Response.json({ id: 1 }));
-  });
-  test('when login uses email, it posts the email payload', async () => {
-    await login({
-      email: 'user@example.com',
-      password: 'secret',
-    });
-    expect(apiFetch).toHaveBeenCalledWith('/auth/login/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: expect.any(String),
-    });
-    const [, options] = apiFetch.mock.calls[0];
-    await expect(JSON.parse(options.body)).toEqual({
-      email: 'user@example.com',
-      password: 'secret',
-    });
-  });
-  test('when login uses username, it posts the username payload', async () => {
-    await login({
-      username: 'user1',
-      password: 'secret',
-    });
-    expect(apiFetch).toHaveBeenCalledWith('/auth/login/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: expect.any(String),
-    });
-    const [, options] = apiFetch.mock.calls[0];
-    await expect(JSON.parse(options.body)).toEqual({
-      username: 'user1',
-      password: 'secret',
-    });
-  });
-  test('when login includes email and username, it prefers email', async () => {
-    await login({
-      email: 'user@example.com',
-      username: 'user1',
-      password: 'secret',
-    });
-    const [, options] = apiFetch.mock.calls[0];
-    await expect(JSON.parse(options.body)).toEqual({
-      email: 'user@example.com',
-      password: 'secret',
-    });
-  });
-  test('when register trims inputs, it posts trimmed values', async () => {
-    await register({
-      email: ' user@example.com ',
-      username: ' user1 ',
-      password: 'secret',
-    });
-    expect(apiFetch).toHaveBeenCalledWith('/auth/register/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: expect.any(String),
-    });
-    const [, options] = apiFetch.mock.calls[0];
-    await expect(JSON.parse(options.body)).toEqual({
-      email: 'user@example.com',
-      username: 'user1',
-      password: 'secret',
-    });
-  });
-  test('when register has blank username, it omits the username', async () => {
-    await register({
-      email: 'user@example.com',
-      username: '   ',
-      password: 'secret',
-    });
-    expect(apiFetch).toHaveBeenCalledWith('/auth/register/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: expect.any(String),
-    });
-    const [, options] = apiFetch.mock.calls[0];
-    await expect(JSON.parse(options.body)).toEqual({
-      email: 'user@example.com',
-      password: 'secret',
-    });
-  });
-  test('when forgotPassword is called, it posts trimmed email', async () => {
-    await forgotPassword({
-      email: ' user@example.com ',
-    });
-    expect(apiFetch).toHaveBeenCalledWith('/auth/forgot-password/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: 'user@example.com',
-      }),
-    });
-  });
-  test('when resetPassword is called, it posts uid/token/password', async () => {
-    await resetPassword({
-      uid: 'abc',
-      token: 'tok',
-      password: 'secret',
-    });
-    expect(apiFetch).toHaveBeenCalledWith('/auth/reset-password/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        uid: 'abc',
-        token: 'tok',
-        password: 'secret',
-      }),
-    });
   });
   test('fetchBoards returns parsed board data', async () => {
     const boards = [{ id: 3, name: 'Alpha' }];
@@ -333,49 +205,6 @@ describe('notoliApiClient', () => {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ list: 7, ordered_ids: [102, 101] }),
-    });
-  });
-  test('when fetching notifications, it calls the notifications endpoint', async () => {
-    await fetchNotifications();
-    expect(apiFetch).toHaveBeenCalledWith('/api/notifications/');
-  });
-  test('when marking a notification read, it patches the notification', async () => {
-    await markNotificationRead(4);
-    expect(apiFetch).toHaveBeenCalledWith('/api/notifications/4/', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        is_read: true,
-      }),
-    });
-  });
-  test('when clearing a notification, it deletes the notification', async () => {
-    await clearNotification(4);
-    expect(apiFetch).toHaveBeenCalledWith('/api/notifications/4/', {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-  });
-  test('when clearing all notifications, it deletes the collection action', async () => {
-    await clearAllNotifications();
-    expect(apiFetch).toHaveBeenCalledWith('/api/notifications/clear-all/', {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-  });
-  test('when marking all notifications read, it patches the collection action', async () => {
-    await markAllNotificationsRead();
-    expect(apiFetch).toHaveBeenCalledWith('/api/notifications/mark-all-read/', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
     });
   });
 });
