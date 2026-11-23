@@ -48,7 +48,7 @@ vi.mock('./pages/authentication/ResetPassword', () => ({
 vi.mock('./components/app/BoardHomeRedirect', () => ({
   default: () => <div>BoardHomeRedirect</div>,
 }));
-vi.mock('./pages/boards/BoardListsPage', async () => {
+vi.mock('./pages/notepad/BoardListsPage', async () => {
   const { useNavigate } = await import('react-router');
   return {
     default: function MockBoardListsPage({ active }) {
@@ -64,7 +64,7 @@ vi.mock('./pages/boards/BoardListsPage', async () => {
     },
   };
 });
-vi.mock('./pages/lists/ListTasksPage', async () => {
+vi.mock('./pages/notepad/ListTasksPage', async () => {
   const React = await import('react');
   return {
     default: function MockListTasksPage({ active, onPageReady }) {
@@ -211,7 +211,7 @@ test('a failed pending notepad chunk becomes a visible recoverable route', async
   const pending = new Promise((_resolve, reject) => {
     rejectChunk = reject;
   });
-  vi.doMock('./pages/lists/ListTasksPage', () => pending);
+  vi.doMock('./pages/notepad/ListTasksPage', () => pending);
   const { default: FailedApp } = await import('./App');
   const { browserLocation } = await import('./services/navigationService');
   const reload = vi.spyOn(browserLocation, 'reload').mockImplementation(() => {});
@@ -234,7 +234,7 @@ test('a failed pending notepad chunk becomes a visible recoverable route', async
   await userEvent.click(screen.getByRole('link', { name: 'Sign in' }));
   expect(await screen.findByText('LoginPage')).toBeVisible();
   vi.restoreAllMocks();
-  vi.doUnmock('./pages/lists/ListTasksPage');
+  vi.doUnmock('./pages/notepad/ListTasksPage');
 });
 
 describe('real session route lifecycle', () => {
@@ -251,8 +251,8 @@ describe('real session route lifecycle', () => {
     vi.doUnmock('./pages/authentication/Register');
     vi.doUnmock('./pages/authentication/ForgotPassword');
     vi.doUnmock('./pages/authentication/ResetPassword');
-    vi.doUnmock('./pages/boards/BoardListsPage');
-    vi.doUnmock('./pages/lists/ListTasksPage');
+    vi.doUnmock('./pages/notepad/BoardListsPage');
+    vi.doUnmock('./pages/notepad/ListTasksPage');
     SessionApp = (await import('./App')).default;
   });
 

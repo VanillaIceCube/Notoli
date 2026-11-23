@@ -21,6 +21,9 @@ authentication, and the application shell.
 - `src/test-helpers/`: shared test setup and reusable helpers.
   App, startup and feature tests stay beside the files they exercise.
 
+Keep `components/`, `pages/`, `hooks/` and `services/` flat by default. Group modules you
+usually edit together one level down. A source file and its adjacent test count as one module.
+
 ### Where to change things
 
 | To change                                       | Start here                                                                                                                         |
@@ -31,7 +34,7 @@ authentication, and the application shell.
 | Shared colors, typography, and component styles | [Theme](src/theme.js)                                                                                                              |
 | Preferred board on sign-in                      | [BoardHomeRedirect](src/components/app/BoardHomeRedirect.js)                                                                       |
 | Board navigation and sharing                    | [BoardNavigationDrawer](src/components/app/BoardNavigationDrawer.jsx), [BoardShareDialog](src/components/app/BoardShareDialog.jsx) |
-| Lists and tasks                                 | [BoardListsPage](src/pages/boards/BoardListsPage.jsx), [ListTasksPage](src/pages/lists/ListTasksPage.jsx)                          |
+| Lists and tasks                                 | [BoardListsPage](src/pages/notepad/BoardListsPage.jsx), [ListTasksPage](src/pages/notepad/ListTasksPage.jsx)                       |
 
 ## 💻 Local development
 

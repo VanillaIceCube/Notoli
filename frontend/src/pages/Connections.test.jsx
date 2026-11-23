@@ -1,19 +1,19 @@
-import { startSession } from '../../services/sessionState';
+import { startSession } from '../services/sessionState';
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes, useLocation } from 'react-router';
-import { renderWithProviders } from '../../test-helpers/utils';
-import AuthenticatedRoute from '../../components/app-core/AuthenticatedRoute';
+import { renderWithProviders } from '../test-helpers/utils';
+import AuthenticatedRoute from '../components/app-core/AuthenticatedRoute';
 import ConnectedApps, { OAuthConsent } from './Connections';
-import Login from '../authentication/Login';
-import * as connections from '../../services/connectionsClient';
-import { login } from '../../services/authApiClient';
-import { fetchBoards } from '../../services/notoliApiClient';
-vi.mock('../../services/connectionsClient');
-vi.mock('../../services/notoliApiClient', () => ({
+import Login from './authentication/Login';
+import * as connections from '../services/connectionsClient';
+import { login } from '../services/authApiClient';
+import { fetchBoards } from '../services/notoliApiClient';
+vi.mock('../services/connectionsClient');
+vi.mock('../services/notoliApiClient', () => ({
   fetchBoards: vi.fn(),
 }));
-vi.mock('../../services/authApiClient', () => ({
+vi.mock('../services/authApiClient', () => ({
   login: vi.fn(),
 }));
 const query =

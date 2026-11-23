@@ -17,11 +17,11 @@ const Login = lazy(() => import('./pages/authentication/Login'));
 const Register = lazy(() => import('./pages/authentication/Register'));
 const ForgotPassword = lazy(() => import('./pages/authentication/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/authentication/ResetPassword'));
-const BoardListsPage = lazy(() => import('./pages/boards/BoardListsPage'));
-const ListTasksPage = lazy(() => import('./pages/lists/ListTasksPage'));
-const ConnectedApps = lazy(() => import('./pages/connections/Connections'));
+const BoardListsPage = lazy(() => import('./pages/notepad/BoardListsPage'));
+const ListTasksPage = lazy(() => import('./pages/notepad/ListTasksPage'));
+const ConnectedApps = lazy(() => import('./pages/Connections'));
 const OAuthConsent = lazy(() =>
-  import('./pages/connections/Connections').then((module) => ({ default: module.OAuthConsent })),
+  import('./pages/Connections').then((module) => ({ default: module.OAuthConsent })),
 );
 
 function getLocationSignature(location) {
