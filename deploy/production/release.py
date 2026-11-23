@@ -8,6 +8,7 @@ can decide whether restoring a database and losing later writes is acceptable.
 import argparse
 from contextlib import closing, contextmanager
 import hashlib
+import inspect as python_inspect
 import json
 import os
 from pathlib import Path
@@ -607,9 +608,11 @@ def capture_recovery(root, candidate, recovery):
             shutil.copyfile(path, evidence / name)
             (evidence / name).chmod(0o600)
     if current.exists():
-        old_dir = Path(json.loads(current.read_text())["directory"])
-        if not old_dir.is_relative_to(root) or old_dir.is_symlink():
-            raise ReleaseError("Invalid previous release directory")
+        old_dir = saved_controller_directory(
+            root, json.loads(regular(current).read_text())
+        )
+        private_dir(old_dir.parent)
+        private_dir(old_dir)
         previous = recovery / "previous-release"
         previous.mkdir(mode=0o700)
         for name in (
@@ -626,6 +629,97 @@ def capture_recovery(root, candidate, recovery):
                 regular(old_dir / name)
                 shutil.copyfile(old_dir / name, previous / name)
                 (previous / name).chmod(0o600)
+        # Discover an incomplete or altered saved controller before stopping
+        # writers or starting migrations, rather than during a later rollback.
+        recovery_controller(root, recovery.name)
+
+
+def saved_controller_directory(root, record):
+    """A recovered runtime keeps its original controller in previous-release/."""
+    if not isinstance(record, dict) or not isinstance(record.get("id", ""), str):
+        raise ReleaseError("Invalid saved release record")
+    identity = record.get("id", "")
+    recovered = identity.startswith("recovered-")
+    release_id = identity.removeprefix("recovered-") if recovered else identity
+    if record.get("healthy") is not True or not RUN_ID.fullmatch(release_id):
+        raise ReleaseError(
+            "A saved accepted release is required for automatic recovery"
+        )
+    directory = root / ("recovery" if recovered else "releases") / release_id
+    if record.get("directory") != str(directory):
+        raise ReleaseError("Invalid saved controller directory")
+    return directory / "previous-release" if recovered else directory
+
+
+def recovery_controller(root, recovery_id):
+    """Load only the checksummed app controller saved with this recovery set."""
+    private_dir(root)
+    private_dir(root / "recovery")
+    if not RUN_ID.fullmatch(recovery_id):
+        raise ReleaseError("Invalid recovery identity")
+    recovery = private_dir(root / "recovery" / recovery_id)
+    record = json.loads(regular(recovery / "previous.json").read_text())
+    saved_controller_directory(root, record)
+    directory = private_dir(recovery / "previous-release")
+    manifest = json.loads(regular(directory / "manifest.json").read_text())
+    if not isinstance(manifest, dict):
+        raise ReleaseError("Invalid saved controller manifest")
+    contents = {}
+    for name in ("release.py", "app.json"):
+        path = regular(directory / name)
+        contents[name] = path.read_bytes()
+        if path.stat().st_mode & 0o077:
+            raise ReleaseError("Saved controller files must have mode 0600")
+        if hashlib.sha256(contents[name]).hexdigest() != manifest.get(name):
+            raise ReleaseError("Saved controller checksum mismatch")
+    policy = json.loads(contents["app.json"])
+    if not isinstance(policy, dict):
+        raise ReleaseError("Invalid saved application policy")
+    for name in ("contract_version", "app", "services", "containers", "database"):
+        if policy.get(name) != CONFIG[name]:
+            raise ReleaseError("Saved controller does not match this application")
+    saved = {"__file__": str(directory / "release.py"), "__name__": "saved_app_release"}
+    # Execute the verified bytes, never legacy-evidence or a neighboring checkout.
+    try:
+        exec(compile(contents["release.py"], saved["__file__"], "exec"), saved)
+    except Exception:
+        raise ReleaseError("Saved controller could not be loaded") from None
+    if saved.get("CONFIG") != policy:
+        raise ReleaseError("Saved controller loaded a different application policy")
+    error_type = saved.get("ReleaseError")
+    if not isinstance(error_type, type) or not issubclass(error_type, Exception):
+        raise ReleaseError("Saved controller has an unsupported error contract")
+    return saved
+
+
+def recover(root, recovery_id, restore_database, keep_database=False):
+    global CURRENT_STEP
+    if restore_database == keep_database:
+        raise ReleaseError("Choose exactly one database recovery mode")
+    progress("Selecting the saved recovery controller and policy")
+    try:
+        saved = recovery_controller(root, recovery_id)
+    except (OSError, ValueError, KeyError):
+        raise ReleaseError(
+            "Saved recovery script or policy is missing or invalid; inspect private recovery records"
+        ) from None
+    try:
+        python_inspect.signature(saved["rollback"]).bind(
+            root, recovery_id, restore_database, keep_database
+        )
+    except (KeyError, TypeError, ValueError):
+        raise ReleaseError(
+            "Saved controller does not support this recovery command"
+        ) from None
+    progress("Running the saved recovery controller")
+    try:
+        saved["rollback"](root, recovery_id, restore_database, keep_database)
+    except saved["ReleaseError"] as error:
+        raise ReleaseError(str(error)) from None
+    finally:
+        CURRENT_STEP = saved.get(
+            "CURRENT_STEP", "Running the saved recovery controller"
+        )
 
 
 def check_response(path, status, predicate):
@@ -993,7 +1087,7 @@ def main():
                 raise ReleaseError("Bundle must be the app's unique incoming directory")
             deploy(root, args.bundle)
         else:
-            rollback(
+            recover(
                 root, args.recovery or "", args.restore_database, args.keep_database
             )
 

@@ -6,6 +6,7 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
 import sqlite3
 import subprocess
 import tempfile
@@ -388,6 +389,125 @@ class TransactionTests(unittest.TestCase):
     def values(self):
         with sqlite3.connect(self.root / "db.sqlite3") as db:
             return [row[0] for row in db.execute("SELECT value FROM items")]
+
+    def accepted_baseline(self):
+        identity = "a" * 40 + "-122-1"
+        baseline = self.root / "releases" / identity
+        shutil.copytree(self.bundle, baseline)
+        policy = copy.deepcopy(release.CONFIG)
+        policy["environment"]["fixed"]["DJANGO_MCP_ENABLED"] = "0"
+        policy["readiness"]["public"] = policy["readiness"]["public"][:2]
+        (baseline / "app.json").write_text(json.dumps(policy))
+        metadata = json.loads((baseline / "release.json").read_text()) | {
+            "id": identity
+        }
+        (baseline / "release.json").write_text(json.dumps(metadata))
+        import hashlib
+
+        (baseline / "manifest.json").write_text(
+            json.dumps(
+                {
+                    name: hashlib.sha256((baseline / name).read_bytes()).hexdigest()
+                    for name in release.PAYLOAD
+                }
+            )
+        )
+        release.write_private(baseline / ".release.env", "")
+        release.atomic_json(
+            self.root / "current.json",
+            {
+                "id": identity,
+                "directory": str(baseline),
+                "healthy": True,
+            },
+        )
+        return baseline
+
+    def recover_saved(self, restore_database, keep_database=False):
+        load = release.recovery_controller
+        probes = []
+
+        def selected(root, identity):
+            saved = load(root, identity)
+            # Use the existing host/Docker fault fixture, but execute the
+            # saved controller's actual rollback and actual old readiness.
+            for name in (
+                "app_writers",
+                "stop_writers",
+                "snapshot_writer",
+                "stop_management",
+                "inspect",
+                "docker",
+            ):
+                saved[name] = getattr(release, name)
+            saved["compose"] = lambda directory, *args, **kwargs: self.compose(
+                directory, *args
+            )
+            saved["check_response"] = lambda path, *args: probes.append(path)
+            return saved
+
+        with patch.object(release, "recovery_controller", side_effect=selected):
+            release.recover(self.root, self.identity, restore_database, keep_database)
+        return probes
+
+    def test_automatic_recovery_uses_old_readiness_and_preserves_it_for_next_deploy(
+        self,
+    ):
+        baseline = self.accepted_baseline()
+        self.fail_migration = True
+        with self.assertRaises(release.ReleaseError):
+            release.deploy(self.root, self.bundle)
+        probes = self.recover_saved(True)
+        self.assertEqual(
+            probes, [rule["path"] for rule in release.CONFIG["readiness"]["public"][:2]]
+        )
+        self.assertEqual(self.values(), ["original"])
+        self.assertFalse((self.root / "FAILED.json").exists())
+        next_recovery = self.root / "recovery" / ("a" * 40 + "-124-1")
+        release.capture_recovery(
+            self.root, self.root / "releases" / self.identity, next_recovery
+        )
+        for name in ("release.py", "app.json", "manifest.json"):
+            self.assertEqual(
+                (next_recovery / "previous-release" / name).read_bytes(),
+                (baseline / name).read_bytes(),
+            )
+        saved = release.recovery_controller(self.root, next_recovery.name)
+        self.assertEqual(
+            saved["CONFIG"]["environment"]["fixed"]["DJANGO_MCP_ENABLED"], "0"
+        )
+
+    def test_changed_saved_controller_blocks_deploy_before_writers_stop(self):
+        baseline = self.accepted_baseline()
+        (baseline / "release.py").write_text("raise RuntimeError('private')")
+        with self.assertRaisesRegex(release.ReleaseError, "checksum mismatch"):
+            release.deploy(self.root, self.bundle)
+        self.assertNotIn(("stop-writers",), self.events)
+        self.assertFalse(any(event[:1] == ("manage",) for event in self.events))
+        self.assertEqual(self.values(), ["original"])
+        self.assertFalse((self.root / "FAILED.json").exists())
+
+    def test_automatic_keep_data_recovery_retains_pre_migration_gate(self):
+        self.accepted_baseline()
+        with patch.object(
+            release, "snapshot", side_effect=release.ReleaseError("backup failed")
+        ):
+            with self.assertRaises(release.ReleaseError):
+                release.deploy(self.root, self.bundle)
+        self.recover_saved(False, True)
+        self.assertEqual(self.values(), ["original"])
+        self.assertFalse((self.root / "FAILED.json").exists())
+        release.atomic_json(
+            self.root / "FAILED.json",
+            {
+                "recovery": str(self.root / "recovery" / self.identity),
+                "stage": "migration-started",
+            },
+        )
+        events = len(self.events)
+        with self.assertRaisesRegex(release.ReleaseError, "only before migration"):
+            self.recover_saved(False, True)
+        self.assertEqual(len(self.events), events)
 
     def test_success_full_private_recovery_and_commit_after_health(self):
         release.deploy(self.root, self.bundle)

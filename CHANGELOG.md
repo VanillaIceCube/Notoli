@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Select the verified saved app controller and policy automatically for rollback; preserve their original readiness through recovery and later deployments while retaining explicit database choices and deployment locks.
 - Limit production preflight policy to this app's route networks and exact trusted peers; Infrastructure retains full-host topology checks.
 - Add readable production release and recovery progress, failing-step context, command exit codes and private-record pointers from the shared engine; preserve transaction order and private subprocess output.
 - Put routine production release and recovery steps first in the existing guide; retain detailed setup, migration history, commands, section links and operational prerequisites in the same README.
