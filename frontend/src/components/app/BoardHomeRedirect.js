@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { useSessionGuard } from '../hooks/useSession';
-import { fetchBoards } from '../services/notoliApiClient';
-import { getPreferredBoardId } from '../services/lastBoard';
+import { useSessionGuard } from '../../hooks/useSession';
+import { fetchBoards } from '../../services/notoliApiClient';
+import { getPreferredBoardId } from '../../services/lastBoard';
 
 export default function BoardHomeRedirect({ showSnackbar }) {
   const navigate = useNavigate();

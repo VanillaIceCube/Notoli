@@ -1,4 +1,4 @@
-import useSession from '../hooks/useSession';
+import useSession from '../../hooks/useSession';
 import { useState } from 'react';
 import {
   AppBar,
@@ -15,8 +15,8 @@ import MenuIcon from '@mui/icons-material/Menu';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
-import { goBackToParent } from '../utils/Navigation';
-import { logout } from '../services/requestClient';
+import { goBackToParent } from '../../utils/Navigation';
+import { logout } from '../../services/requestClient';
 import NotificationsMenu from './NotificationsMenu';
 
 const AUTH_PATHS = ['/login', '/register', '/forgot-password', '/reset-password'];

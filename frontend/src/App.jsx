@@ -1,16 +1,16 @@
 import { getSessionVersion } from './services/sessionState';
 import useSession, { useSessionGuard } from './hooks/useSession';
-import RouteContent from './components/RouteContent';
+import RouteContent from './components/app-core/RouteContent';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import appTheme from './theme';
 import { lazy, useCallback, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from 'react-router';
-import AuthenticatedRoute from './components/AuthenticatedRoute';
-import AppHeader from './components/AppHeader';
-import AppSnackbar from './components/AppSnackbar';
-import BoardNavigationDrawer from './components/BoardNavigationDrawer';
-import NavigationBridge from './components/NavigationBridge';
-import BoardHomeRedirect from './components/BoardHomeRedirect';
+import AuthenticatedRoute from './components/app-core/AuthenticatedRoute';
+import AppHeader from './components/app-core/AppHeader';
+import AppSnackbar from './components/app-core/AppSnackbar';
+import BoardNavigationDrawer from './components/app/BoardNavigationDrawer';
+import NavigationBridge from './components/app-core/NavigationBridge';
+import BoardHomeRedirect from './components/app/BoardHomeRedirect';
 
 const Login = lazy(() => import('./pages/authentication/Login'));
 const Register = lazy(() => import('./pages/authentication/Register'));

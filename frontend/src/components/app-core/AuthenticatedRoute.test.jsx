@@ -3,12 +3,12 @@ import {
   clearSession,
   rotateSessionTokens,
   getSessionSnapshot,
-} from '../services/sessionState';
+} from '../../services/sessionState';
 import { act, fireEvent, screen } from '@testing-library/react';
 import { Route, Routes, useLocation, useNavigationType } from 'react-router';
 
 import AuthenticatedRoute from './AuthenticatedRoute';
-import { renderWithProviders } from '../test-helpers/utils';
+import { renderWithProviders } from '../../test-helpers/utils';
 
 function LocationDisplay() {
   const location = useLocation();

@@ -1,5 +1,5 @@
-import useSession, { useSessionGuard } from '../hooks/useSession';
-import { getSessionSnapshot } from '../services/sessionState';
+import useSession, { useSessionGuard } from '../../hooks/useSession';
+import { getSessionSnapshot } from '../../services/sessionState';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -21,7 +21,7 @@ import Edit from '@mui/icons-material/Edit';
 import MoreVert from '@mui/icons-material/MoreVert';
 import Share from '@mui/icons-material/Share';
 import Divider from '@mui/material/Divider';
-import { getBoardId } from '../utils/Navigation';
+import { getBoardId } from '../../utils/Navigation';
 import { useLocation, useNavigate } from 'react-router';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
@@ -33,7 +33,7 @@ import {
   deleteBoard,
   fetchBoards as fetchBoardsApi,
   updateBoard,
-} from '../services/notoliApiClient';
+} from '../../services/notoliApiClient';
 
 export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackbar }) {
   const navigate = useNavigate();

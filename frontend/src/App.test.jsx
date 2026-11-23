@@ -7,7 +7,7 @@ vi.mock('react-router', async () => ({
   ...(await vi.importActual('react-router')),
   BrowserRouter: ({ children }) => <>{children}</>,
 }));
-vi.mock('./components/AuthenticatedRoute', () => ({
+vi.mock('./components/app-core/AuthenticatedRoute', () => ({
   default: ({ children }) => {
     const token = globalThis.sessionStorage?.getItem('accessToken');
     if (!token) {
@@ -16,17 +16,17 @@ vi.mock('./components/AuthenticatedRoute', () => ({
     return <div>{children}</div>;
   },
 }));
-vi.mock('./components/AppHeader', () => ({
+vi.mock('./components/app-core/AppHeader', () => ({
   default: ({ setDrawerOpen }) => (
     <button type="button" onClick={() => setDrawerOpen((prev) => !prev)}>
       ToggleDrawer
     </button>
   ),
 }));
-vi.mock('./components/BoardNavigationDrawer', () => ({
+vi.mock('./components/app/BoardNavigationDrawer', () => ({
   default: ({ open }) => <div data-testid="drawer">{open ? 'DrawerOpen' : 'DrawerClosed'}</div>,
 }));
-vi.mock('./components/AppSnackbar', () => ({
+vi.mock('./components/app-core/AppSnackbar', () => ({
   default: ({ open, message }) => (open ? <div data-testid="snackbar">{message}</div> : null),
 }));
 vi.mock('./pages/authentication/Login', () => ({
@@ -45,7 +45,7 @@ vi.mock('./pages/authentication/ForgotPassword', () => ({
 vi.mock('./pages/authentication/ResetPassword', () => ({
   default: () => <div>ResetPasswordPage</div>,
 }));
-vi.mock('./components/BoardHomeRedirect', () => ({
+vi.mock('./components/app/BoardHomeRedirect', () => ({
   default: () => <div>BoardHomeRedirect</div>,
 }));
 vi.mock('./pages/boards/BoardListsPage', async () => {
@@ -238,11 +238,11 @@ describe('real session route lifecycle', () => {
   beforeEach(async () => {
     vi.resetModules();
     vi.doUnmock('react-router');
-    vi.doUnmock('./components/AuthenticatedRoute');
-    vi.doUnmock('./components/AppHeader');
-    vi.doUnmock('./components/BoardNavigationDrawer');
-    vi.doUnmock('./components/AppSnackbar');
-    vi.doUnmock('./components/BoardHomeRedirect');
+    vi.doUnmock('./components/app-core/AuthenticatedRoute');
+    vi.doUnmock('./components/app-core/AppHeader');
+    vi.doUnmock('./components/app/BoardNavigationDrawer');
+    vi.doUnmock('./components/app-core/AppSnackbar');
+    vi.doUnmock('./components/app/BoardHomeRedirect');
     vi.doUnmock('./pages/authentication/Login');
     vi.doUnmock('./pages/authentication/Register');
     vi.doUnmock('./pages/authentication/ForgotPassword');

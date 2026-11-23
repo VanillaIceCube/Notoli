@@ -3,10 +3,10 @@ import { Route, Routes } from 'react-router';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AppHeader from './AppHeader';
-import { renderWithProviders } from '../test-helpers/utils';
-import { goBackToParent } from '../utils/Navigation';
-import { setNavigate } from '../services/navigationService';
-import { fetchNotifications } from '../services/notoliApiClient';
+import { renderWithProviders } from '../../test-helpers/utils';
+import { goBackToParent } from '../../utils/Navigation';
+import { setNavigate } from '../../services/navigationService';
+import { fetchNotifications } from '../../services/notoliApiClient';
 const { mockNavigate, mockUseLocation, mockNavigateHook } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockUseLocation: vi.fn(),
@@ -17,10 +17,10 @@ vi.mock('react-router', async () => ({
   useLocation: mockUseLocation,
   useNavigate: mockNavigateHook,
 }));
-vi.mock('../utils/Navigation', () => ({
+vi.mock('../../utils/Navigation', () => ({
   goBackToParent: vi.fn(),
 }));
-vi.mock('../services/notoliApiClient', () => ({ fetchNotifications: vi.fn() }));
+vi.mock('../../services/notoliApiClient', () => ({ fetchNotifications: vi.fn() }));
 describe('AppHeader', () => {
   test('supports profile menu keyboard navigation, dismissal, and logout', async () => {
     const user = userEvent.setup();

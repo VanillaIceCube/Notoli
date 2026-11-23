@@ -1,7 +1,7 @@
 // Shared notepad page frame for title, pull-to-refresh offset, loading/error states, and row content.
 import { Box, Container, Paper, Stack, Typography } from '@mui/material';
 import Divider from '@mui/material/Divider';
-import PullToRefreshIndicator from '../PullToRefreshIndicator';
+import PullToRefreshIndicator from './PullToRefreshIndicator';
 
 export default function NotepadPageShell({
   title,

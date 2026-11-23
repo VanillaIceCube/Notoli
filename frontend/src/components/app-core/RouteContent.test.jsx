@@ -3,8 +3,8 @@ import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Link, Route, Routes } from 'react-router';
 import RouteContent from './RouteContent';
-import { renderWithProviders } from '../test-helpers/utils';
-import { browserLocation } from '../services/navigationService';
+import { renderWithProviders } from '../../test-helpers/utils';
+import { browserLocation } from '../../services/navigationService';
 
 afterEach(() => vi.restoreAllMocks());
 

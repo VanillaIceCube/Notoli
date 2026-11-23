@@ -13,6 +13,8 @@ authentication, and the application shell.
 - `src/index.css`: platform font rendering and remaining app-specific global rules,
   loaded by `src/index.jsx`. Keep responsive page geometry in the owning component.
 - `src/components/`: reusable interface components.
+  Standard components maintained across the three apps live in [src/components/app-core/](src/components/app-core/).
+  App-specific layout and navigation live in [src/components/app/](src/components/app/).
 - `src/pages/`: application pages and routes.
 - `src/services/`: API requests and centralized session storage.
 - `src/hooks/`: reactive session access and shared notification lifecycle behavior.
@@ -21,15 +23,15 @@ authentication, and the application shell.
 
 ### Where to change things
 
-| To change                                       | Start here                                                                                                                 |
-| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Routes and layout                               | [App](src/App.jsx)                                                                                                         |
-| Header and notifications                        | [AppHeader](src/components/AppHeader.jsx), [NotificationsMenu](src/components/NotificationsMenu.jsx)                       |
-| Sign-in, registration, and password reset       | [AuthForm and its pages](src/pages/authentication/)                                                                        |
-| Shared colors, typography, and component styles | [Theme](src/theme.js)                                                                                                      |
-| Preferred board on sign-in                      | [BoardHomeRedirect](src/components/BoardHomeRedirect.js)                                                                   |
-| Board navigation and sharing                    | [BoardNavigationDrawer](src/components/BoardNavigationDrawer.jsx), [BoardShareDialog](src/components/BoardShareDialog.jsx) |
-| Lists and tasks                                 | [BoardListsPage](src/pages/boards/BoardListsPage.jsx), [ListTasksPage](src/pages/lists/ListTasksPage.jsx)                  |
+| To change                                       | Start here                                                                                                                         |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Routes and layout                               | [App](src/App.jsx)                                                                                                                 |
+| Header and notifications                        | [AppHeader](src/components/app-core/AppHeader.jsx), [NotificationsMenu](src/components/app-core/NotificationsMenu.jsx)             |
+| Sign-in, registration, and password reset       | [AuthForm and its pages](src/pages/authentication/)                                                                                |
+| Shared colors, typography, and component styles | [Theme](src/theme.js)                                                                                                              |
+| Preferred board on sign-in                      | [BoardHomeRedirect](src/components/app/BoardHomeRedirect.js)                                                                       |
+| Board navigation and sharing                    | [BoardNavigationDrawer](src/components/app/BoardNavigationDrawer.jsx), [BoardShareDialog](src/components/app/BoardShareDialog.jsx) |
+| Lists and tasks                                 | [BoardListsPage](src/pages/boards/BoardListsPage.jsx), [ListTasksPage](src/pages/lists/ListTasksPage.jsx)                          |
 
 ## 💻 Local development
 

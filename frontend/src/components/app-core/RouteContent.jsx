@@ -1,7 +1,7 @@
 import { Component, Suspense } from 'react';
 import { Box, Button, Typography } from '@mui/material';
 import { useLocation } from 'react-router';
-import { browserLocation } from '../services/navigationService';
+import { browserLocation } from '../../services/navigationService';
 
 class PageErrorBoundary extends Component {
   state = { failed: false, routeKey: null };

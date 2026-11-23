@@ -1,15 +1,15 @@
-import { startSession } from '../services/sessionState';
+import { startSession } from '../../services/sessionState';
 import { createElement } from 'react';
 import { act, waitFor } from '@testing-library/react';
-import { createDeferred, renderWithProviders } from '../test-helpers/utils';
+import { createDeferred, renderWithProviders } from '../../test-helpers/utils';
 import BoardHomeRedirect from './BoardHomeRedirect';
-import { fetchBoards } from '../services/notoliApiClient';
+import { fetchBoards } from '../../services/notoliApiClient';
 import { useNavigate } from 'react-router';
 vi.mock('react-router', async () => ({
   ...(await vi.importActual('react-router')),
   useNavigate: vi.fn(),
 }));
-vi.mock('../services/notoliApiClient', () => ({
+vi.mock('../../services/notoliApiClient', () => ({
   fetchBoards: vi.fn(),
 }));
 describe('BoardHomeRedirect', () => {

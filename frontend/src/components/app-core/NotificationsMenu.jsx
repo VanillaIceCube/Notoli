@@ -18,9 +18,9 @@ import {
 } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import useNotifications from '../hooks/useNotifications';
-import { useSessionGuard } from '../hooks/useSession';
-import * as notificationApi from '../services/notoliApiClient';
+import useNotifications from '../../hooks/useNotifications';
+import { useSessionGuard } from '../../hooks/useSession';
+import * as notificationApi from '../../services/notoliApiClient';
 
 function formatNotificationMessage(notification) {
   const listSuffix = notification.list_name ? ` in ${notification.list_name}.` : '';

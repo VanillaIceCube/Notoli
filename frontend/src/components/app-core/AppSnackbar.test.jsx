@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AppSnackbar from './AppSnackbar';
-import { renderWithProviders } from '../test-helpers/utils';
+import { renderWithProviders } from '../../test-helpers/utils';
 describe('AppSnackbar', () => {
   test('when open is false, it does not render the message', () => {
     renderWithProviders(

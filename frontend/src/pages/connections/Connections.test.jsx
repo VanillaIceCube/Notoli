@@ -3,7 +3,7 @@ import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes, useLocation } from 'react-router';
 import { renderWithProviders } from '../../test-helpers/utils';
-import AuthenticatedRoute from '../../components/AuthenticatedRoute';
+import AuthenticatedRoute from '../../components/app-core/AuthenticatedRoute';
 import ConnectedApps, { OAuthConsent } from './Connections';
 import Login from '../authentication/Login';
 import * as connections from '../../services/connectionsClient';
