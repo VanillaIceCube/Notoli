@@ -1,11 +1,11 @@
 import { CssBaseline } from '@mui/material';
-import notoliTheme from '../theme';
+import appTheme from '../theme';
 import { render, waitFor } from '@testing-library/react';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router';
 
 // Shared test setup: disable MUI ripples (act warnings).
-const testTheme = createTheme(notoliTheme, {
+const testTheme = createTheme(appTheme, {
   components: {
     MuiButtonBase: {
       defaultProps: {

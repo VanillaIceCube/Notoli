@@ -45,7 +45,7 @@ export default function PullToRefreshIndicator({ pullDistance, refreshReady, isR
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'var(--secondary-color)',
+          color: 'var(--surface-text)',
           opacity: active ? 1 : 0,
           transition: 'opacity 120ms ease',
           '@keyframes notoliRefreshSpin': {

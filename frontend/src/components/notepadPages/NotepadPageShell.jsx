@@ -47,7 +47,7 @@ export default function NotepadPageShell({
               data-testid="notepad-page-title"
               sx={{
                 fontWeight: 'bold',
-                color: 'var(--secondary-color)',
+                color: 'var(--surface-text)',
                 lineHeight: 1.235,
                 minHeight: '2.625rem',
               }}
@@ -65,9 +65,7 @@ export default function NotepadPageShell({
             </Typography>
           )}
 
-          <Divider
-            sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--secondary-color)' }}
-          />
+          <Divider sx={{ borderBottomWidth: 2, marginBottom: 1, bgcolor: 'var(--surface-text)' }} />
           {showContent && <Stack spacing={1}>{children}</Stack>}
         </Box>
       </Paper>

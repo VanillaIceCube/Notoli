@@ -7,11 +7,11 @@ const textFieldSx = {
   flexGrow: 1,
   mr: 1,
   justifyContent: 'space-between',
-  color: 'var(--secondary-color)',
+  color: 'var(--surface-text)',
 };
 
 const inputSx = {
-  color: 'var(--secondary-color)',
+  color: 'var(--surface-text)',
 };
 
 export default function InlineTextEditor({

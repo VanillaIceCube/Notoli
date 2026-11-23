@@ -49,7 +49,7 @@ export default function AuthForm({ title, onSubmit, isSubmitting, submitLabel, f
               pt: 0.75,
               borderTop: '1px solid rgba(0,0,0,0.2)',
               textAlign: 'center',
-              color: 'var(--secondary-color)',
+              color: 'var(--surface-text)',
             }}
           >
             {footer}

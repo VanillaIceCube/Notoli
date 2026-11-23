@@ -281,8 +281,8 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
           willChange: 'width',
           overflow: 'hidden',
           height: '100%',
-          bgcolor: 'var(--secondary-background-color)',
-          color: 'var(--secondary-color)',
+          bgcolor: 'var(--surface-background)',
+          color: 'var(--surface-text)',
           borderTopLeftRadius: 15,
           borderBottomLeftRadius: 15,
         })}
@@ -291,15 +291,13 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
           variant="h4"
           align="center"
           gutterBottom
-          sx={{ mt: 2, mx: 1.5, fontWeight: 'bold', color: 'var(--secondary-color)' }}
+          sx={{ mt: 2, mx: 1.5, fontWeight: 'bold', color: 'var(--surface-text)' }}
         >
           notoli
         </Typography>
 
         <Box role="navigation">
-          <Divider
-            sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }}
-          />
+          <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--surface-text)' }} />
 
           <List disablePadding sx={{ mt: 1, mb: 1 }}>
             {/* Header row that toggles the nested content */}
@@ -316,7 +314,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
             <Collapse in={boardDrawerOpen} timeout="auto" unmountOnExit>
               <List sx={{ pb: 0 }}>
                 <Divider
-                  sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }}
+                  sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--surface-text)' }}
                 />
 
                 {/* Loading */}
@@ -345,7 +343,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
                             ml: 2,
                             my: 0.1,
                             px: 0,
-                            bgcolor: 'var(--secondary-color)',
+                            bgcolor: 'var(--surface-text)',
                           }}
                         />
                       )}
@@ -370,12 +368,12 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
                                 flexGrow: 1,
                                 mr: 1,
                                 justifyContent: 'space-between',
-                                color: 'var(--secondary-color)',
+                                color: 'var(--surface-text)',
                               }}
                               slotProps={{
                                 input: {
                                   sx: {
-                                    color: 'var(--secondary-color)',
+                                    color: 'var(--surface-text)',
                                   },
                                 },
                               }}
@@ -435,7 +433,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
                   ml: 2,
                   my: 0.1,
                   px: 0,
-                  bgcolor: 'var(--secondary-color)',
+                  bgcolor: 'var(--surface-text)',
                 }}
               />
 
@@ -447,8 +445,8 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
                     pt: 1.5,
                     pb: 0.75,
                     fontWeight: 'bold',
-                    background: 'var(--secondary-background-color)',
-                    color: 'var(--secondary-color)',
+                    background: 'var(--surface-background)',
+                    color: 'var(--surface-text)',
                   }}
                   startIcon={<Add sx={{ fontSize: 20 }} />}
                   onClick={() => setIsAdding(true)}
@@ -466,12 +464,12 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
                       flexGrow: 1,
                       mr: 1,
                       justifyContent: 'space-between',
-                      color: 'var(--secondary-color)',
+                      color: 'var(--surface-text)',
                     }}
                     slotProps={{
                       input: {
                         sx: {
-                          color: 'var(--secondary-color)',
+                          color: 'var(--surface-text)',
                         },
                       },
                     }}
@@ -493,9 +491,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
               )}
             </Collapse>
           </List>
-          <Divider
-            sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--secondary-color)' }}
-          />
+          <Divider sx={{ borderBottomWidth: 2, mx: 1, my: 0.1, bgcolor: 'var(--surface-text)' }} />
         </Box>
       </Box>
       {/* Triple dot menu */}
@@ -522,7 +518,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
           <Divider
             key="rename-divider"
             variant="middle"
-            sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+            sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--surface-text)' }}
           />,
           <MenuItem
             key="rename"
@@ -535,7 +531,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
           <Divider
             key="remove-divider"
             variant="middle"
-            sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+            sx={{ my: 0, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--surface-text)' }}
           />,
           <MenuItem
             key="remove"

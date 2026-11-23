@@ -90,14 +90,14 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
                 primary={profilePrimary}
                 secondary={profileSecondary}
                 slotProps={{
-                  primary: { sx: { fontWeight: 'bold', color: 'var(--secondary-color)' } },
-                  secondary: { sx: { color: 'var(--secondary-color)', opacity: 1 } },
+                  primary: { sx: { fontWeight: 'bold', color: 'var(--surface-text)' } },
+                  secondary: { sx: { color: 'var(--surface-text)', opacity: 1 } },
                 }}
               />
             </MenuItem>
             <Divider
               variant="middle"
-              sx={{ my: 0.25, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' }}
+              sx={{ my: 0.25, mx: 1, borderBottomWidth: 2, bgcolor: 'var(--surface-text)' }}
             />
             {import.meta.env.VITE_MCP_ENABLED === '1' && (
               <MenuItem

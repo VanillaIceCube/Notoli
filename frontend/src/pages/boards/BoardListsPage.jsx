@@ -29,8 +29,8 @@ const rowSx = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  background: 'var(--secondary-background-color)',
-  color: 'var(--secondary-color)',
+  background: 'var(--surface-background)',
+  color: 'var(--surface-text)',
   borderRadius: 1,
   width: '100%',
   minHeight: NOTEPAD_ITEM_ROW_MIN_HEIGHT,
@@ -41,8 +41,8 @@ const pageActionButtonSx = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'left',
-  background: 'var(--secondary-background-color)',
-  color: 'var(--secondary-color)',
+  background: 'var(--surface-background)',
+  color: 'var(--surface-text)',
 };
 
 const rowTitleSx = { fontSize: '1.1rem', textAlign: 'left' };
@@ -257,7 +257,7 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
             size="small"
             aria-label={`Drag ${list.name}`}
             data-testid={`list-drag-handle-${list.id}`}
-            sx={{ color: 'var(--secondary-color)', cursor: 'grab' }}
+            sx={{ color: 'var(--surface-text)', cursor: 'grab' }}
             style={DRAG_HANDLE_TOUCH_STYLE}
             {...handleProps}
           >
@@ -276,7 +276,7 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
           sx={{
             flexGrow: 1,
             justifyContent: 'flex-start',
-            color: 'var(--secondary-color)',
+            color: 'var(--surface-text)',
             textTransform: 'none',
           }}
           onClick={() =>
@@ -301,7 +301,7 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
           size="small"
           aria-label={`List actions for ${list.name}`}
           onClick={(event) => openActionMenu(event, list)}
-          sx={{ color: 'var(--secondary-color)' }}
+          sx={{ color: 'var(--surface-text)' }}
         >
           <MoreVert />
         </IconButton>

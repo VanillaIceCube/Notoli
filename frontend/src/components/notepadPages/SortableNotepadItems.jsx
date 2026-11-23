@@ -40,7 +40,7 @@ const listStyle = {
   gap: NOTEPAD_ITEM_VERTICAL_GAP,
 };
 
-const dividerSx = { borderBottomWidth: 2, bgcolor: 'var(--secondary-color)' };
+const dividerSx = { borderBottomWidth: 2, bgcolor: 'var(--surface-text)' };
 
 function SortableNotepadItem({ itemId, testIdPrefix, children }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -97,9 +97,9 @@ export default function SortableNotepadItems({
           boxSizing: 'border-box',
           px: 2,
           borderRadius: 1,
-          borderBottom: '2px solid var(--secondary-color)',
-          bgcolor: 'var(--secondary-background-color)',
-          color: 'var(--secondary-color)',
+          borderBottom: '2px solid var(--surface-text)',
+          bgcolor: 'var(--surface-background)',
+          color: 'var(--surface-text)',
           fontSize: '1.1rem',
         }}
       >

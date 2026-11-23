@@ -30,18 +30,18 @@ const userInitials = (user) => {
 const textFieldStyles = {
   backgroundColor: 'transparent',
   '& .MuiInputBase-root': {
-    color: 'var(--secondary-color)',
+    color: 'var(--surface-text)',
     bgcolor: 'rgba(255, 255, 255, 0.22)',
     borderRadius: 2,
   },
   '& .MuiOutlinedInput-notchedOutline': {
-    borderColor: 'var(--secondary-color)',
+    borderColor: 'var(--surface-text)',
   },
   '&:hover .MuiOutlinedInput-notchedOutline': {
-    borderColor: 'var(--secondary-color)',
+    borderColor: 'var(--surface-text)',
   },
   '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-    borderColor: 'var(--secondary-color)',
+    borderColor: 'var(--surface-text)',
     borderWidth: 2,
   },
 };
@@ -63,8 +63,8 @@ function AccessRow({ user, role, canRemove, removing, saving, onRemove }) {
         sx={{
           width: 36,
           height: 36,
-          bgcolor: 'var(--secondary-color)',
-          color: 'var(--secondary-background-color)',
+          bgcolor: 'var(--surface-text)',
+          color: 'var(--surface-background)',
           fontSize: '0.82rem',
           fontWeight: 'bold',
         }}
@@ -75,7 +75,7 @@ function AccessRow({ user, role, canRemove, removing, saving, onRemove }) {
         <Typography
           variant="body2"
           sx={{
-            color: 'var(--secondary-color)',
+            color: 'var(--surface-text)',
             fontWeight: 'bold',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -87,7 +87,7 @@ function AccessRow({ user, role, canRemove, removing, saving, onRemove }) {
         <Typography
           variant="caption"
           sx={{
-            color: 'var(--secondary-color)',
+            color: 'var(--surface-text)',
             display: 'block',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -102,9 +102,9 @@ function AccessRow({ user, role, canRemove, removing, saving, onRemove }) {
         size="small"
         variant={role === 'Owner' ? 'filled' : 'outlined'}
         sx={{
-          borderColor: 'var(--secondary-color)',
+          borderColor: 'var(--surface-text)',
           bgcolor: role === 'Owner' ? 'rgba(85, 85, 85, 0.16)' : 'transparent',
-          color: 'var(--secondary-color)',
+          color: 'var(--surface-text)',
           fontWeight: 'bold',
           height: 24,
         }}
@@ -115,7 +115,7 @@ function AccessRow({ user, role, canRemove, removing, saving, onRemove }) {
           aria-label={`Remove ${label}`}
           onClick={onRemove}
           disabled={removing || saving}
-          sx={{ color: 'var(--secondary-color)' }}
+          sx={{ color: 'var(--surface-text)' }}
         >
           <Delete fontSize="small" />
         </IconButton>
@@ -225,9 +225,9 @@ export default function BoardShareDialog({
         paper: {
           sx: {
             width: 'min(480px, calc(100vw - 32px))',
-            bgcolor: 'var(--secondary-background-color)',
-            color: 'var(--secondary-color)',
-            border: '2.5px solid var(--background-color)',
+            bgcolor: 'var(--surface-background)',
+            color: 'var(--surface-text)',
+            border: '2.5px solid var(--page-background)',
             borderRadius: 2,
             boxShadow: '0 18px 50px rgba(0,0,0,0.22)',
           },
@@ -243,7 +243,7 @@ export default function BoardShareDialog({
           px: 3,
           pt: 2.5,
           pb: 1,
-          color: 'var(--secondary-color)',
+          color: 'var(--surface-text)',
           fontWeight: 'bold',
         }}
       >
@@ -261,7 +261,7 @@ export default function BoardShareDialog({
           <Close fontSize="small" />
         </IconButton>
       </DialogTitle>
-      <Divider sx={{ mx: 3, borderColor: 'var(--secondary-color)', opacity: 0.45 }} />
+      <Divider sx={{ mx: 3, borderColor: 'var(--surface-text)', opacity: 0.45 }} />
       <DialogContent sx={{ px: 3, pt: 1.5, pb: 2.75 }}>
         <Stack spacing={2.25}>
           {isOwner ? (
@@ -300,9 +300,9 @@ export default function BoardShareDialog({
                   disabled={!identifier.trim() || savingAdd || Boolean(removingUserId)}
                   sx={{
                     minWidth: { xs: '100%', sm: 92 },
-                    bgcolor: 'var(--secondary-color)',
-                    color: 'var(--text-color)',
-                    '&:hover': { bgcolor: 'var(--background-color)' },
+                    bgcolor: 'var(--surface-text)',
+                    color: 'var(--page-text)',
+                    '&:hover': { bgcolor: 'var(--page-background)' },
                   }}
                 >
                   {savingAdd ? 'Adding...' : 'Add'}
@@ -310,7 +310,7 @@ export default function BoardShareDialog({
               </Stack>
             </Box>
           ) : (
-            <Typography variant="body2" sx={{ color: 'var(--secondary-color)' }}>
+            <Typography variant="body2" sx={{ color: 'var(--surface-text)' }}>
               Sharing is read-only for collaborators.
             </Typography>
           )}
@@ -325,7 +325,7 @@ export default function BoardShareDialog({
             >
               People with access
             </Typography>
-            <Divider sx={{ borderColor: 'var(--secondary-color)', opacity: 0.45 }} />
+            <Divider sx={{ borderColor: 'var(--surface-text)', opacity: 0.45 }} />
             {people.length ? (
               <Box sx={{ py: 0.25 }}>
                 {people.map(({ user, role }) => (
@@ -341,11 +341,11 @@ export default function BoardShareDialog({
                 ))}
               </Box>
             ) : (
-              <Typography sx={{ py: 1.25, color: 'var(--secondary-color)' }}>
+              <Typography sx={{ py: 1.25, color: 'var(--surface-text)' }}>
                 No people have access yet.
               </Typography>
             )}
-            <Divider sx={{ borderColor: 'var(--secondary-color)', opacity: 0.45 }} />
+            <Divider sx={{ borderColor: 'var(--surface-text)', opacity: 0.45 }} />
           </Box>
         </Stack>
       </DialogContent>

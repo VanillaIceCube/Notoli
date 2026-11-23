@@ -10,7 +10,7 @@ const dividerSx = {
   my: 0,
   mx: 1,
   borderBottomWidth: 2,
-  bgcolor: 'var(--secondary-color)',
+  bgcolor: 'var(--surface-text)',
 };
 const menuIconSx = { mr: 1, fontSize: 18 };
 

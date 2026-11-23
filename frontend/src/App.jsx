@@ -2,7 +2,7 @@ import { getSessionVersion } from './services/sessionState';
 import useSession, { useSessionGuard } from './hooks/useSession';
 import RouteContent from './components/RouteContent';
 import { CssBaseline, ThemeProvider } from '@mui/material';
-import notoliTheme from './theme';
+import appTheme from './theme';
 import { lazy, useCallback, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from 'react-router';
 import AuthenticatedRoute from './components/AuthenticatedRoute';
@@ -187,7 +187,7 @@ export default function App() {
     setSnackbar({ open: true, severity, message, version: getSessionVersion() });
   }, []);
   return (
-    <ThemeProvider theme={notoliTheme}>
+    <ThemeProvider theme={appTheme}>
       <CssBaseline />
       <Router basename={import.meta.env.BASE_URL}>
         <ApplicationSession key={version} showSnackbar={showSnackbar} />

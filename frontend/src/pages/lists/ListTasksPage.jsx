@@ -36,8 +36,8 @@ const rowSx = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  background: 'var(--secondary-background-color)',
-  color: 'var(--secondary-color)',
+  background: 'var(--surface-background)',
+  color: 'var(--surface-text)',
   borderRadius: 1,
   width: '100%',
   minHeight: NOTEPAD_ITEM_ROW_MIN_HEIGHT,
@@ -48,8 +48,8 @@ const pageActionButtonSx = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'left',
-  background: 'var(--secondary-background-color)',
-  color: 'var(--secondary-color)',
+  background: 'var(--surface-background)',
+  color: 'var(--surface-text)',
 };
 
 export default function ListTasksPage({ active = true, onPageReady = () => {}, setAppBarHeader }) {
@@ -299,11 +299,11 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
           onClick={(event) => event.stopPropagation()}
           onChange={isReordering ? undefined : (event) => toggleTaskCompletion(event, task)}
           sx={{
-            color: 'var(--secondary-color)',
+            color: 'var(--surface-text)',
             p: 0.5,
             mr: 1,
             pointerEvents: isReordering ? 'none' : 'auto',
-            '&.Mui-checked': { color: 'var(--secondary-color)' },
+            '&.Mui-checked': { color: 'var(--surface-text)' },
           }}
           slotProps={{
             input: { 'aria-label': `Mark ${task.text} complete` },
@@ -326,7 +326,7 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
             size="small"
             aria-label={`Drag ${task.text}`}
             data-testid={`task-drag-handle-${task.id}`}
-            sx={{ color: 'var(--secondary-color)', cursor: 'grab' }}
+            sx={{ color: 'var(--surface-text)', cursor: 'grab' }}
             style={DRAG_HANDLE_TOUCH_STYLE}
             {...handleProps}
           >
@@ -340,7 +340,7 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
               event.stopPropagation();
               openActionMenu(event, task);
             }}
-            sx={{ color: 'var(--secondary-color)' }}
+            sx={{ color: 'var(--surface-text)' }}
           >
             <MoreVert />
           </IconButton>

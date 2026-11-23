@@ -19,6 +19,18 @@ authentication, and the application shell.
 - `src/test-helpers/`: shared test setup and reusable helpers.
   App, startup and feature tests stay beside the files they exercise.
 
+### Where to change things
+
+| To change                                       | Start here                                                                                                                 |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Routes and layout                               | [App](src/App.jsx)                                                                                                         |
+| Header and notifications                        | [AppHeader](src/components/AppHeader.jsx), [NotificationsMenu](src/components/NotificationsMenu.jsx)                       |
+| Sign-in, registration, and password reset       | [AuthForm and its pages](src/pages/authentication/)                                                                        |
+| Shared colors, typography, and component styles | [Theme](src/theme.js)                                                                                                      |
+| Preferred board on sign-in                      | [BoardHomeRedirect](src/components/BoardHomeRedirect.js)                                                                   |
+| Board navigation and sharing                    | [BoardNavigationDrawer](src/components/BoardNavigationDrawer.jsx), [BoardShareDialog](src/components/BoardShareDialog.jsx) |
+| Lists and tasks                                 | [BoardListsPage](src/pages/boards/BoardListsPage.jsx), [ListTasksPage](src/pages/lists/ListTasksPage.jsx)                  |
+
 ## 💻 Local development
 
 Use Node.js 24.15+ within 24.x or Node.js 26.x, matching `package.json`.
@@ -71,9 +83,9 @@ reload at the current URL, preserving its query and deployment base. Navigating
 to another route clears that route's error state. The build emits separate page
 chunks; shared vendor code remains part of the signed-out dependency graph.
 
-Notoli gives each active/pending notepad slot its own boundary. The active page
-stays visible while a pending chunk loads; a pending import failure activates
-its recovery UI instead of leaving it hidden behind the previous page.
+Board and list pages have separate boundaries for the active page and the next
+page. The active page stays visible until the next page is ready. A failed
+import shows recovery controls for the next page.
 
 - `/` opens the last accessible board or the first accessible board by ID
 - `/board/:boardId` shows lists for a board
@@ -112,11 +124,10 @@ root snackbar state preserves successful login/register feedback and excludes
 messages from an older generation.
 
 `useNotifications` owns loading, retries, unread state and synchronous item/bulk
-locks. Headers inject stable app-owned API adapters and keep presentation and
-target navigation local. Generation and unmount guards discard stale lists,
-mutations and errors; token rotation preserves pending work. An earlier list
-request cannot undo a newer mutation. MacroMapper retains its existing HTTP
-error-message adapter.
+locks. `NotificationsMenu` connects the hook to the app's notification API and
+handles presentation and navigation. The hook discards stale results after
+account changes or unmount. Token rotation preserves pending work, and an
+earlier list request cannot undo a newer mutation.
 
 Authentication forms disable submission while pending. Tokens and profile data
 live in `sessionStorage`; new sessions trim profile fields and clear absent values.
@@ -148,9 +159,9 @@ Approve/Cancel. It never auto-approves or puts credentials in links. Invalid/sta
 tickets clear controls and require fresh review. Framed action review is refused;
 frontend Nginx applies `frame-ancestors 'none'`, `X-Frame-Options: DENY`, no-store and
 no-referrer to the exact `/connections/authorize` page, preserving embedding policy
-elsewhere. Only MacroMapper configures the backend handler; FullStackTemplate and
-Notoli retain reusable plumbing with action approval unavailable and existing
-domain behavior unchanged.
+elsewhere. MacroMapper and Notoli configure app-owned approval handlers.
+FullStackTemplate supplies the reusable flow for applications that register a
+handler.
 
 ### Connections response contract
 
@@ -209,6 +220,11 @@ immediately on route exit/unmount and once a disabled hook has settled.
 
 ## 🎨 Style guide
 
+Use `--page-background` and `--page-text` for the document, and
+`--surface-background` and `--surface-text` for panels and controls. The app theme
+defines these colors. Keep sibling JSX sections in the order they appear on
+screen so keyboard navigation follows the layout.
+
 `src/theme.js` owns the dark document background, pale-yellow paper surfaces and
 neutral gray controls. MUI uses light control semantics on these pale surfaces;
 body text remains white on the dark document. Preserve the system document font,
@@ -225,7 +241,7 @@ Test helpers use the actual app theme with only ripple suppression added.
 
 - Dialog and modal dividers should be inset to align with the content padding.
 - Avoid full-bleed divider lines inside dialogs unless the surrounding surface also uses full-bleed sectioning.
-- Use the app divider color (`var(--secondary-color)`) and a visible weight (`borderBottomWidth: 2`) for consistency with sidebar and list surfaces.
+- Use the app divider color (`var(--surface-text)`) and a visible weight (`borderBottomWidth: 2`) for consistency with sidebar and list surfaces.
 
 ### Dialog density
 

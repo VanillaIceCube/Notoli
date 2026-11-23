@@ -1,5 +1,6 @@
 import { act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import appTheme from './theme';
 
 const { roots } = vi.hoisted(() => ({ roots: [] }));
 
@@ -62,6 +63,13 @@ describe('application startup', () => {
 
     const app = within(container);
     expect(await app.findByRole('heading', { name: 'Login' })).toBeVisible();
+    const rootStyle = getComputedStyle(document.documentElement);
+    expect(rootStyle.getPropertyValue('--page-background').trim()).toBe(
+      appTheme.palette.background.default,
+    );
+    expect(rootStyle.getPropertyValue('--surface-background').trim()).toBe(
+      appTheme.palette.background.paper,
+    );
     expect(app.getByRole('textbox', { name: 'Email' })).toBeVisible();
     expect(app.getByLabelText('Password')).toBeVisible();
     expect(app.getByRole('button', { name: 'Login' })).toBeEnabled();
