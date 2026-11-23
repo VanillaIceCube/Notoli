@@ -22,10 +22,10 @@ describe('ResetPassword', () => {
     renderWithProviders(<ResetPassword showSnackbar={showSnackbar} />, {
       routeEntries: ['/reset-password'],
     });
-    fireEvent.change(screen.getByLabelText(/new password/i), {
+    fireEvent.change(screen.getByLabelText('New Password'), {
       target: { value: 'new_password_123!' },
     });
-    fireEvent.change(screen.getByLabelText(/confirm password/i), {
+    fireEvent.change(screen.getByLabelText('Confirm Password'), {
       target: { value: 'new_password_123!' },
     });
     await userEvent.click(
@@ -41,8 +41,8 @@ describe('ResetPassword', () => {
     renderWithProviders(<ResetPassword showSnackbar={showSnackbar} />, {
       routeEntries: ['/reset-password?uid=abc&token=tok'],
     });
-    fireEvent.change(screen.getByLabelText(/new password/i), { target: { value: 'one' } });
-    fireEvent.change(screen.getByLabelText(/confirm password/i), { target: { value: 'two' } });
+    fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'one' } });
+    fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'two' } });
     await userEvent.click(
       screen.getByRole('button', {
         name: /reset password/i,
@@ -59,8 +59,8 @@ describe('ResetPassword', () => {
     renderWithProviders(<ResetPassword showSnackbar={showSnackbar} />, {
       routeEntries: ['/reset-password?uid=abc&token=tok'],
     });
-    await userEvent.type(screen.getByLabelText(/new password/i), 'new_password_123!');
-    await userEvent.type(screen.getByLabelText(/confirm password/i), 'new_password_123!');
+    await userEvent.type(screen.getByLabelText('New Password'), 'new_password_123!');
+    await userEvent.type(screen.getByLabelText('Confirm Password'), 'new_password_123!');
     await userEvent.click(
       screen.getByRole('button', {
         name: /reset password/i,

@@ -75,7 +75,7 @@ Notoli gives each active/pending notepad slot its own boundary. The active page
 stays visible while a pending chunk loads; a pending import failure activates
 its recovery UI instead of leaving it hidden behind the previous page.
 
-- `/` redirects authenticated users to their first board when one exists
+- `/` opens the last accessible board or the first accessible board by ID
 - `/board/:boardId` shows lists for a board
 - `/board/:boardId/list/:listId` shows tasks for a list
 - Public auth routes: `/login`, `/register`, `/forgot-password`, `/reset-password?uid=<...>&token=<...>`
@@ -83,6 +83,7 @@ its recovery UI instead of leaving it hidden behind the previous page.
 - `/connections` lists and revokes Connected Apps (also available in the profile menu)
 - Everything else requires auth
 
+All four authentication pages use the shared `AuthForm` for layout and submit controls.
 Authentication-page navigation uses Material UI `Link` with React Router `Link`,
 so each destination has a real `href`, Tab/Enter access, and native new-tab
 behavior without submitting its form. Regression tests cover all five links
@@ -133,8 +134,8 @@ for Retry, and malformed mark-read responses must not navigate away.
 Use semantic links for destinations and buttons for actions, with keyboard and
 native new-tab coverage.
 
-Ordinary login lands on the preferred board; connection login preserves the
-validated pending consent path and query. Connection pages use explicit JWT
+Ordinary login goes to the home route, which chooses the preferred board.
+Connection login preserves the validated pending consent path and query. Connection pages use explicit JWT
 headers and omit cookies. JWTs never enter OAuth callback URLs. Consent and
 revocation stay account-bound; scopes and current membership remain enforced by
 Django. See [Notoli's MCP integration](../backend/apps/mcp/README.md#application-tools) and

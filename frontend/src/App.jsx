@@ -28,7 +28,7 @@ function getLocationSignature(location) {
 }
 
 function isNotepadRoute(pathname) {
-  return pathname === '/' || /^\/board\/[^/]+(?:\/list\/[^/]+)?$/.test(pathname);
+  return /^\/board\/[^/]+(?:\/list\/[^/]+)?$/.test(pathname);
 }
 
 function NotepadRoutes({ setAppBarHeader }) {
@@ -86,15 +86,6 @@ function NotepadRoutes({ setAppBarHeader }) {
       <RouteContent routeKey={slot.signature} onError={() => handlePageReady(slot.signature)}>
         <Routes location={slot.location}>
           <Route
-            path="/"
-            element={
-              <AuthenticatedRoute>
-                <BoardHomeRedirect />
-              </AuthenticatedRoute>
-            }
-          />
-
-          <Route
             path="/board/:boardId"
             element={
               <AuthenticatedRoute>
@@ -148,6 +139,14 @@ function ApplicationSession({ showSnackbar }) {
       />
       <RouteContent>
         <Routes>
+          <Route
+            path="/"
+            element={
+              <AuthenticatedRoute>
+                <BoardHomeRedirect showSnackbar={showSnackbar} />
+              </AuthenticatedRoute>
+            }
+          />
           <Route path="/login" element={<Login showSnackbar={showSnackbar} />} />
           <Route path="/register" element={<Register showSnackbar={showSnackbar} />} />
           <Route path="/forgot-password" element={<ForgotPassword showSnackbar={showSnackbar} />} />

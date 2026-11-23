@@ -1,7 +1,7 @@
 import { startSession } from '../services/sessionState';
 import { createElement } from 'react';
 import { act, waitFor } from '@testing-library/react';
-import { renderWithProviders } from '../test-helpers/utils';
+import { createDeferred, renderWithProviders } from '../test-helpers/utils';
 import BoardHomeRedirect from './BoardHomeRedirect';
 import { fetchBoards } from '../services/notoliApiClient';
 import { useNavigate } from 'react-router';
@@ -37,7 +37,7 @@ describe('BoardHomeRedirect', () => {
         id: 12,
       },
     ]);
-    renderWithProviders(createElement(BoardHomeRedirect));
+    renderWithProviders(createElement(BoardHomeRedirect, { showSnackbar: vi.fn() }));
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/board/12', {
         replace: true,
@@ -59,12 +59,48 @@ describe('BoardHomeRedirect', () => {
         id: 3,
       },
     ]);
-    renderWithProviders(createElement(BoardHomeRedirect));
+    renderWithProviders(createElement(BoardHomeRedirect, { showSnackbar: vi.fn() }));
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/board/3', {
         replace: true,
       });
     });
+  });
+  test('stays home when the account has no boards', async () => {
+    const pending = createDeferred();
+    fetchBoards.mockReturnValueOnce(pending.promise);
+    const showSnackbar = vi.fn();
+    renderWithProviders(createElement(BoardHomeRedirect, { showSnackbar }));
+    await act(async () => pending.resolve([]));
+
+    expect(fetchBoards).toHaveBeenCalledOnce();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(showSnackbar).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    [Object.assign(new Error('HTTP 500'), { status: 500 }), 'Board load failed :('],
+    [new TypeError('Failed to fetch'), 'Network error :('],
+  ])('stays home and reports a failed lookup %s', async (error, message) => {
+    fetchBoards.mockRejectedValueOnce(error);
+    const showSnackbar = vi.fn();
+    renderWithProviders(createElement(BoardHomeRedirect, { showSnackbar }));
+
+    await waitFor(() => expect(showSnackbar).toHaveBeenCalledWith('error', message));
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  test('leaving home cancels the pending board redirect', async () => {
+    const pending = createDeferred();
+    fetchBoards.mockReturnValueOnce(pending.promise);
+    const { unmount } = renderWithProviders(
+      createElement(BoardHomeRedirect, { showSnackbar: vi.fn() }),
+    );
+    unmount();
+
+    await act(async () => pending.resolve([{ id: 3 }]));
+
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
 
@@ -80,7 +116,7 @@ test('ignores a previous account board lookup when selecting the new account hom
       }),
     )
     .mockResolvedValue([{ id: 12 }]);
-  renderWithProviders(createElement(BoardHomeRedirect));
+  renderWithProviders(createElement(BoardHomeRedirect, { showSnackbar: vi.fn() }));
   act(() => startSession({ access: 'new', refresh: 'new-r' }));
   await waitFor(() => expect(navigate).toHaveBeenCalledWith('/board/12', { replace: true }));
   await act(async () => {

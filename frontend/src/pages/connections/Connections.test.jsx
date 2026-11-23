@@ -172,7 +172,6 @@ test('signed-out users use existing login, preserve the exact request, and retur
 });
 test('an external login next parameter cannot redirect the user off-site', async () => {
   sessionStorage.clear();
-  fetchBoards.mockResolvedValue([]);
   renderFlow('/login?next=https%3A%2F%2Fattacker.example%2Fconnections');
   await userEvent.type(screen.getByLabelText('Email'), 'alice@example.com');
   await userEvent.type(screen.getByLabelText('Password'), 'password');

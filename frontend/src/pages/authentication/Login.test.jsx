@@ -1,5 +1,4 @@
-import { startSession } from '../../services/sessionState';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-helpers/utils';
 import Login from './Login';
@@ -25,28 +24,9 @@ describe('Login', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
-    localStorage.clear();
     useNavigate.mockReturnValue(mockNavigate);
   });
 
-  test('a post-login board lookup cannot navigate after another account replaces the session', async () => {
-    let finish;
-    fetchBoards.mockReturnValueOnce(
-      new Promise((resolve) => {
-        finish = resolve;
-      }),
-    );
-    renderWithProviders(<Login showSnackbar={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'reader@example.com' } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'password123' } });
-    await userEvent.click(screen.getByRole('button', { name: 'Login' }));
-    await waitFor(() => expect(fetchBoards).toHaveBeenCalled());
-    act(() => startSession({ access: 'new', refresh: 'new-r' }));
-    await act(async () => {
-      finish([{ id: 1 }]);
-    });
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
   test('when rendered, it shows email/password inputs and submit button', () => {
     renderWithProviders(<Login showSnackbar={vi.fn()} />);
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
@@ -56,12 +36,6 @@ describe('Login', () => {
         name: /login/i,
       }),
     ).toBeInTheDocument();
-    // The Stack has no accessible role; inspect its computed layout to catch removed MUI props.
-    // eslint-disable-next-line testing-library/no-node-access
-    expect(screen.getByText('notoli').parentElement).toHaveStyle({
-      alignItems: 'center',
-      maxWidth: '600px',
-    });
   });
   test('when a pending snackbar exists in sessionStorage, it shows it once on render', async () => {
     sessionStorage.setItem(
@@ -81,18 +55,7 @@ describe('Login', () => {
     });
     expect(sessionStorage.getItem('pendingSnackbar')).toBeNull();
   });
-  test('when login succeeds and boards exist, it navigates to the first board', async () => {
-    fetchBoards.mockResolvedValueOnce([
-      {
-        id: 7,
-      },
-      {
-        id: 3,
-      },
-      {
-        id: 12,
-      },
-    ]);
+  test('ordinary login navigates home and lets that route choose the board', async () => {
     login.mockResolvedValue({
       access: 'ACCESS',
       refresh: 'REFRESH',
@@ -100,93 +63,18 @@ describe('Login', () => {
       email: 'test_email@example.com',
     });
     renderWithProviders(<Login showSnackbar={vi.fn()} />);
-    await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
-    await userEvent.type(screen.getByLabelText(/password/i), 'test_password');
-    await userEvent.click(
-      screen.getByRole('button', {
-        name: /login/i,
-      }),
-    );
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/board/3');
-    });
-  });
-  test('when login succeeds and the previous board is still accessible, it navigates there', async () => {
-    localStorage.setItem(
-      'notoli:lastBoardByUser',
-      JSON.stringify({
-        test_email: '12',
-      }),
-    );
-    fetchBoards.mockResolvedValueOnce([
-      {
-        id: 7,
-      },
-      {
-        id: 3,
-      },
-      {
-        id: 12,
-      },
-    ]);
-    login.mockResolvedValue({
-      access: 'ACCESS',
-      refresh: 'REFRESH',
-      username: 'test_email',
+    await userEvent.type(screen.getByLabelText('Email'), 'test_email@example.com');
+    await userEvent.type(screen.getByLabelText('Password'), 'test_password');
+    await userEvent.click(screen.getByRole('button', { name: 'Login' }));
+
+    expect(login).toHaveBeenCalledWith({
       email: 'test_email@example.com',
+      password: 'test_password',
     });
-    renderWithProviders(<Login showSnackbar={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/email/i), {
-      target: { value: 'test_email@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
-    await userEvent.click(
-      screen.getByRole('button', {
-        name: /login/i,
-      }),
-    );
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/board/12');
-    });
-  });
-  test('when login succeeds and no boards exist, it navigates home', async () => {
-    fetchBoards.mockResolvedValue([]);
-    login.mockResolvedValue({
-      access: 'ACCESS',
-      refresh: 'REFRESH',
-      username: 'test_email',
-      email: 'test_email@example.com',
-    });
-    renderWithProviders(<Login showSnackbar={vi.fn()} />);
-
-    // Type credentials
-    fireEvent.change(screen.getByLabelText(/email/i), {
-      target: { value: 'test_email@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
-
-    // Click login
-    await userEvent.click(
-      screen.getByRole('button', {
-        name: /login/i,
-      }),
-    );
-
-    // Confirm the login request happened with the creds we typed
-    await waitFor(() => {
-      expect(login).toHaveBeenCalledWith({
-        email: 'test_email@example.com',
-        password: 'test_password',
-      });
-    });
-
-    // Confirm we navigated to the main page when no boards are returned
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/');
-    });
+    expect(mockNavigate).toHaveBeenCalledWith('/', { replace: true });
+    expect(fetchBoards).not.toHaveBeenCalled();
   });
   test('when login succeeds, it stores access/refresh tokens', async () => {
-    fetchBoards.mockResolvedValue([]);
     login.mockResolvedValue({
       access: 'test_access_token',
       refresh: 'test_refresh_token',
@@ -222,7 +110,6 @@ describe('Login', () => {
     }
   });
   test('when login succeeds, it shows a success snackbar', async () => {
-    fetchBoards.mockResolvedValue([]);
     login.mockResolvedValue({
       access: 'ACCESS',
       refresh: 'REFRESH',
@@ -242,51 +129,6 @@ describe('Login', () => {
     );
     await waitFor(() => {
       expect(showSnackbar).toHaveBeenCalledWith('success', 'Welcome test_email!');
-    });
-  });
-  test('when board fetch fails after login, it navigates home', async () => {
-    fetchBoards.mockRejectedValueOnce(Object.assign(new Error('HTTP 500'), { status: 500 }));
-    login.mockResolvedValue({
-      access: 'ACCESS',
-      refresh: 'REFRESH',
-      username: 'test_email',
-      email: 'test_email@example.com',
-    });
-    renderWithProviders(<Login showSnackbar={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/email/i), {
-      target: { value: 'test_email@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
-    await userEvent.click(
-      screen.getByRole('button', {
-        name: /login/i,
-      }),
-    );
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/');
-    });
-  });
-  test('when board fetch fails after login, it shows an error snackbar', async () => {
-    fetchBoards.mockRejectedValueOnce(Object.assign(new Error('HTTP 500'), { status: 500 }));
-    login.mockResolvedValue({
-      access: 'ACCESS',
-      refresh: 'REFRESH',
-      username: 'test_email',
-      email: 'test_email@example.com',
-    });
-    const showSnackbar = vi.fn();
-    renderWithProviders(<Login showSnackbar={showSnackbar} />);
-    fireEvent.change(screen.getByLabelText(/email/i), {
-      target: { value: 'test_email@example.com' },
-    });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: 'test_password' } });
-    await userEvent.click(
-      screen.getByRole('button', {
-        name: /login/i,
-      }),
-    );
-    await waitFor(() => {
-      expect(showSnackbar).toHaveBeenCalledWith('error', 'Board load failed :(');
     });
   });
   test('when login fails, it does not navigate', async () => {

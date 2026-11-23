@@ -1,38 +1,38 @@
-import useSession, { useSessionGuard } from '../hooks/useSession';
-import { getSessionSnapshot } from '../services/sessionState';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
+import { useSessionGuard } from '../hooks/useSession';
 import { fetchBoards } from '../services/notoliApiClient';
 import { getPreferredBoardId } from '../services/lastBoard';
 
-export default function BoardHomeRedirect() {
+export default function BoardHomeRedirect({ showSnackbar }) {
   const navigate = useNavigate();
-  const { version } = useSession();
   const isCurrentSession = useSessionGuard();
 
   useEffect(() => {
-    let isMounted = true;
-    const token = getSessionSnapshot().accessToken;
-    if (!token || !isCurrentSession()) return;
+    let cancelled = false;
 
-    (async () => {
+    async function openPreferredBoard() {
       try {
         const boards = await fetchBoards();
-        if (!isMounted || !isCurrentSession() || !boards.length) return;
+        if (cancelled || !isCurrentSession()) return;
 
         const boardId = getPreferredBoardId(boards);
-        if (boardId) {
-          navigate(`/board/${boardId}`, { replace: true });
-        }
-      } catch (_err) {
-        // Leave the root route empty; board management is available in the drawer.
-      }
-    })();
+        if (boardId) navigate(`/board/${boardId}`, { replace: true });
+      } catch (error) {
+        if (cancelled || !isCurrentSession()) return;
 
+        const message = Number.isInteger(error?.status)
+          ? 'Board load failed :('
+          : 'Network error :(';
+        showSnackbar('error', message);
+      }
+    }
+
+    openPreferredBoard();
     return () => {
-      isMounted = false;
+      cancelled = true;
     };
-  }, [navigate, version, isCurrentSession]);
+  }, [navigate, isCurrentSession, showSnackbar]);
 
   return null;
 }

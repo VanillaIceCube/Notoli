@@ -13,6 +13,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 
 - Use “Task” consistently in the checklist labels, empty state, and reorder screen.
+- Align the layout of the four authentication forms, give each an accessible name, and report preferred-board loading errors on the home route.
 
 ## 2026-11-22
 

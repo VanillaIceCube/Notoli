@@ -1,14 +1,12 @@
-import { getSessionVersion } from '../../services/sessionState';
-import { useState, useCallback, useEffect } from 'react';
-import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
-import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
-import { fetchBoards as fetchBoardsApi, login } from '../../services/notoliApiClient';
+import { useState, useEffect } from 'react';
+import { TextField } from '@mui/material';
+import { useLocation, useNavigate } from 'react-router';
+import { login } from '../../services/notoliApiClient';
 import { persistAuthSession } from '../../services/authSession';
-import { getPreferredBoardId } from '../../services/lastBoard';
 import { connectionReturnTo } from '../../services/authRedirect';
+import AuthForm, { AuthLink } from './AuthForm';
 
 export default function Login({ showSnackbar }) {
-  // Basics
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,32 +33,13 @@ export default function Login({ showSnackbar }) {
     }
   }, [showSnackbar]);
 
-  // Pull Board List
-  const fetchBoards = useCallback(
-    async (sessionVersion) => {
-      try {
-        return await fetchBoardsApi();
-      } catch (err) {
-        if (getSessionVersion() === sessionVersion) {
-          const isHttpError = Number.isInteger(err?.status);
-          showSnackbar('error', isHttpError ? 'Board load failed :(' : 'Network error :(');
-        }
-        return [];
-      }
-    },
-    [showSnackbar],
-  );
-
-  // Login function
   const handleLogin = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
       const data = await login({ email: email.trim(), password });
       persistAuthSession(data);
-      const sessionVersion = getSessionVersion();
 
-      // Update Snackbar
       const welcomeName =
         data?.username ||
         data?.email?.split?.('@')?.[0] ||
@@ -68,22 +47,8 @@ export default function Login({ showSnackbar }) {
         'there';
       showSnackbar('success', `Welcome ${welcomeName}!`);
 
-      if (returnTo) {
-        navigate(returnTo, { replace: true });
-        return;
-      }
-
-      // Navigate to first Board, if empty, navigate to root
-      const boards = await fetchBoards(sessionVersion);
-      if (getSessionVersion() !== sessionVersion) return;
-      const boardId = getPreferredBoardId(boards);
-      if (boardId) {
-        navigate(`/board/${boardId}`);
-      } else {
-        navigate('/');
-      }
+      navigate(returnTo || '/', { replace: true });
     } catch (err) {
-      // Update Snackbar
       const isNetworkError =
         err instanceof TypeError ||
         (typeof err?.message === 'string' && err.message.toLowerCase().includes('network'));
@@ -95,92 +60,37 @@ export default function Login({ showSnackbar }) {
   };
 
   return (
-    <Stack
-      spacing={2}
-      sx={{
-        maxWidth: 'sm',
-        p: 5.5,
-        mx: 'auto',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '85vh',
-      }}
+    <AuthForm
+      title="Login"
+      onSubmit={handleLogin}
+      isSubmitting={isSubmitting}
+      submitLabel={isSubmitting ? 'Logging in...' : 'Login'}
+      footer={
+        <>
+          <AuthLink to="/forgot-password">Forgot Password?</AuthLink>
+          {' | '}
+          <AuthLink to="/register">Create Account!</AuthLink>
+        </>
+      }
     >
-      <Typography variant="h3" sx={{ mt: 2, fontWeight: 'bold', color: 'white' }}>
-        notoli
-      </Typography>
-      <Paper elevation={3} sx={{ p: 4, pb: 2, width: '100%' }}>
-        <Box
-          component="form"
-          autoComplete="on"
-          sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleLogin();
-          }}
-        >
-          <TextField
-            fullWidth
-            label="Email"
-            type="email"
-            name="email"
-            autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            label="Password"
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <Button fullWidth type="submit" disabled={isSubmitting} variant="contained">
-            <Typography variant="h5" align="center">
-              {isSubmitting ? 'Logging in...' : 'Login'}
-            </Typography>
-          </Button>
-          <Box
-            sx={{
-              mt: 0.5,
-              pt: 1.5,
-              borderTop: '1px solid rgba(0,0,0,0.2)',
-              textAlign: 'center',
-            }}
-          >
-            <Typography
-              variant="caption"
-              sx={{
-                color: 'var(--secondary-color)',
-                width: '100%',
-              }}
-            >
-              <Link
-                component={RouterLink}
-                variant="caption"
-                underline="always"
-                to="/forgot-password"
-                sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
-              >
-                Forgot Password?
-              </Link>
-              {' | '}
-              <Link
-                component={RouterLink}
-                variant="caption"
-                underline="always"
-                to="/register"
-                sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
-              >
-                Create Account!
-              </Link>
-            </Typography>
-          </Box>
-        </Box>
-      </Paper>
-    </Stack>
+      <TextField
+        fullWidth
+        label="Email"
+        type="email"
+        name="email"
+        autoComplete="username"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <TextField
+        fullWidth
+        label="Password"
+        type="password"
+        name="password"
+        autoComplete="current-password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+    </AuthForm>
   );
 }

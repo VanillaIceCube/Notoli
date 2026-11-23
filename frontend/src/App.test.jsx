@@ -318,6 +318,34 @@ describe('real session route lifecycle', () => {
     },
   );
 
+  test('ordinary login opens the last accessible board through the home route', async () => {
+    localStorage.setItem('notoli:lastBoardByUser', JSON.stringify({ Reader: '12' }));
+    const defaultFetch = fetch.getMockImplementation();
+    fetch.mockImplementation((url, ...options) => {
+      if (url.endsWith('/api/boards/')) {
+        return Promise.resolve(
+          reply([
+            { id: 3, name: 'First' },
+            { id: 12, name: 'Remembered' },
+          ]),
+        );
+      }
+      if (url.endsWith('/api/boards/12/')) {
+        return Promise.resolve(reply({ id: 12, name: 'Remembered' }));
+      }
+      return defaultFetch(url, ...options);
+    });
+
+    render(<SessionApp />);
+    const user = userEvent.setup();
+    await user.type(await screen.findByRole('textbox', { name: 'Email' }), 'reader@example.com');
+    await user.type(screen.getByLabelText('Password', { exact: true }), 'password123');
+    await user.click(screen.getByRole('button', { name: 'Login' }));
+
+    expect(await screen.findByRole('heading', { name: 'Remembered' })).toBeVisible();
+    expect(window.location.pathname).toBe('/board/12');
+  });
+
   test('shows the queued logout message after the session shell and lazy Login change', async () => {
     const { startSession } = await import('./services/sessionState');
     startSession(credentials);

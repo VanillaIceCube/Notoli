@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
-import { Link as RouterLink, useNavigate } from 'react-router';
+import { TextField } from '@mui/material';
+import { useNavigate } from 'react-router';
 import { forgotPassword } from '../../services/notoliApiClient';
+import AuthForm, { AuthLink } from './AuthForm';
 
 export default function ForgotPassword({ showSnackbar }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,70 +34,22 @@ export default function ForgotPassword({ showSnackbar }) {
   };
 
   return (
-    <Stack
-      spacing={2}
-      sx={{
-        maxWidth: 'sm',
-        p: 5.5,
-        mx: 'auto',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '85vh',
-      }}
+    <AuthForm
+      title="Reset your password"
+      onSubmit={handleSubmit}
+      isSubmitting={isSubmitting}
+      submitLabel={isSubmitting ? 'Sending...' : 'Send Reset Link'}
+      footer={<AuthLink to="/login">Back to Login</AuthLink>}
     >
-      <Typography variant="h3" sx={{ mt: 2, fontWeight: 'bold', color: 'white' }}>
-        notoli
-      </Typography>
-      <Paper elevation={3} sx={{ p: 4, pb: 2, width: '100%' }}>
-        <Box
-          component="form"
-          autoComplete="on"
-          sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSubmit();
-          }}
-        >
-          <TextField
-            fullWidth
-            label="Email"
-            type="email"
-            name="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <Button fullWidth type="submit" disabled={isSubmitting} variant="contained">
-            <Typography variant="h6" align="center">
-              {isSubmitting ? 'Sending...' : 'Send Reset Link'}
-            </Typography>
-          </Button>
-          <Box
-            sx={{
-              mt: 0.25,
-              pt: 0.75,
-              borderTop: '1px solid rgba(0,0,0,0.2)',
-              textAlign: 'center',
-            }}
-          >
-            <Typography
-              variant="caption"
-              sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
-            >
-              <Link
-                component={RouterLink}
-                variant="caption"
-                underline="always"
-                to="/login"
-                sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
-              >
-                Back to Login
-              </Link>
-            </Typography>
-          </Box>
-        </Box>
-      </Paper>
-    </Stack>
+      <TextField
+        fullWidth
+        label="Email"
+        type="email"
+        name="email"
+        autoComplete="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+    </AuthForm>
   );
 }
