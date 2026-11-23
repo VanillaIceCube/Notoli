@@ -2,6 +2,7 @@
 
 import copy
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -323,10 +324,12 @@ class TransactionTests(unittest.TestCase):
             ),
             patch.object(release, "manage", side_effect=self.manage),
             patch.object(release, "readiness", side_effect=self.ready),
+            patch.object(release.sys, "stderr", new_callable=io.StringIO),
         ]
         for item in self.patches:
             item.start()
             self.addCleanup(item.stop)
+        self.addCleanup(setattr, release, "CURRENT_STEP", release.CURRENT_STEP)
 
     def compose(self, directory, *args):
         self.events.append(("compose",) + args)
@@ -376,6 +379,8 @@ class TransactionTests(unittest.TestCase):
 
     def ready(self, directory):
         self.assertFalse((self.root / "current.json").exists())
+        self.assertNotIn("Release: Release accepted", release.sys.stderr.getvalue())
+        self.assertNotIn("Release: Recovery accepted", release.sys.stderr.getvalue())
         self.events.append(("ready",))
         if self.fail_readiness:
             raise release.ReleaseError("simulated readiness failure")
@@ -406,6 +411,18 @@ class TransactionTests(unittest.TestCase):
             self.events.index(("stop-writers",)),
             self.events.index(("manage", "migrate", "--noinput")),
         )
+        log = release.sys.stderr.getvalue()
+        self.assertTrue(log.endswith("Release: Release accepted\n"))
+        for private_value in (
+            "ORIGINAL=private", "original-$literal", environment()["DJANGO_SECRET_KEY"]
+        ):
+            self.assertNotIn(private_value, log)
+
+    def test_disconnected_progress_stream_does_not_interrupt_release(self):
+        with patch.object(release.sys.stderr, "write", side_effect=BrokenPipeError):
+            release.deploy(self.root, self.bundle)
+        self.assertTrue(json.loads((self.root / "current.json").read_text())["healthy"])
+        self.assertFalse((self.root / "FAILED.json").exists())
 
     def test_running_port_drift_prevents_accepting_release(self):
         self.model["services"][release.FRONTEND]["ports"] = []
@@ -438,14 +455,22 @@ class TransactionTests(unittest.TestCase):
 
     def test_migration_failure_preserves_old_db_config_and_explicit_rollback(self):
         self.fail_migration = True
-        with self.assertRaises(release.ReleaseError):
+        with self.assertRaises(release.ReleaseError) as failure:
             release.deploy(self.root, self.bundle)
+        release.report_failure(failure.exception)
+        self.assertIn(
+            "Release failed during: Applying database migrations. simulated migration failure",
+            release.sys.stderr.getvalue(),
+        )
         self.assertFalse((self.root / "current.json").exists())
         self.assertTrue((self.root / "FAILED.json").exists())
         self.assertEqual(self.events[-1], ("stop-writers",))
         with self.assertRaises(release.ReleaseError):
             release.rollback(self.root, self.identity, False, True)
         release.rollback(self.root, self.identity, True)
+        self.assertTrue(
+            release.sys.stderr.getvalue().endswith("Release: Recovery accepted\n")
+        )
         self.assertEqual(self.values(), ["original"])
         self.assertTrue(json.loads((self.root / "current.json").read_text())["healthy"])
         self.assertFalse((self.root / "FAILED.json").exists())

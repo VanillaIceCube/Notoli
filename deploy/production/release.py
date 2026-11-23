@@ -41,10 +41,43 @@ RUN_ID = re.compile(r"[0-9a-f]{40}-[0-9]+-[0-9]+")
 DIGEST = re.compile(
     r"ghcr\.io/[a-z0-9-]+/" + APP + r"-(backend|frontend)@sha256:[0-9a-f]{64}"
 )
+CURRENT_STEP = "Validating command arguments"
+REPORT_ROOT = None
 
 
 class ReleaseError(RuntimeError):
     pass
+
+
+def progress(step):
+    global CURRENT_STEP
+    CURRENT_STEP = step
+    try:
+        print("Release: " + step, file=sys.stderr, flush=True)
+    except OSError:
+        # A disconnected log stream must not interrupt the release transaction.
+        pass
+
+
+def report_failure(error):
+    # Show our safe error messages, never parsed values or subprocess output.
+    detail = str(error) if isinstance(error, ReleaseError) else type(error).__name__
+    try:
+        print(
+            "Release failed during: " + CURRENT_STEP + ". " + detail,
+            file=sys.stderr,
+            flush=True,
+        )
+        if REPORT_ROOT is not None:
+            print(
+                f"Inspect {REPORT_ROOT / 'FAILED.json'} if present and "
+                f"{REPORT_ROOT / 'recovery'} privately. "
+                "Recovery capture may be incomplete; preserve existing records before retrying.",
+                file=sys.stderr,
+                flush=True,
+            )
+    except OSError:
+        pass
 
 
 def run(args, timeout=300):
@@ -55,7 +88,11 @@ def run(args, timeout=300):
         raise ReleaseError("Command timed out: " + args[0]) from error
     if result.returncode:
         raise ReleaseError(
-            "Command failed: " + args[0] + " (output withheld; inspect privately)"
+            "Command failed: "
+            + args[0]
+            + " (exit "
+            + str(result.returncode)
+            + "; output withheld; inspect privately)"
         )
     return result.stdout
 
@@ -645,8 +682,10 @@ def readiness(directory):
     )
     deadline = time.monotonic() + 90
     while True:
+        probe = "direct backend API"
         try:
             compose(directory, "exec", "-T", BACKEND, "python", "-c", check, timeout=10)
+            probe = "public routes"
             for rule in policy["public"]:
                 check_response(
                     rule["path"],
@@ -659,7 +698,7 @@ def readiness(directory):
         except (ReleaseError, OSError, ValueError, KeyError, urllib.error.URLError):
             if time.monotonic() >= deadline:
                 raise ReleaseError(
-                    "Readiness failed within the bounded retry window"
+                    "Readiness failed within the bounded retry window: " + probe
                 ) from None
             time.sleep(2)
 
@@ -707,9 +746,12 @@ def manage(directory, image, *args):
 
 
 def deploy(root, bundle):
+    progress("Validating release bundle")
     release = validate_bundle(bundle)
+    progress("Checking host prerequisites")
     preflight(root)
     stop_management()
+    progress("Preparing release files")
     for name in ("releases", "recovery"):
         private_dir(root / name)
     candidate = root / "releases" / release["id"]
@@ -729,9 +771,12 @@ def deploy(root, bundle):
         + "\n",
     )
     validate_candidate_ports(candidate)
+    progress("Downloading backend and frontend images")
     compose(candidate, "pull", *SERVICES)
+    progress("Checking host capacity after image download")
     preflight(root)  # disk policy must still pass after image staging
     recovery = root / "recovery" / release["id"]
+    progress("Capturing recovery configuration")
     capture_recovery(root, candidate, recovery)
     begin_data_state(root)
     record = {
@@ -743,23 +788,27 @@ def deploy(root, bundle):
         root / "FAILED.json", record
     )  # also prevents a new deploy after process death
     try:
+        progress("Stopping writers and backing up the database")
         stop_writers()
         snapshot_writer(root, recovery / "db.sqlite3")
         record["stage"] = "backup-verified"
         atomic_json(root / "FAILED.json", record)
         replace_database(root, recovery / "db.sqlite3")
+        progress("Checking Django production settings")
         manage(candidate, release["backend"], "check", "--deploy")
         checked = candidate / "checked.sqlite3"
         snapshot_writer(root, checked)
         replace_database(root, checked)
         record["stage"] = "migration-started"
         atomic_json(root / "FAILED.json", record)
+        progress("Applying database migrations")
         manage(candidate, release["backend"], "migrate", "--noinput")
         # Consolidate committed container-local journals before a new app container
         # mounts the database. Keep its original ownership and mode.
         migrated = candidate / "migrated.sqlite3"
         snapshot_writer(root, migrated)
         replace_database(root, migrated)
+        progress("Starting backend and frontend")
         prepare_backend(root, candidate)
         compose(
             candidate,
@@ -788,7 +837,9 @@ def deploy(root, bundle):
                     file=sys.stderr,
                 )
             raise
+        progress("Checking backend and public readiness")
         readiness(candidate)
+        progress("Recording accepted release")
         atomic_json(
             root / "current.json",
             {
@@ -802,6 +853,7 @@ def deploy(root, bundle):
             },
         )
         (root / "FAILED.json").unlink()
+        progress("Release accepted")
     except Exception:
         # Do not let newly migrated writers run while the operator assesses recovery.
         try:
@@ -831,6 +883,7 @@ def replace_database(root, source):
 
 
 def rollback(root, recovery_id, restore_database, keep_database=False):
+    progress("Validating recovery records and database choice")
     private_dir(root)
     private_dir(root / "recovery")
     if not RUN_ID.fullmatch(recovery_id):
@@ -854,6 +907,7 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
         regular(recovery / "db.sqlite3")
     compose(recovery, "config", "--quiet")
     # Verify cached recovery images BEFORE stopping any current writer.
+    progress("Checking cached recovery images")
     for container in json.loads((recovery / "runtime.json").read_text()).values():
         docker("image", "inspect", container["Image"])
     atomic_json(
@@ -865,13 +919,18 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
         },
     )
     try:
+        progress("Stopping writers and saving current data before recovery")
         stop_management()
         stop_writers()
         # Preserve all current committed data, including container-local journals.
         rescue = recovery / ("before-rollback-" + str(time.time_ns()) + ".sqlite3")
         snapshot_writer(root, rescue)
         # Keep mode consolidates the SAME data before recreation, never an older DB.
+        progress(
+            "Restoring saved database" if restore_database else "Keeping current database"
+        )
         replace_database(root, recovery / "db.sqlite3" if restore_database else rescue)
+        progress("Starting previous backend and frontend")
         prepare_backend(root, recovery)
         compose(
             recovery,
@@ -883,7 +942,9 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
             "--force-recreate",
             *SERVICES,
         )
+        progress("Checking recovered backend and public readiness")
         readiness(recovery)
+        progress("Recording accepted recovery")
         atomic_json(
             root / "current.json",
             {
@@ -894,6 +955,7 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
             },
         )
         (root / "FAILED.json").unlink()
+        progress("Recovery accepted")
     except Exception:
         try:
             stop_writers()
@@ -906,6 +968,7 @@ def rollback(root, recovery_id, restore_database, keep_database=False):
 
 
 def main():
+    global REPORT_ROOT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("operation", choices=["deploy", "rollback"])
     parser.add_argument("--root", required=True, type=Path)
@@ -919,7 +982,9 @@ def main():
     root = args.root.resolve()
     if not re.fullmatch(r"/[A-Za-z0-9_/-]+", str(root)) or root == Path("/"):
         raise ReleaseError("Unsafe root path")
+    REPORT_ROOT = root
     os.umask(0o077)
+    progress("Acquiring deployment locks")
     with locks():
         if args.operation == "deploy":
             if args.bundle is None or args.bundle.parent != root / "incoming":
@@ -936,9 +1001,5 @@ if __name__ == "__main__":
         main()
     except (ReleaseError, OSError, ValueError, KeyError) as error:
         # Exceptions from parsed secrets or subprocess outputs must not expose their values.
-        print(
-            "Release failed; preserve recovery artifacts and inspect private state. "
-            + (str(error) if isinstance(error, ReleaseError) else type(error).__name__),
-            file=sys.stderr,
-        )
+        report_failure(error)
         sys.exit(1)

@@ -52,6 +52,14 @@ python3 "$app_root/incoming/$release_id/release.py" deploy \
 
 ## 🛟 Failure and explicit recovery
 
+The release tool writes plain progress steps to stderr, such as
+`Release: Applying database migrations`. Errors name the current step; failed commands
+include their exit code, while command output and credentials stay private.
+Readiness timeouts distinguish the direct backend API from public routes.
+On failure, inspect the app's `FAILED.json` if present and `recovery/` privately;
+early failures may leave no complete recovery set. Preserve existing records
+before retrying or choosing recovery below.
+
 `FAILED.json` is written **before stopping writers**, so process death also
 blocks the next deploy. The success record `current.json` is replaced only
 after readiness. On migration/startup/readiness failure the backend is stopped,
@@ -152,11 +160,11 @@ environment, networks, database and readiness policy; [compose.yml](compose.yml)
 defines its two services. Common release and bundle code has no app-name branches.
 Infrastructure owns `app-release/v1`, its manifest, tests and workflow template.
 `shared_source` in `app.json` pins that source to immutable commit
-`9c1102c4ac866c4925fa13260dbdc27eec1199b1` across all three consumers. CI verifies
+`3e3d8663e192d2c5141e22eeae3e4aa07fa390c8` across all three consumers. CI verifies
 the common files and generated workflow, failing on drift or unavailable source.
 Change the Infrastructure source, regenerate its manifest, then synchronize all
 consumers; never edit only a vendored common file. See the
-[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/9c1102c4ac866c4925fa13260dbdc27eec1199b1/app-release/README.md)
+[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/3e3d8663e192d2c5141e22eeae3e4aa07fa390c8/app-release/README.md)
 for the parity matrix and coordinated update procedure.
 
 Required Actions access variables: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`,
@@ -564,4 +572,4 @@ production status.
 - [Workflow guide](../../.github/workflows/README.md)
 - [App policy](app.json), [Compose](compose.yml), [bundle builder](build_bundle.py),
   [release controller](release.py) and [deployment workflow](../../.github/workflows/ci-deploy.yml)
-- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/9c1102c4ac866c4925fa13260dbdc27eec1199b1/app-release/README.md)
+- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/3e3d8663e192d2c5141e22eeae3e4aa07fa390c8/app-release/README.md)

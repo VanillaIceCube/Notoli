@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Add readable production release and recovery progress, failing-step context, command exit codes and private-record pointers from the shared engine; preserve transaction order and private subprocess output.
 - Put routine production release and recovery steps first in the existing guide; retain detailed setup, migration history, commands, section links and operational prerequisites in the same README.
 - Rename local deployment files to `compose.yml`, `compose.hotswap.yml`, `.env.example` and `nginx.conf`; update setup, validation and test references while preserving configuration and runtime behavior.
 - Align local Compose descriptions, readable startup-command formatting and environment-example sections across applications; preserve app-specific identities, isolated subnets and MacroMapper AI settings.

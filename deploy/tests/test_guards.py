@@ -6,6 +6,7 @@ import io
 import json
 import os
 from pathlib import Path
+import subprocess
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -15,7 +16,61 @@ import urllib.error
 from test_production import release
 
 
+class ReleaseMessagesTests(unittest.TestCase):
+    def test_failed_commands_report_exit_code_without_output_or_arguments(self):
+        result = subprocess.CompletedProcess(
+            ["docker"], 17, stdout="private stdout", stderr="private stderr"
+        )
+        with (
+            patch.object(release.subprocess, "run", return_value=result),
+            self.assertRaises(release.ReleaseError) as failure,
+        ):
+            release.run(["docker", "private argument"])
+        self.assertIn("docker (exit 17;", str(failure.exception))
+        for secret in ("private stdout", "private stderr", "private argument"):
+            self.assertNotIn(secret, str(failure.exception))
+
+    def test_failure_names_step_and_private_records_without_exception_values(self):
+        for error in (ValueError("private value"), KeyError("private key")):
+            with (
+                self.subTest(error=type(error).__name__),
+                patch.object(release, "CURRENT_STEP", "Applying database migrations"),
+                patch.object(release, "REPORT_ROOT", Path("/opt/apps/fixture")),
+                patch.object(release.sys, "stderr", new_callable=io.StringIO) as log,
+            ):
+                release.report_failure(error)
+                message = log.getvalue()
+            self.assertIn("Release failed during: Applying database migrations", message)
+            self.assertIn(type(error).__name__, message)
+            self.assertIn(str(Path("/opt/apps/fixture/FAILED.json")), message)
+            self.assertIn(str(Path("/opt/apps/fixture/recovery")), message)
+            self.assertIn("may be incomplete", message)
+            self.assertNotIn(str(error), message)
+
+
 class ReadinessTests(unittest.TestCase):
+    def test_timeout_names_backend_or_public_probe_without_response_details(self):
+        for backend_fails, expected in (
+            (True, "direct backend API"), (False, "public routes")
+        ):
+            with (
+                self.subTest(probe=expected),
+                patch.object(
+                    release, "compose", side_effect=(
+                        release.ReleaseError("private backend output")
+                        if backend_fails else None
+                    )
+                ),
+                patch.object(
+                    release, "check_response", side_effect=ValueError("private response")
+                ),
+                patch.object(release.time, "monotonic", side_effect=[0, 91]),
+                self.assertRaises(release.ReleaseError) as failure,
+            ):
+                release.readiness(Path("fixture"))
+            self.assertIn(expected, str(failure.exception))
+            self.assertNotIn("private", str(failure.exception))
+
     def test_public_client_identity_preserves_response_validation(self):
         def edge(request, timeout):
             self.assertEqual(request.get_header("User-agent"), "JudeAppRelease/1.0")
