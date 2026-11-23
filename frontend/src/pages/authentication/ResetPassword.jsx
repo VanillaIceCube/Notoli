@@ -3,7 +3,7 @@ import { TextField } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router';
 import { resetPassword } from '../../services/notoliApiClient';
 import { isAuthNetworkError } from '../../services/authSession';
-import AuthForm, { AuthLink } from './AuthForm';
+import AuthForm, { AuthLink } from '../../components/app-core/AuthForm';
 
 export default function ResetPassword({ showSnackbar }) {
   const [isSubmitting, setIsSubmitting] = useState(false);

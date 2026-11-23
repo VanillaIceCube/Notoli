@@ -27,7 +27,7 @@ authentication, and the application shell.
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Routes and layout                               | [App](src/App.jsx)                                                                                                                 |
 | Header and notifications                        | [AppHeader](src/components/app-core/AppHeader.jsx), [NotificationsMenu](src/components/app-core/NotificationsMenu.jsx)             |
-| Sign-in, registration, and password reset       | [AuthForm and its pages](src/pages/authentication/)                                                                                |
+| Sign-in, registration, and password reset       | [AuthForm](src/components/app-core/AuthForm.jsx) and [route pages](src/pages/authentication/)                                      |
 | Shared colors, typography, and component styles | [Theme](src/theme.js)                                                                                                              |
 | Preferred board on sign-in                      | [BoardHomeRedirect](src/components/app/BoardHomeRedirect.js)                                                                       |
 | Board navigation and sharing                    | [BoardNavigationDrawer](src/components/app/BoardNavigationDrawer.jsx), [BoardShareDialog](src/components/app/BoardShareDialog.jsx) |

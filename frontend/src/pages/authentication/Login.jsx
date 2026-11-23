@@ -5,7 +5,7 @@ import { login } from '../../services/notoliApiClient';
 import { isAuthNetworkError } from '../../services/authSession';
 import { startSession } from '../../services/sessionState';
 import { connectionReturnTo } from '../../services/authRedirect';
-import AuthForm, { AuthLink } from './AuthForm';
+import AuthForm, { AuthLink } from '../../components/app-core/AuthForm';
 
 export default function Login({ showSnackbar }) {
   const [isSubmitting, setIsSubmitting] = useState(false);

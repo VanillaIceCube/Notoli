@@ -7,13 +7,13 @@ import Add from '@mui/icons-material/Add';
 import DragIndicator from '@mui/icons-material/DragIndicator';
 import MoreVert from '@mui/icons-material/MoreVert';
 import { useLocation, useParams } from 'react-router';
-import InlineTextEditor from '../../components/notepadPages/InlineTextEditor';
-import NotepadPageShell from '../../components/notepadPages/NotepadPageShell';
-import NotepadRowActionMenu from '../../components/notepadPages/NotepadRowActionMenu';
+import InlineTextEditor from '../../components/notepad/InlineTextEditor';
+import NotepadPageShell from '../../components/notepad/NotepadPageShell';
+import NotepadRowActionMenu from '../../components/notepad/NotepadRowActionMenu';
 import SortableNotepadItems, {
   NOTEPAD_ITEM_ROW_MIN_HEIGHT,
   DRAG_HANDLE_TOUCH_STYLE,
-} from '../../components/notepadPages/SortableNotepadItems';
+} from '../../components/notepad/SortableNotepadItems';
 import {
   createTask,
   deleteTask,
