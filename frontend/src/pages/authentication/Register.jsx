@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
-import { Link as RouterLink, useNavigate } from 'react-router';
-import { register } from '../../services/notoliApiClient';
-import { persistAuthSession, readOkJson } from '../../services/authSession';
+import { TextField } from '@mui/material';
+import { useNavigate } from 'react-router';
+import { register } from '../../services/authentication/authApiClient';
+import { isAuthNetworkError } from '../../services/http/apiResponse';
+import { startSession } from '../../services/authentication/sessionState';
+import { useSessionGuard } from '../../hooks/authentication/useSession';
+import AuthForm, { AuthLink } from '../../components/app-core/AuthForm';
 
 export default function Register({ showSnackbar }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -12,6 +15,7 @@ export default function Register({ showSnackbar }) {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const navigate = useNavigate();
+  const isCurrentSession = useSessionGuard({ trackLocation: true });
 
   const handleRegister = async () => {
     if (isSubmitting) return;
@@ -21,10 +25,12 @@ export default function Register({ showSnackbar }) {
     }
 
     setIsSubmitting(true);
+    let acceptedResponse = false;
     try {
-      const response = await register({ email, username, password });
-      const data = await readOkJson(response, 'Registration failed :(');
-      persistAuthSession(data);
+      const data = await register({ email, username, password });
+      if (!isCurrentSession()) return;
+      acceptedResponse = true;
+      startSession(data);
 
       showSnackbar('success', 'Account created! Welcome to Notoli!');
       if (data?.board_id) {
@@ -33,12 +39,11 @@ export default function Register({ showSnackbar }) {
         navigate('/');
       }
     } catch (err) {
-      const isNetworkError =
-        err instanceof TypeError ||
-        (typeof err?.message === 'string' && err.message.toLowerCase().includes('network'));
+      // A session storage failure can also advance the session version.
+      if (!acceptedResponse && !isCurrentSession()) return;
       showSnackbar(
         'error',
-        isNetworkError ? 'Network error :(' : err?.message || 'Registration failed :(',
+        isAuthNetworkError(err) ? 'Network error :(' : err?.message || 'Registration failed :(',
       );
       console.error(err);
     } finally {
@@ -47,88 +52,44 @@ export default function Register({ showSnackbar }) {
   };
 
   return (
-    <Stack
-      spacing={2}
-      sx={{
-        maxWidth: 'sm',
-        p: 5.5,
-        mx: 'auto',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '85vh',
-      }}
+    <AuthForm
+      title="Create account"
+      onSubmit={handleRegister}
+      isSubmitting={isSubmitting}
+      submitLabel={isSubmitting ? 'Registering...' : 'Register'}
+      footer={
+        <>
+          Already have an account? <AuthLink to="/login">Sign in now!</AuthLink>
+        </>
+      }
     >
-      <Typography variant="h3" sx={{ mt: 2, fontWeight: 'bold', color: 'white' }}>
-        notoli
-      </Typography>
-      <Paper elevation={3} sx={{ p: 4, pb: 2, width: '100%' }}>
-        <Box
-          component="form"
-          sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleRegister();
-          }}
-        >
-          <TextField
-            fullWidth
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            label="Username (optional)"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <TextField
-            fullWidth
-            label="Confirm Password"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-          <Button fullWidth type="submit" disabled={isSubmitting} variant="contained">
-            <Typography variant="h5" align="center">
-              {isSubmitting ? 'Registering...' : 'Register'}
-            </Typography>
-          </Button>
-          <Box
-            sx={{
-              mt: 0.25,
-              pt: 0.75,
-              borderTop: '1px solid rgba(0,0,0,0.2)',
-              textAlign: 'center',
-            }}
-          >
-            <Typography
-              variant="caption"
-              sx={{ color: 'var(--secondary-color)', textAlign: 'center', width: '100%' }}
-            >
-              Already have an account?{' '}
-              <Link
-                component={RouterLink}
-                variant="caption"
-                underline="always"
-                to="/login"
-                sx={{ color: 'var(--secondary-color)', verticalAlign: 'baseline' }}
-              >
-                Sign in now!
-              </Link>
-            </Typography>
-          </Box>
-        </Box>
-      </Paper>
-    </Stack>
+      <TextField
+        fullWidth
+        label="Email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <TextField
+        fullWidth
+        label="Username (optional)"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+      />
+      <TextField
+        fullWidth
+        label="Password"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <TextField
+        fullWidth
+        label="Confirm Password"
+        type="password"
+        value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)}
+      />
+    </AuthForm>
   );
 }

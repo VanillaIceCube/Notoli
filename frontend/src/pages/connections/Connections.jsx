@@ -1,4 +1,4 @@
-import { useSessionGuard } from '../../hooks/useSession';
+import { useSessionGuard } from '../../hooks/authentication/useSession';
 import { useEffect, useState } from 'react';
 import { Alert, Box, Button, Paper, Stack, Typography } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router';
@@ -10,7 +10,7 @@ import {
   loadConnections,
   loadConsent,
   revokeConnection,
-} from '../../services/connectionsClient';
+} from '../../services/connections/connectionsClient';
 
 function ConnectionSurface({ title, children }) {
   return (
