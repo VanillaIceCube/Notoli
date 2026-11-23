@@ -1,6 +1,6 @@
 import useSession, { useSessionGuard } from '../hooks/useSession';
 import { getSessionSnapshot } from '../services/sessionState';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   List,
@@ -32,86 +32,56 @@ import { getResponseErrorMessage } from '../services/authSession';
 import {
   createBoard,
   deleteBoard,
-  fetchBoard as fetchBoardApi,
   fetchBoards as fetchBoardsApi,
   updateBoard,
 } from '../services/notoliApiClient';
 
-export default function BoardNavigationDrawer({
-  open,
-  setDrawerOpen,
-  drawerBoardsLabel,
-  setDrawerBoardsLabel,
-  showSnackbar,
-}) {
-  // Navigate using Drawer
+export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackbar }) {
   const navigate = useNavigate();
-
-  // Fetch Board Name
-  const location = useLocation();
-
-  const boardId = getBoardId(location.pathname);
-
+  const { pathname } = useLocation();
+  const boardId = getBoardId(pathname);
   const { accessToken: token, username: currentUsername, email: currentEmail } = useSession();
   const isCurrentSession = useSessionGuard();
 
-  const fetchBoardName = useCallback(async () => {
-    if (!boardId || !token) return '';
-    try {
-      const response = await fetchBoardApi(boardId, token);
-      if (!response.ok) {
-        const errorMsg = await getResponseErrorMessage(response, `HTTP ${response.status}`);
-        throw new Error(errorMsg);
-      }
-      const boardData = await response.json();
-      return boardData?.name ?? '';
-    } catch (error) {
-      return error?.message || error?.toString() || '';
-    }
-  }, [boardId, token]);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const name = await fetchBoardName();
-        if (isCurrentSession()) setDrawerBoardsLabel(name);
-      } catch {
-        if (isCurrentSession()) setDrawerBoardsLabel('');
-      }
-    })();
-  }, [fetchBoardName, setDrawerBoardsLabel, isCurrentSession]);
-
-  // Fetch Board List
   const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const activeBoardName = boards.find((board) => String(board.id) === boardId)?.name;
 
-  const fetchBoards = useCallback(async () => {
+  useEffect(() => {
     if (!token) {
       setBoards([]);
       setLoading(false);
       return;
     }
-    setLoading(true);
-    try {
-      const response = await fetchBoardsApi(token);
-      if (!response.ok) {
-        const errorMsg = await getResponseErrorMessage(response, `HTTP ${response.status}`);
-        throw new Error(errorMsg);
-      }
-      const data = await response.json();
-      setBoards(data);
-      setError(null);
-    } catch (err) {
-      setError(err?.toString() || 'Error loading boards.');
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
+    let cancelled = false;
+    const canShowBoards = () => !cancelled && isCurrentSession();
 
-  useEffect(() => {
-    fetchBoards();
-  }, [fetchBoards]);
+    async function loadBoards() {
+      setLoading(true);
+      try {
+        const response = await fetchBoardsApi(token);
+        if (!response.ok) {
+          const message = await getResponseErrorMessage(response, `HTTP ${response.status}`);
+          throw new Error(message);
+        }
+        const data = await response.json();
+        if (canShowBoards()) {
+          setBoards(data);
+          setError(null);
+        }
+      } catch (err) {
+        if (canShowBoards()) setError(err?.toString() || 'Error loading boards.');
+      } finally {
+        if (canShowBoards()) setLoading(false);
+      }
+    }
+
+    loadBoards();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, isCurrentSession]);
 
   // Add New Board
   const [isAdding, setIsAdding] = useState(false);
@@ -120,7 +90,6 @@ export default function BoardNavigationDrawer({
   useEffect(() => {
     if (!token) {
       setIsAdding(false);
-      setIsEditing(false);
       setEditingBoardId(null);
     }
   }, [token]);
@@ -196,12 +165,10 @@ export default function BoardNavigationDrawer({
   };
 
   // Rename board
-  const [isEditing, setIsEditing] = useState(false);
   const [editingBoardId, setEditingBoardId] = useState(null);
   const [editBoardName, setEditBoardName] = useState('');
 
   const startEditing = () => {
-    setIsEditing(true);
     setEditingBoardId(selectedBoard.id);
     setEditBoardName(selectedBoard.name);
     handleTripleDotClose();
@@ -250,7 +217,6 @@ export default function BoardNavigationDrawer({
   };
 
   const closeEdit = () => {
-    setIsEditing(false);
     setEditingBoardId(null);
     setEditBoardName('');
   };
@@ -322,11 +288,7 @@ export default function BoardNavigationDrawer({
   // Manage Drawer
   const [boardDrawerOpen, setBoardDrawerOpen] = useState(false);
   const toggleBoardDrawer = () => setBoardDrawerOpen((prev) => !prev);
-  const [drawerWidth, setDrawerWidth] = useState(180);
-
-  useEffect(() => {
-    setDrawerWidth(isAdding || isEditing ? 300 : 200);
-  }, [isAdding, isEditing]);
+  const drawerWidth = isAdding || editingBoardId !== null ? 300 : 200;
 
   return (
     <SwipeableDrawer
@@ -386,7 +348,7 @@ export default function BoardNavigationDrawer({
               aria-expanded={boardDrawerOpen}
               sx={{ py: 0 }}
             >
-              <ListItemText primary="Board" secondary={drawerBoardsLabel} />
+              <ListItemText primary="Board" secondary={activeBoardName} />
               {boardDrawerOpen ? <ExpandLess /> : <ExpandMore />}
             </ListItemButton>
 

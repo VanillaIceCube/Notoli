@@ -1,12 +1,10 @@
-import { startSession } from '../services/sessionState';
+import { getSessionVersion, rotateSessionTokens, startSession } from '../services/sessionState';
 vi.mock('@mui/material', async () => await vi.importActual('@mui/material'));
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState } from 'react';
 import BoardNavigationDrawer from './BoardNavigationDrawer';
 import { boardFixtures } from '../test-helpers/fixtures';
 import { createDeferred, renderWithProviders } from '../test-helpers/utils';
-import { getBoardId } from '../utils/Navigation';
 import {
   addBoardCollaborator,
   createBoard,
@@ -25,9 +23,6 @@ vi.mock('react-router', async () => ({
   useNavigate: () => mockNavigate,
   useLocation: () => mockUseLocation(),
 }));
-vi.mock('../utils/Navigation', () => ({
-  getBoardId: vi.fn(),
-}));
 vi.mock('../services/notoliApiClient', () => ({
   addBoardCollaborator: vi.fn(),
   createBoard: vi.fn(),
@@ -38,37 +33,20 @@ vi.mock('../services/notoliApiClient', () => ({
   updateBoard: vi.fn(),
 }));
 const defaultBoards = boardFixtures;
-async function renderDrawer({
-  open = true,
-  drawerBoardsLabel = '',
-  setDrawerBoardsLabel,
-  showSnackbar = vi.fn(),
-} = {}) {
+async function renderDrawer({ open = true, showSnackbar = vi.fn() } = {}) {
   const setDrawerOpen = vi.fn();
-  const labelSetter = setDrawerBoardsLabel || vi.fn();
   const view = renderWithProviders(
-    <BoardNavigationDrawer
-      open={open}
-      setDrawerOpen={setDrawerOpen}
-      drawerBoardsLabel={drawerBoardsLabel}
-      setDrawerBoardsLabel={labelSetter}
-      showSnackbar={showSnackbar}
-    />,
+    <BoardNavigationDrawer open={open} setDrawerOpen={setDrawerOpen} showSnackbar={showSnackbar} />,
   );
   await waitFor(() => {
     expect(fetchBoardsApi).toHaveBeenCalledWith('token');
   });
-  return {
-    ...view,
-    setDrawerOpen,
-    setDrawerBoardsLabel: labelSetter,
-    showSnackbar,
-  };
+  return { ...view, setDrawerOpen, showSnackbar };
 }
 async function openBoardList() {
   await userEvent.click(
     screen.getByRole('button', {
-      name: /board/i,
+      name: /^Board(?: |$)/,
     }),
   );
 }
@@ -76,18 +54,10 @@ describe('BoardNavigationDrawer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.setItem('accessToken', 'token');
+    sessionStorage.setItem('refreshToken', 'refresh');
     sessionStorage.setItem('username', 'owner');
     sessionStorage.setItem('email', 'owner@example.com');
-    mockUseLocation.mockReturnValue({
-      pathname: '/boards/1',
-    });
-    getBoardId.mockReturnValue('1');
-    fetchBoardApi.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        name: 'Main',
-      }),
-    });
+    mockUseLocation.mockReturnValue({ pathname: '/' });
     fetchBoardsApi.mockResolvedValue({
       ok: true,
       json: async () => defaultBoards,
@@ -116,34 +86,13 @@ describe('BoardNavigationDrawer', () => {
     expect(await screen.findByText('Error: HTTP 500')).toBeInTheDocument();
   });
   test('when refreshing boards fails, it keeps the existing board list visible', async () => {
-    const setDrawerOpen = vi.fn();
-    const setDrawerBoardsLabel = vi.fn();
-    const showSnackbar = vi.fn();
-    let refreshDrawer;
-    function RefreshableDrawer() {
-      const [, setRefreshCount] = useState(0);
-      refreshDrawer = () => setRefreshCount((count) => count + 1);
-      return (
-        <BoardNavigationDrawer
-          open
-          setDrawerOpen={setDrawerOpen}
-          drawerBoardsLabel=""
-          setDrawerBoardsLabel={setDrawerBoardsLabel}
-          showSnackbar={showSnackbar}
-        />
-      );
-    }
-    renderWithProviders(<RefreshableDrawer />);
-    await waitFor(() => {
-      expect(fetchBoardsApi).toHaveBeenCalledWith('token');
-    });
+    await renderDrawer();
     await openBoardList();
     expect(await screen.findByText('test_board_01')).toBeInTheDocument();
     const deferred = createDeferred();
     fetchBoardsApi.mockReturnValueOnce(deferred.promise);
-    sessionStorage.setItem('accessToken', 'token-2');
     act(() => {
-      refreshDrawer();
+      rotateSessionTokens({ access: 'token-2' }, getSessionVersion(), 'refresh');
     });
     await waitFor(() => {
       expect(fetchBoardsApi).toHaveBeenCalledWith('token-2');
@@ -167,7 +116,7 @@ describe('BoardNavigationDrawer', () => {
   test('when the Board header is clicked again, it collapses the list', async () => {
     await renderDrawer();
     const toggleButton = screen.getByRole('button', {
-      name: /board/i,
+      name: /^Board(?: |$)/,
     });
     await userEvent.click(toggleButton);
     expect(await screen.findByText('test_board_01')).toBeInTheDocument();
@@ -274,7 +223,17 @@ describe('BoardNavigationDrawer', () => {
     const input = screen.getByRole('textbox');
     expect(input).toHaveValue('test_board_01');
   });
-  test('when an edit is saved, it updates the board name', async () => {
+  test('labels a list route from the boards already loaded by the drawer', async () => {
+    mockUseLocation.mockReturnValue({ pathname: '/board/2/list/10' });
+    await renderDrawer();
+
+    expect(await screen.findByRole('button', { name: 'Board test_board_02' })).toBeVisible();
+    expect(fetchBoardsApi).toHaveBeenCalledTimes(1);
+    expect(fetchBoardApi).not.toHaveBeenCalled();
+  });
+
+  test('when an edit is saved, it updates the active board name in the header and list', async () => {
+    mockUseLocation.mockReturnValue({ pathname: '/board/1' });
     updateBoard.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -302,7 +261,8 @@ describe('BoardNavigationDrawer', () => {
         'token',
       );
     });
-    expect(await screen.findByText('test_board_01 Updated')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'test_board_01 Updated' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Board test_board_01 Updated' })).toBeVisible();
   });
   test('when Remove is selected from the menu, it removes the board', async () => {
     deleteBoard.mockResolvedValueOnce({
@@ -631,7 +591,7 @@ describe('BoardNavigationDrawer', () => {
       ok: true,
     });
 
-    // Active board is ID 1 (matches mock getBoardId)
+    mockUseLocation.mockReturnValue({ pathname: '/board/1' });
     await renderDrawer({
       showSnackbar,
     });
@@ -650,13 +610,7 @@ describe('BoardNavigationDrawer', () => {
   test('when unauthenticated, it does not call board API endpoints', async () => {
     sessionStorage.removeItem('accessToken');
     renderWithProviders(
-      <BoardNavigationDrawer
-        open
-        setDrawerOpen={vi.fn()}
-        drawerBoardsLabel=""
-        setDrawerBoardsLabel={vi.fn()}
-        showSnackbar={vi.fn()}
-      />,
+      <BoardNavigationDrawer open setDrawerOpen={vi.fn()} showSnackbar={vi.fn()} />,
     );
     await waitFor(() => {
       expect(fetchBoardsApi).not.toHaveBeenCalled();
@@ -685,29 +639,22 @@ describe('BoardNavigationDrawer', () => {
     expect(createBoard).not.toHaveBeenCalled();
     expect(showSnackbar).toHaveBeenCalledWith('error', 'Authentication required.');
   });
-  test('an old board-name response cannot change the new account label', async () => {
+  test('a late board list response cannot replace the new account board label', async () => {
+    mockUseLocation.mockReturnValue({ pathname: '/board/1' });
     const pending = createDeferred();
-    fetchBoardApi
+    fetchBoardsApi
       .mockReturnValueOnce(pending.promise)
-      .mockResolvedValue({ ok: true, json: async () => ({ name: 'New account board' }) });
-    const { setDrawerBoardsLabel } = await renderDrawer();
-    act(() => startSession({ access: 'new', refresh: 'new-r' }));
-    await waitFor(() => expect(setDrawerBoardsLabel).toHaveBeenCalledWith('New account board'));
-    await act(async () => {
-      pending.resolve({ ok: true, json: async () => ({ name: 'Old account board' }) });
-    });
-    expect(setDrawerBoardsLabel).not.toHaveBeenCalledWith('Old account board');
-  });
+      .mockResolvedValue({ ok: true, json: async () => [{ id: 1, name: 'New account board' }] });
 
-  test('a board-name response after unmount cannot publish a parent label', async () => {
-    const pending = createDeferred();
-    fetchBoardApi.mockReturnValueOnce(pending.promise);
-    const { unmount, setDrawerBoardsLabel } = await renderDrawer();
-    unmount();
+    await renderDrawer();
+    act(() => startSession({ access: 'new', refresh: 'new-r' }));
+    expect(await screen.findByRole('button', { name: 'Board New account board' })).toBeVisible();
+
     await act(async () => {
-      pending.resolve({ ok: true, json: async () => ({ name: 'Old board' }) });
+      pending.resolve({ ok: true, json: async () => [{ id: 1, name: 'Old account board' }] });
     });
-    expect(setDrawerBoardsLabel).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Board New account board' })).toBeVisible();
+    expect(screen.queryByText('Old account board')).not.toBeInTheDocument();
   });
 
   test('a delete finishing after account replacement cannot navigate or show a stale snackbar', async () => {
@@ -733,8 +680,6 @@ describe('BoardNavigationDrawer menu transitions', () => {
     vi.clearAllMocks();
     sessionStorage.clear();
     mockUseLocation.mockReturnValue({ pathname: '/' });
-    getBoardId.mockReturnValue(null);
-    fetchBoardApi.mockResolvedValue({ ok: true, json: async () => boardFixtures[0] });
     fetchBoardsApi.mockResolvedValue({ ok: true, json: async () => boardFixtures });
   });
 
@@ -744,13 +689,7 @@ describe('BoardNavigationDrawer menu transitions', () => {
     sessionStorage.setItem('accessToken', 'fixture');
     sessionStorage.setItem('username', 'owner');
     renderWithProviders(
-      <BoardNavigationDrawer
-        open
-        setDrawerOpen={vi.fn()}
-        drawerBoardsLabel=""
-        setDrawerBoardsLabel={vi.fn()}
-        showSnackbar={vi.fn()}
-      />,
+      <BoardNavigationDrawer open setDrawerOpen={vi.fn()} showSnackbar={vi.fn()} />,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Board' }));
     const icon = (await screen.findAllByTestId('MoreVertIcon'))[0];

@@ -132,7 +132,6 @@ function ApplicationSession({ showSnackbar }) {
 
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerBoardsLabel, setDrawerBoardsLabel] = useState('');
 
   const showSessionSnackbar = (severity, message) => {
     if (isCurrentSession()) showSnackbar(severity, message);
@@ -145,8 +144,6 @@ function ApplicationSession({ showSnackbar }) {
       <BoardNavigationDrawer
         open={drawerOpen}
         setDrawerOpen={setDrawerOpen}
-        drawerBoardsLabel={drawerBoardsLabel}
-        setDrawerBoardsLabel={setDrawerBoardsLabel}
         showSnackbar={showSessionSnackbar}
       />
       <RouteContent>
