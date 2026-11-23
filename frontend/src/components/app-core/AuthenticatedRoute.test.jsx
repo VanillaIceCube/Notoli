@@ -3,7 +3,7 @@ import {
   clearSession,
   rotateSessionTokens,
   getSessionSnapshot,
-} from '../../services/sessionState';
+} from '../../services/authentication/sessionState';
 import { act, fireEvent, screen } from '@testing-library/react';
 import { Route, Routes, useLocation, useNavigationType } from 'react-router';
 

@@ -1,4 +1,4 @@
-import useSession, { useSessionGuard } from '../../hooks/useSession';
+import useSession, { useSessionGuard } from '../../hooks/authentication/useSession';
 import { useMemo, useState } from 'react';
 import {
   Avatar,
@@ -17,7 +17,10 @@ import {
 import Close from '@mui/icons-material/Close';
 import Delete from '@mui/icons-material/Delete';
 import PersonAdd from '@mui/icons-material/PersonAdd';
-import { addBoardCollaborator, removeBoardCollaborator } from '../../services/notoliApiClient';
+import {
+  addBoardCollaborator,
+  removeBoardCollaborator,
+} from '../../services/notepad/notoliApiClient';
 
 const userLabel = (user) =>
   user?.display_name || user?.username || user?.email || `User ${user?.id}`;

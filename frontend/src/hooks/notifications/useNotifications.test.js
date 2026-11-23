@@ -5,7 +5,7 @@ import {
   getSessionSnapshot,
   rotateSessionTokens,
   startSession,
-} from '../services/sessionState';
+} from '../../services/authentication/sessionState';
 
 const item = {
   id: 1,

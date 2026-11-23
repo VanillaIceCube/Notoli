@@ -1,4 +1,4 @@
-import useSession, { useSessionGuard } from '../../hooks/useSession';
+import useSession, { useSessionGuard } from '../../hooks/authentication/useSession';
 // ListTasksPage loads one list's tasks and adds task-specific completion behavior to notepad UI.
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -22,9 +22,9 @@ import {
   fetchBoard as fetchBoardApi,
   reorderTasks,
   updateTask,
-} from '../../services/notoliApiClient';
-import { rememberLastBoard } from '../../services/lastBoard';
-import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+} from '../../services/notepad/notoliApiClient';
+import { rememberLastBoard } from '../../services/notepad/lastBoard';
+import { usePullToRefresh } from '../../hooks/notepad/usePullToRefresh';
 
 const TASK_STATUS_NOT_STARTED = 'Not Started';
 const TASK_STATUS_COMPLETE = 'Complete';

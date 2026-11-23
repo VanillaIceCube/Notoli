@@ -1,5 +1,5 @@
-import { apiFetch } from './requestClient';
-import { getResponseErrorMessage } from './apiResponse';
+import { apiFetch } from '../http/requestClient';
+import { getResponseErrorMessage } from '../http/apiResponse';
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
 const deleteOptions = { method: 'DELETE', headers: jsonHeaders };

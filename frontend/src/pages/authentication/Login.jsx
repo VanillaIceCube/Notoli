@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { TextField } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router';
-import { login } from '../../services/authApiClient';
-import { isAuthNetworkError } from '../../services/apiResponse';
-import { startSession } from '../../services/sessionState';
-import { connectionReturnTo } from '../../services/authRedirect';
-import { useSessionGuard } from '../../hooks/useSession';
+import { login } from '../../services/authentication/authApiClient';
+import { isAuthNetworkError } from '../../services/http/apiResponse';
+import { startSession } from '../../services/authentication/sessionState';
+import { connectionReturnTo } from '../../services/authentication/authRedirect';
+import { useSessionGuard } from '../../hooks/authentication/useSession';
 import AuthForm, { AuthLink } from '../../components/app-core/AuthForm';
 
 export default function Login({ showSnackbar }) {

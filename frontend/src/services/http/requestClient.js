@@ -1,11 +1,14 @@
-import { connectionReturnTo, loginPath as connectionLoginPath } from './authRedirect';
+import {
+  connectionReturnTo,
+  loginPath as connectionLoginPath,
+} from '../authentication/authRedirect';
 import {
   clearSession,
   getSessionSnapshot,
   getSessionVersion,
   rotateSessionTokens,
-} from './sessionState';
-import { browserLocation, navigate } from './navigationService';
+} from '../authentication/sessionState';
+import { browserLocation, navigate } from '../navigation/navigationService';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:8000');

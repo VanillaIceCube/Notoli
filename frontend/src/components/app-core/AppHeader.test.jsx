@@ -5,8 +5,8 @@ import userEvent from '@testing-library/user-event';
 import AppHeader from './AppHeader';
 import { renderWithProviders } from '../../test-helpers/utils';
 import { goBackToParent } from '../../utils/Navigation';
-import { setNavigate } from '../../services/navigationService';
-import { fetchNotifications } from '../../services/notificationApiClient';
+import { setNavigate } from '../../services/navigation/navigationService';
+import { fetchNotifications } from '../../services/notifications/notificationApiClient';
 const { mockNavigate, mockUseLocation, mockNavigateHook } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockUseLocation: vi.fn(),
@@ -20,7 +20,9 @@ vi.mock('react-router', async () => ({
 vi.mock('../../utils/Navigation', () => ({
   goBackToParent: vi.fn(),
 }));
-vi.mock('../../services/notificationApiClient', () => ({ fetchNotifications: vi.fn() }));
+vi.mock('../../services/notifications/notificationApiClient', () => ({
+  fetchNotifications: vi.fn(),
+}));
 describe('AppHeader', () => {
   test('supports profile menu keyboard navigation, dismissal, and logout', async () => {
     const user = userEvent.setup();

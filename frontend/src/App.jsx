@@ -1,6 +1,6 @@
-import { getSessionVersion } from './services/sessionState';
-import useSession, { useSessionGuard } from './hooks/useSession';
-import useBoardList from './hooks/useBoardList';
+import { getSessionVersion } from './services/authentication/sessionState';
+import useSession, { useSessionGuard } from './hooks/authentication/useSession';
+import useBoardList from './hooks/notepad/useBoardList';
 import RouteContent from './components/app-core/RouteContent';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import appTheme from './theme';
@@ -19,9 +19,9 @@ const ForgotPassword = lazy(() => import('./pages/authentication/ForgotPassword'
 const ResetPassword = lazy(() => import('./pages/authentication/ResetPassword'));
 const BoardListsPage = lazy(() => import('./pages/notepad/BoardListsPage'));
 const ListTasksPage = lazy(() => import('./pages/notepad/ListTasksPage'));
-const ConnectedApps = lazy(() => import('./pages/Connections'));
+const ConnectedApps = lazy(() => import('./pages/connections/Connections'));
 const OAuthConsent = lazy(() =>
-  import('./pages/Connections').then((module) => ({ default: module.OAuthConsent })),
+  import('./pages/connections/Connections').then((module) => ({ default: module.OAuthConsent })),
 );
 
 function getLocationSignature(location) {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getSessionSnapshot } from '../services/sessionState';
-import useSession from './useSession';
+import { getSessionSnapshot } from '../../services/authentication/sessionState';
+import useSession from '../authentication/useSession';
 
 const emptyState = (version) => ({
   version,

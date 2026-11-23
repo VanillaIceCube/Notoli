@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchBoards } from '../services/notoliApiClient';
-import useSession, { useSessionGuard } from './useSession';
+import { fetchBoards } from '../../services/notepad/notoliApiClient';
+import useSession, { useSessionGuard } from '../authentication/useSession';
 
 export default function useBoardList() {
   const { accessToken } = useSession();

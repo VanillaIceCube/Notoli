@@ -18,8 +18,8 @@ import {
   deleteTask,
   reorderTasks,
 } from './notoliApiClient';
-import { apiFetch } from './requestClient';
-vi.mock('./requestClient', () => ({
+import { apiFetch } from '../http/requestClient';
+vi.mock('../http/requestClient', () => ({
   apiFetch: vi.fn(),
 }));
 describe('notoliApiClient', () => {

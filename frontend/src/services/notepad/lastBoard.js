@@ -1,4 +1,4 @@
-import { getSessionSnapshot } from './sessionState';
+import { getSessionSnapshot } from '../authentication/sessionState';
 const STORAGE_KEY = 'notoli:lastBoardByUser';
 
 function getUserKey() {

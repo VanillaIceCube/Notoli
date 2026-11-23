@@ -9,7 +9,7 @@ describe('requestClient', () => {
 
   test('the fallback login redirect preserves the Vite deployment base', async () => {
     vi.stubEnv('BASE_URL', '/sample/');
-    const { browserLocation, clearNavigate } = await import('./navigationService');
+    const { browserLocation, clearNavigate } = await import('../navigation/navigationService');
     const replace = vi.spyOn(browserLocation, 'replace').mockImplementation(() => {});
     clearNavigate();
     const { logout } = await import('./requestClient');
@@ -18,7 +18,7 @@ describe('requestClient', () => {
   });
 
   test('background requests preserve the active consent URL when authentication expires', async () => {
-    const { setNavigate } = await import('./navigationService');
+    const { setNavigate } = await import('../navigation/navigationService');
     const mockNavigate = vi.fn();
     setNavigate(mockNavigate);
     const pending = '/connections/authorize?state=pending%26state';
@@ -34,7 +34,7 @@ describe('requestClient', () => {
     });
   });
   test('expired connection authentication returns to the pending consent after login', async () => {
-    const { setNavigate } = await import('./navigationService');
+    const { setNavigate } = await import('../navigation/navigationService');
     const mockNavigate = vi.fn();
     setNavigate(mockNavigate);
     global.fetch.mockResolvedValue({
@@ -57,7 +57,7 @@ describe('requestClient', () => {
     expect(global.fetch.mock.calls[0][1]).not.toHaveProperty('authReturnTo');
   });
   test('connection requests refresh expired JWTs without forcing a second login', async () => {
-    const { setNavigate } = await import('./navigationService');
+    const { setNavigate } = await import('../navigation/navigationService');
     const mockNavigate = vi.fn();
     setNavigate(mockNavigate);
     global.fetch
@@ -171,7 +171,7 @@ describe('requestClient', () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
     window.history.replaceState({}, '', '/board/1');
-    const { setNavigate } = await import('./navigationService');
+    const { setNavigate } = await import('../navigation/navigationService');
     const mockNavigate = vi.fn();
     setNavigate(mockNavigate);
     const { apiFetch } = await import('./requestClient');
@@ -209,7 +209,7 @@ describe('requestClient', () => {
       });
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
-    const { setNavigate } = await import('./navigationService');
+    const { setNavigate } = await import('../navigation/navigationService');
     const mockNavigate = vi.fn();
     setNavigate(mockNavigate);
     const { apiFetch } = await import('./requestClient');
@@ -242,7 +242,7 @@ describe('requestClient', () => {
       });
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
-    const { setNavigate } = await import('./navigationService');
+    const { setNavigate } = await import('../navigation/navigationService');
     const mockNavigate = vi.fn();
     setNavigate(mockNavigate);
     const { apiFetch } = await import('./requestClient');
@@ -263,7 +263,7 @@ describe('requestClient', () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
     window.history.replaceState({}, '', '/login');
-    const { setNavigate } = await import('./navigationService');
+    const { setNavigate } = await import('../navigation/navigationService');
     const mockNavigate = vi.fn();
     setNavigate(mockNavigate);
     const { apiFetch } = await import('./requestClient');
@@ -284,7 +284,7 @@ describe('requestClient', () => {
     );
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
-    const { setNavigate } = await import('./navigationService');
+    const { setNavigate } = await import('../navigation/navigationService');
     const mockNavigate = vi.fn();
     setNavigate(mockNavigate);
     const { apiFetch } = await import('./requestClient');
@@ -302,7 +302,7 @@ describe('requestClient', () => {
     sessionStorage.setItem('username', 'judea');
     sessionStorage.setItem('email', 'judea@example.com');
     window.history.replaceState({}, '', '/board/1');
-    const { setNavigate } = await import('./navigationService');
+    const { setNavigate } = await import('../navigation/navigationService');
     const mockNavigate = vi.fn();
     setNavigate(mockNavigate);
     const { logout } = await import('./requestClient');
@@ -323,7 +323,7 @@ describe('requestClient', () => {
     vi.stubEnv('VITE_API_BASE_URL', undefined);
     sessionStorage.setItem('accessToken', 'ACCESS');
     sessionStorage.setItem('refreshToken', 'REFRESH');
-    const { browserLocation, clearNavigate } = await import('./navigationService');
+    const { browserLocation, clearNavigate } = await import('../navigation/navigationService');
     const replaceSpy = vi.spyOn(browserLocation, 'replace').mockImplementation(() => {});
     clearNavigate();
     const { logout } = await import('./requestClient');
@@ -505,9 +505,9 @@ describe('session lifecycle', () => {
     'an old refresh (%s) cannot restore a logged-out session',
     async (status) => {
       const pending = deferred();
-      const { startSession } = await import('./sessionState');
+      const { startSession } = await import('../authentication/sessionState');
       startSession({ access: 'old', refresh: 'old-refresh' });
-      const { setNavigate } = await import('./navigationService');
+      const { setNavigate } = await import('../navigation/navigationService');
       const navigate = vi.fn();
       setNavigate(navigate);
       vi.stubGlobal(
@@ -536,9 +536,9 @@ describe('session lifecycle', () => {
     'an old refresh (%s) cannot overwrite or expire a new login',
     async (status) => {
       const pending = deferred();
-      const { startSession } = await import('./sessionState');
+      const { startSession } = await import('../authentication/sessionState');
       startSession({ access: 'old', refresh: 'old-refresh' });
-      const { setNavigate } = await import('./navigationService');
+      const { setNavigate } = await import('../navigation/navigationService');
       const navigate = vi.fn();
       setNavigate(navigate);
       vi.stubGlobal(
@@ -564,7 +564,7 @@ describe('session lifecycle', () => {
 
   test('a late protected 401 cannot refresh or clear a newer login', async () => {
     const pending = deferred();
-    const { startSession } = await import('./sessionState');
+    const { startSession } = await import('../authentication/sessionState');
     startSession({ access: 'old', refresh: 'old-refresh' });
     vi.stubGlobal('fetch', vi.fn().mockReturnValueOnce(pending.promise));
     const { apiFetch } = await import('./requestClient');
@@ -581,9 +581,9 @@ describe('session lifecycle', () => {
     async (path) => {
       const pendingPath = '/connections/authorize?state=keep%26this';
       window.history.replaceState({}, '', pendingPath);
-      const { startSession } = await import('./sessionState');
+      const { startSession } = await import('../authentication/sessionState');
       startSession({ access: 'old', refresh: 'old-refresh' });
-      const { setNavigate } = await import('./navigationService');
+      const { setNavigate } = await import('../navigation/navigationService');
       const navigate = vi.fn();
       setNavigate(navigate);
       vi.stubGlobal(
@@ -606,7 +606,7 @@ describe('session lifecycle', () => {
 
   test('concurrent requests share one refresh and retry with the rotated token', async () => {
     const pending = deferred();
-    const { startSession } = await import('./sessionState');
+    const { startSession } = await import('../authentication/sessionState');
     startSession({ access: 'old', refresh: 'old-refresh' });
     vi.stubGlobal(
       'fetch',
@@ -637,7 +637,7 @@ describe('session lifecycle', () => {
   test('a new login starts its own refresh while the prior session is still pending', async () => {
     const oldRefresh = deferred();
     const newRefresh = deferred();
-    const { startSession } = await import('./sessionState');
+    const { startSession } = await import('../authentication/sessionState');
     startSession({ access: 'old', refresh: 'old-refresh' });
     vi.stubGlobal(
       'fetch',
@@ -684,7 +684,7 @@ describe('reactive session ownership', () => {
     vi.unstubAllGlobals();
   });
   test('a foreign explicit Authorization 401 cannot refresh or expire the current user', async () => {
-    const { startSession, getSessionSnapshot } = await import('./sessionState');
+    const { startSession, getSessionSnapshot } = await import('../authentication/sessionState');
     startSession({ access: 'current', refresh: 'current-refresh' });
     const session = getSessionSnapshot();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 401 }));
@@ -697,9 +697,10 @@ describe('reactive session ownership', () => {
   test.each(['logout', 'expiry'])(
     '%s queues feedback before publishing the anonymous session',
     async (action) => {
-      const { startSession, getSessionSnapshot, subscribeSession } = await import('./sessionState');
+      const { startSession, getSessionSnapshot, subscribeSession } =
+        await import('../authentication/sessionState');
       startSession({ access: 'current', refresh: 'refresh' });
-      const { setNavigate } = await import('./navigationService');
+      const { setNavigate } = await import('../navigation/navigationService');
       setNavigate(vi.fn());
       const messages = [];
       const unsubscribe = subscribeSession(() => {

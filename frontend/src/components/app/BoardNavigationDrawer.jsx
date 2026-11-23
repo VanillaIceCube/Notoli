@@ -1,5 +1,5 @@
-import useSession, { useSessionGuard } from '../../hooks/useSession';
-import { getSessionSnapshot } from '../../services/sessionState';
+import useSession, { useSessionGuard } from '../../hooks/authentication/useSession';
+import { getSessionSnapshot } from '../../services/authentication/sessionState';
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -28,7 +28,7 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import BoardShareDialog from './BoardShareDialog';
 
-import { createBoard, deleteBoard, updateBoard } from '../../services/notoliApiClient';
+import { createBoard, deleteBoard, updateBoard } from '../../services/notepad/notoliApiClient';
 
 export default function BoardNavigationDrawer({ boardList, open, setDrawerOpen, showSnackbar }) {
   const navigate = useNavigate();

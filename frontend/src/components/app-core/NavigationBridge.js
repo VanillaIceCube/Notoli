@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { clearNavigate, setNavigate } from '../../services/navigationService';
+import { clearNavigate, setNavigate } from '../../services/navigation/navigationService';
 
 export default function NavigationBridge() {
   const navigate = useNavigate();

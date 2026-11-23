@@ -1,6 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import useSession, { useSessionGuard } from './useSession';
-import { clearSession, startSession, rotateSessionTokens } from '../services/sessionState';
+import {
+  clearSession,
+  startSession,
+  rotateSessionTokens,
+} from '../../services/authentication/sessionState';
 
 beforeEach(() => {
   sessionStorage.clear();

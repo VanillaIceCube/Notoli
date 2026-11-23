@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { Link, Route, Routes } from 'react-router';
 import RouteContent from './RouteContent';
 import { renderWithProviders } from '../../test-helpers/utils';
-import { browserLocation } from '../../services/navigationService';
+import { browserLocation } from '../../services/navigation/navigationService';
 
 afterEach(() => vi.restoreAllMocks());
 

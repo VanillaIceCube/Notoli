@@ -213,7 +213,7 @@ test('a failed pending notepad chunk becomes a visible recoverable route', async
   });
   vi.doMock('./pages/notepad/ListTasksPage', () => pending);
   const { default: FailedApp } = await import('./App');
-  const { browserLocation } = await import('./services/navigationService');
+  const { browserLocation } = await import('./services/navigation/navigationService');
   const reload = vi.spyOn(browserLocation, 'reload').mockImplementation(() => {});
   vi.spyOn(console, 'error').mockImplementation(() => {});
   render(
@@ -345,7 +345,7 @@ describe('real session route lifecycle', () => {
 
   test('a late login response cannot replace the new account', async () => {
     const pending = await submitPendingAuthRequest('login');
-    const { startSession } = await import('./services/sessionState');
+    const { startSession } = await import('./services/authentication/sessionState');
     act(() => startSession({ access: 'new-access', refresh: 'new-refresh' }));
     await act(async () => pending.resolve(reply(credentials)));
     expect(sessionStorage.getItem('accessToken')).toBe('new-access');
@@ -426,7 +426,7 @@ describe('real session route lifecycle', () => {
   });
 
   test('returning home retries an earlier failed board list request', async () => {
-    const { startSession } = await import('./services/sessionState');
+    const { startSession } = await import('./services/authentication/sessionState');
     startSession(credentials);
     window.history.replaceState({}, '', '/');
     const defaultFetch = fetch.getMockImplementation();
@@ -457,7 +457,7 @@ describe('real session route lifecycle', () => {
   });
 
   test('shows the queued logout message after the session shell and lazy Login change', async () => {
-    const { startSession } = await import('./services/sessionState');
+    const { startSession } = await import('./services/authentication/sessionState');
     startSession(credentials);
     window.history.replaceState({}, '', '/');
     render(<SessionApp />);
@@ -474,7 +474,7 @@ describe('real session route lifecycle', () => {
     window.history.replaceState({}, '', '/');
     render(<SessionApp />);
     expect(await screen.findByLabelText('user profile')).toBeVisible();
-    const { apiFetch } = await import('./services/requestClient');
+    const { apiFetch } = await import('./services/http/requestClient');
     await act(() => apiFetch('/api/expired/'));
     expect(await screen.findByRole('heading', { name: 'Login' })).toBeVisible();
     expect(await screen.findByText('Your session expired. Please log in again.')).toBeVisible();
@@ -508,7 +508,7 @@ describe('real session route lifecycle', () => {
   });
 
   test('account replacement closes account menus and presents only the current profile', async () => {
-    const { startSession } = await import('./services/sessionState');
+    const { startSession } = await import('./services/authentication/sessionState');
     startSession(credentials);
     window.history.replaceState({}, '', '/');
     render(<SessionApp />);

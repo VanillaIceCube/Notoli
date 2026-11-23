@@ -1,4 +1,4 @@
-import { apiFetch } from './requestClient';
+import { apiFetch } from '../http/requestClient';
 
 const jsonHeaders = { 'Content-Type': 'application/json' };
 

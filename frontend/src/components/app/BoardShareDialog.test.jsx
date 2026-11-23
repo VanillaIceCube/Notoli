@@ -2,8 +2,11 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-helpers/utils';
 import BoardShareDialog from './BoardShareDialog';
-import { addBoardCollaborator, removeBoardCollaborator } from '../../services/notoliApiClient';
-vi.mock('../../services/notoliApiClient', () => ({
+import {
+  addBoardCollaborator,
+  removeBoardCollaborator,
+} from '../../services/notepad/notoliApiClient';
+vi.mock('../../services/notepad/notoliApiClient', () => ({
   addBoardCollaborator: vi.fn(),
   removeBoardCollaborator: vi.fn(),
 }));

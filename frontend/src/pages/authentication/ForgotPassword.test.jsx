@@ -2,13 +2,13 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-helpers/utils';
 import ForgotPassword from './ForgotPassword';
-import { forgotPassword } from '../../services/authApiClient';
+import { forgotPassword } from '../../services/authentication/authApiClient';
 import { Route, Routes, useNavigate } from 'react-router';
 vi.mock('react-router', async () => ({
   ...(await vi.importActual('react-router')),
   useNavigate: vi.fn(),
 }));
-vi.mock('../../services/authApiClient', () => ({
+vi.mock('../../services/authentication/authApiClient', () => ({
   forgotPassword: vi.fn(),
 }));
 describe('ForgotPassword', () => {

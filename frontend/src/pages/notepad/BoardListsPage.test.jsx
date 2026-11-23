@@ -14,7 +14,7 @@ import {
   fetchLists as fetchListsApi,
   fetchBoard as fetchBoardApi,
   updateList,
-} from '../../services/notoliApiClient';
+} from '../../services/notepad/notoliApiClient';
 const { mockNavigate, mockUseParams } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockUseParams: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock('react-router', async () => ({
   useNavigate: () => mockNavigate,
   useParams: () => mockUseParams(),
 }));
-vi.mock('../../services/notoliApiClient', () => ({
+vi.mock('../../services/notepad/notoliApiClient', () => ({
   createList: vi.fn(),
   deleteList: vi.fn(),
   fetchLists: vi.fn(),

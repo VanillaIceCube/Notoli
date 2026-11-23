@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
-import { getSessionSnapshot, getSessionVersion, subscribeSession } from '../services/sessionState';
+import {
+  getSessionSnapshot,
+  getSessionVersion,
+  subscribeSession,
+} from '../../services/authentication/sessionState';
 
 export default function useSession() {
   return useSyncExternalStore(subscribeSession, getSessionSnapshot, getSessionSnapshot);

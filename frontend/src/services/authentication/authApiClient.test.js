@@ -1,8 +1,8 @@
 // @vitest-environment node
 
 import { login, register, forgotPassword, resetPassword } from './authApiClient';
-import { apiFetch } from './requestClient';
-vi.mock('./requestClient', () => ({
+import { apiFetch } from '../http/requestClient';
+vi.mock('../http/requestClient', () => ({
   apiFetch: vi.fn(),
 }));
 describe('authApiClient', () => {

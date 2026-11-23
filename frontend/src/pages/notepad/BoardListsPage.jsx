@@ -1,4 +1,4 @@
-import useSession, { useSessionGuard } from '../../hooks/useSession';
+import useSession, { useSessionGuard } from '../../hooks/authentication/useSession';
 // BoardListsPage loads one board's lists and plugs board-specific CRUD/navigation into notepad UI.
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -21,9 +21,9 @@ import {
   fetchBoard as fetchBoardApi,
   reorderLists,
   updateList,
-} from '../../services/notoliApiClient';
-import { rememberLastBoard } from '../../services/lastBoard';
-import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+} from '../../services/notepad/notoliApiClient';
+import { rememberLastBoard } from '../../services/notepad/lastBoard';
+import { usePullToRefresh } from '../../hooks/notepad/usePullToRefresh';
 
 const rowSx = {
   display: 'flex',

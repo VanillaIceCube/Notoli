@@ -4,11 +4,11 @@ import {
   getSessionVersion,
   rotateSessionTokens,
   startSession,
-} from '../services/sessionState';
-import { fetchBoards } from '../services/notoliApiClient';
+} from '../../services/authentication/sessionState';
+import { fetchBoards } from '../../services/notepad/notoliApiClient';
 import useBoardList from './useBoardList';
 
-vi.mock('../services/notoliApiClient', () => ({ fetchBoards: vi.fn() }));
+vi.mock('../../services/notepad/notoliApiClient', () => ({ fetchBoards: vi.fn() }));
 
 beforeEach(() => startSession({ access: 'access', refresh: 'refresh' }));
 afterEach(() => clearSession());

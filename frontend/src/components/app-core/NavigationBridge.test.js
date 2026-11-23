@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderWithProviders } from '../../test-helpers/utils';
 import NavigationBridge from './NavigationBridge';
-import { navigate } from '../../services/navigationService';
+import { navigate } from '../../services/navigation/navigationService';
 const { mockNavigate } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
 }));

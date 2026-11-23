@@ -1,6 +1,10 @@
-import useBoardList from '../../hooks/useBoardList';
-import useSession from '../../hooks/useSession';
-import { getSessionVersion, rotateSessionTokens, startSession } from '../../services/sessionState';
+import useBoardList from '../../hooks/notepad/useBoardList';
+import useSession from '../../hooks/authentication/useSession';
+import {
+  getSessionVersion,
+  rotateSessionTokens,
+  startSession,
+} from '../../services/authentication/sessionState';
 vi.mock('@mui/material', async () => await vi.importActual('@mui/material'));
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -15,7 +19,7 @@ import {
   fetchBoards as fetchBoardsApi,
   removeBoardCollaborator,
   updateBoard,
-} from '../../services/notoliApiClient';
+} from '../../services/notepad/notoliApiClient';
 const { mockNavigate, mockUseLocation } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockUseLocation: vi.fn(),
@@ -25,7 +29,7 @@ vi.mock('react-router', async () => ({
   useNavigate: () => mockNavigate,
   useLocation: () => mockUseLocation(),
 }));
-vi.mock('../../services/notoliApiClient', () => ({
+vi.mock('../../services/notepad/notoliApiClient', () => ({
   addBoardCollaborator: vi.fn(),
   createBoard: vi.fn(),
   deleteBoard: vi.fn(),

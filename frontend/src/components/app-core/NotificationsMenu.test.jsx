@@ -10,7 +10,7 @@ import {
   fetchNotifications,
   markAllNotificationsRead,
   markNotificationRead,
-} from '../../services/notificationApiClient';
+} from '../../services/notifications/notificationApiClient';
 
 const { mockNavigate, mockNavigateHook } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
@@ -22,7 +22,7 @@ vi.mock('react-router', async () => ({
   useNavigate: mockNavigateHook,
 }));
 
-vi.mock('../../services/notificationApiClient', () => ({
+vi.mock('../../services/notifications/notificationApiClient', () => ({
   clearAllNotifications: vi.fn(),
   clearNotification: vi.fn(),
   fetchNotifications: vi.fn(),

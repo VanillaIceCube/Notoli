@@ -16,13 +16,13 @@ authentication, and the application shell.
   Standard components maintained across the three apps live in [src/components/app-core/](src/components/app-core/).
   App-specific layout and navigation live in [src/components/app/](src/components/app/).
 - `src/pages/`: application pages and routes.
-- `src/services/`: API requests, response parsing in `apiResponse.js` and session storage in `sessionState.js`.
+- `src/services/`: API requests, response parsing in `http/apiResponse.js` and session storage in `authentication/sessionState.js`.
 - `src/hooks/`: reactive session access, notifications, the session’s board list and pull-to-refresh gestures.
 - `src/test-helpers/`: shared test setup and reusable helpers.
   App, startup and feature tests stay beside the files they exercise.
 
-Keep `components/`, `pages/`, `hooks/` and `services/` flat by default. Group modules you
-usually edit together one level down. A source file and its adjacent test count as one module.
+Under `components/`, `pages/`, `hooks/` and `services/`, put every module and its
+adjacent test in exactly one purpose-named subfolder. Use lowercase names with hyphens between words.
 
 ### Where to change things
 
@@ -113,7 +113,7 @@ compatibility form, not an additional React route.
 
 ## 🔐 Sessions and connections
 
-`src/services/sessionState.js` is the sole owner of the compatible access/refresh
+`src/services/authentication/sessionState.js` is the sole owner of the compatible access/refresh
 and username/email storage keys. Its cached snapshots and subscriptions feed
 `useSession`; login/logout replace the account generation, while guarded refresh
 updates tokens without replacing that generation. Do not read or mutate auth
@@ -195,7 +195,7 @@ Board management lives in the right sidebar. Open the Board list, use a board ro
 
 Tasks in a list render as checklist rows. Checking a task sets its `status` to `Complete` and strikes through the task text immediately. Unchecking sets it to `Not Started`. The API also supports `In Progress`.
 
-Authentication and notification requests live in `authApiClient.js` and `notificationApiClient.js`. The board, list and task client `notoliApiClient.js` translates between task `text` and the existing `note` field on `/api/notes/` routes.
+Authentication and notification requests live in `src/services/authentication/authApiClient.js` and `src/services/notifications/notificationApiClient.js`. The board, list and task client `src/services/notepad/notoliApiClient.js` translates between task `text` and the existing `note` field on `/api/notes/` routes.
 
 ### In-app notifications
 
