@@ -245,7 +245,7 @@ supplies transport and common OAuth plumbing.
 - `permissions.py`: operation scopes and live OAuth principal checks.
 - `services.py`: authenticated read/mutation routing, transaction and bounded-result boundary.
 - `queries.py`: read-only discovery, actor-scoped lookups and exact locked sensitive-action snapshots.
-- `operations.py`: mutation dispatch through authoritative [notes services](../notes/services.py) and [notification services](../notifications/services.py).
+- `operations.py`: maps each mutation to a named handler that calls the [notes services](../notes/services.py) or [notification services](../notifications/services.py).
 - `results.py`: domain-shaped formatting and adaptive pagination; no authorization policy.
 - `schemas.py`: domain outputs with replay metadata and sensitive preparation/execution envelopes.
 - `models.py` and `migrations/`: private Confirmation state, ActorLock and durable Execution receipts under the existing `integrations` label.
