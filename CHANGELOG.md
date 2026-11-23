@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-22
+
+### Changed
+
+- Rename local deployment files to `compose.yml`, `compose.hotswap.yml`, `.env.example` and `nginx.conf`; update setup, validation and test references while preserving configuration and runtime behavior.
+- Align local Compose descriptions, readable startup-command formatting and environment-example sections across applications; preserve app-specific identities, isolated subnets and MacroMapper AI settings.
+
 ## 2026-11-16
 
 ### Fixed

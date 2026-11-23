@@ -76,7 +76,7 @@ class ProxyTrustTests(SimpleTestCase):
 
     def test_compose_and_nginx_enforce_the_proxy_boundary(self):
         root = Path(__file__).resolve().parents[3]
-        compose = yaml.safe_load((root / "deploy/docker-compose.yml").read_text())
+        compose = yaml.safe_load((root / "deploy/compose.yml").read_text())
         backend = compose["services"]["backend"]
         proxy = compose["services"]["proxy"]
         frontend = compose["services"]["frontend"]
@@ -90,7 +90,7 @@ class ProxyTrustTests(SimpleTestCase):
             proxy["networks"]["backend_private"]["ipv4_address"],
         )
         self.assertTrue(compose["networks"]["backend_private"]["internal"])
-        nginx = (root / "deploy/nginx-proxy.conf").read_text()
+        nginx = (root / "deploy/nginx.conf").read_text()
         self.assertNotIn("$http_x_forwarded_proto", nginx)
         self.assertNotIn("$proxy_add_x_forwarded_for", nginx)
         self.assertIn("proxy_set_header X-Forwarded-Proto $scheme;", nginx)
@@ -102,7 +102,7 @@ class ProxyTrustTests(SimpleTestCase):
 
     def test_private_network_members_have_distinct_fixed_addresses(self):
         root = Path(__file__).resolve().parents[3]
-        compose = yaml.safe_load((root / "deploy/docker-compose.yml").read_text())
+        compose = yaml.safe_load((root / "deploy/compose.yml").read_text())
         private_network = compose["networks"]["backend_private"]
         subnet = ip_network(private_network["ipam"]["config"][0]["subnet"])
         addresses = []

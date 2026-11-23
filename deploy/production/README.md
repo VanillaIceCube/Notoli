@@ -112,7 +112,7 @@ cutover acceptance still requires both apps.
 
 Releases never create/delete networks, publish a backend port, upload TLS/vhosts,
 reload the gateway, run whole-project `down`/`remove-orphans` or prune host images.
-Local `deploy/docker-compose.yml` and `deploy/nginx-proxy.conf` are local/legacy
+Local `deploy/compose.yml` and `deploy/nginx.conf` are local/legacy
 inputs, never production release inputs. The retired shared-proxy deployment
 must not be restored. Preserve installed legacy evidence until the separately
 approved transfer/recovery is verified.
