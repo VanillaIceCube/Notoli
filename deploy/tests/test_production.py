@@ -531,8 +531,10 @@ class TransactionTests(unittest.TestCase):
         self.assertTrue(current["healthy"])
         recovery = self.root / "recovery" / self.identity
         self.assertTrue((recovery / "db.sqlite3").is_file())
+        self.assertFalse((recovery / "legacy-evidence").exists())
+        self.assertEqual((self.root / ".env").read_text(), "ORIGINAL=private")
         self.assertEqual(
-            (recovery / "legacy-evidence/.env").read_text(), "ORIGINAL=private"
+            (self.root / "docker-compose.yml").read_text(), "legacy proxy config"
         )
         model = json.loads((recovery / "compose.yml").read_text())
         self.assertEqual(set(model["services"]), set(release.SERVICES))

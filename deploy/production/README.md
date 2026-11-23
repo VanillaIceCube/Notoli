@@ -69,8 +69,9 @@ A SIGKILL/host crash still requires the operator to inspect containers and stop
 writers before recovery; the persistent marker does not itself stop a process.
 
 The private recovery set contains captured effective runtime (including Env),
-app-only Compose, raw old environment, immutable old local image IDs, original
-config/script/env evidence, previous release files/record, and verified DB backup.
+app-only Compose, raw old service environment, immutable old local image IDs,
+matched previous release files/record, and verified DB backup. New captures omit
+retired root-level Compose/proxy/env files; older recovery archives retain them.
 Retain these plus cached images. The tool never prunes them. Keep recovery files
 private and out of logs/tickets. Retained management containers also contain raw
 environment and possible DB journals; treat them as private recovery evidence.
@@ -171,11 +172,11 @@ other apps' networks. `workflow.extra_env` adds only app-specific Actions inputs
 all frontend builds use `VITE_API_BASE_URL=` for same-origin API requests.
 Infrastructure owns `app-release/v1`, its manifest, tests and workflow template.
 `shared_source` in `app.json` pins that source to immutable commit
-`50aeb6222613b803d3526082529966dfedd102f5` across all three consumers. CI verifies
+`4d5afa9f7fd0a4e742d97fc8d56b062dfe04c958` across all three consumers. CI verifies
 the common files and generated workflow, failing on drift or unavailable source.
 Change the Infrastructure source, regenerate its manifest, then synchronize all
 consumers; never edit only a vendored common file. See the
-[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/50aeb6222613b803d3526082529966dfedd102f5/app-release/README.md)
+[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/4d5afa9f7fd0a4e742d97fc8d56b062dfe04c958/app-release/README.md)
 for the parity matrix and coordinated update procedure.
 
 Required Actions access variables: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`,
@@ -278,16 +279,18 @@ from every app release.
 
 The port-removal release requires a healthy accepted Notoli release record
 (current.json) whose checksummed app policy permits the existing bindings.
-A recovered release can use its retained previous-release app.json and
-manifest. When those records are absent, preflight checks the running
-ports against the incoming policy and rejects a direct transition from
-legacy port 3000 to no host ports.
+A recovered release requires its retained previous-release app.json and
+manifest. Missing saved policy fails preflight; the incoming candidate cannot
+substitute for the accepted recovery policy. Use the matched historical
+recovery/adoption procedure to establish a verified baseline when records are
+incomplete; never fabricate or guess an accepted policy.
 
-For an unrecorded legacy deployment or a recovered release without a saved
-app policy, first use the existing app adoption process. Review a baseline
-release that keeps the live approved bindings in both Compose and app.json,
-and deploy it through env-prod with the current database. Once that release
-records its healthy policy, promote the separate port-removal change.
+For an unrecorded legacy deployment, first use the existing app adoption process.
+Review a baseline release that keeps the live approved bindings in both Compose
+and app.json, and deploy it through env-prod with the current database. With no
+accepted record, preflight uses the incoming policy and rejects a direct change
+from legacy port 3000 to no host ports. Once the baseline records its healthy
+policy, promote the separate port-removal change.
 The Infrastructure #23 migration notes recorded a healthy, checksum-verified
 baseline release. Verify the retained record again before a transition.
 
@@ -490,8 +493,10 @@ image identities, topology, fixed trust, existing DB bind, 512 MiB available
 memory and 20% disk headroom after allowance for recovery copies. These floors
 do not certify representative peak capacity. It resolves/pulls images, captures
 private runtime state and produces an **app-only recovery Compose model** pinned
-to cached previous image IDs. Original legacy files are retained as private
-evidence; they are never executed as rollback scripts.
+to cached previous image IDs, alongside the matched previous release bundle.
+Retired root-level stack files are no longer copied into new recovery sets.
+Existing historical archives remain private and use their reviewed procedures;
+proxy-owning legacy scripts are not app recovery controllers.
 
 The backend and any surviving app-labelled management containers stop before
 SQLite backup. Private `data-state.json` records the exact writer ID or a unique
@@ -584,4 +589,4 @@ production status.
 - [Workflow guide](../../.github/workflows/README.md)
 - [App policy](app.json), [Compose](compose.yml), [bundle builder](build_bundle.py),
   [release controller](release.py) and [deployment workflow](../../.github/workflows/ci-deploy.yml)
-- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/50aeb6222613b803d3526082529966dfedd102f5/app-release/README.md)
+- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/4d5afa9f7fd0a4e742d97fc8d56b062dfe04c958/app-release/README.md)

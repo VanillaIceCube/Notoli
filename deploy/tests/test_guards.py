@@ -163,6 +163,50 @@ class CandidatePortTests(unittest.TestCase):
 
 @unittest.skipUnless(os.name == "posix", "Host preflight requires Linux")
 class PreflightTests(unittest.TestCase):
+    def test_recovered_release_requires_its_saved_port_policy_without_guessing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            identity = "a" * 40 + "-100-1"
+            recovery = root / "recovery" / identity
+            recovery.parent.mkdir(mode=0o700)
+            recovery.mkdir(mode=0o700)
+            (root / "current.json").write_text(
+                json.dumps(
+                    {
+                        "id": "recovered-" + identity,
+                        "directory": str(recovery),
+                        "healthy": True,
+                    }
+                )
+            )
+            with patch.dict(release.CONFIG, {"frontend_port_bindings": [[]]}):
+                # Neither a missing directory nor a missing app.json may use
+                # the incoming candidate's otherwise valid no-port policy.
+                with self.assertRaises(release.ReleaseError):
+                    release.current_frontend_port_policy(root)
+                previous = recovery / "previous-release"
+                previous.mkdir(mode=0o700)
+                with self.assertRaises(release.ReleaseError):
+                    release.current_frontend_port_policy(root)
+                ports = [[("80/tcp", "127.0.0.1", "3000")]]
+                policy = release.CONFIG | {"frontend_port_bindings": ports}
+                app = previous / "app.json"
+                app.write_text(json.dumps(policy))
+                (previous / "manifest.json").write_text(
+                    json.dumps(
+                        {
+                            "app.json": hashlib.sha256(app.read_bytes()).hexdigest(),
+                        }
+                    )
+                )
+                self.assertEqual(
+                    release.current_frontend_port_policy(root),
+                    json.loads(json.dumps(ports)),
+                )
+                app.write_text(json.dumps(release.CONFIG))
+                with self.assertRaisesRegex(release.ReleaseError, "checksum mismatch"):
+                    release.current_frontend_port_policy(root)
+
     def test_preflight_port_policy_comes_from_the_accepted_release(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

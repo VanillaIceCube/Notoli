@@ -16,6 +16,8 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Stop recopying retired root-level Compose, proxy, script and environment files into new recovery sets; retain effective runtime, matched previous releases and SQLite recovery data.
+- Remove the incoming port-policy fallback for recovered releases without a saved policy; require their checksummed accepted policy instead.
 - Remove retired Resend backend-name conversion from Django settings and the shared bundle builder; new production bundles require an explicit maintained Anymail or SMTP backend.
 - Remove the unused deployment root hint, repeated frontend build-argument selector and completed parity-checker cleanup migration.
 

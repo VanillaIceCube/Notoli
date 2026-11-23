@@ -248,14 +248,6 @@ def current_frontend_port_policy(root):
         private_dir(parent)
         private_dir(directory)
         directory = directory / "previous-release"
-        if not directory.exists() and not directory.is_symlink():
-            # Legacy recovery had no earlier app policy. Require the incoming one.
-            return CONFIG["frontend_port_bindings"]
-        if (
-            not (directory / "app.json").exists()
-            and not (directory / "app.json").is_symlink()
-        ):
-            return CONFIG["frontend_port_bindings"]
     else:
         parent = root / "releases"
         if not RUN_ID.fullmatch(current["id"]) or directory != parent / current["id"]:
@@ -589,24 +581,6 @@ def capture_recovery(root, candidate, recovery):
     write_private(
         recovery / "previous.json", current.read_text() if current.exists() else "{}"
     )
-    # Preserve original artifacts as evidence, NEVER execute old proxy-owning scripts.
-    evidence = recovery / "legacy-evidence"
-    evidence.mkdir(mode=0o700)
-    for name in (
-        "docker-compose.yml",
-        "docker-compose.override.yml",
-        "docker-compose.shared.yml",
-        "deploy-production.sh",
-        ".env",
-        ".backend.env",
-        "nginx-proxy.conf",
-        "nginx-shared.conf",
-    ):
-        path = root / name
-        if path.exists():
-            regular(path)
-            shutil.copyfile(path, evidence / name)
-            (evidence / name).chmod(0o600)
     if current.exists():
         old_dir = saved_controller_directory(
             root, json.loads(regular(current).read_text())
