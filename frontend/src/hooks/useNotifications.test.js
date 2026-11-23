@@ -71,7 +71,7 @@ async function loaded() {
 
 test('loads the account list and exposes its unread count', async () => {
   const { result } = await loaded();
-  expect(api.fetchNotifications).toHaveBeenCalledWith('access');
+  expect(api.fetchNotifications).toHaveBeenCalledWith();
   expect(result.current.unreadCount).toBe(1);
   expect(result.current.notificationsLoading).toBe(false);
 });
@@ -133,7 +133,7 @@ test('token rotation preserves pending work and data and uses the current token 
   });
   expect(result.current.unreadCount).toBe(0);
   await act(() => result.current.clearNotification(1));
-  expect(api.clearNotification).toHaveBeenCalledWith(1, 'rotated');
+  expect(api.clearNotification).toHaveBeenCalledWith(1);
 });
 
 test('synchronous item locks block duplicate and bulk actions but allow another item', async () => {
@@ -274,7 +274,7 @@ test.each(['success', 'failure'])(
     });
     expect(result.current.notifications).toEqual([]);
     expect(result.current.notificationError).toBe('');
-    expect(api.fetchNotifications).toHaveBeenLastCalledWith('new');
+    expect(api.fetchNotifications).toHaveBeenCalledTimes(2);
   },
 );
 

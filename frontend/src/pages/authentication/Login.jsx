@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
 import { fetchBoards as fetchBoardsApi, login } from '../../services/notoliApiClient';
-import { persistAuthSession, readOkJson } from '../../services/authSession';
+import { persistAuthSession } from '../../services/authSession';
 import { getPreferredBoardId } from '../../services/lastBoard';
 import { connectionReturnTo } from '../../services/authRedirect';
 
@@ -37,15 +37,12 @@ export default function Login({ showSnackbar }) {
 
   // Pull Board List
   const fetchBoards = useCallback(
-    async (token, showError, sessionVersion) => {
+    async (sessionVersion) => {
       try {
-        const response = await fetchBoardsApi(token);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        return data;
+        return await fetchBoardsApi();
       } catch (err) {
-        if (showError && getSessionVersion() === sessionVersion) {
-          const isHttpError = typeof err?.message === 'string' && err.message.startsWith('HTTP ');
+        if (getSessionVersion() === sessionVersion) {
+          const isHttpError = Number.isInteger(err?.status);
           showSnackbar('error', isHttpError ? 'Board load failed :(' : 'Network error :(');
         }
         return [];
@@ -59,9 +56,7 @@ export default function Login({ showSnackbar }) {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const response = await login({ email: email.trim(), password });
-
-      const data = await readOkJson(response, 'Login failed :(');
+      const data = await login({ email: email.trim(), password });
       persistAuthSession(data);
       const sessionVersion = getSessionVersion();
 
@@ -79,7 +74,7 @@ export default function Login({ showSnackbar }) {
       }
 
       // Navigate to first Board, if empty, navigate to root
-      const boards = await fetchBoards(data.access, true, sessionVersion);
+      const boards = await fetchBoards(sessionVersion);
       if (getSessionVersion() !== sessionVersion) return;
       const boardId = getPreferredBoardId(boards);
       if (boardId) {

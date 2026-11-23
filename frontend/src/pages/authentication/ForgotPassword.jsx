@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router';
 import { forgotPassword } from '../../services/notoliApiClient';
-import { readOkJson } from '../../services/authSession';
 
 export default function ForgotPassword({ showSnackbar }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -13,8 +12,7 @@ export default function ForgotPassword({ showSnackbar }) {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const response = await forgotPassword({ email: email.trim() });
-      const data = await readOkJson(response, 'Password reset request failed :(');
+      const data = await forgotPassword({ email: email.trim() });
       showSnackbar(
         'success',
         data?.message || 'If that account exists, we sent a password reset link.',

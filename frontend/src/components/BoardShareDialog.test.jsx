@@ -30,7 +30,6 @@ function renderDialog(props = {}) {
     <BoardShareDialog
       open
       board={board}
-      token="token"
       onClose={vi.fn()}
       onBoardUpdated={vi.fn()}
       showSnackbar={vi.fn()}
@@ -73,10 +72,7 @@ describe('BoardShareDialog', () => {
       ],
     };
     const onBoardUpdated = vi.fn();
-    addBoardCollaborator.mockResolvedValueOnce({
-      ok: true,
-      json: async () => updatedBoard,
-    });
+    addBoardCollaborator.mockResolvedValueOnce(updatedBoard);
     renderDialog({
       onBoardUpdated,
     });
@@ -87,13 +83,9 @@ describe('BoardShareDialog', () => {
       }),
     );
     await waitFor(() => {
-      expect(addBoardCollaborator).toHaveBeenCalledWith(
-        4,
-        {
-          identifier: 'newuser',
-        },
-        'token',
-      );
+      expect(addBoardCollaborator).toHaveBeenCalledWith(4, {
+        identifier: 'newuser',
+      });
     });
     expect(onBoardUpdated).toHaveBeenCalledWith(updatedBoard);
     expect(screen.getByLabelText('Username or email address')).toHaveValue('');
@@ -117,13 +109,7 @@ describe('BoardShareDialog', () => {
       'That username or email matches multiple accounts. Use an unambiguous username or email.';
     const showSnackbar = vi.fn();
     const onBoardUpdated = vi.fn();
-    addBoardCollaborator.mockResolvedValueOnce({
-      ok: false,
-      status: 400,
-      json: async () => ({
-        error: [message],
-      }),
-    });
+    addBoardCollaborator.mockRejectedValueOnce(new Error(message));
     renderDialog({
       showSnackbar,
       onBoardUpdated,
@@ -146,10 +132,7 @@ describe('BoardShareDialog', () => {
       collaborators_details: [],
     };
     const onBoardUpdated = vi.fn();
-    removeBoardCollaborator.mockResolvedValueOnce({
-      ok: true,
-      json: async () => updatedBoard,
-    });
+    removeBoardCollaborator.mockResolvedValueOnce(updatedBoard);
     renderDialog({
       onBoardUpdated,
     });
@@ -159,7 +142,7 @@ describe('BoardShareDialog', () => {
       }),
     );
     await waitFor(() => {
-      expect(removeBoardCollaborator).toHaveBeenCalledWith(4, 2, 'token');
+      expect(removeBoardCollaborator).toHaveBeenCalledWith(4, 2);
     });
     expect(onBoardUpdated).toHaveBeenCalledWith(updatedBoard);
   });

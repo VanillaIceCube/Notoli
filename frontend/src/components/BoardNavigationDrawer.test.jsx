@@ -39,7 +39,7 @@ async function renderDrawer({ open = true, showSnackbar = vi.fn() } = {}) {
     <BoardNavigationDrawer open={open} setDrawerOpen={setDrawerOpen} showSnackbar={showSnackbar} />,
   );
   await waitFor(() => {
-    expect(fetchBoardsApi).toHaveBeenCalledWith('token');
+    expect(fetchBoardsApi).toHaveBeenCalledWith();
   });
   return { ...view, setDrawerOpen, showSnackbar };
 }
@@ -58,10 +58,7 @@ describe('BoardNavigationDrawer', () => {
     sessionStorage.setItem('username', 'owner');
     sessionStorage.setItem('email', 'owner@example.com');
     mockUseLocation.mockReturnValue({ pathname: '/' });
-    fetchBoardsApi.mockResolvedValue({
-      ok: true,
-      json: async () => defaultBoards,
-    });
+    fetchBoardsApi.mockResolvedValue(defaultBoards);
   });
   test('when the drawer is closed, it keeps components hidden', async () => {
     await renderDrawer({
@@ -76,11 +73,7 @@ describe('BoardNavigationDrawer', () => {
     expect(screen.getByText('test_board_02')).toBeInTheDocument();
   });
   test('when fetching boards fails, it shows an error message', async () => {
-    fetchBoardsApi.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    fetchBoardsApi.mockRejectedValueOnce(new Error('HTTP 500'));
     await renderDrawer();
     await openBoardList();
     expect(await screen.findByText('Error: HTTP 500')).toBeInTheDocument();
@@ -89,21 +82,17 @@ describe('BoardNavigationDrawer', () => {
     await renderDrawer();
     await openBoardList();
     expect(await screen.findByText('test_board_01')).toBeInTheDocument();
-    const deferred = createDeferred();
+    const deferred = Promise.withResolvers();
     fetchBoardsApi.mockReturnValueOnce(deferred.promise);
     act(() => {
       rotateSessionTokens({ access: 'token-2' }, getSessionVersion(), 'refresh');
     });
     await waitFor(() => {
-      expect(fetchBoardsApi).toHaveBeenCalledWith('token-2');
+      expect(fetchBoardsApi).toHaveBeenCalledWith();
     });
     expect(screen.getByText('test_board_01')).toBeInTheDocument();
     expect(screen.getByText('test_board_02')).toBeInTheDocument();
-    deferred.resolve({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    deferred.reject(new Error('HTTP 500'));
     expect(await screen.findByText('Error: HTTP 500')).toBeInTheDocument();
     expect(screen.getByText('test_board_01')).toBeInTheDocument();
     expect(screen.getByText('test_board_02')).toBeInTheDocument();
@@ -185,11 +174,8 @@ describe('BoardNavigationDrawer', () => {
   });
   test('when a valid new name is submitted, it creates and renders the board', async () => {
     createBoard.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        id: 3,
-        name: 'Gamma',
-      }),
+      id: 3,
+      name: 'Gamma',
     });
     await renderDrawer();
     await openBoardList();
@@ -201,13 +187,10 @@ describe('BoardNavigationDrawer', () => {
     const input = screen.getByPlaceholderText('New Board Name...');
     await userEvent.type(input, 'Gamma{enter}');
     await waitFor(() => {
-      expect(createBoard).toHaveBeenCalledWith(
-        {
-          name: 'Gamma',
-          description: '',
-        },
-        'token',
-      );
+      expect(createBoard).toHaveBeenCalledWith({
+        name: 'Gamma',
+        description: '',
+      });
     });
     expect(await screen.findByText('Gamma')).toBeInTheDocument();
   });
@@ -235,11 +218,8 @@ describe('BoardNavigationDrawer', () => {
   test('when an edit is saved, it updates the active board name in the header and list', async () => {
     mockUseLocation.mockReturnValue({ pathname: '/board/1' });
     updateBoard.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        id: 1,
-        name: 'test_board_01 Updated',
-      }),
+      id: 1,
+      name: 'test_board_01 Updated',
     });
     await renderDrawer();
     await openBoardList();
@@ -253,21 +233,15 @@ describe('BoardNavigationDrawer', () => {
     await userEvent.clear(input);
     await userEvent.type(input, 'test_board_01 Updated{enter}');
     await waitFor(() => {
-      expect(updateBoard).toHaveBeenCalledWith(
-        1,
-        {
-          name: 'test_board_01 Updated',
-        },
-        'token',
-      );
+      expect(updateBoard).toHaveBeenCalledWith(1, {
+        name: 'test_board_01 Updated',
+      });
     });
     expect(await screen.findByRole('button', { name: 'test_board_01 Updated' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Board test_board_01 Updated' })).toBeVisible();
   });
   test('when Remove is selected from the menu, it removes the board', async () => {
-    deleteBoard.mockResolvedValueOnce({
-      ok: true,
-    });
+    deleteBoard.mockResolvedValueOnce(undefined);
     await renderDrawer();
     await openBoardList();
     await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
@@ -277,7 +251,7 @@ describe('BoardNavigationDrawer', () => {
       }),
     );
     await waitFor(() => {
-      expect(deleteBoard).toHaveBeenCalledWith(1, 'token');
+      expect(deleteBoard).toHaveBeenCalledWith(1);
     });
     await waitFor(() => {
       expect(screen.queryByText('test_board_01')).not.toBeInTheDocument();
@@ -333,18 +307,15 @@ describe('BoardNavigationDrawer', () => {
   });
   test('when the owner adds a collaborator from the drawer share modal, the modal list updates', async () => {
     addBoardCollaborator.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        ...boardFixtures[1],
-        collaborators_details: [
-          {
-            id: 3,
-            username: 'new-user',
-            email: 'new@example.com',
-            display_name: 'new-user',
-          },
-        ],
-      }),
+      ...boardFixtures[1],
+      collaborators_details: [
+        {
+          id: 3,
+          username: 'new-user',
+          email: 'new@example.com',
+          display_name: 'new-user',
+        },
+      ],
     });
     await renderDrawer();
     await openBoardList();
@@ -361,25 +332,17 @@ describe('BoardNavigationDrawer', () => {
       }),
     );
     await waitFor(() => {
-      expect(addBoardCollaborator).toHaveBeenCalledWith(
-        2,
-        {
-          identifier: 'new@example.com',
-        },
-        'token',
-      );
+      expect(addBoardCollaborator).toHaveBeenCalledWith(2, {
+        identifier: 'new@example.com',
+      });
     });
     expect(await screen.findByText('new-user')).toBeInTheDocument();
   });
   test('when adding a missing collaborator fails, it shows the error in a snackbar', async () => {
     const showSnackbar = vi.fn();
-    addBoardCollaborator.mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      json: async () => ({
-        error: 'No user found for that username or email.',
-      }),
-    });
+    addBoardCollaborator.mockRejectedValueOnce(
+      new Error('No user found for that username or email.'),
+    );
     await renderDrawer({
       showSnackbar,
     });
@@ -409,11 +372,8 @@ describe('BoardNavigationDrawer', () => {
   });
   test('when the owner removes a collaborator from the drawer share modal, the modal list updates', async () => {
     removeBoardCollaborator.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        ...boardFixtures[0],
-        collaborators_details: [],
-      }),
+      ...boardFixtures[0],
+      collaborators_details: [],
     });
     await renderDrawer();
     await openBoardList();
@@ -429,7 +389,7 @@ describe('BoardNavigationDrawer', () => {
       }),
     );
     await waitFor(() => {
-      expect(removeBoardCollaborator).toHaveBeenCalledWith(1, 2, 'token');
+      expect(removeBoardCollaborator).toHaveBeenCalledWith(1, 2);
     });
     await waitFor(() => {
       expect(screen.queryByText('collab')).not.toBeInTheDocument();
@@ -463,13 +423,7 @@ describe('BoardNavigationDrawer', () => {
   });
   test('when creating a board fails with a custom backend error, it shows snackbar and drawer error', async () => {
     const showSnackbar = vi.fn();
-    createBoard.mockResolvedValueOnce({
-      ok: false,
-      status: 400,
-      json: async () => ({
-        error: 'Board limit reached.',
-      }),
-    });
+    createBoard.mockRejectedValueOnce(new Error('Board limit reached.'));
     await renderDrawer({
       showSnackbar,
     });
@@ -489,11 +443,8 @@ describe('BoardNavigationDrawer', () => {
   test('when creating a board succeeds, it notifies via snackbar', async () => {
     const showSnackbar = vi.fn();
     createBoard.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        id: 99,
-        name: 'Fresh Board',
-      }),
+      id: 99,
+      name: 'Fresh Board',
     });
     await renderDrawer({
       showSnackbar,
@@ -512,13 +463,7 @@ describe('BoardNavigationDrawer', () => {
   });
   test('when renaming a board fails with a custom backend error, it shows snackbar', async () => {
     const showSnackbar = vi.fn();
-    updateBoard.mockResolvedValueOnce({
-      ok: false,
-      status: 403,
-      json: async () => ({
-        error: 'Only the owner can rename this board.',
-      }),
-    });
+    updateBoard.mockRejectedValueOnce(new Error('Only the owner can rename this board.'));
     await renderDrawer({
       showSnackbar,
     });
@@ -539,11 +484,8 @@ describe('BoardNavigationDrawer', () => {
   test('when renaming a board succeeds, it notifies via snackbar', async () => {
     const showSnackbar = vi.fn();
     updateBoard.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        id: 1,
-        name: 'Renamed Board',
-      }),
+      id: 1,
+      name: 'Renamed Board',
     });
     await renderDrawer({
       showSnackbar,
@@ -564,13 +506,7 @@ describe('BoardNavigationDrawer', () => {
   });
   test('when removing a board fails with a custom backend error, it shows snackbar', async () => {
     const showSnackbar = vi.fn();
-    deleteBoard.mockResolvedValueOnce({
-      ok: false,
-      status: 403,
-      json: async () => ({
-        error: 'Cannot delete primary board.',
-      }),
-    });
+    deleteBoard.mockRejectedValueOnce(new Error('Cannot delete primary board.'));
     await renderDrawer({
       showSnackbar,
     });
@@ -587,9 +523,7 @@ describe('BoardNavigationDrawer', () => {
   });
   test('when the active board is removed, it redirects to root route and notifies via snackbar', async () => {
     const showSnackbar = vi.fn();
-    deleteBoard.mockResolvedValueOnce({
-      ok: true,
-    });
+    deleteBoard.mockResolvedValueOnce(undefined);
 
     mockUseLocation.mockReturnValue({ pathname: '/board/1' });
     await renderDrawer({
@@ -644,14 +578,14 @@ describe('BoardNavigationDrawer', () => {
     const pending = createDeferred();
     fetchBoardsApi
       .mockReturnValueOnce(pending.promise)
-      .mockResolvedValue({ ok: true, json: async () => [{ id: 1, name: 'New account board' }] });
+      .mockResolvedValue([{ id: 1, name: 'New account board' }]);
 
     await renderDrawer();
     act(() => startSession({ access: 'new', refresh: 'new-r' }));
     expect(await screen.findByRole('button', { name: 'Board New account board' })).toBeVisible();
 
     await act(async () => {
-      pending.resolve({ ok: true, json: async () => [{ id: 1, name: 'Old account board' }] });
+      pending.resolve([{ id: 1, name: 'Old account board' }]);
     });
     expect(screen.getByRole('button', { name: 'Board New account board' })).toBeVisible();
     expect(screen.queryByText('Old account board')).not.toBeInTheDocument();
@@ -664,10 +598,10 @@ describe('BoardNavigationDrawer', () => {
     await openBoardList();
     await userEvent.click((await screen.findAllByTestId('MoreVertIcon'))[0]);
     await userEvent.click(screen.getByRole('menuitem', { name: /remove/i }));
-    expect(deleteBoard).toHaveBeenCalledWith(1, 'token');
+    expect(deleteBoard).toHaveBeenCalledWith(1);
     act(() => startSession({ access: 'new', refresh: 'new-r' }));
     await act(async () => {
-      pending.resolve({ ok: true });
+      pending.resolve(undefined);
     });
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(showSnackbar).not.toHaveBeenCalled();
@@ -680,7 +614,7 @@ describe('BoardNavigationDrawer menu transitions', () => {
     vi.clearAllMocks();
     sessionStorage.clear();
     mockUseLocation.mockReturnValue({ pathname: '/' });
-    fetchBoardsApi.mockResolvedValue({ ok: true, json: async () => boardFixtures });
+    fetchBoardsApi.mockResolvedValue(boardFixtures);
   });
 
   afterEach(() => vi.restoreAllMocks());

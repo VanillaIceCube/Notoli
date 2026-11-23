@@ -29,18 +29,15 @@ import {
 } from './notoliApiClient';
 import { apiFetch } from './requestClient';
 vi.mock('./requestClient', () => ({
-  apiFetch: vi.fn(() =>
-    Promise.resolve({
-      ok: true,
-    }),
-  ),
+  apiFetch: vi.fn(),
 }));
 describe('notoliApiClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    apiFetch.mockResolvedValue(Response.json({ id: 1 }));
   });
-  test('when login uses email, it posts the email payload', () => {
-    login({
+  test('when login uses email, it posts the email payload', async () => {
+    await login({
       email: 'user@example.com',
       password: 'secret',
     });
@@ -52,13 +49,13 @@ describe('notoliApiClient', () => {
       body: expect.any(String),
     });
     const [, options] = apiFetch.mock.calls[0];
-    expect(JSON.parse(options.body)).toEqual({
+    await expect(JSON.parse(options.body)).toEqual({
       email: 'user@example.com',
       password: 'secret',
     });
   });
-  test('when login uses username, it posts the username payload', () => {
-    login({
+  test('when login uses username, it posts the username payload', async () => {
+    await login({
       username: 'user1',
       password: 'secret',
     });
@@ -70,25 +67,25 @@ describe('notoliApiClient', () => {
       body: expect.any(String),
     });
     const [, options] = apiFetch.mock.calls[0];
-    expect(JSON.parse(options.body)).toEqual({
+    await expect(JSON.parse(options.body)).toEqual({
       username: 'user1',
       password: 'secret',
     });
   });
-  test('when login includes email and username, it prefers email', () => {
-    login({
+  test('when login includes email and username, it prefers email', async () => {
+    await login({
       email: 'user@example.com',
       username: 'user1',
       password: 'secret',
     });
     const [, options] = apiFetch.mock.calls[0];
-    expect(JSON.parse(options.body)).toEqual({
+    await expect(JSON.parse(options.body)).toEqual({
       email: 'user@example.com',
       password: 'secret',
     });
   });
-  test('when register trims inputs, it posts trimmed values', () => {
-    register({
+  test('when register trims inputs, it posts trimmed values', async () => {
+    await register({
       email: ' user@example.com ',
       username: ' user1 ',
       password: 'secret',
@@ -101,14 +98,14 @@ describe('notoliApiClient', () => {
       body: expect.any(String),
     });
     const [, options] = apiFetch.mock.calls[0];
-    expect(JSON.parse(options.body)).toEqual({
+    await expect(JSON.parse(options.body)).toEqual({
       email: 'user@example.com',
       username: 'user1',
       password: 'secret',
     });
   });
-  test('when register has blank username, it omits the username', () => {
-    register({
+  test('when register has blank username, it omits the username', async () => {
+    await register({
       email: 'user@example.com',
       username: '   ',
       password: 'secret',
@@ -121,13 +118,13 @@ describe('notoliApiClient', () => {
       body: expect.any(String),
     });
     const [, options] = apiFetch.mock.calls[0];
-    expect(JSON.parse(options.body)).toEqual({
+    await expect(JSON.parse(options.body)).toEqual({
       email: 'user@example.com',
       password: 'secret',
     });
   });
-  test('when forgotPassword is called, it posts trimmed email', () => {
-    forgotPassword({
+  test('when forgotPassword is called, it posts trimmed email', async () => {
+    await forgotPassword({
       email: ' user@example.com ',
     });
     expect(apiFetch).toHaveBeenCalledWith('/auth/forgot-password/', {
@@ -140,8 +137,8 @@ describe('notoliApiClient', () => {
       }),
     });
   });
-  test('when resetPassword is called, it posts uid/token/password', () => {
-    resetPassword({
+  test('when resetPassword is called, it posts uid/token/password', async () => {
+    await resetPassword({
       uid: 'abc',
       token: 'tok',
       password: 'secret',
@@ -158,146 +155,117 @@ describe('notoliApiClient', () => {
       }),
     });
   });
-  test('when fetching boards with a token, it sends the auth header', () => {
-    fetchBoards('token');
-    expect(apiFetch).toHaveBeenCalledWith('/api/boards/', {
-      headers: {
-        Authorization: 'Bearer token',
-      },
-    });
+  test('fetchBoards returns parsed board data', async () => {
+    const boards = [{ id: 3, name: 'Alpha' }];
+    apiFetch.mockResolvedValueOnce(Response.json(boards));
+
+    await expect(fetchBoards()).resolves.toEqual(boards);
+    expect(apiFetch).toHaveBeenCalledWith('/api/boards/', undefined);
   });
-  test('when fetching boards without a token, it omits the auth header', () => {
-    fetchBoards();
-    expect(apiFetch).toHaveBeenCalledWith('/api/boards/', {
-      headers: {},
-    });
-  });
-  test('when fetching a board, it calls the board endpoint', () => {
-    fetchBoard(3, 'token');
-    expect(apiFetch).toHaveBeenCalledWith('/api/boards/3/', {
-      headers: {
-        Authorization: 'Bearer token',
-      },
-    });
-  });
-  test('when creating a board, it posts JSON with auth', () => {
-    createBoard(
-      {
-        name: 'Alpha',
-      },
-      'token',
+
+  test('fetchBoards keeps the HTTP status and server message', async () => {
+    apiFetch.mockResolvedValueOnce(
+      Response.json({ detail: 'Boards are unavailable.' }, { status: 503 }),
     );
+    await expect(fetchBoards()).rejects.toMatchObject({
+      message: 'Boards are unavailable.',
+      status: 503,
+    });
+  });
+
+  test('when fetching a board, it calls the board endpoint', async () => {
+    await fetchBoard(3);
+    expect(apiFetch).toHaveBeenCalledWith('/api/boards/3/', undefined);
+  });
+  test('when creating a board, it posts JSON', async () => {
+    await createBoard({
+      name: 'Alpha',
+    });
     expect(apiFetch).toHaveBeenCalledWith('/api/boards/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
       body: JSON.stringify({
         name: 'Alpha',
       }),
     });
   });
-  test('when updating a board, it patches JSON with auth', () => {
-    updateBoard(
-      3,
-      {
-        name: 'Beta',
-      },
-      'token',
-    );
+  test('when updating a board, it patches JSON', async () => {
+    await updateBoard(3, {
+      name: 'Beta',
+    });
     expect(apiFetch).toHaveBeenCalledWith('/api/boards/3/', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
       body: JSON.stringify({
         name: 'Beta',
       }),
     });
   });
-  test('when deleting a board, it deletes with auth', () => {
-    deleteBoard(3, 'token');
+  test('when deleting a board, it deletes', async () => {
+    apiFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await expect(deleteBoard(3)).resolves.toBeUndefined();
     expect(apiFetch).toHaveBeenCalledWith('/api/boards/3/', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
     });
   });
-  test('when fetching lists, it calls the board query endpoint', () => {
-    fetchLists(9, 'token');
-    expect(apiFetch).toHaveBeenCalledWith('/api/lists/?board=9', {
-      headers: {
-        Authorization: 'Bearer token',
-      },
-    });
+  test('when fetching lists, it calls the board query endpoint', async () => {
+    await fetchLists(9);
+    expect(apiFetch).toHaveBeenCalledWith('/api/lists/?board=9', undefined);
   });
-  test('when fetching a list, it calls the list endpoint', () => {
-    fetchList(5, 'token');
-    expect(apiFetch).toHaveBeenCalledWith('/api/lists/5/', {
-      headers: {
-        Authorization: 'Bearer token',
-      },
-    });
+  test('when fetching a list, it calls the list endpoint', async () => {
+    await fetchList(5);
+    expect(apiFetch).toHaveBeenCalledWith('/api/lists/5/', undefined);
   });
-  test('when creating a list, it posts JSON with auth', () => {
-    createList(
-      9,
-      {
-        name: 'List',
-      },
-      'token',
-    );
+  test('when creating a list, it posts JSON', async () => {
+    await createList(9, {
+      name: 'List',
+    });
     expect(apiFetch).toHaveBeenCalledWith('/api/lists/?board=9', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
       body: JSON.stringify({
         name: 'List',
       }),
     });
   });
-  test('when updating a list, it patches JSON with auth', () => {
-    updateList(
-      5,
-      {
-        name: 'Updated',
-      },
-      'token',
-    );
+  test('when updating a list, it patches JSON', async () => {
+    await updateList(5, {
+      name: 'Updated',
+    });
     expect(apiFetch).toHaveBeenCalledWith('/api/lists/5/', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
       body: JSON.stringify({
         name: 'Updated',
       }),
     });
   });
-  test('when deleting a list, it deletes with auth', () => {
-    deleteList(5, 'token');
+  test('when deleting a list, it deletes', async () => {
+    await deleteList(5);
     expect(apiFetch).toHaveBeenCalledWith('/api/lists/5/', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
     });
   });
-  test('when reordering lists, it patches the reorder endpoint', () => {
-    reorderLists(9, [11, 10], 'token');
+  test('when reordering lists, it patches the reorder endpoint', async () => {
+    await reorderLists(9, [11, 10]);
     expect(apiFetch).toHaveBeenCalledWith('/api/lists/reorder/', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
       body: JSON.stringify({
         board: 9,
@@ -305,69 +273,53 @@ describe('notoliApiClient', () => {
       }),
     });
   });
-  test('when fetching notes, it calls the list query endpoint', () => {
-    fetchNotes(7, 'token');
-    expect(apiFetch).toHaveBeenCalledWith('/api/notes/?list=7', {
-      headers: {
-        Authorization: 'Bearer token',
-      },
-    });
+  test('when fetching notes, it calls the list query endpoint', async () => {
+    await fetchNotes(7);
+    expect(apiFetch).toHaveBeenCalledWith('/api/notes/?list=7', undefined);
   });
-  test('when creating a note, it posts JSON with auth', () => {
-    createNote(
-      7,
-      {
-        note: 'Hello',
-      },
-      'token',
-    );
+  test('when creating a note, it posts JSON', async () => {
+    await createNote(7, {
+      note: 'Hello',
+    });
     expect(apiFetch).toHaveBeenCalledWith('/api/notes/?list=7', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
       body: JSON.stringify({
         note: 'Hello',
       }),
     });
   });
-  test('when updating a note, it patches JSON with auth', () => {
-    updateNote(
-      2,
-      {
-        note: 'Updated',
-      },
-      'token',
-    );
+  test('when updating a note, it patches JSON', async () => {
+    await updateNote(2, {
+      note: 'Updated',
+    });
     expect(apiFetch).toHaveBeenCalledWith('/api/notes/2/', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
       body: JSON.stringify({
         note: 'Updated',
       }),
     });
   });
-  test('when deleting a note, it deletes with auth', () => {
-    deleteNote(2, 'token');
+  test('when deleting a note, it deletes', async () => {
+    await deleteNote(2);
     expect(apiFetch).toHaveBeenCalledWith('/api/notes/2/', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
     });
   });
-  test('when reordering notes, it patches the reorder endpoint', () => {
-    reorderNotes(7, [102, 101], 'token');
+  test('when reordering notes, it patches the reorder endpoint', async () => {
+    await reorderNotes(7, [102, 101]);
     expect(apiFetch).toHaveBeenCalledWith('/api/notes/reorder/', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
       body: JSON.stringify({
         list: 7,
@@ -375,54 +327,46 @@ describe('notoliApiClient', () => {
       }),
     });
   });
-  test('when fetching notifications, it calls the notifications endpoint', () => {
-    fetchNotifications('token');
-    expect(apiFetch).toHaveBeenCalledWith('/api/notifications/', {
-      headers: {
-        Authorization: 'Bearer token',
-      },
-    });
+  test('when fetching notifications, it calls the notifications endpoint', async () => {
+    await fetchNotifications();
+    expect(apiFetch).toHaveBeenCalledWith('/api/notifications/');
   });
-  test('when marking a notification read, it patches the notification', () => {
-    markNotificationRead(4, 'token');
+  test('when marking a notification read, it patches the notification', async () => {
+    await markNotificationRead(4);
     expect(apiFetch).toHaveBeenCalledWith('/api/notifications/4/', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
       body: JSON.stringify({
         is_read: true,
       }),
     });
   });
-  test('when clearing a notification, it deletes the notification', () => {
-    clearNotification(4, 'token');
+  test('when clearing a notification, it deletes the notification', async () => {
+    await clearNotification(4);
     expect(apiFetch).toHaveBeenCalledWith('/api/notifications/4/', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
     });
   });
-  test('when clearing all notifications, it deletes the collection action', () => {
-    clearAllNotifications('token');
+  test('when clearing all notifications, it deletes the collection action', async () => {
+    await clearAllNotifications();
     expect(apiFetch).toHaveBeenCalledWith('/api/notifications/clear-all/', {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
     });
   });
-  test('when marking all notifications read, it patches the collection action', () => {
-    markAllNotificationsRead('token');
+  test('when marking all notifications read, it patches the collection action', async () => {
+    await markAllNotificationsRead();
     expect(apiFetch).toHaveBeenCalledWith('/api/notifications/mark-all-read/', {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer token',
       },
     });
   });

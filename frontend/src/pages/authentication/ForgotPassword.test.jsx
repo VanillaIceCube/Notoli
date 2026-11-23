@@ -28,10 +28,7 @@ describe('ForgotPassword', () => {
   });
   test('when submit succeeds, it shows success and navigates to login', async () => {
     forgotPassword.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        message: 'Password reset link has been sent!',
-      }),
+      message: 'Password reset link has been sent!',
     });
     const showSnackbar = vi.fn();
     renderWithProviders(<ForgotPassword showSnackbar={showSnackbar} />);
@@ -52,13 +49,7 @@ describe('ForgotPassword', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
   test('when submit fails, it shows an error', async () => {
-    forgotPassword.mockResolvedValue({
-      ok: false,
-      status: 400,
-      json: async () => ({
-        error: 'Invalid email address.',
-      }),
-    });
+    forgotPassword.mockRejectedValue(new Error('Invalid email address.'));
     const showSnackbar = vi.fn();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
@@ -80,10 +71,10 @@ describe('ForgotPassword', () => {
   test('blocks duplicate submissions and recovers after a validation failure', async () => {
     const showSnackbar = vi.fn();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    let resolveRequest;
+    let rejectRequest;
     forgotPassword.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveRequest = resolve;
+      new Promise((_resolve, reject) => {
+        rejectRequest = reject;
       }),
     );
     renderWithProviders(<ForgotPassword showSnackbar={showSnackbar} />, {
@@ -101,13 +92,7 @@ describe('ForgotPassword', () => {
     expect(pendingButton).toBeDisabled();
     fireEvent.click(pendingButton);
     expect(forgotPassword).toHaveBeenCalledTimes(1);
-    resolveRequest({
-      ok: false,
-      status: 400,
-      json: async () => ({
-        password: ['Validation failed.'],
-      }),
-    });
+    rejectRequest(new Error('Validation failed.'));
     await waitFor(() =>
       expect(
         screen.getByRole('button', {

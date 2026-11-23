@@ -53,10 +53,7 @@ describe('ResetPassword', () => {
   });
   test('when reset succeeds, it shows success and navigates to login', async () => {
     resetPassword.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        message: 'Password reset successful.',
-      }),
+      message: 'Password reset successful.',
     });
     const showSnackbar = vi.fn();
     renderWithProviders(<ResetPassword showSnackbar={showSnackbar} />, {
@@ -82,10 +79,10 @@ describe('ResetPassword', () => {
   test('blocks duplicate submissions and recovers after a validation failure', async () => {
     const showSnackbar = vi.fn();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    let resolveRequest;
+    let rejectRequest;
     resetPassword.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveRequest = resolve;
+      new Promise((_resolve, reject) => {
+        rejectRequest = reject;
       }),
     );
     renderWithProviders(<ResetPassword showSnackbar={showSnackbar} />, {
@@ -106,13 +103,7 @@ describe('ResetPassword', () => {
     expect(pendingButton).toBeDisabled();
     fireEvent.click(pendingButton);
     expect(resetPassword).toHaveBeenCalledTimes(1);
-    resolveRequest({
-      ok: false,
-      status: 400,
-      json: async () => ({
-        password: ['Validation failed.'],
-      }),
-    });
+    rejectRequest(new Error('Validation failed.'));
     await waitFor(() =>
       expect(
         screen.getByRole('button', {

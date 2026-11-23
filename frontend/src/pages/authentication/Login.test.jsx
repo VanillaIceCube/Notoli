@@ -10,21 +10,13 @@ vi.mock('react-router', async () => ({
   useNavigate: vi.fn(),
 }));
 vi.mock('../../services/notoliApiClient', () => ({
-  fetchBoards: vi.fn(() =>
-    Promise.resolve({
-      ok: true,
-      json: async () => [],
-    }),
-  ),
+  fetchBoards: vi.fn(() => Promise.resolve([])),
   login: vi.fn(() =>
     Promise.resolve({
-      ok: true,
-      json: async () => ({
-        access: 'ACCESS',
-        refresh: 'REFRESH',
-        username: 'test_email',
-        email: 'test_email@example.com',
-      }),
+      access: 'ACCESS',
+      refresh: 'REFRESH',
+      username: 'test_email',
+      email: 'test_email@example.com',
     }),
   ),
 }));
@@ -51,7 +43,7 @@ describe('Login', () => {
     await waitFor(() => expect(fetchBoards).toHaveBeenCalled());
     act(() => startSession({ access: 'new', refresh: 'new-r' }));
     await act(async () => {
-      finish({ ok: true, json: async () => [{ id: 1 }] });
+      finish([{ id: 1 }]);
     });
     expect(mockNavigate).not.toHaveBeenCalled();
   });
@@ -90,28 +82,22 @@ describe('Login', () => {
     expect(sessionStorage.getItem('pendingSnackbar')).toBeNull();
   });
   test('when login succeeds and boards exist, it navigates to the first board', async () => {
-    fetchBoards.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [
-        {
-          id: 7,
-        },
-        {
-          id: 3,
-        },
-        {
-          id: 12,
-        },
-      ],
-    });
+    fetchBoards.mockResolvedValueOnce([
+      {
+        id: 7,
+      },
+      {
+        id: 3,
+      },
+      {
+        id: 12,
+      },
+    ]);
     login.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        access: 'ACCESS',
-        refresh: 'REFRESH',
-        username: 'test_email',
-        email: 'test_email@example.com',
-      }),
+      access: 'ACCESS',
+      refresh: 'REFRESH',
+      username: 'test_email',
+      email: 'test_email@example.com',
     });
     renderWithProviders(<Login showSnackbar={vi.fn()} />);
     await userEvent.type(screen.getByLabelText(/email/i), 'test_email@example.com');
@@ -132,28 +118,22 @@ describe('Login', () => {
         test_email: '12',
       }),
     );
-    fetchBoards.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [
-        {
-          id: 7,
-        },
-        {
-          id: 3,
-        },
-        {
-          id: 12,
-        },
-      ],
-    });
+    fetchBoards.mockResolvedValueOnce([
+      {
+        id: 7,
+      },
+      {
+        id: 3,
+      },
+      {
+        id: 12,
+      },
+    ]);
     login.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        access: 'ACCESS',
-        refresh: 'REFRESH',
-        username: 'test_email',
-        email: 'test_email@example.com',
-      }),
+      access: 'ACCESS',
+      refresh: 'REFRESH',
+      username: 'test_email',
+      email: 'test_email@example.com',
     });
     renderWithProviders(<Login showSnackbar={vi.fn()} />);
     fireEvent.change(screen.getByLabelText(/email/i), {
@@ -170,18 +150,12 @@ describe('Login', () => {
     });
   });
   test('when login succeeds and no boards exist, it navigates home', async () => {
-    fetchBoards.mockResolvedValue({
-      ok: true,
-      json: async () => [],
-    });
+    fetchBoards.mockResolvedValue([]);
     login.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        access: 'ACCESS',
-        refresh: 'REFRESH',
-        username: 'test_email',
-        email: 'test_email@example.com',
-      }),
+      access: 'ACCESS',
+      refresh: 'REFRESH',
+      username: 'test_email',
+      email: 'test_email@example.com',
     });
     renderWithProviders(<Login showSnackbar={vi.fn()} />);
 
@@ -212,18 +186,12 @@ describe('Login', () => {
     });
   });
   test('when login succeeds, it stores access/refresh tokens', async () => {
-    fetchBoards.mockResolvedValue({
-      ok: true,
-      json: async () => [],
-    });
+    fetchBoards.mockResolvedValue([]);
     login.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        access: 'test_access_token',
-        refresh: 'test_refresh_token',
-        username: 'test_email',
-        email: 'test_email@example.com',
-      }),
+      access: 'test_access_token',
+      refresh: 'test_refresh_token',
+      username: 'test_email',
+      email: 'test_email@example.com',
     });
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
     try {
@@ -254,18 +222,12 @@ describe('Login', () => {
     }
   });
   test('when login succeeds, it shows a success snackbar', async () => {
-    fetchBoards.mockResolvedValue({
-      ok: true,
-      json: async () => [],
-    });
+    fetchBoards.mockResolvedValue([]);
     login.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        access: 'ACCESS',
-        refresh: 'REFRESH',
-        username: 'test_email',
-        email: 'test_email@example.com',
-      }),
+      access: 'ACCESS',
+      refresh: 'REFRESH',
+      username: 'test_email',
+      email: 'test_email@example.com',
     });
     const showSnackbar = vi.fn();
     renderWithProviders(<Login showSnackbar={showSnackbar} />);
@@ -283,19 +245,12 @@ describe('Login', () => {
     });
   });
   test('when board fetch fails after login, it navigates home', async () => {
-    fetchBoards.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    fetchBoards.mockRejectedValueOnce(Object.assign(new Error('HTTP 500'), { status: 500 }));
     login.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        access: 'ACCESS',
-        refresh: 'REFRESH',
-        username: 'test_email',
-        email: 'test_email@example.com',
-      }),
+      access: 'ACCESS',
+      refresh: 'REFRESH',
+      username: 'test_email',
+      email: 'test_email@example.com',
     });
     renderWithProviders(<Login showSnackbar={vi.fn()} />);
     fireEvent.change(screen.getByLabelText(/email/i), {
@@ -312,19 +267,12 @@ describe('Login', () => {
     });
   });
   test('when board fetch fails after login, it shows an error snackbar', async () => {
-    fetchBoards.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    fetchBoards.mockRejectedValueOnce(Object.assign(new Error('HTTP 500'), { status: 500 }));
     login.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        access: 'ACCESS',
-        refresh: 'REFRESH',
-        username: 'test_email',
-        email: 'test_email@example.com',
-      }),
+      access: 'ACCESS',
+      refresh: 'REFRESH',
+      username: 'test_email',
+      email: 'test_email@example.com',
     });
     const showSnackbar = vi.fn();
     renderWithProviders(<Login showSnackbar={showSnackbar} />);
@@ -342,13 +290,7 @@ describe('Login', () => {
     });
   });
   test('when login fails, it does not navigate', async () => {
-    login.mockResolvedValue({
-      ok: false,
-      status: 401,
-      json: async () => ({
-        detail: 'Invalid credentials',
-      }),
-    });
+    login.mockRejectedValue(new Error('Invalid credentials'));
 
     // Login.js logs the auth error; silence it here to avoid noisy test output.
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -376,13 +318,7 @@ describe('Login', () => {
     }
   });
   test('when login fails, it does not store tokens', async () => {
-    login.mockResolvedValue({
-      ok: false,
-      status: 401,
-      json: async () => ({
-        detail: 'Invalid credentials',
-      }),
-    });
+    login.mockRejectedValue(new Error('Invalid credentials'));
     const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
@@ -405,13 +341,7 @@ describe('Login', () => {
     }
   });
   test('when login fails, it shows an error snackbar', async () => {
-    login.mockResolvedValue({
-      ok: false,
-      status: 401,
-      json: async () => ({
-        detail: 'Invalid credentials',
-      }),
-    });
+    login.mockRejectedValue(new Error('Invalid credentials'));
     const showSnackbar = vi.fn();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
@@ -501,10 +431,10 @@ describe('Login', () => {
   test('blocks duplicate submissions and recovers after a validation failure', async () => {
     const showSnackbar = vi.fn();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    let resolveRequest;
+    let rejectRequest;
     login.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveRequest = resolve;
+      new Promise((_resolve, reject) => {
+        rejectRequest = reject;
       }),
     );
     renderWithProviders(<Login showSnackbar={showSnackbar} />, {
@@ -523,13 +453,7 @@ describe('Login', () => {
     expect(pendingButton).toBeDisabled();
     fireEvent.click(pendingButton);
     expect(login).toHaveBeenCalledTimes(1);
-    resolveRequest({
-      ok: false,
-      status: 400,
-      json: async () => ({
-        password: ['Validation failed.'],
-      }),
-    });
+    rejectRequest(new Error('Validation failed.'));
     await waitFor(() =>
       expect(
         screen.getByRole('button', {

@@ -49,7 +49,7 @@ async function renderNotes(routeEntries = ['/board/1/list/5']) {
     },
   );
   await waitFor(() => {
-    expect(fetchNotesApi).toHaveBeenCalledWith('5', 'token');
+    expect(fetchNotesApi).toHaveBeenCalledWith('5');
   });
   await waitForLoadingToFinish();
   return {
@@ -79,20 +79,11 @@ describe('ListTasksPage', () => {
       boardId: '1',
       listId: '5',
     });
-    fetchNotesApi.mockResolvedValue({
-      ok: true,
-      json: async () => noteFixtures,
-    });
+    fetchNotesApi.mockResolvedValue(noteFixtures);
     fetchListApi.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        name: 'List 5',
-      }),
+      name: 'List 5',
     });
-    fetchBoardApi.mockResolvedValue({
-      ok: true,
-      json: async () => boardFixtures[0],
-    });
+    fetchBoardApi.mockResolvedValue(boardFixtures[0]);
   });
   test('when the page loads, it shows a loading state', async () => {
     const deferred = createDeferred();
@@ -106,10 +97,7 @@ describe('ListTasksPage', () => {
         name: /^notes$/i,
       }),
     ).not.toBeInTheDocument();
-    deferred.resolve({
-      ok: true,
-      json: async () => [],
-    });
+    deferred.resolve([]);
     expect(await screen.findByText(/no notes found/i)).toBeInTheDocument();
   });
   test('activating a loaded list updates the header without fetching its data again', async () => {
@@ -154,11 +142,7 @@ describe('ListTasksPage', () => {
     ).toBeChecked();
   });
   test('when the fetch fails, it shows an error message', async () => {
-    fetchNotesApi.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    fetchNotesApi.mockRejectedValueOnce(new Error('HTTP 500'));
     await renderNotes();
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
@@ -173,11 +157,8 @@ describe('ListTasksPage', () => {
   });
   test('when a valid add is submitted, it creates and renders the new item', async () => {
     createNote.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        id: 103,
-        note: 'test_note_03',
-      }),
+      id: 103,
+      note: 'test_note_03',
     });
     await renderNotes();
     await userEvent.click(
@@ -188,15 +169,11 @@ describe('ListTasksPage', () => {
     const input = screen.getByPlaceholderText(/new note/i);
     await userEvent.type(input, 'test_note_03{enter}');
     await waitFor(() => {
-      expect(createNote).toHaveBeenCalledWith(
-        '5',
-        {
-          note: 'test_note_03',
-          list: '5',
-          description: '',
-        },
-        'token',
-      );
+      expect(createNote).toHaveBeenCalledWith('5', {
+        note: 'test_note_03',
+        list: '5',
+        description: '',
+      });
     });
     expect(await screen.findByText('test_note_03')).toBeInTheDocument();
   });
@@ -240,12 +217,9 @@ describe('ListTasksPage', () => {
   });
   test('when a valid edit is submitted, it updates the item', async () => {
     updateNote.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        id: 101,
-        note: 'test_note_01 Updated',
-        status: 'Not Started',
-      }),
+      id: 101,
+      note: 'test_note_01 Updated',
+      status: 'Not Started',
     });
     await renderNotes();
     await userEvent.click(
@@ -262,24 +236,17 @@ describe('ListTasksPage', () => {
     await userEvent.clear(input);
     await userEvent.type(input, 'test_note_01 Updated{enter}');
     await waitFor(() => {
-      expect(updateNote).toHaveBeenCalledWith(
-        101,
-        {
-          note: 'test_note_01 Updated',
-        },
-        'token',
-      );
+      expect(updateNote).toHaveBeenCalledWith(101, {
+        note: 'test_note_01 Updated',
+      });
     });
     expect(await screen.findByText('test_note_01 Updated')).toBeInTheDocument();
   });
   test('when a checkbox is toggled, it updates the status immediately', async () => {
     updateNote.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        id: 101,
-        note: 'test_note_01',
-        status: 'Complete',
-      }),
+      id: 101,
+      note: 'test_note_01',
+      status: 'Complete',
     });
     await renderNotes();
     const checkbox = screen.getByRole('checkbox', {
@@ -288,20 +255,14 @@ describe('ListTasksPage', () => {
     await userEvent.click(checkbox);
     expect(checkbox).toBeChecked();
     await waitFor(() => {
-      expect(updateNote).toHaveBeenCalledWith(
-        101,
-        {
-          status: 'Complete',
-        },
-        'token',
-      );
+      expect(updateNote).toHaveBeenCalledWith(101, {
+        status: 'Complete',
+      });
     });
     expect(screen.getByText('test_note_01')).toHaveStyle('text-decoration: line-through');
   });
   test('when delete is confirmed, it removes the item', async () => {
-    deleteNote.mockResolvedValueOnce({
-      ok: true,
-    });
+    deleteNote.mockResolvedValueOnce(undefined);
     await renderNotes();
     await userEvent.click(
       await screen.findByRole('button', {
@@ -314,7 +275,7 @@ describe('ListTasksPage', () => {
       }),
     );
     await waitFor(() => {
-      expect(deleteNote).toHaveBeenCalledWith(101, 'token');
+      expect(deleteNote).toHaveBeenCalledWith(101);
     });
     await waitFor(() => {
       expect(screen.queryByText('test_note_01')).not.toBeInTheDocument();
@@ -409,7 +370,7 @@ describe('ListTasksPage', () => {
       routeEntries: ['/board/1/list/5'],
     });
     await waitFor(() => {
-      expect(fetchBoardApi).toHaveBeenCalledWith('1', 'token');
+      expect(fetchBoardApi).toHaveBeenCalledWith('1');
     });
     await waitFor(() => {
       expect(setAppBarHeader).toHaveBeenCalledWith('test_board_01');
@@ -440,11 +401,7 @@ describe('ListTasksPage', () => {
   test('when the list fetch fails, it shows an error and does not show the old hardcoded title', async () => {
     const deferred = createDeferred();
     fetchNotesApi.mockReturnValueOnce(deferred.promise);
-    fetchListApi.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    fetchListApi.mockRejectedValueOnce(new Error('HTTP 500'));
     const setAppBarHeader = vi.fn();
     renderWithProviders(<ListTasksPage setAppBarHeader={setAppBarHeader} />, {
       routeEntries: ['/board/1/list/5'],
@@ -456,10 +413,7 @@ describe('ListTasksPage', () => {
       }),
     ).not.toBeInTheDocument();
     await act(async () => {
-      deferred.resolve({
-        ok: true,
-        json: async () => noteFixtures,
-      });
+      deferred.resolve(noteFixtures);
     });
     await waitForLoadingToFinish();
   });
@@ -491,11 +445,7 @@ describe('ListTasksPage', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
   test('when create fails, it shows an error message', async () => {
-    createNote.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    createNote.mockRejectedValueOnce(new Error('HTTP 500'));
     await renderNotes();
     await userEvent.click(
       screen.getByRole('button', {
@@ -507,11 +457,7 @@ describe('ListTasksPage', () => {
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
   test('when update fails, it shows an error message', async () => {
-    updateNote.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    updateNote.mockRejectedValueOnce(new Error('HTTP 500'));
     await renderNotes();
     await userEvent.click(
       await screen.findByRole('button', {
@@ -529,11 +475,7 @@ describe('ListTasksPage', () => {
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
   test('when delete fails, it shows an error message', async () => {
-    deleteNote.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    deleteNote.mockRejectedValueOnce(new Error('HTTP 500'));
     await renderNotes();
     await userEvent.click(
       await screen.findByRole('button', {
@@ -548,10 +490,7 @@ describe('ListTasksPage', () => {
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
   test('when the last note is gone, the empty row keeps Add New at one complete note-item height', async () => {
-    fetchNotesApi.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [],
-    });
+    fetchNotesApi.mockResolvedValueOnce([]);
     await renderNotes();
     expect(await screen.findByText(/no notes found/i)).toBeInTheDocument();
     expect(screen.getByTestId('note-empty-state')).toHaveStyle({
@@ -637,26 +576,19 @@ describe('ListTasksPage', () => {
     expect(screen.getByText('test_note_01')).toBeInTheDocument();
     expect(screen.getByText('test_note_02')).toBeInTheDocument();
     expect(screen.queryByText(/^loading/i)).not.toBeInTheDocument();
-    deferred.resolve({
-      ok: true,
-      json: async () => [
-        {
-          id: 103,
-          note: 'test_note_03',
-          status: 'Not Started',
-        },
-      ],
-    });
+    deferred.resolve([
+      {
+        id: 103,
+        note: 'test_note_03',
+        status: 'Not Started',
+      },
+    ]);
     expect(await screen.findByText('test_note_03')).toBeInTheDocument();
   });
   test('when a mobile refresh fails, it keeps existing notes visible with the error', async () => {
     setMobilePullViewport();
     await renderNotes();
-    fetchNotesApi.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    fetchNotesApi.mockRejectedValueOnce(new Error('HTTP 500'));
     const list = screen.getByTestId('note-list');
     fireEvent.touchStart(list, {
       touches: [

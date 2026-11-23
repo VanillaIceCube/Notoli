@@ -1,195 +1,157 @@
 import { apiFetch } from './requestClient';
+import { getResponseErrorMessage, readOkJson } from './authSession';
 
-const authHeader = (token) => (token ? { Authorization: `Bearer ${token}` } : {});
-const jsonHeaders = (token) => ({
-  'Content-Type': 'application/json',
-  ...authHeader(token),
-});
+const jsonHeaders = { 'Content-Type': 'application/json' };
+const deleteOptions = { method: 'DELETE', headers: jsonHeaders };
+
+function jsonRequest(method, payload) {
+  return { method, headers: jsonHeaders, body: JSON.stringify(payload) };
+}
+
+async function requestNotoli(path, options, errorMessage) {
+  const response = await apiFetch(path, options);
+  if (!response.ok) {
+    const status = response.status;
+    const message = errorMessage ? await errorMessage(response) : `HTTP ${status}`;
+    throw Object.assign(new Error(message), { status });
+  }
+  return response;
+}
+
+async function requestData(path, options, errorMessage) {
+  const response = await requestNotoli(path, options, errorMessage);
+  return response.json();
+}
+
+async function postAuthForm(path, payload, invalidResponseMessage) {
+  const response = await apiFetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return readOkJson(response, invalidResponseMessage);
+}
 
 export const login = ({ email, username, password }) => {
   const payload = { password };
-  if (email) {
-    payload.email = email;
-  } else if (username) {
-    payload.username = username;
-  }
+  if (email) payload.email = email;
+  else if (username) payload.username = username;
 
-  return apiFetch('/auth/login/', {
-    method: 'POST',
-    headers: jsonHeaders(),
-    body: JSON.stringify(payload),
-  });
+  return postAuthForm('/auth/login/', payload, 'Login failed :(');
 };
 
 export const register = ({ email, username, password }) => {
-  const payload = {
-    email: email?.trim(),
-    password,
-  };
+  const payload = { email: email?.trim(), password };
   const trimmedUsername = username?.trim();
-  if (trimmedUsername) {
-    payload.username = trimmedUsername;
-  }
+  if (trimmedUsername) payload.username = trimmedUsername;
 
-  return apiFetch('/auth/register/', {
-    method: 'POST',
-    headers: jsonHeaders(),
-    body: JSON.stringify(payload),
-  });
+  return postAuthForm('/auth/register/', payload, 'Registration failed :(');
 };
 
 export const forgotPassword = ({ email }) =>
-  apiFetch('/auth/forgot-password/', {
-    method: 'POST',
-    headers: jsonHeaders(),
-    body: JSON.stringify({ email: email?.trim() }),
-  });
+  postAuthForm(
+    '/auth/forgot-password/',
+    { email: email?.trim() },
+    'Password reset request failed :(',
+  );
 
 export const resetPassword = ({ uid, token, password }) =>
-  apiFetch('/auth/reset-password/', {
-    method: 'POST',
-    headers: jsonHeaders(),
-    body: JSON.stringify({ uid, token, password }),
-  });
+  postAuthForm('/auth/reset-password/', { uid, token, password }, 'Password reset failed :(');
 
-export const fetchBoards = (token) =>
-  apiFetch('/api/boards/', {
-    headers: authHeader(token),
-  });
+export const fetchBoards = () =>
+  requestData('/api/boards/', undefined, (response) =>
+    getResponseErrorMessage(response, `HTTP ${response.status}`),
+  );
 
-export const fetchBoard = (boardId, token) =>
-  apiFetch(`/api/boards/${boardId}/`, {
-    headers: authHeader(token),
-  });
+export const fetchBoard = (boardId) => requestData(`/api/boards/${boardId}/`);
 
-export const createBoard = (payload, token) =>
-  apiFetch('/api/boards/', {
-    method: 'POST',
-    headers: jsonHeaders(token),
-    body: JSON.stringify(payload),
-  });
+export const createBoard = (payload) =>
+  requestData('/api/boards/', jsonRequest('POST', payload), (response) =>
+    getResponseErrorMessage(response, `Unable to create board (HTTP ${response.status})`),
+  );
 
-export const updateBoard = (boardId, payload, token) =>
-  apiFetch(`/api/boards/${boardId}/`, {
-    method: 'PATCH',
-    headers: jsonHeaders(token),
-    body: JSON.stringify(payload),
-  });
+export const updateBoard = (boardId, payload) =>
+  requestData(`/api/boards/${boardId}/`, jsonRequest('PATCH', payload), (response) =>
+    getResponseErrorMessage(response, `Unable to update board (HTTP ${response.status})`),
+  );
 
-export const deleteBoard = (boardId, token) =>
-  apiFetch(`/api/boards/${boardId}/`, {
-    method: 'DELETE',
-    headers: jsonHeaders(token),
-  });
+export const deleteBoard = async (boardId) => {
+  await requestNotoli(`/api/boards/${boardId}/`, deleteOptions, (response) =>
+    getResponseErrorMessage(response, `Unable to delete board (HTTP ${response.status})`),
+  );
+};
 
-export const addBoardCollaborator = (boardId, payload, token) =>
-  apiFetch(`/api/boards/${boardId}/collaborators/`, {
-    method: 'POST',
-    headers: jsonHeaders(token),
-    body: JSON.stringify(payload),
-  });
+export const addBoardCollaborator = (boardId, payload) =>
+  requestData(`/api/boards/${boardId}/collaborators/`, jsonRequest('POST', payload), (response) =>
+    getResponseErrorMessage(response, 'Unable to add collaborator.'),
+  );
 
-export const removeBoardCollaborator = (boardId, userId, token) =>
-  apiFetch(`/api/boards/${boardId}/collaborators/${userId}/`, {
-    method: 'DELETE',
-    headers: jsonHeaders(token),
-  });
+export const removeBoardCollaborator = (boardId, userId) =>
+  requestData(`/api/boards/${boardId}/collaborators/${userId}/`, deleteOptions, (response) =>
+    getResponseErrorMessage(response, 'Unable to remove collaborator.'),
+  );
 
-export const fetchLists = (boardId, token) =>
-  apiFetch(`/api/lists/?board=${boardId}`, {
-    headers: authHeader(token),
-  });
+export const fetchLists = (boardId) => requestData(`/api/lists/?board=${boardId}`);
 
-export const fetchList = (listId, token) =>
-  apiFetch(`/api/lists/${listId}/`, {
-    headers: authHeader(token),
-  });
+export const fetchList = (listId) => requestData(`/api/lists/${listId}/`);
 
-export const createList = (boardId, payload, token) =>
-  apiFetch(`/api/lists/?board=${boardId}`, {
-    method: 'POST',
-    headers: jsonHeaders(token),
-    body: JSON.stringify(payload),
-  });
+export const createList = (boardId, payload) =>
+  requestData(`/api/lists/?board=${boardId}`, jsonRequest('POST', payload));
 
-export const updateList = (listId, payload, token) =>
-  apiFetch(`/api/lists/${listId}/`, {
-    method: 'PATCH',
-    headers: jsonHeaders(token),
-    body: JSON.stringify(payload),
-  });
+export const updateList = (listId, payload) =>
+  requestData(`/api/lists/${listId}/`, jsonRequest('PATCH', payload));
 
-export const deleteList = (listId, token) =>
-  apiFetch(`/api/lists/${listId}/`, {
-    method: 'DELETE',
-    headers: jsonHeaders(token),
-  });
+export const deleteList = async (listId) => {
+  await requestNotoli(`/api/lists/${listId}/`, deleteOptions);
+};
 
-export const reorderLists = (boardId, orderedIds, token) =>
-  apiFetch('/api/lists/reorder/', {
-    method: 'PATCH',
-    headers: jsonHeaders(token),
-    body: JSON.stringify({ board: boardId, ordered_ids: orderedIds }),
-  });
+export const reorderLists = (boardId, orderedIds) =>
+  requestData(
+    '/api/lists/reorder/',
+    jsonRequest('PATCH', { board: boardId, ordered_ids: orderedIds }),
+  );
 
-export const fetchNotes = (listId, token) =>
-  apiFetch(`/api/notes/?list=${listId}`, {
-    headers: authHeader(token),
-  });
+export const fetchNotes = (listId) => requestData(`/api/notes/?list=${listId}`);
 
-export const createNote = (listId, payload, token) =>
-  apiFetch(`/api/notes/?list=${listId}`, {
-    method: 'POST',
-    headers: jsonHeaders(token),
-    body: JSON.stringify(payload),
-  });
+export const createNote = (listId, payload) =>
+  requestData(`/api/notes/?list=${listId}`, jsonRequest('POST', payload));
 
-export const updateNote = (noteId, payload, token) =>
-  apiFetch(`/api/notes/${noteId}/`, {
-    method: 'PATCH',
-    headers: jsonHeaders(token),
-    body: JSON.stringify(payload),
-  });
+export const updateNote = (noteId, payload) =>
+  requestData(`/api/notes/${noteId}/`, jsonRequest('PATCH', payload));
 
-export const deleteNote = (noteId, token) =>
-  apiFetch(`/api/notes/${noteId}/`, {
-    method: 'DELETE',
-    headers: jsonHeaders(token),
-  });
+export const deleteNote = async (noteId) => {
+  await requestNotoli(`/api/notes/${noteId}/`, deleteOptions);
+};
 
-export const reorderNotes = (listId, orderedIds, token) =>
-  apiFetch('/api/notes/reorder/', {
-    method: 'PATCH',
-    headers: jsonHeaders(token),
-    body: JSON.stringify({ list: listId, ordered_ids: orderedIds }),
-  });
+export const reorderNotes = (listId, orderedIds) =>
+  requestData(
+    '/api/notes/reorder/',
+    jsonRequest('PATCH', { list: listId, ordered_ids: orderedIds }),
+  );
 
-export const fetchNotifications = (token) =>
-  apiFetch('/api/notifications/', {
-    headers: authHeader(token),
-  });
+export const fetchNotifications = () => apiFetch('/api/notifications/');
 
-export const markNotificationRead = (notificationId, token) =>
+export const markNotificationRead = (notificationId) =>
   apiFetch(`/api/notifications/${notificationId}/`, {
     method: 'PATCH',
-    headers: jsonHeaders(token),
+    headers: jsonHeaders,
     body: JSON.stringify({ is_read: true }),
   });
 
-export const clearNotification = (notificationId, token) =>
+export const clearNotification = (notificationId) =>
   apiFetch(`/api/notifications/${notificationId}/`, {
     method: 'DELETE',
-    headers: jsonHeaders(token),
+    headers: jsonHeaders,
   });
 
-export const clearAllNotifications = (token) =>
+export const clearAllNotifications = () =>
   apiFetch('/api/notifications/clear-all/', {
     method: 'DELETE',
-    headers: jsonHeaders(token),
+    headers: jsonHeaders,
   });
 
-export const markAllNotificationsRead = (token) =>
+export const markAllNotificationsRead = () =>
   apiFetch('/api/notifications/mark-all-read/', {
     method: 'PATCH',
-    headers: jsonHeaders(token),
+    headers: jsonHeaders,
   });

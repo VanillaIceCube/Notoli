@@ -18,7 +18,6 @@ import Close from '@mui/icons-material/Close';
 import Delete from '@mui/icons-material/Delete';
 import PersonAdd from '@mui/icons-material/PersonAdd';
 import { addBoardCollaborator, removeBoardCollaborator } from '../services/notoliApiClient';
-import { getResponseErrorMessage } from '../services/authSession';
 
 const userLabel = (user) =>
   user?.display_name || user?.username || user?.email || `User ${user?.id}`;
@@ -130,7 +129,6 @@ function AccessRow({ user, role, canRemove, removing, saving, onRemove }) {
 export default function BoardShareDialog({
   open,
   board,
-  token,
   onClose,
   onExited,
   onBoardUpdated,
@@ -160,7 +158,7 @@ export default function BoardShareDialog({
 
   const handleAdd = async () => {
     const trimmed = identifier.trim();
-    if (!trimmed || !board || !isOwner) return;
+    if (!isCurrentSession() || !trimmed || !board || !isOwner) return;
 
     const duplicate = collaborators.some(
       (collaborator) =>
@@ -181,10 +179,7 @@ export default function BoardShareDialog({
 
     setSavingAdd(true);
     try {
-      const response = await addBoardCollaborator(board.id, { identifier: trimmed }, token);
-      if (!response.ok)
-        throw new Error(await getResponseErrorMessage(response, 'Unable to add collaborator.'));
-      const updated = await response.json();
+      const updated = await addBoardCollaborator(board.id, { identifier: trimmed });
       if (!isCurrentSession()) return;
       onBoardUpdated(updated);
       setIdentifier('');
@@ -196,14 +191,18 @@ export default function BoardShareDialog({
   };
 
   const handleRemove = async (collaborator) => {
-    if (!board || !collaborator?.id || collaborator.id === owner?.id || !isOwner) return;
+    if (
+      !isCurrentSession() ||
+      !board ||
+      !collaborator?.id ||
+      collaborator.id === owner?.id ||
+      !isOwner
+    )
+      return;
 
     setRemovingUserId(collaborator.id);
     try {
-      const response = await removeBoardCollaborator(board.id, collaborator.id, token);
-      if (!response.ok)
-        throw new Error(await getResponseErrorMessage(response, 'Unable to remove collaborator.'));
-      const updated = await response.json();
+      const updated = await removeBoardCollaborator(board.id, collaborator.id);
       if (!isCurrentSession()) return;
       onBoardUpdated(updated);
     } catch (err) {

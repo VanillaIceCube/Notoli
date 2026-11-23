@@ -36,7 +36,7 @@ async function renderLists() {
   const setAppBarHeader = vi.fn();
   const view = renderWithProviders(<BoardListsPage setAppBarHeader={setAppBarHeader} />);
   await waitFor(() => {
-    expect(fetchListsApi).toHaveBeenCalledWith('1', 'token');
+    expect(fetchListsApi).toHaveBeenCalledWith('1');
   });
   await waitForLoadingToFinish();
   return {
@@ -65,14 +65,8 @@ describe('BoardListsPage', () => {
     mockUseParams.mockReturnValue({
       boardId: '1',
     });
-    fetchListsApi.mockResolvedValue({
-      ok: true,
-      json: async () => listFixtures,
-    });
-    fetchBoardApi.mockResolvedValue({
-      ok: true,
-      json: async () => boardFixtures[0],
-    });
+    fetchListsApi.mockResolvedValue(listFixtures);
+    fetchBoardApi.mockResolvedValue(boardFixtures[0]);
   });
   test('when the page loads, it shows a loading state', async () => {
     const deferred = createDeferred();
@@ -84,15 +78,12 @@ describe('BoardListsPage', () => {
         name: /lists/i,
       }),
     ).not.toBeInTheDocument();
-    deferred.resolve({
-      ok: true,
-      json: async () => [],
-    });
+    deferred.resolve([]);
     expect(await screen.findByText(/no lists found/i)).toBeInTheDocument();
   });
   test('when the board fetch succeeds, it shows the board name as the page title', async () => {
     await renderLists();
-    expect(fetchBoardApi).toHaveBeenCalledWith('1', 'token');
+    expect(fetchBoardApi).toHaveBeenCalledWith('1');
     expect(
       screen.getByRole('heading', {
         name: 'test_board_01',
@@ -105,11 +96,7 @@ describe('BoardListsPage', () => {
     expect(screen.getByText('test_list_02')).toBeInTheDocument();
   });
   test('when the fetch fails, it shows an error message', async () => {
-    fetchListsApi.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    fetchListsApi.mockRejectedValueOnce(new Error('HTTP 500'));
     await renderLists();
     expect(await screen.findByText('Error: Error: HTTP 500')).toBeInTheDocument();
   });
@@ -123,10 +110,7 @@ describe('BoardListsPage', () => {
     });
   });
   test('when the fetch succeeds with empty data, it shows the empty state message', async () => {
-    fetchListsApi.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [],
-    });
+    fetchListsApi.mockResolvedValueOnce([]);
     await renderLists();
     expect(await screen.findByText(/no lists found/i)).toBeInTheDocument();
   });
@@ -141,11 +125,8 @@ describe('BoardListsPage', () => {
   });
   test('when a valid add is submitted, it creates and renders the new item', async () => {
     createList.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        id: 12,
-        name: 'test_list_03',
-      }),
+      id: 12,
+      name: 'test_list_03',
     });
     await renderLists();
     await userEvent.click(
@@ -156,24 +137,16 @@ describe('BoardListsPage', () => {
     const input = screen.getByPlaceholderText(/new list name/i);
     await userEvent.type(input, 'test_list_03{enter}');
     await waitFor(() => {
-      expect(createList).toHaveBeenCalledWith(
-        '1',
-        {
-          name: 'test_list_03',
-          board: '1',
-          description: '',
-        },
-        'token',
-      );
+      expect(createList).toHaveBeenCalledWith('1', {
+        name: 'test_list_03',
+        board: '1',
+        description: '',
+      });
     });
     expect(await screen.findByText('test_list_03')).toBeInTheDocument();
   });
   test('when create fails, it shows an error message', async () => {
-    createList.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    createList.mockRejectedValueOnce(new Error('HTTP 500'));
     await renderLists();
     await userEvent.click(
       screen.getByRole('button', {
@@ -235,11 +208,8 @@ describe('BoardListsPage', () => {
   });
   test('when a valid edit is submitted, it updates the item', async () => {
     updateList.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        id: 10,
-        name: 'test_list_01 Updated',
-      }),
+      id: 10,
+      name: 'test_list_01 Updated',
     });
     await renderLists();
     await userEvent.click(
@@ -256,22 +226,14 @@ describe('BoardListsPage', () => {
     await userEvent.clear(input);
     await userEvent.type(input, 'test_list_01 Updated{enter}');
     await waitFor(() => {
-      expect(updateList).toHaveBeenCalledWith(
-        10,
-        {
-          name: 'test_list_01 Updated',
-        },
-        'token',
-      );
+      expect(updateList).toHaveBeenCalledWith(10, {
+        name: 'test_list_01 Updated',
+      });
     });
     expect(await screen.findByText('test_list_01 Updated')).toBeInTheDocument();
   });
   test('when update fails, it shows an error message', async () => {
-    updateList.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    updateList.mockRejectedValueOnce(new Error('HTTP 500'));
     await renderLists();
     await userEvent.click(
       await screen.findByRole('button', {
@@ -305,9 +267,7 @@ describe('BoardListsPage', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
   test('when delete is confirmed, it removes the item', async () => {
-    deleteList.mockResolvedValueOnce({
-      ok: true,
-    });
+    deleteList.mockResolvedValueOnce(undefined);
     await renderLists();
     await userEvent.click(
       await screen.findByRole('button', {
@@ -320,18 +280,14 @@ describe('BoardListsPage', () => {
       }),
     );
     await waitFor(() => {
-      expect(deleteList).toHaveBeenCalledWith(10, 'token');
+      expect(deleteList).toHaveBeenCalledWith(10);
     });
     await waitFor(() => {
       expect(screen.queryByText('test_list_01')).not.toBeInTheDocument();
     });
   });
   test('when delete fails, it shows an error message', async () => {
-    deleteList.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    deleteList.mockRejectedValueOnce(new Error('HTTP 500'));
     await renderLists();
     await userEvent.click(
       await screen.findByRole('button', {
@@ -423,18 +379,15 @@ describe('BoardListsPage', () => {
   test('when the boardId changes, it refetches the lists', async () => {
     const { rerender } = renderWithProviders(<BoardListsPage setAppBarHeader={vi.fn()} />);
     await waitFor(() => {
-      expect(fetchListsApi).toHaveBeenCalledWith('1', 'token');
+      expect(fetchListsApi).toHaveBeenCalledWith('1');
     });
     mockUseParams.mockReturnValue({
       boardId: '2',
     });
-    fetchListsApi.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [],
-    });
+    fetchListsApi.mockResolvedValueOnce([]);
     rerender(<BoardListsPage setAppBarHeader={vi.fn()} />);
     await waitFor(() => {
-      expect(fetchListsApi).toHaveBeenCalledWith('2', 'token');
+      expect(fetchListsApi).toHaveBeenCalledWith('2');
     });
   });
   test('when a mobile user pulls down from the top, it refreshes the lists', async () => {
@@ -510,25 +463,18 @@ describe('BoardListsPage', () => {
     expect(screen.getByText('test_list_01')).toBeInTheDocument();
     expect(screen.getByText('test_list_02')).toBeInTheDocument();
     expect(screen.queryByText(/^loading/i)).not.toBeInTheDocument();
-    deferred.resolve({
-      ok: true,
-      json: async () => [
-        {
-          id: 12,
-          name: 'test_list_03',
-        },
-      ],
-    });
+    deferred.resolve([
+      {
+        id: 12,
+        name: 'test_list_03',
+      },
+    ]);
     expect(await screen.findByText('test_list_03')).toBeInTheDocument();
   });
   test('when a mobile refresh fails, it keeps existing lists visible with the error', async () => {
     setMobilePullViewport();
     await renderLists();
-    fetchListsApi.mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => [],
-    });
+    fetchListsApi.mockRejectedValueOnce(new Error('HTTP 500'));
     const list = screen.getByTestId('list-list');
     fireEvent.touchStart(list, {
       touches: [

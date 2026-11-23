@@ -13,14 +13,11 @@ export default function BoardHomeRedirect() {
   useEffect(() => {
     let isMounted = true;
     const token = getSessionSnapshot().accessToken;
-    if (!token) return;
+    if (!token || !isCurrentSession()) return;
 
     (async () => {
       try {
-        const response = await fetchBoards(token);
-        if (!response.ok) return;
-
-        const boards = await response.json();
+        const boards = await fetchBoards();
         if (!isMounted || !isCurrentSession() || !boards.length) return;
 
         const boardId = getPreferredBoardId(boards);

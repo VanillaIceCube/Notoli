@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
 import { Link as RouterLink, useNavigate } from 'react-router';
 import { register } from '../../services/notoliApiClient';
-import { persistAuthSession, readOkJson } from '../../services/authSession';
+import { persistAuthSession } from '../../services/authSession';
 
 export default function Register({ showSnackbar }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,8 +22,7 @@ export default function Register({ showSnackbar }) {
 
     setIsSubmitting(true);
     try {
-      const response = await register({ email, username, password });
-      const data = await readOkJson(response, 'Registration failed :(');
+      const data = await register({ email, username, password });
       persistAuthSession(data);
 
       showSnackbar('success', 'Account created! Welcome to Notoli!');

@@ -66,13 +66,12 @@ export default function useNotifications(api, getErrorMessage = fallbackError) {
   const loadNotifications = useCallback(async () => {
     const operation = lifecycleRef.current;
     if (!isCurrent(operation) || operation.bulk || operation.pending.size) return;
-    const accessToken = getSessionSnapshot().accessToken;
-    if (!accessToken) return;
+    if (!getSessionSnapshot().accessToken) return;
     const request = ++operation.load;
     const canPublish = () => isCurrent(operation) && operation.load === request;
     update(operation, () => ({ notificationsLoading: true, notificationError: '' }));
     try {
-      const response = await api.fetchNotifications(accessToken);
+      const response = await api.fetchNotifications();
       if (!response?.ok) {
         const message = await getErrorMessage(response, 'Notifications are unavailable right now.');
         if (canPublish()) update(operation, () => ({ notificationError: message }));
@@ -141,7 +140,7 @@ export default function useNotifications(api, getErrorMessage = fallbackError) {
     const operation = begin(id);
     if (!operation) return false;
     try {
-      const response = await request(getSessionSnapshot().accessToken);
+      const response = await request();
       if (!response?.ok) {
         const message = await getErrorMessage(response, fallback);
         update(operation, () => ({ notificationError: message }));
@@ -171,7 +170,7 @@ export default function useNotifications(api, getErrorMessage = fallbackError) {
     }
     return mutate(
       notification.id,
-      (token) => api.markNotificationRead(notification.id, token),
+      () => api.markNotificationRead(notification.id),
       async (response) => {
         const updated = await response.json();
         if (
@@ -194,7 +193,7 @@ export default function useNotifications(api, getErrorMessage = fallbackError) {
   const clearNotification = (id) =>
     mutate(
       id,
-      (token) => api.clearNotification(id, token),
+      () => api.clearNotification(id),
       async () => (current) => ({
         notifications: current.notifications.filter((item) => item.id !== id),
       }),

@@ -201,7 +201,7 @@ describe('AppHeader', () => {
   test('when there are no notifications, it shows the empty state', async () => {
     sessionStorage.setItem('accessToken', 'ACCESS');
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
-    await waitFor(() => expect(fetchNotifications).toHaveBeenCalledWith('ACCESS'));
+    await waitFor(() => expect(fetchNotifications).toHaveBeenCalledWith());
     await userEvent.click(screen.getByLabelText('notifications'));
     expect(screen.getByText('No notifications yet.')).toBeInTheDocument();
   });
@@ -226,7 +226,7 @@ describe('AppHeader', () => {
         name: /clear notification/i,
       }),
     );
-    expect(clearNotification).toHaveBeenCalledWith(1, 'ACCESS');
+    expect(clearNotification).toHaveBeenCalledWith(1);
     await waitFor(() =>
       expect(
         screen.queryByRole('button', {
@@ -265,7 +265,7 @@ describe('AppHeader', () => {
     await screen.findByText('1');
     await userEvent.click(screen.getByLabelText('notifications'));
     await userEvent.click(screen.getByText('collaborator added "Plan".'));
-    expect(markNotificationRead).toHaveBeenCalledWith(1, 'ACCESS');
+    expect(markNotificationRead).toHaveBeenCalledWith(1);
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/board/12/list/34'));
   });
   test('when mark all read is clicked, it updates all notifications', async () => {
@@ -296,7 +296,7 @@ describe('AppHeader', () => {
         name: /mark all read/i,
       }),
     );
-    expect(markAllNotificationsRead).toHaveBeenCalledWith('ACCESS');
+    expect(markAllNotificationsRead).toHaveBeenCalledWith();
     expect(
       await screen.findByRole('button', {
         name: /clear all/i,
@@ -323,7 +323,7 @@ describe('AppHeader', () => {
         name: /clear all/i,
       }),
     );
-    expect(clearAllNotifications).toHaveBeenCalledWith('ACCESS');
+    expect(clearAllNotifications).toHaveBeenCalledWith();
     expect(await screen.findByText('No notifications yet.')).toBeInTheDocument();
   });
   test('when no profile info exists, it falls back to username + username@gmail.com', async () => {

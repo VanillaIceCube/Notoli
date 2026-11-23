@@ -27,7 +27,6 @@ import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import BoardShareDialog from './BoardShareDialog';
-import { getResponseErrorMessage } from '../services/authSession';
 
 import {
   createBoard,
@@ -60,12 +59,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
     async function loadBoards() {
       setLoading(true);
       try {
-        const response = await fetchBoardsApi(token);
-        if (!response.ok) {
-          const message = await getResponseErrorMessage(response, `HTTP ${response.status}`);
-          throw new Error(message);
-        }
-        const data = await response.json();
+        const data = await fetchBoardsApi();
         if (canShowBoards()) {
           setBoards(data);
           setError(null);
@@ -96,8 +90,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
 
   const onAdd = async () => {
     if (!newBoardName.trim()) return;
-    const currentToken = getSessionSnapshot().accessToken;
-    if (!currentToken) {
+    if (!getSessionSnapshot().accessToken) {
       const message = 'Authentication required.';
       setError(message);
       if (typeof showSnackbar === 'function') {
@@ -109,22 +102,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
     setError(null);
 
     try {
-      const response = await createBoard(
-        {
-          name: newBoardName,
-          description: '',
-        },
-        currentToken,
-      );
-
-      if (!response.ok) {
-        const errorMsg = await getResponseErrorMessage(
-          response,
-          `Unable to create board (HTTP ${response.status})`,
-        );
-        throw new Error(errorMsg);
-      }
-      const created = await response.json();
+      const created = await createBoard({ name: newBoardName, description: '' });
       if (!isCurrentSession()) return;
       setBoards((prev) => [...prev, created]);
 
@@ -176,8 +154,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
 
   const onEdit = async () => {
     if (!editBoardName.trim()) return;
-    const currentToken = getSessionSnapshot().accessToken;
-    if (!currentToken) {
+    if (!getSessionSnapshot().accessToken) {
       const message = 'Authentication required.';
       setError(message);
       if (typeof showSnackbar === 'function') {
@@ -189,16 +166,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
     setError(null);
 
     try {
-      const response = await updateBoard(editingBoardId, { name: editBoardName }, currentToken);
-
-      if (!response.ok) {
-        const errorMsg = await getResponseErrorMessage(
-          response,
-          `Unable to update board (HTTP ${response.status})`,
-        );
-        throw new Error(errorMsg);
-      }
-      const updated = await response.json();
+      const updated = await updateBoard(editingBoardId, { name: editBoardName });
       if (!isCurrentSession()) return;
       setBoards((prev) => prev.map((board) => (board.id === updated.id ? updated : board)));
 
@@ -242,8 +210,7 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
 
   // Remove board
   const onDelete = async (id) => {
-    const currentToken = getSessionSnapshot().accessToken;
-    if (!currentToken) {
+    if (!getSessionSnapshot().accessToken) {
       const message = 'Authentication required.';
       setError(message);
       if (typeof showSnackbar === 'function') {
@@ -256,16 +223,9 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
     setError(null);
 
     try {
-      const response = await deleteBoard(id, currentToken);
+      await deleteBoard(id);
       if (!isCurrentSession()) return;
 
-      if (!response.ok) {
-        const errorMsg = await getResponseErrorMessage(
-          response,
-          `Unable to delete board (HTTP ${response.status})`,
-        );
-        throw new Error(errorMsg);
-      }
       setBoards((prev) => prev.filter((board) => board.id !== id));
       if (typeof showSnackbar === 'function') {
         showSnackbar('success', 'Board deleted.');
@@ -590,7 +550,6 @@ export default function BoardNavigationDrawer({ open, setDrawerOpen, showSnackba
       <BoardShareDialog
         open={shareDialogOpen}
         board={sharingBoard}
-        token={token}
         onClose={closeShareDialog}
         onExited={() => setSharingBoard(null)}
         onBoardUpdated={updateSharedBoard}

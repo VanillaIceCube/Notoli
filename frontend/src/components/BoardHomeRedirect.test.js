@@ -29,17 +29,14 @@ describe('BoardHomeRedirect', () => {
         test_email: '12',
       }),
     );
-    fetchBoards.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [
-        {
-          id: 3,
-        },
-        {
-          id: 12,
-        },
-      ],
-    });
+    fetchBoards.mockResolvedValueOnce([
+      {
+        id: 3,
+      },
+      {
+        id: 12,
+      },
+    ]);
     renderWithProviders(createElement(BoardHomeRedirect));
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/board/12', {
@@ -54,17 +51,14 @@ describe('BoardHomeRedirect', () => {
         test_email: '99',
       }),
     );
-    fetchBoards.mockResolvedValueOnce({
-      ok: true,
-      json: async () => [
-        {
-          id: 7,
-        },
-        {
-          id: 3,
-        },
-      ],
-    });
+    fetchBoards.mockResolvedValueOnce([
+      {
+        id: 7,
+      },
+      {
+        id: 3,
+      },
+    ]);
     renderWithProviders(createElement(BoardHomeRedirect));
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/board/3', {
@@ -85,12 +79,12 @@ test('ignores a previous account board lookup when selecting the new account hom
         finish = resolve;
       }),
     )
-    .mockResolvedValue({ ok: true, json: async () => [{ id: 12 }] });
+    .mockResolvedValue([{ id: 12 }]);
   renderWithProviders(createElement(BoardHomeRedirect));
   act(() => startSession({ access: 'new', refresh: 'new-r' }));
   await waitFor(() => expect(navigate).toHaveBeenCalledWith('/board/12', { replace: true }));
   await act(async () => {
-    finish({ ok: true, json: async () => [{ id: 1 }] });
+    finish([{ id: 1 }]);
   });
   expect(navigate).not.toHaveBeenCalledWith('/board/1', expect.anything());
 });

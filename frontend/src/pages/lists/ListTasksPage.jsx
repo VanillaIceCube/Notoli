@@ -1,4 +1,4 @@
-import useSession from '../../hooks/useSession';
+import useSession, { useSessionGuard } from '../../hooks/useSession';
 // ListTasksPage loads one list's tasks and adds task-specific completion behavior to notepad UI.
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -56,6 +56,7 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
   const { boardId, listId } = useParams();
   const location = useLocation();
   const { accessToken: token } = useSession();
+  const isCurrentSession = useSessionGuard();
   const [boardName, setBoardName] = useState('');
   const [listName, setListName] = useState('');
   const [tasks, setTasks] = useState([]);
@@ -91,11 +92,10 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
   }, [loading, onPageReady]);
 
   const fetchTasks = useCallback(async () => {
+    if (!token || !isCurrentSession()) return;
     setLoading(true);
     try {
-      const response = await fetchNotesApi(listId, token);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
+      const data = await fetchNotesApi(listId);
       setTasks(data);
       setError(null);
     } catch (err) {
@@ -103,33 +103,30 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
     } finally {
       setLoading(false);
     }
-  }, [token, listId]);
+  }, [token, listId, isCurrentSession]);
 
   const fetchListName = useCallback(async () => {
+    if (!token || !isCurrentSession()) return;
     setListName('');
 
     if (!listId) return;
     try {
-      const response = await fetchListApi(listId, token);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const listData = await response.json();
+      const listData = await fetchListApi(listId);
       setListName(listData?.name ?? '');
     } catch (err) {
       setListName('');
       setError(err.toString());
     }
-  }, [listId, token]);
+  }, [listId, token, isCurrentSession]);
 
   useEffect(() => {
     if (!listId) return;
     let cancelled = false;
 
     async function loadBoardName() {
-      if (!boardId) return;
+      if (!boardId || !token || !isCurrentSession()) return;
       try {
-        const response = await fetchBoardApi(boardId, token);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const boardData = await response.json();
+        const boardData = await fetchBoardApi(boardId);
         if (!cancelled) setBoardName(boardData?.name ?? '');
       } catch (err) {
         if (cancelled) return;
@@ -145,7 +142,7 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
     return () => {
       cancelled = true;
     };
-  }, [boardId, listId, token, fetchTasks, fetchListName]);
+  }, [boardId, listId, token, fetchTasks, fetchListName, isCurrentSession]);
 
   const closeActionMenu = () => {
     setActionMenuAnchorEl(null);
@@ -170,18 +167,12 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
   };
 
   const onAdd = async () => {
+    if (!token || !isCurrentSession()) return;
     if (!newTask.trim()) return;
     setError(null);
 
     try {
-      const response = await createNote(
-        listId,
-        { note: newTask, list: listId, description: '' },
-        token,
-      );
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const created = await response.json();
+      const created = await createNote(listId, { note: newTask, list: listId, description: '' });
       setTasks((prev) => [...prev, created]);
       setIsAdding(false);
       setNewTask('');
@@ -197,13 +188,12 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
   };
 
   const onEdit = async () => {
+    if (!token || !isCurrentSession()) return;
     if (!editTask.trim()) return;
     setError(null);
 
     try {
-      const response = await updateNote(editingTaskId, { note: editTask }, token);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const updated = await response.json();
+      const updated = await updateNote(editingTaskId, { note: editTask });
       setTasks((prev) =>
         prev.map((task) => (task.id === updated.id ? { ...task, ...updated } : task)),
       );
@@ -214,6 +204,7 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
   };
 
   const onToggleStatus = async (event, taskToToggle) => {
+    if (!token || !isCurrentSession()) return;
     event.stopPropagation();
     const status = event.target.checked ? NOTE_STATUS_COMPLETE : NOTE_STATUS_NOT_STARTED;
     setError(null);
@@ -222,9 +213,7 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
     );
 
     try {
-      const response = await updateNote(taskToToggle.id, { status }, token);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const updated = await response.json();
+      const updated = await updateNote(taskToToggle.id, { status });
       setTasks((prev) =>
         prev.map((task) => (task.id === updated.id ? { ...task, ...updated } : task)),
       );
@@ -247,11 +236,11 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
   });
 
   const onDelete = async (id) => {
+    if (!token || !isCurrentSession()) return;
     setError(null);
 
     try {
-      const response = await deleteNote(id, token);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      await deleteNote(id);
       setTasks((prev) => prev.filter((task) => task.id !== id));
     } catch (err) {
       setError(err.toString());
@@ -261,6 +250,7 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
   };
 
   const onDragEnd = async ({ active, over }) => {
+    if (!token || !isCurrentSession()) return;
     if (!over || active.id === over.id) return;
 
     const oldIndex = tasks.findIndex((task) => task.id === active.id);
@@ -273,13 +263,10 @@ export default function ListTasksPage({ active = true, onPageReady = () => {}, s
     setError(null);
 
     try {
-      const response = await reorderNotes(
+      const updatedTasks = await reorderNotes(
         listId,
         reorderedTasks.map((task) => task.id),
-        token,
       );
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const updatedTasks = await response.json();
       setTasks(updatedTasks);
     } catch (err) {
       setTasks(previousTasks);

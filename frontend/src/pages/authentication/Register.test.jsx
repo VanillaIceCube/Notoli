@@ -35,15 +35,12 @@ describe('Register', () => {
   });
   test('when registration succeeds, it stores tokens, navigates to board, and shows success', async () => {
     register.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        message: 'User created successfully.',
-        username: 'test_username',
-        email: 'test_email@example.com',
-        access: 'access-token',
-        refresh: 'refresh-token',
-        board_id: 12,
-      }),
+      message: 'User created successfully.',
+      username: 'test_username',
+      email: 'test_email@example.com',
+      access: 'access-token',
+      refresh: 'refresh-token',
+      board_id: 12,
     });
     const showSnackbar = vi.fn();
     renderWithProviders(<Register showSnackbar={showSnackbar} />);
@@ -73,13 +70,7 @@ describe('Register', () => {
     expect(sessionStorage.getItem('refreshToken')).toBe('refresh-token');
   });
   test('when registration fails, it shows the server error', async () => {
-    register.mockResolvedValue({
-      ok: false,
-      status: 400,
-      json: async () => ({
-        error: 'Email already exists.',
-      }),
-    });
+    register.mockRejectedValue(new Error('Email already exists.'));
     const showSnackbar = vi.fn();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
@@ -149,10 +140,10 @@ describe('Register', () => {
   test('blocks duplicate submissions and recovers after a validation failure', async () => {
     const showSnackbar = vi.fn();
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    let resolveRequest;
+    let rejectRequest;
     register.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveRequest = resolve;
+      new Promise((_resolve, reject) => {
+        rejectRequest = reject;
       }),
     );
     renderWithProviders(<Register showSnackbar={showSnackbar} />, {
@@ -172,13 +163,7 @@ describe('Register', () => {
     expect(pendingButton).toBeDisabled();
     fireEvent.click(pendingButton);
     expect(register).toHaveBeenCalledTimes(1);
-    resolveRequest({
-      ok: false,
-      status: 400,
-      json: async () => ({
-        password: ['Validation failed.'],
-      }),
-    });
+    rejectRequest(new Error('Validation failed.'));
     await waitFor(() =>
       expect(
         screen.getByRole('button', {

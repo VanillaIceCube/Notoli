@@ -1,4 +1,4 @@
-import useSession from '../../hooks/useSession';
+import useSession, { useSessionGuard } from '../../hooks/useSession';
 // BoardListsPage loads one board's lists and plugs board-specific CRUD/navigation into notepad UI.
 import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { arrayMove } from '@dnd-kit/sortable';
@@ -51,6 +51,7 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
   const navigate = useNavigate();
   const { boardId } = useParams();
   const { accessToken: token } = useSession();
+  const isCurrentSession = useSessionGuard();
   const [boardName, setBoardName] = useState('');
   const [lists, setLists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -81,11 +82,10 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
   }, [loading, onPageReady]);
 
   const fetchLists = useCallback(async () => {
+    if (!token || !isCurrentSession()) return;
     setLoading(true);
     try {
-      const response = await fetchListsApi(boardId, token);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
+      const data = await fetchListsApi(boardId);
       setLists(data);
       setError(null);
     } catch (err) {
@@ -93,23 +93,22 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
     } finally {
       setLoading(false);
     }
-  }, [token, boardId]);
+  }, [token, boardId, isCurrentSession]);
 
   const fetchBoardName = useCallback(async () => {
+    if (!token || !isCurrentSession()) return;
     setBoardName('');
 
     if (!boardId) return;
 
     try {
-      const response = await fetchBoardApi(boardId, token);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
+      const data = await fetchBoardApi(boardId);
       setBoardName(data?.name ?? '');
     } catch (err) {
       setBoardName('');
       setError(err.toString());
     }
-  }, [token, boardId]);
+  }, [token, boardId, isCurrentSession]);
 
   useEffect(() => {
     if (boardId) {
@@ -143,18 +142,16 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
   };
 
   const onAdd = async () => {
+    if (!token || !isCurrentSession()) return;
     if (!newListName.trim()) return;
     setError(null);
 
     try {
-      const response = await createList(
-        boardId,
-        { name: newListName, board: boardId, description: '' },
-        token,
-      );
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const created = await response.json();
+      const created = await createList(boardId, {
+        name: newListName,
+        board: boardId,
+        description: '',
+      });
       setLists((prev) => [...prev, created]);
       setIsAdding(false);
       setNewListName('');
@@ -170,13 +167,12 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
   };
 
   const onEdit = async () => {
+    if (!token || !isCurrentSession()) return;
     if (!editListName.trim()) return;
     setError(null);
 
     try {
-      const response = await updateList(editingListId, { name: editListName }, token);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const updated = await response.json();
+      const updated = await updateList(editingListId, { name: editListName });
       setLists((prev) => prev.map((list) => (list.id === updated.id ? updated : list)));
       closeEdit();
     } catch (err) {
@@ -193,11 +189,11 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
   });
 
   const onDelete = async (id) => {
+    if (!token || !isCurrentSession()) return;
     setError(null);
 
     try {
-      const response = await deleteList(id, token);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      await deleteList(id);
       setLists((prev) => prev.filter((list) => list.id !== id));
     } catch (err) {
       setError(err.toString());
@@ -207,6 +203,7 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
   };
 
   const onDragEnd = async ({ active, over }) => {
+    if (!token || !isCurrentSession()) return;
     if (!over || active.id === over.id) return;
 
     const oldIndex = lists.findIndex((list) => list.id === active.id);
@@ -219,13 +216,10 @@ export default function BoardListsPage({ active = true, onPageReady = () => {}, 
     setError(null);
 
     try {
-      const response = await reorderLists(
+      const updatedLists = await reorderLists(
         boardId,
         reorderedLists.map((list) => list.id),
-        token,
       );
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const updatedLists = await response.json();
       setLists(updatedLists);
     } catch (err) {
       setLists(previousLists);

@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { TextField, Button, Typography, Box, Paper, Stack, Link } from '@mui/material';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
 import { resetPassword } from '../../services/notoliApiClient';
-import { readOkJson } from '../../services/authSession';
 
 export default function ResetPassword({ showSnackbar }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,8 +29,7 @@ export default function ResetPassword({ showSnackbar }) {
 
     setIsSubmitting(true);
     try {
-      const response = await resetPassword({ uid, token, password });
-      const data = await readOkJson(response, 'Password reset failed :(');
+      const data = await resetPassword({ uid, token, password });
       showSnackbar('success', data?.message || 'Password reset successful.');
       navigate('/login');
     } catch (err) {
