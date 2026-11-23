@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { TextField } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router';
 import { login } from '../../services/notoliApiClient';
-import { isAuthNetworkError, persistAuthSession } from '../../services/authSession';
+import { isAuthNetworkError } from '../../services/authSession';
+import { startSession } from '../../services/sessionState';
 import { connectionReturnTo } from '../../services/authRedirect';
 import AuthForm, { AuthLink } from './AuthForm';
 
@@ -38,7 +39,7 @@ export default function Login({ showSnackbar }) {
     setIsSubmitting(true);
     try {
       const data = await login({ email: email.trim(), password });
-      persistAuthSession(data);
+      startSession(data);
 
       const welcomeName =
         data?.username ||

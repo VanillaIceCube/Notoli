@@ -1,5 +1,3 @@
-import { startSession } from './sessionState';
-
 export async function safeReadJson(response) {
   try {
     return await response.json();
@@ -54,8 +52,4 @@ export function isAuthNetworkError(error) {
     error instanceof TypeError ||
     (typeof message === 'string' && message.toLowerCase().includes('network'))
   );
-}
-
-export function persistAuthSession(data) {
-  startSession(data);
 }

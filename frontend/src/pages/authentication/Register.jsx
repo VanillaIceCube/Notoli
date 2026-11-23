@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { TextField } from '@mui/material';
 import { useNavigate } from 'react-router';
 import { register } from '../../services/notoliApiClient';
-import { isAuthNetworkError, persistAuthSession } from '../../services/authSession';
+import { isAuthNetworkError } from '../../services/authSession';
+import { startSession } from '../../services/sessionState';
 import AuthForm, { AuthLink } from './AuthForm';
 
 export default function Register({ showSnackbar }) {
@@ -24,7 +25,7 @@ export default function Register({ showSnackbar }) {
     setIsSubmitting(true);
     try {
       const data = await register({ email, username, password });
-      persistAuthSession(data);
+      startSession(data);
 
       showSnackbar('success', 'Account created! Welcome to Notoli!');
       if (data?.board_id) {

@@ -505,8 +505,8 @@ describe('session lifecycle', () => {
     'an old refresh (%s) cannot restore a logged-out session',
     async (status) => {
       const pending = deferred();
-      const { persistAuthSession } = await import('./authSession');
-      persistAuthSession({ access: 'old', refresh: 'old-refresh' });
+      const { startSession } = await import('./sessionState');
+      startSession({ access: 'old', refresh: 'old-refresh' });
       const { setNavigate } = await import('./navigationService');
       const navigate = vi.fn();
       setNavigate(navigate);
@@ -536,8 +536,8 @@ describe('session lifecycle', () => {
     'an old refresh (%s) cannot overwrite or expire a new login',
     async (status) => {
       const pending = deferred();
-      const { persistAuthSession } = await import('./authSession');
-      persistAuthSession({ access: 'old', refresh: 'old-refresh' });
+      const { startSession } = await import('./sessionState');
+      startSession({ access: 'old', refresh: 'old-refresh' });
       const { setNavigate } = await import('./navigationService');
       const navigate = vi.fn();
       setNavigate(navigate);
@@ -548,7 +548,7 @@ describe('session lifecycle', () => {
       const { apiFetch } = await import('./requestClient');
       const request = apiFetch('/api/private/');
       await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
-      persistAuthSession({ access: 'new-user', refresh: 'new-user-refresh' });
+      startSession({ access: 'new-user', refresh: 'new-user-refresh' });
       pending.resolve({
         status,
         ok: status === 200,
@@ -564,12 +564,12 @@ describe('session lifecycle', () => {
 
   test('a late protected 401 cannot refresh or clear a newer login', async () => {
     const pending = deferred();
-    const { persistAuthSession } = await import('./authSession');
-    persistAuthSession({ access: 'old', refresh: 'old-refresh' });
+    const { startSession } = await import('./sessionState');
+    startSession({ access: 'old', refresh: 'old-refresh' });
     vi.stubGlobal('fetch', vi.fn().mockReturnValueOnce(pending.promise));
     const { apiFetch } = await import('./requestClient');
     const request = apiFetch('/api/private/');
-    persistAuthSession({ access: 'new-user', refresh: 'new-refresh' });
+    startSession({ access: 'new-user', refresh: 'new-refresh' });
     pending.resolve({ status: 401 });
     await request;
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -581,8 +581,8 @@ describe('session lifecycle', () => {
     async (path) => {
       const pendingPath = '/connections/authorize?state=keep%26this';
       window.history.replaceState({}, '', pendingPath);
-      const { persistAuthSession } = await import('./authSession');
-      persistAuthSession({ access: 'old', refresh: 'old-refresh' });
+      const { startSession } = await import('./sessionState');
+      startSession({ access: 'old', refresh: 'old-refresh' });
       const { setNavigate } = await import('./navigationService');
       const navigate = vi.fn();
       setNavigate(navigate);
@@ -606,8 +606,8 @@ describe('session lifecycle', () => {
 
   test('concurrent requests share one refresh and retry with the rotated token', async () => {
     const pending = deferred();
-    const { persistAuthSession } = await import('./authSession');
-    persistAuthSession({ access: 'old', refresh: 'old-refresh' });
+    const { startSession } = await import('./sessionState');
+    startSession({ access: 'old', refresh: 'old-refresh' });
     vi.stubGlobal(
       'fetch',
       vi.fn((url, options) => {
@@ -637,8 +637,8 @@ describe('session lifecycle', () => {
   test('a new login starts its own refresh while the prior session is still pending', async () => {
     const oldRefresh = deferred();
     const newRefresh = deferred();
-    const { persistAuthSession } = await import('./authSession');
-    persistAuthSession({ access: 'old', refresh: 'old-refresh' });
+    const { startSession } = await import('./sessionState');
+    startSession({ access: 'old', refresh: 'old-refresh' });
     vi.stubGlobal(
       'fetch',
       vi.fn((url, options) => {
@@ -659,7 +659,7 @@ describe('session lifecycle', () => {
     await vi.waitFor(() =>
       expect(fetch.mock.calls.filter(([url]) => url === '/auth/refresh/')).toHaveLength(1),
     );
-    persistAuthSession({ access: 'new-user', refresh: 'new-refresh' });
+    startSession({ access: 'new-user', refresh: 'new-refresh' });
     const second = apiFetch('/api/new/');
     await vi.waitFor(() =>
       expect(fetch.mock.calls.filter(([url]) => url === '/auth/refresh/')).toHaveLength(2),
