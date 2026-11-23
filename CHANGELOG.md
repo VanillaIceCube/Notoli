@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Use `anymail.backends.resend.EmailBackend` directly in the repository Actions `DJANGO_EMAIL_BACKEND` variable.
 - Select the verified saved app controller and policy automatically for rollback; preserve their original readiness through recovery and later deployments while retaining explicit database choices and deployment locks.
 - Limit production preflight policy to this app's route networks and exact trusted peers; Infrastructure retains full-host topology checks.
 - Add readable production release and recovery progress, failing-step context, command exit codes and private-record pointers from the shared engine; preserve transaction order and private subprocess output.
@@ -15,6 +16,7 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Remove retired Resend backend-name conversion from Django settings and the shared bundle builder; new production bundles require an explicit maintained Anymail or SMTP backend.
 - Remove the unused deployment root hint, repeated frontend build-argument selector and completed parity-checker cleanup migration.
 
 ## 2026-11-16

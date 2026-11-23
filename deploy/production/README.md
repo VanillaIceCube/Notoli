@@ -171,11 +171,11 @@ other apps' networks. `workflow.extra_env` adds only app-specific Actions inputs
 all frontend builds use `VITE_API_BASE_URL=` for same-origin API requests.
 Infrastructure owns `app-release/v1`, its manifest, tests and workflow template.
 `shared_source` in `app.json` pins that source to immutable commit
-`07420531a79f14cb1ba3914c2865e5d4847d1bf4` across all three consumers. CI verifies
+`50aeb6222613b803d3526082529966dfedd102f5` across all three consumers. CI verifies
 the common files and generated workflow, failing on drift or unavailable source.
 Change the Infrastructure source, regenerate its manifest, then synchronize all
 consumers; never edit only a vendored common file. See the
-[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/07420531a79f14cb1ba3914c2865e5d4847d1bf4/app-release/README.md)
+[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/50aeb6222613b803d3526082529966dfedd102f5/app-release/README.md)
 for the parity matrix and coordinated update procedure.
 
 Required Actions access variables: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`,
@@ -184,8 +184,9 @@ Optional `DEPLOY_PORT` defaults to 22. Required access secret: `DEPLOY_SSH_KEY`.
 Required app secrets: `DJANGO_SECRET_KEY`, `DJANGO_EMAIL_HOST_KEY`.
 Required app variables: `DJANGO_EMAIL_BACKEND`, `DJANGO_DEFAULT_FROM_EMAIL`.
 Use `anymail.backends.resend.EmailBackend` or
-`django.core.mail.backends.smtp.EmailBackend`. The builder normalizes known
-legacy Resend class paths to the current Anymail backend for new bundles only.
+`django.core.mail.backends.smtp.EmailBackend` explicitly. New bundles reject
+retired custom Resend class paths; saved recovery bundles keep their original
+settings and matched images/controllers.
 Optional mail settings: `DJANGO_EMAIL_HOST`, `DJANGO_EMAIL_PORT`,
 `DJANGO_EMAIL_USE_TLS`, `DJANGO_EMAIL_HOST_USER`, `DJANGO_EMAIL_TIMEOUT`.
 Defaults are `smtp.resend.com`, port 587, TLS enabled, user `resend`, timeout 10
@@ -583,4 +584,4 @@ production status.
 - [Workflow guide](../../.github/workflows/README.md)
 - [App policy](app.json), [Compose](compose.yml), [bundle builder](build_bundle.py),
   [release controller](release.py) and [deployment workflow](../../.github/workflows/ci-deploy.yml)
-- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/07420531a79f14cb1ba3914c2865e5d4847d1bf4/app-release/README.md)
+- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/50aeb6222613b803d3526082529966dfedd102f5/app-release/README.md)

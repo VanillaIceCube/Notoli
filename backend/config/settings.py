@@ -215,12 +215,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 EMAIL_BACKEND = os.getenv(
     "DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
 )
-if EMAIL_BACKEND in {
-    "authentication.email_backends.ResendApiEmailBackend",
-    "apps.authentication.email_backends.ResendApiEmailBackend",
-    "apps.email.backends.ResendApiEmailBackend",
-}:
-    EMAIL_BACKEND = "anymail.backends.resend.EmailBackend"
 EMAIL_HOST = os.getenv("DJANGO_EMAIL_HOST", "smtp.resend.com")
 EMAIL_PORT = int(os.getenv("DJANGO_EMAIL_PORT") or "587")
 EMAIL_USE_TLS = os.getenv("DJANGO_EMAIL_USE_TLS", "1") == "1"
