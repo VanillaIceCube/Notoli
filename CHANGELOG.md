@@ -15,6 +15,8 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Cancel older CI runs when a new run starts for the same pull request.
+- Remove the generated CI workflow inventory and its architecture drift check.
 - Review GitHub Actions write permissions in workflow PRs and remove the separate approval file.
 - Save board, list, and item changes even if their activity notification fails.
 - Standardize Board, List, and Task naming across the React UI, Django API, and MCP tools. The public API uses task terminology exclusively. Existing MCP approvals and execution receipts remain valid.
