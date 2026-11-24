@@ -19,6 +19,16 @@ to succeed. Commands in this guide run from the repository root.
 A new CI run for a pull request cancels the older run for that pull request.
 The current run follows the job dependencies in the workflow.
 
+### Secret scan
+
+[Gitleaks](gate-secrets.yml) scans PR commits for exposed credentials. It runs
+with a read-only token and disables PR comments and artifact uploads. RoboCop
+receives the job result as scanner evidence. A failed scan fails PR CI and
+prevents Dependabot auto-merge.
+
+After a successful GitHub PR run confirms the `Secret scan / Gitleaks` check
+name, add that check to the `main` ruleset alongside the other required gates.
+
 ### Major-upgrade review evidence
 
 Obi-Wan uses Dependabot's per-dependency metadata for grouped upgrades.
@@ -579,7 +589,7 @@ flowchart TD
   Fork[Fork PR] --> Isolated[Applicable checks with fork credential isolation]
   CI --> LintTest[Lint and test workflows]
   CI --> Scanners[CodeQL and dependency scanners]
-  CI -->|Infrastructure| Secrets[Gitleaks secret scan]
+  CI --> Secrets[Gitleaks secret scan]
   Secrets --> Robo
   Secrets --> Gate
   CI --> Obi[Obi-Wan code review]
@@ -603,7 +613,7 @@ Infrastructure restricts it to `main`. Same-repository human and Dependabot PRs
 receive the configured reviewers. Forks receive no reviewer credentials: never
 execute fork code with privileged credentials or add `pull_request_target` here.
 Obi-Wan starts independently; Lint Eastwood consumes lint/test outcomes; RoboCop
-consumes scanner evidence, including Infrastructure's secret scan. Missing evidence,
+consumes scanner evidence, including the secret scan. Missing evidence,
 credentials, invalid output and `REQUEST_CHANGES` fail. Skipped or old-head reviews
 are not current-head acceptance. App Dependabot auto-merge verifies the exact head
 without executing PR code; Infrastructure retains Required CI and owner merge.

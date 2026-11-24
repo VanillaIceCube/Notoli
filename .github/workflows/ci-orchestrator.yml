@@ -55,6 +55,10 @@ jobs:
       contents: read
       pull-requests: read
 
+  secrets:
+    name: Secret scan
+    uses: ./.github/workflows/gate-secrets.yml
+
   code-review:
     permissions:
       contents: read
@@ -101,7 +105,7 @@ jobs:
 
   security-review:
     name: AI Security Review
-    needs: [codeql, dependency-vulnerability, dependency-malware]
+    needs: [codeql, dependency-vulnerability, dependency-malware, secrets]
     if: >-
       always() &&
       github.event_name == 'pull_request' &&
@@ -127,10 +131,11 @@ jobs:
       dependency_vulnerability_report: ${{ needs.dependency-vulnerability.outputs.vulnerability_report }}
       dependency_malware_result: ${{ needs.dependency-malware.result }}
       dependency_malware_report: ${{ needs.dependency-malware.outputs.malware_report }}
+      secret_scan_result: ${{ needs.secrets.result }}
 
   auto-merge:
     name: Auto Merge
-    needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware, code-review, build-review, security-review]
+    needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware, secrets, code-review, build-review, security-review]
     if: always()
     runs-on: ubuntu-latest
     permissions:
@@ -166,6 +171,7 @@ jobs:
           CODEQL_RESULT: ${{ needs.codeql.result }}
           VULNERABILITY_RESULT: ${{ needs.dependency-vulnerability.result }}
           MALWARE_RESULT: ${{ needs.dependency-malware.result }}
+          SECRET_SCAN_RESULT: ${{ needs.secrets.result }}
         run: |
           set -euo pipefail
 
@@ -178,7 +184,8 @@ jobs:
              [ "$TEST_RESULT" = 'success' ] && \
              [ "$CODEQL_RESULT" = 'success' ] && \
              [ "$VULNERABILITY_RESULT" = 'success' ] && \
-             [ "$MALWARE_RESULT" = 'success' ]; then
+             [ "$MALWARE_RESULT" = 'success' ] && \
+             [ "$SECRET_SCAN_RESULT" = 'success' ]; then
             echo 'Dependabot eligibility will be evaluated after successful CI by the main-branch follow-up.'
           else
             echo 'Dependabot auto-merge is not evaluated until all independent gates pass.'

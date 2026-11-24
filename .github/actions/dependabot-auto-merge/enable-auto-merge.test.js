@@ -343,7 +343,7 @@ test("privileged workflow uses only main code and verified metadata, with no imm
   assert.doesNotMatch(source, /pulls\.merge|mergePullRequest\(/);
   const orchestrator = fs.readFileSync(path.join(workflows, "ci-orchestrator.yml"), "utf8");
   assert.doesNotMatch(orchestrator, /uses: .*ci-auto-merge.yml/);
-  assert.match(orchestrator, /needs: \[lints, tests, codeql, dependency-vulnerability, dependency-malware, code-review, build-review, security-review\]/);
+  assert.match(orchestrator, /needs: \[lints, tests, codeql, dependency-vulnerability, dependency-malware, secrets, code-review, build-review, security-review\]/);
   const gate = fs.readFileSync(path.join(workflows, "gate-test.yml"), "utf8");
   assert.match(gate, /\.github\/actions\/dependabot-auto-merge\/\*\.test.js/);
   assert.match(gate, /'\.github\/workflows\/ci-auto-merge.yml'/);

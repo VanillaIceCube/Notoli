@@ -3,6 +3,9 @@ name: AI Security Review
 on:
   workflow_call:
     inputs:
+      secret_scan_result:
+        required: false
+        type: string
       codeql_result:
         required: false
         type: string
@@ -71,6 +74,7 @@ jobs:
           DEPENDENCY_VULNERABILITY_REPORT: ${{ inputs.dependency_vulnerability_report }}
           DEPENDENCY_MALWARE_RESULT: ${{ inputs.dependency_malware_result || 'unknown' }}
           DEPENDENCY_MALWARE_REPORT: ${{ inputs.dependency_malware_report }}
+          SECRET_SCAN_RESULT: ${{ inputs.secret_scan_result || 'unknown' }}
         with:
           script: |
             const fs = require('fs');
@@ -176,6 +180,7 @@ jobs:
                 codeql: process.env.CODEQL_RESULT,
                 dependency_vulnerability: process.env.DEPENDENCY_VULNERABILITY_RESULT,
                 dependency_malware: process.env.DEPENDENCY_MALWARE_RESULT,
+                secret_scan: process.env.SECRET_SCAN_RESULT,
               },
               codeql_interpretation: codeqlInterpretation,
               gate_reports: {
@@ -290,7 +295,7 @@ jobs:
             }
 
             Review decision rules:
-            - If CodeQL, Dependency/Vulnerability Review, or Malware Review failed with an actionable finding, return REQUEST_CHANGES.
+            - If CodeQL, Dependency/Vulnerability Review, Malware Review, or Secret Scan failed with an actionable finding, return REQUEST_CHANGES.
             - If you identify a concrete security risk in a security-sensitive code path, return REQUEST_CHANGES.
             - If a security gate failed but the evidence shows an external/tooling problem rather than a PR security issue, return COMMENT and explain the evidence gap.
             - If all security gates are clean and you find no security risk in the diff, return APPROVE with a concise clean-security summary.

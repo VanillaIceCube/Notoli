@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-24
+
+### Added
+
+- Run the shared Gitleaks secret scan on pull requests and pass its result to RoboCop.
+
 ## 2026-11-23
 
 ### Fixed
