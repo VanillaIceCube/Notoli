@@ -466,18 +466,9 @@ constrain a workflow that bypasses it. GitHub rulesets and independent review
 remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
 forms, rejects aliases, duplicate and merge keys, and requires pinned PyYAML 6.0.3.
 
-Mapping-form writes are checked against `.github/workflow-write-grants.json`,
-which records reviewed per-workflow/job grants. Unknown scopes/grant levels and
-new writes fail. Changes to that policy require review with the workflow; it does
-not grant GitHub permissions itself or replace branch protection.
-
-On pull requests, grant authority comes from the platform event base SHA, never
-from the proposed policy file. Bootstrap derives existing writes from that exact
-base when no manifest exists. To add a grant, first merge a separately reviewed
-policy-only PR under the existing protected review gates; a later workflow PR
-can consume it. Fetch the base commit before local PR-policy audits. This detects
-self-authorizing policy/workflow changes; it does not make PR-owned code a sandbox
-or remove repository-writer privileges.
+Declare permissions explicitly in the workflow or job. The checker rejects broad
+grants such as `write-all` and unknown permission scopes or levels. Review changes
+to write permissions in the pull request that changes the workflow.
 
 ### Security-alert configuration contract
 
@@ -662,9 +653,8 @@ permissions. Dependabot receives required reviewer OpenAI keys/App private keys,
 never production/Project credentials. RoboCop owns security-alert issue writes;
 the separate Project token only synchronizes Project fields. Repository Actions
 secrets are not branch-scoped: arbitrary workflow writers remain privileged.
-Immutable external Action pins and the platform-selected base permission policy
-prevent proposed workflows from approving their own new write grants. A grant
-must merge through review before a consumer requests it.
+External Actions use immutable pins. Workflow reviews cover changes to write
+permissions in the workflow or job that requests them.
 
 ### Scheduled source-alert maintenance
 

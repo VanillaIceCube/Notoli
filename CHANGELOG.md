@@ -15,6 +15,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Review GitHub Actions write permissions in workflow PRs and remove the separate approval file.
 - Save board, list, and item changes even if their activity notification fails.
 - Standardize Board, List, and Task naming across the React UI, Django API, and MCP tools. The public API uses task terminology exclusively. Existing MCP approvals and execution receipts remain valid.
 - Use “Task” consistently in the checklist labels, empty state, and reorder screen.

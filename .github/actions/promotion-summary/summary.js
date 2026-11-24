@@ -26,7 +26,7 @@ function classify(files) {
     add("automation", hit(/^\.github\//));
     add("migrations", codeNames.some(p => /^backend\/.*\/migrations\/[^/]+\.py$/.test(p) && !p.endsWith("/__init__.py")));
     add("dependencies", hit(/(^|\/)(package(?:-lock)?\.json|pnpm-lock\.yaml|yarn\.lock|requirements[^/]*\.txt|environment\.ya?ml|pyproject\.toml|uv\.lock)$/));
-    add("configuration", hit(/^\.github\/(workflows\/|workflow-write-grants\.json$|actions\/openai-chat\/policy\.cjs$)/) || hit(/(^|\/)(settings\.py|app\.json|compose[^/]*\.ya?ml|docker-compose[^/]*\.ya?ml|Dockerfile[^/]*|[^/]*\.conf|[^/]*\.env(?:\.[^/]*)?)$/));
+    add("configuration", hit(/^\.github\/(workflows\/|actions\/openai-chat\/policy\.cjs$)/) || hit(/(^|\/)(settings\.py|app\.json|compose[^/]*\.ya?ml|docker-compose[^/]*\.ya?ml|Dockerfile[^/]*|[^/]*\.conf|[^/]*\.env(?:\.[^/]*)?)$/));
     add("release", hit(/^(deploy\/|app-release\/|nginx\/|compose\.yml$|scripts\/.*(?:release|gateway|cutover)|\.github\/workflows\/(?:ci-deploy|deploy-gateway|promotion-summary)\.yml$)/));
     add("documentation", names.some(p => /\.md$/i.test(p)));
     if (!known) groups.other++;
