@@ -91,8 +91,12 @@ function verifyChecks(rules, checks, files, policyCheckId) {
       item.app?.slug === "github-actions" &&
       (!requirement.integration_id || item.app.id === requirement.integration_id))
       .sort((a, b) => b.id - a.id)[0];
-    if (requirement.context === policyContext && check && check.id === policyCheckId &&
-        check.status === "in_progress" && !check.conclusion) continue;
+    if (requirement.context === policyContext) {
+      if (check && check.id === policyCheckId && check.status === "in_progress" && !check.conclusion) continue;
+      const error = new Error("Required check Dependabot Policy is not pending for this run");
+      error.retryable = !check || check.id < policyCheckId || (check.id === policyCheckId && check.status === "queued");
+      throw error;
+    }
     const expectedSkip = scopedChecks.has(requirement.context) && check?.conclusion === "skipped" &&
       scopeAllowsSkip(requirement.context, files);
     if (check?.status !== "completed" || (check.conclusion !== "success" && !expectedSkip)) {

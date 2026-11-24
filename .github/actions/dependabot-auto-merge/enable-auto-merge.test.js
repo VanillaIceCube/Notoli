@@ -303,6 +303,20 @@ test("a required pending per-head policy holds native auto-merge through later p
   await assert.rejects(clean.enable(), /not stable/);
 });
 
+test("a previous successful policy check cannot stand in for this run's pending check", async () => {
+  const h = harness();
+  const pending = h.checks.pop();
+  h.checks.push({ ...pending, id: pending.id - 1, status: "completed", conclusion: "success" });
+  let waits = 0;
+  h.sleep = async () => { waits++; };
+  await assert.rejects(h.enable(), /Required check/);
+  assert.equal(waits, 5);
+  assert.equal(h.calls.length, 0);
+
+  h.sleep = async () => { h.checks.push(pending); };
+  assert.equal(await h.enable(), "enabled");
+});
+
 test("policy check visibility is polled boundedly without trusting a stale head", async () => {
   const h = harness(); const paginate = h.github.paginate.bind(h.github);
   let reads = 0; let waits = 0;
