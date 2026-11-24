@@ -12,6 +12,7 @@ triggers, repository-specific gates and token permissions; the
 | [collect-prior-ai-reviews](collect-prior-ai-reviews/action.yml) | Attributed, bounded prior discussion and review evidence. |
 | [openai-chat](openai-chat/action.yml) | Validated request policy, configuration and aggregate usage. |
 | [publish-ai-review](publish-ai-review/action.yml) | Current-head native review publication and conservative own-feedback reconciliation. |
+| [review-npm-malware](review-npm-malware/action.yml) | Known-malware review for changed public npm and PyPI versions using GitHub and OpenSSF advisories. |
 | [security-alerts](security-alerts/action.yml) | Validated alert classification, issue lifecycle and separate Project synchronization. |
 
 ## 📏 Complete source-diff review limit
@@ -19,7 +20,7 @@ triggers, repository-specific gates and token permissions; the
 All three reviewers (Obi-Wan Code-nobi, Lint Eastwood and RoboCop) inherit a
 2 MB (2,000,000-byte) source-diff limit from [`get-pr-diff`](get-pr-diff/action.yml)
 in all four repositories. The three applications omit only the regular
-`frontend/package-lock.json` covered by the npm malware gate. Infrastructure
+`frontend/package-lock.json` covered by the dependency malware gate. Infrastructure
 includes every lockfile. A source diff at the limit is reviewed in full; a larger source diff
 withholds the model call, publishes an incomplete-review notice and fails the
 reviewer's check. Truncated content cannot produce an approval.

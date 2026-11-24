@@ -78,8 +78,7 @@ What it does:
   - Uses GitHub Dependency Review and fails when a PR introduces a high or critical vulnerability.
   - Emits a bounded vulnerability report output for RoboCop instead of posting a standalone PR comment. Full dependency and vulnerability JSON travels through a file and is retained in the `dependency-review-evidence` artifact; it is not passed through a large environment variable. The report includes change counts, vulnerable entries up to 16 KiB, and an explicit omitted-entry count. Every non-success Dependency Review outcome fails the gate, independently of report size.
 - Runs the reusable malware gate: [`.github/workflows/gate-malware.yml`](gate-malware.yml)
-  - Uses the local [npm malware review action](../actions/review-npm-malware/action.yml) to compare changed `frontend/package-lock.json` packages against GitHub's npm malware advisories. Queries use GitHub's documented [affects filter](https://docs.github.com/en/rest/security-advisories/global-advisories#list-global-security-advisories) with one unique changed package name per query, following every result page and matching versions locally; API failures still block the gate. This avoids downloading the full global malware corpus for each dependency PR.
-  - Follows GitHub's cursor-based advisory pagination and applies a per-request timeout so the gate terminates reliably as the advisory feed grows.
+  - The [malware action](../actions/review-npm-malware/action.yml) checks both application lockfiles against GitHub malware advisories and OpenSSF reports via OSV.
   - Emits a malware report output for RoboCop and fails when a changed package/version matches a known malware advisory.
 - For trusted same-repository PRs, including Dependabot, runs [`.github/workflows/review-code.yml`](review-code.yml)
   - Runs Obi-Wan Code-nobi, the AI Code Reviewer, for general implementation review
@@ -101,7 +100,7 @@ For `version-update:semver-major` updates, Obi-Wan publishes a **Major upgrade b
 
 The workflow uses pinned Dependabot metadata, the target and first release in the new major line from GitHub Releases, npm/PyPI repository metadata, the bounded Dependabot PR description, a bounded exact-match search of tracked repository text, and [Responses API web search](https://developers.openai.com/api/docs/guides/tools-web-search). Search runs only for semver-major code reviews; other reviews have no web tool. Missing releases, unsupported ecosystems such as Docker, registry and API failures are recorded as evidence gaps so the reviewer can search official sources and explain uncertainty rather than invent release rationale.
 
-Upstream release notes are capped at 12,000 characters per release, repository usage evidence at 30,000 bytes, and the PR description at 12,000 characters. The shared diff action uses a 2 MB (2,000,000-byte) budget. All three reviewers omit only the regular frontend/package-lock.json payload covered by the independent npm malware gate. Obi-Wan's changed-file context applies the same exclusion. The full diff size and any exclusion are disclosed. Each persona publishes an incomplete-review `COMMENT` and fails its check when the source diff is truncated, withholding the normal model call and verdict. This also ports the complete-diff behavior tracked in [#660](https://github.com/VanillaIceCube/Notoli/issues/660).
+Upstream release notes are capped at 12,000 characters per release, repository usage evidence at 30,000 bytes, and the PR description at 12,000 characters. The shared diff action uses a 2 MB (2,000,000-byte) budget. All three reviewers omit only the regular frontend/package-lock.json payload covered by the independent dependency malware gate. Obi-Wan's changed-file context applies the same exclusion. The full diff size and any exclusion are disclosed. Each persona publishes an incomplete-review `COMMENT` and fails its check when the source diff is truncated, withholding the normal model call and verdict. This also ports the complete-diff behavior tracked in [#660](https://github.com/VanillaIceCube/Notoli/issues/660).
 
 The publisher requires all major-brief fields before publishing a normal major-upgrade review. An incomplete brief produces one unavailable notice per persona/commit and fails the review job. An unchanged verdict retains its brief rather than collapsing to a summary. A native `REQUEST_CHANGES` review fails the corresponding reviewer check, matching MacroMapper. OpenAI requests cap combined reasoning and visible output at 16,000 tokens; invalid credentials, quota errors, and unusable model responses retain the existing visible failure behavior.
 
@@ -169,7 +168,7 @@ Merge blocking:
 
 - The active `main` ruleset requires the exact checks listed below, including CodeQL scope detection, the three analyzers, Vulnerability, and Malware.
 - Dependency vulnerability review fails at `high` severity or above and posts its summary directly on the PR.
-- Dependency malware review is npm-focused because GitHub's malware advisory coverage is currently npm-focused; it checks only changed lockfile package versions.
+- Dependency malware review checks changed public npm and PyPI versions against both advisory feeds.
 - The workflow reports CodeQL findings, and CodeQL must pass before `ci-auto-merge.yml` can run.
 - Dependabot auto-merge requires lint, test, CodeQL, vulnerability, and malware checks to pass.
 - To make serious CodeQL findings block merges, configure GitHub branch protection or a repository ruleset to require the relevant CodeQL check after validating runtime and alert noise.
@@ -462,15 +461,27 @@ required. Repository settings are audited independently of source; stage read-on
 defaults/disabled workflow-token approvals and SHA enforcement after source CI
 passes. Reviewer App tokens and scoped auto-merge/deployment grants remain explicit.
 
-The PR npm malware gate scans only added/changed exact package versions, at most
-25 per request, 200 requests total and 20 pages per batch, with 30-second timeouts.
-A missing base lock scans the complete head; a missing head lock while a frontend
-manifest remains fails. Invalid refs, unsupported/malformed locks, unverifiable
-versions, API/range evidence failures and known malware fail visibly. Removing the
-whole frontend has no remaining npm graph. This gate is distinct from the scheduled
-repository-alert feed. Mocked regressions make no API writes or model calls.
+The PR malware gate discovers committed npm v2/v3 lockfiles (`package-lock.json` or
+`npm-shrinkwrap.json`) and uv v1 `uv.lock` files at any depth in the base and
+head. This application uses `frontend/package-lock.json` and `backend/uv.lock`.
+It checks added or changed
+direct and transitive registry versions, including optional and platform-specific
+entries. A new lockfile scans the full graph. A missing head lock with a remaining
+manifest, malformed or unsupported input, or incomplete advisory evidence fails the
+check. The local Python project is excluded. Private indexes, Git URLs, direct
+downloads and workspace links require separate provenance review and fail the gate.
 
-Python malware coverage follows [the canonical decision](README.md#python-malware-coverage-limitation).
+The gate sends only public npm and PyPI names and exact versions to the
+[GitHub malware advisory API](https://docs.github.com/en/rest/security-advisories/global-advisories#list-global-security-advisories)
+and [OSV's batch API](https://google.github.io/osv.dev/post-v1-querybatch/). GitHub
+matches affected releases and ranges; an ambiguous batch is rechecked by exact
+version. OSV supplies normalized matches for [OpenSSF malware reports](https://github.com/ossf/malicious-packages),
+including PyPI advisories GitHub indexes under a different spelling. Only active
+malware records contribute findings. The scanner installs no PR dependencies.
+It limits a revision to 100 lockfiles and a review to 2,000 changed coordinates, batches of 25, 20 pages per
+batch, 200 total requests and 30 seconds per request. The reviewer receives
+up to 16 KiB of findings and the omitted count; any finding fails the gate.
+
 Shared deployment files are synchronized to the Infrastructure source pin, including
 the approved Action-upgrade/unauthorized-drift regression. Update the source before
 consumers; never edit a vendored workflow or test independently.
@@ -608,7 +619,7 @@ flowchart TD
     T["gate-test.yml<br/>Changed files select tests"]
     Q["gate-codeql.yml<br/>Changed files select analyzers"]
     V["gate-vulnerability.yml<br/>Dependency vulnerability review"]
-    M["gate-malware.yml<br/>npm malware · app repos only"]
+    M["gate-malware.yml<br/>npm and PyPI malware · app repos only"]
     S["gate-secrets.yml<br/>Gitleaks scan"]
     RC["review-code.yml · Obi-Wan"]
     RB["review-build.yml · Lint Eastwood"]
@@ -749,12 +760,10 @@ runtime verification for those claims.
 
 ### Python malware coverage limitation
 
-Keep the existing vulnerability review; it does not establish malware detection.
-No mandatory Python malware service is configured. Known-advisory matching,
-publishing attestations and source review cannot clear new/unknown malicious
-behavior, typosquatting or compromised trusted publishers. Maintainers still review
-package identity, installation hooks and dependency changes. Reconsider a gate
-only with a complete immutable resolved graph, bounded feed freshness/error policy,
-representative false-positive evaluation and a named maintenance owner; new services,
-credentials or spend require their own review. Infrastructure's validation-tool
-pins are distinct from application dependency scanning.
+The gate checks known malware for exact public PyPI versions in the backend lock.
+For example, GitHub records [GHSA-f3g9-pmww-pww3](https://github.com/advisories/GHSA-f3g9-pmww-pww3)
+under its original mixed-case name. The normalized OSV query also finds the
+OpenSSF record for that release. Neither feed inspects downloaded artifacts or
+detects unpublished malware or a newly compromised publisher. Docker images,
+GitHub Actions and Infrastructure's separate toolchain are outside these two
+application lockfiles. Dependency Review and CodeQL retain their existing roles.

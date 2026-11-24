@@ -57,7 +57,7 @@ runs:
         echo "Base: $BASE_SHA"
         echo "Head: $HEAD_SHA"
 
-        # Only this exact generated file is covered by our npm malware gate.
+        # Only this exact generated file is omitted from reviewer input. The Python lock stays in the diff.
         # Other lockfiles, and non-regular files at this path, remain reviewable.
         DIFF_DIR=$(mktemp -d "$RUNNER_TEMP/pr-diff.XXXXXX")
         git diff --no-ext-diff --no-textconv --unified=3 "$BASE_SHA" "$HEAD_SHA" > "$DIFF_DIR/pr_full.diff"
@@ -117,7 +117,7 @@ runs:
         if excluded:
             scope += (
                 "Excluded payloads have NOT been inspected by this AI source review. "
-                "Dependency Review and npm malware review remain independent required gates.\n"
+                "Dependency Review and dependency malware review remain independent required gates.\n"
             )
         if not Path(diff_path).stat().st_size:
             scope += (
