@@ -4,8 +4,7 @@ from django.core.exceptions import PermissionDenied
 from rest_framework.exceptions import APIException
 
 from apps.notes import services as notes
-from apps.notes.models import Board, ListNote, Note
-from apps.notes.models import List as NoteList
+from apps.notes.models import Board, List, ListNote, Note
 from apps.notes.serializers import UserSummarySerializer
 from apps.notifications import services as notifications
 
@@ -163,7 +162,7 @@ def snapshot(user, action, args, selected_ids):
             _profile(row) for row in selected_rows(board.collaborators.order_by("pk"))
         ],
     }
-    lists = NoteList.objects.filter(board=board).order_by("pk")
+    lists = List.objects.filter(board=board).order_by("pk")
     items = Note.objects.filter(board=board).order_by("pk")
     memberships = ListNote.objects.filter(list__board=board).order_by("pk")
     if action in {"delete_list", "set_list_items"}:

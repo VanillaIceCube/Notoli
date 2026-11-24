@@ -18,8 +18,6 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from apps.notes.models import Board
-
 from .serializers import (
     EmailTokenObtainPairSerializer,
     ForgotPasswordRequestSerializer,
@@ -92,22 +90,21 @@ class RegisterView(APIView):
             )
 
         try:
-            # Include required user-save onboarding and session creation in the
-            # transaction, so a failed signup never leaves a partial account.
+            # Account, starter board, and session succeed or roll back together.
             with transaction.atomic():
-                user = User.objects.create_user(
-                    username=username, email=email, password=password
-                )
-                refresh = RefreshToken.for_user(user)
+                candidate_user.username = User.normalize_username(username)
+                candidate_user.email = User.objects.normalize_email(email)
+                candidate_user.set_password(password)
+                board = candidate_user.save_with_starter_board(force_insert=True)
+                refresh = RefreshToken.for_user(candidate_user)
                 data = {
                     "message": "User created successfully.",
-                    "username": user.username,
-                    "email": user.email,
+                    "username": candidate_user.username,
+                    "email": candidate_user.email,
                     "access": str(refresh.access_token),
                     "refresh": str(refresh),
+                    "board_id": board.pk,
                 }
-                board = Board.objects.filter(owner=user).order_by("id").first()
-                data["board_id"] = board.id if board else None
         except IntegrityError:
             return Response(
                 {"error": "Email or username already exists."},

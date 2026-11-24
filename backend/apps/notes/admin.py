@@ -1,7 +1,6 @@
 from django.contrib import admin
 
-from .models import Board, ListNote, Note
-from .models import List as NoteList
+from .models import Board, List, ListNote, Note
 
 
 def _summarize_users(users, limit: int = 3) -> str:
@@ -67,7 +66,7 @@ class BoardAdmin(admin.ModelAdmin):
         return _summarize_users(obj.collaborators.all())
 
 
-@admin.register(NoteList)
+@admin.register(List)
 class ListAdmin(admin.ModelAdmin):
     list_display = (
         "name",
