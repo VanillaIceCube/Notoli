@@ -71,7 +71,7 @@ function OAuthConnectionConsent() {
       {consent && (
         <>
           <Typography variant="h6">{consent.application.name}</Typography>
-          <Typography variant="body2">Application ID: {consent.application.client_id}</Typography>
+          <Typography variant="body2">OAuth client ID: {consent.application.client_id}</Typography>
           <Typography>Signed in as {consent.user.username}</Typography>
           <Typography>This application is requesting permission to:</Typography>
           <Box component="ul" sx={{ pl: 3, my: 0 }}>
@@ -151,7 +151,7 @@ function ActionApproval({ reference, search }) {
               {approval.application && (
                 <>
                   <Typography variant="h6">{approval.application.name}</Typography>
-                  <Typography>Application ID: {approval.application.client_id}</Typography>
+                  <Typography>OAuth client ID: {approval.application.client_id}</Typography>
                   <Typography>Signed in as {approval.user.username}</Typography>
                   <Typography>
                     Target ID: {approval.target_id ?? 'New record or selected batch'}
