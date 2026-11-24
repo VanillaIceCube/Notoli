@@ -680,12 +680,20 @@ flowchart LR
   Issues --> Project[Separately credentialed Project synchronization and recovery]
 ```
 
-[CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml) and
-[malware](alert-malware.yml) aggregation run daily at midnight Pacific (`America/Los_Angeles`) or by dispatch. Incomplete
+The [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml), and
+[malware](alert-malware.yml) alert workflows each run at midnight Pacific
+(`America/Los_Angeles`) every day and support manual dispatch. Incomplete
 source/model evidence fails before lifecycle writes; verified closure and Project
-recovery preserve their independent credential boundaries. CodeQL analysis also
-runs on applicable main pushes, scoped PRs, Mondays at midnight Pacific, and manual dispatch. Alert maintenance
-neither merges code nor deploys.
+recovery preserve their independent credential boundaries.
+
+The CodeQL Gate analyzes scoped pull requests. It also analyzes applicable pushes to `main`. The full weekly scan
+is scheduled for Monday at midnight Pacific and can be dispatched manually.
+
+GitHub may delay or drop scheduled runs at the top of the hour. If a scheduled
+run is missing, check that workflow's run history and use **Run workflow** on
+`main` to recover the missed scan or feed. The daily CodeQL alert feed reads
+published results, so it can pick up Monday's new scan on the following day.
+[GitHub scheduled-event behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 
 ### Promotion, release and manual operations
 
