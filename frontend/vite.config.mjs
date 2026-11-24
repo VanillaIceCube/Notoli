@@ -19,7 +19,7 @@ export default defineConfig({
             'src/services/notepad/notoliApiClient.test.js',
             'src/services/authentication/authApiClient.test.js',
             'src/services/notifications/notificationApiClient.test.js',
-            'src/utils/Navigation.test.js',
+            'src/utils/navigation.test.js',
           ],
         },
       },
@@ -36,7 +36,7 @@ export default defineConfig({
             'src/services/notepad/notoliApiClient.test.js',
             'src/services/authentication/authApiClient.test.js',
             'src/services/notifications/notificationApiClient.test.js',
-            'src/utils/Navigation.test.js',
+            'src/utils/navigation.test.js',
           ],
           deps: {
             optimizer: {

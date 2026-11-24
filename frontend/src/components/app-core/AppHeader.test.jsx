@@ -4,7 +4,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AppHeader from './AppHeader';
 import { renderWithProviders } from '../../test-helpers/utils';
-import { goBackToParent } from '../../utils/Navigation';
+import { goBackToParent } from '../../utils/navigation';
 import { setNavigate } from '../../services/navigation/navigationService';
 import { fetchNotifications } from '../../services/notifications/notificationApiClient';
 const { mockNavigate, mockUseLocation, mockNavigateHook } = vi.hoisted(() => ({
@@ -17,7 +17,7 @@ vi.mock('react-router', async () => ({
   useLocation: mockUseLocation,
   useNavigate: mockNavigateHook,
 }));
-vi.mock('../../utils/Navigation', () => ({
+vi.mock('../../utils/navigation', () => ({
   goBackToParent: vi.fn(),
 }));
 vi.mock('../../services/notifications/notificationApiClient', () => ({

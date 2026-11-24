@@ -93,7 +93,7 @@ function OAuthConnectionConsent() {
   );
 }
 
-function ActionApproval({ reference, search }) {
+function ActionApproval({ approvalId, search }) {
   const isCurrentSession = useSessionGuard();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -103,7 +103,7 @@ function ActionApproval({ reference, search }) {
   useEffect(() => {
     if (framed) return undefined;
     let active = true;
-    loadActionApproval(reference, search)
+    loadActionApproval(approvalId, search)
       .then((result) => {
         if (active && isCurrentSession()) setData(result);
       })
@@ -113,7 +113,7 @@ function ActionApproval({ reference, search }) {
     return () => {
       active = false;
     };
-  }, [reference, search, framed, isCurrentSession]);
+  }, [approvalId, search, framed, isCurrentSession]);
 
   const decide = async (decision) => {
     if (!isCurrentSession()) return;
@@ -233,9 +233,9 @@ function ActionApproval({ reference, search }) {
 
 export function OAuthConsent() {
   const { search } = useLocation();
-  const reference = new URLSearchParams(search).get('approval_id');
-  return reference !== null ? (
-    <ActionApproval key={search} reference={reference} search={search} />
+  const approvalId = new URLSearchParams(search).get('approval_id');
+  return approvalId !== null ? (
+    <ActionApproval key={search} approvalId={approvalId} search={search} />
   ) : (
     <OAuthConnectionConsent />
   );

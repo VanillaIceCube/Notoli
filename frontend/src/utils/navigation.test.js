@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { getBoardId, getParentPath, goBackToParent } from './Navigation';
+import { getBoardId, getParentPath, goBackToParent } from './navigation';
 describe('Navigation', () => {
   describe('getBoardId', () => {
     test('when the path is a board route, it returns the board id', () => {
