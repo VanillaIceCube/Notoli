@@ -21,6 +21,13 @@ function alertRefKey(refs) {
   return normalizeAlertRefs(refs).join("|");
 }
 
+function alertPriority(feed, alerts) {
+  const severities = new Set(alerts.map(alert => alert.severity));
+  if (severities.has("critical")) return "P0";
+  if (severities.has("high") || severities.has("unknown")) return "P1";
+  return feed === "vulnerability" ? "P2" : "P1";
+}
+
 function markerFor(feed, refs) {
   const signature = crypto
     .createHash("sha256")
@@ -303,7 +310,7 @@ async function findProjectItemIdEventually(github, projectId, contentId) {
 
 async function ensureProjectItem(github, projectId, projectState, issue, sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))) {
   const existingItemId = projectState.itemsByContentId.get(issue.node_id);
-  if (existingItemId) return { itemId: existingItemId, added: false };
+  if (existingItemId) return existingItemId;
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       const data = await github.graphql(
@@ -312,7 +319,7 @@ async function ensureProjectItem(github, projectId, projectState, issue, sleep =
       );
       const itemId = data.addProjectV2ItemById.item.id;
       projectState.itemsByContentId.set(issue.node_id, itemId);
-      return { itemId, added: true };
+      return itemId;
     } catch (error) {
       const duplicate = isProjectItemAlreadyExistsError(error);
       const transient = [429, 500, 502, 503, 504].includes(error?.status) ||
@@ -321,7 +328,7 @@ async function ensureProjectItem(github, projectId, projectState, issue, sleep =
       const itemId = await (duplicate ? findProjectItemIdEventually : findProjectItemId)(github, projectId, issue.node_id);
       if (itemId) {
         projectState.itemsByContentId.set(issue.node_id, itemId);
-        return { itemId, added: false };
+        return itemId;
       }
       if (duplicate || attempt === 2) throw new Error(`Project attachment unresolved for issue #${issue.number} after bounded recovery; rerun reuses its saved source refs.`, { cause: error });
       await sleep(attempt === 0 ? 250 : 1000);
@@ -329,15 +336,21 @@ async function ensureProjectItem(github, projectId, projectState, issue, sleep =
   }
 }
 
-async function missingProjectDefaults(github, itemId, defaults) {
+async function projectValuesToUpdate(github, itemId, defaults, urgent) {
   const data = await github.graphql(
-    "query($item: ID!) { node(id: $item) { ... on ProjectV2Item { fieldValues(first: 100) { nodes { ... on ProjectV2ItemFieldSingleSelectValue { field { ... on ProjectV2SingleSelectField { name } } } ... on ProjectV2ItemFieldNumberValue { field { ... on ProjectV2Field { name } } } } } } } }",
+    "query($item: ID!) { node(id: $item) { ... on ProjectV2Item { fieldValues(first: 100) { nodes { ... on ProjectV2ItemFieldSingleSelectValue { name field { ... on ProjectV2SingleSelectField { name } } } ... on ProjectV2ItemFieldNumberValue { field { ... on ProjectV2Field { name } } } } } } } }",
     { item: itemId },
   );
   const nodes = data.node?.fieldValues?.nodes;
   if (!Array.isArray(nodes)) throw new Error("Cannot verify existing Project fields; rerun to resume without overwriting planning.");
-  const present = new Set(nodes.map(node => node.field?.name));
-  return Object.fromEntries(Object.entries(defaults).filter(([name]) => !present.has(name)));
+  const current = new Map(nodes.map(node => [node.field?.name, node.name]));
+  const values = Object.fromEntries(Object.entries(defaults).filter(([name]) => !current.has(name)));
+  const priority = current.get("Priority");
+  // P0 is the most urgent option. Keep higher and unrecognized human priorities.
+  if (urgent && /^P[0-3]$/.test(priority) && priority > defaults.Priority) {
+    values.Priority = defaults.Priority;
+  }
+  return values;
 }
 
 function projectFieldValue(field, value) {
@@ -420,12 +433,7 @@ async function synchronizeSecurityAlerts({
     );
   }
   const { owner, repo } = context.repo;
-  const config = {
-    codeql: { label: "codeql", priority: "P1" },
-    vulnerability: { label: "vulnerability", priority: "P2" },
-    malware: { label: "malware", priority: "P1" },
-  }[source.feed];
-  if (!config) throw new Error(`Unsupported alert feed: ${source.feed}`);
+  if (!["codeql", "vulnerability", "malware"].includes(source.feed)) throw new Error(`Unsupported alert feed: ${source.feed}`);
   validateGroups(source, groups);
 
   const openIssues = await issueGithub.paginate(
@@ -472,7 +480,7 @@ async function synchronizeSecurityAlerts({
         repo,
         title: group.title,
         body,
-        labels: [config.label],
+        labels: [source.feed],
         assignees: [owner],
       }));
       created += 1;
@@ -482,7 +490,7 @@ async function synchronizeSecurityAlerts({
       owner,
       repo,
       issue_number: issue.number,
-      labels: [config.label],
+      labels: [source.feed],
     });
     await issueGithub.rest.issues.addAssignees({
       owner,
@@ -490,25 +498,26 @@ async function synchronizeSecurityAlerts({
       issue_number: issue.number,
       assignees: [owner],
     });
-    const projectItem = await ensureProjectItem(
+    const itemId = await ensureProjectItem(
       projectGithub,
       projectId,
       projectState,
       issue,
       sleep,
     );
+    const alerts = group.alert_refs.map(ref => alertByRef.get(ref));
     const defaults = {
       Status: "Backlog", Domain: "CI/CD", "Work type": "Security",
-      Priority: config.priority, Size: "M", Estimate: 3,
+      Priority: alertPriority(source.feed, alerts), Size: "M", Estimate: 3,
     };
-    const values = !existingIssue || projectItem.added ? defaults :
-      await missingProjectDefaults(projectGithub, projectItem.itemId, defaults);
+    const urgent = alerts.some(alert => ["critical", "high", "unknown"].includes(alert.severity));
+    const values = await projectValuesToUpdate(projectGithub, itemId, defaults, urgent);
     if (Object.keys(values).length) {
       await setProjectValues(
         projectGithub,
         projectId,
         projectState,
-        projectItem.itemId,
+        itemId,
         values,
       );
     }
@@ -540,7 +549,7 @@ async function synchronizeSecurityAlerts({
     const body = withLifecycleNote(staleIssue.body, lifecycleNote);
     // Persist history before any operation which can trigger Project auto-close.
     await issueGithub.rest.issues.update({ ...parameters, body });
-    const { itemId } = await ensureProjectItem(
+    const itemId = await ensureProjectItem(
       projectGithub, projectId, projectState, staleIssue,
     );
     // End date first: a partial failure leaves an open issue discoverable on rerun.
@@ -562,6 +571,7 @@ async function synchronizeSecurityAlerts({
 module.exports = {
   validateGroups,
   closeManagedIssue,
+  alertPriority,
   alertRefKey,
   alertRefsFromBody,
   managedFeedFromBody,

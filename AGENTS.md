@@ -103,7 +103,7 @@ Backend image definitions live in `backend/docker/`; keep `backend/` as the
 Docker build context. Frontend image definitions and Nginx configuration live in
 `frontend/docker/`; keep `frontend/` as the Docker build context.
 Both Docker folders contain `Dockerfile.dockerignore` and
-`Dockerfile.dev.dockerignore`; their patterns are relative to the corresponding
+`Dockerfile.hotswap.dockerignore`; their patterns are relative to the corresponding
 backend/frontend context. Preserve Nginx configuration and development entrypoint
 inputs when adjusting exclusions.
 
@@ -288,9 +288,7 @@ three caller workflows, not local composite metadata; pass explicit model, effor
 and token inputs. Run `.github/actions/custom-regressions/security-alert-contract.test.js`
 after changes; actual loading acceptance requires fresh controlled dispatches on
 corrected main. Preserve applicable bounded malware review and documented
-coverage decisions. Maintain CI architecture diagrams and regenerate
-`.github/workflows/ci-source-inventory.json` with `python .github/tools/ci_architecture.py` after
-workflow edits. Promotion summaries are informational.
+coverage decisions. Keep the CI architecture diagrams aligned with workflow edits.
 
 Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs
 listed in `.github/README.md`; do not require the standalone `CodeQL` Code
@@ -299,9 +297,10 @@ PRs; detector/analyzer failures block merging. Main also requires
 `AI Code Review / Obi-Wan Code-nobi code review`,
 `AI Build Sheriff Review / Lint Eastwood build sheriff review`, and
 `AI Security Review / RoboCop security review`. Preserve the existing 14
-scanner/lint/test requirements and all other ruleset settings; see
-`.github/review-gating-evidence.json`. Run both publisher test files when changing
-the reviewer contract. Keep dependency-usage loop fixes coordinated
+scanner/lint/test requirements and all other ruleset settings. See the
+[workflow guide](.github/workflows/README.md) for rule verification and rollout
+checks. Run both publisher test files when changing the reviewer contract. Keep
+dependency-usage loop fixes coordinated
 with #890 and remaining branch-policy work in #656. Batch 2 controls and Python
 malware coverage remain documented in `.github/README.md` and
 [the Python malware decision](.github/workflows/README.md#python-malware-coverage-limitation).

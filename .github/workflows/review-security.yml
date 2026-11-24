@@ -3,6 +3,9 @@ name: AI Security Review
 on:
   workflow_call:
     inputs:
+      secret_scan_result:
+        required: false
+        type: string
       codeql_result:
         required: false
         type: string
@@ -57,10 +60,11 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Collect security evidence
         id: evidence
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           CODEQL_RESULT: ${{ inputs.codeql_result || 'unknown' }}
           CODEQL_SCOPE_STATUS: ${{ inputs.codeql_scope_status || 'unknown' }}
@@ -71,6 +75,7 @@ jobs:
           DEPENDENCY_VULNERABILITY_REPORT: ${{ inputs.dependency_vulnerability_report }}
           DEPENDENCY_MALWARE_RESULT: ${{ inputs.dependency_malware_result || 'unknown' }}
           DEPENDENCY_MALWARE_REPORT: ${{ inputs.dependency_malware_report }}
+          SECRET_SCAN_RESULT: ${{ inputs.secret_scan_result || 'unknown' }}
         with:
           script: |
             const fs = require('fs');
@@ -176,6 +181,7 @@ jobs:
                 codeql: process.env.CODEQL_RESULT,
                 dependency_vulnerability: process.env.DEPENDENCY_VULNERABILITY_RESULT,
                 dependency_malware: process.env.DEPENDENCY_MALWARE_RESULT,
+                secret_scan: process.env.SECRET_SCAN_RESULT,
               },
               codeql_interpretation: codeqlInterpretation,
               gate_reports: {
@@ -195,10 +201,11 @@ jobs:
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
+          omit_frontend_npm_lockfile: "true"
 
       - name: Create RoboCop GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           app-id: ${{ vars.ROBOCOP_APP_ID }}
           private-key: ${{ secrets.ROBOCOP_PRIVATE_KEY }}
@@ -290,7 +297,7 @@ jobs:
             }
 
             Review decision rules:
-            - If CodeQL, Dependency/Vulnerability Review, or Malware Review failed with an actionable finding, return REQUEST_CHANGES.
+            - If CodeQL, Dependency/Vulnerability Review, Malware Review, or Secret Scan failed with an actionable finding, return REQUEST_CHANGES.
             - If you identify a concrete security risk in a security-sensitive code path, return REQUEST_CHANGES.
             - If a security gate failed but the evidence shows an external/tooling problem rather than a PR security issue, return COMMENT and explain the evidence gap.
             - If all security gates are clean and you find no security risk in the diff, return APPROVE with a concise clean-security summary.
@@ -331,7 +338,7 @@ jobs:
               "summary": "**REVIEW INCOMPLETE. DIRECTIVE: CHECK FAILED. SECURITY VERDICT: WITHHELD.** DIFF SIZE EXCEEDS AUTHORIZED REVIEW PARAMETERS. PARTIAL EVIDENCE DOES NOT CONSTITUTE SECURITY CLEARANCE.",
               "unchanged": false,
               "findings": [],
-              "evidence": ["The complete diff is ${{ steps.pr-diff.outputs.diff_bytes }} bytes; my review budget is ${{ steps.pr-diff.outputs.max_bytes }} bytes."],
+              "evidence": ["The reviewable source diff is ${{ steps.pr-diff.outputs.diff_bytes }} bytes; my review budget is ${{ steps.pr-diff.outputs.max_bytes }} bytes."],
               "actions": ["REDUCE DIFF SCOPE OR AUTHORIZE A HIGHER REVIEW BUDGET, THEN RESUBMIT FOR SECURITY SCAN."],
               "comments": []
             }

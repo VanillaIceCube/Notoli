@@ -231,7 +231,7 @@ See [workflow checks and validation](../.github/workflows/README.md#-checks-and-
 - [Frontend development](../frontend/README.md).
 
 Both application contexts keep their Dockerfile-specific ignore files under
-`docker/`: `Dockerfile.dockerignore` and `Dockerfile.dev.dockerignore`. Docker
+`docker/`: `Dockerfile.dockerignore` and `Dockerfile.hotswap.dockerignore`. Docker
 selects the file matching the explicitly selected Dockerfile. Patterns remain
 relative to `backend/` or `frontend/`, and the frontend Nginx/entrypoint files
 remain included. There is no context-root `.dockerignore`.

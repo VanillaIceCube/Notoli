@@ -62,13 +62,32 @@ function configuration(dir, inputs = {}) {
 const fields = Object.entries({ Status: ['Backlog', 'Done'], Domain: ['CI/CD'], 'Work type': ['Security'], Priority: ['P0', 'P1', 'P2'], Size: ['M'] }).map(([name, names]) => ({ name, id: name, dataType: 'SINGLE_SELECT', options: names.map(name => ({ name, id: name })) }));
 fields.push({ name: 'Estimate', id: 'Estimate', dataType: 'NUMBER' }, { name: 'End date', id: 'End date', dataType: 'DATE' });
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-async function pipeline(dir, feed, config, nonempty) {
+test('Project schema validation checks access, urgency options and closure fields before consuming alerts', async () => {
+  const steps = manifest.runs.steps;
+  const index = steps.findIndex(step => step.name.startsWith('Validate Project access'));
+  assert.ok(index >= 0 && index < steps.findIndex(step => step.id === 'alerts'));
+  assert.equal(steps[index].with['github-token'], '${{ inputs.project-token }}');
+  const validate = new AsyncFunction('github', 'core', steps[index].with.script);
+  const run = node => validate({ graphql: async query => {
+    assert.match(query, /^query/);
+    return { node };
+  } }, { info() {} });
+  await assert.rejects(run(null), /credential cannot read/);
+  for (const name of ['Priority', 'End date']) {
+    const nodes = fields.map(field => field.name !== name ? field : {
+      ...field, options: field.options?.filter(option => option.name !== 'P0'), dataType: name === 'End date' ? 'TEXT' : field.dataType,
+    });
+    await assert.rejects(run({ fields: { nodes } }), new RegExp(name));
+  }
+});
+
+async function pipeline(dir, feed, config, nonempty, severity = 'medium') {
   const messages = [], outputs = {}, issues = [], cards = new Map();
   let fetches = 0, mutations = 0, projectWrites = 0;
   const core = { info: v => messages.push(v), warning: v => messages.push(v), setOutput: (k, v) => { outputs[k] = v; }, setFailed: message => { throw new Error(message); } };
   const sourceAlert = feed === 'codeql'
     ? { number: 1, html_url: 'https://example.test/alert/1', rule: { id: 'fixture', severity: 'warning' }, most_recent_instance: { location: { path: 'synthetic.py' } } }
-    : { number: 1, html_url: 'https://example.test/alert/1', security_advisory: { ghsa_id: 'GHSA-fixture', severity: 'medium', summary: 'Synthetic fixture only' }, dependency: { package: { name: 'fixture', ecosystem: 'npm' }, manifest_path: 'synthetic.json' } };
+    : { number: 1, html_url: 'https://example.test/alert/1', security_advisory: { ghsa_id: 'GHSA-fixture', severity, summary: 'Synthetic fixture only' }, dependency: { package: { name: 'fixture', ecosystem: 'npm' }, manifest_path: 'synthetic.json' } };
   const projectGithub = { graphql: async (query, values) => {
     if (query.includes('fields(first: 100)')) return { node: { title: 'Fixture Project', fields: { nodes: fields } } };
     if (query.includes('items(first: 100')) return { node: { items: { nodes: [...cards].map(([content, id]) => ({ id, content: { id: content } })), pageInfo: {} } } };
@@ -90,7 +109,7 @@ async function pipeline(dir, feed, config, nonempty) {
     Object.assign(process.env, { FEED: feed, PROJECT_ID: 'PROJECT_FIXTURE', RUNNER_TEMP: dir, GITHUB_WORKSPACE: root });
     const execute = async step => new AsyncFunction('github', 'context', 'core', 'require', 'getOctokit', step.with.script)(github, { repo: { owner: 'fixture', repo: 'fixture' } }, core, require, token => { assert.equal(token, 'synthetic-project-token'); return projectGithub; });
     const preflight = manifest.runs.steps.find(step => step.name.startsWith('Validate Project access'));
-    if (preflight) await new AsyncFunction('github', 'core', preflight.with.script)(projectGithub, core);
+    await new AsyncFunction('github', 'core', preflight.with.script)(projectGithub, core);
     await execute(manifest.runs.steps.find(step => step.id === 'alerts'));
     if (outputs.has_alerts === 'true') {
       const nested = manifest.runs.steps.find(step => step.id === 'openai');
@@ -152,6 +171,10 @@ test('invalid model, effort and token limits fail before source reads, provider 
     assert.equal(fs.existsSync(path.join(dir, 'curl-calls')), false); assert.equal(fs.existsSync(path.join(dir, 'security-alerts.json')), false);
   });
 });
+for (const severity of ['high', 'critical']) {
+  test(`vulnerability: ${severity} source reaches grouped issue and Project synchronization`, () =>
+    fixture(dir => pipeline(dir, 'vulnerability', configuration(dir), true, severity)));
+}
 for (const caller of callers) {
   test(`${caller.feed}: empty feed executes the actual empty-group and reconciliation scripts with no provider or writes`, async () => fixture(async dir => pipeline(dir, caller.feed, configuration(dir, explicitCallerConfiguration(caller)), false)));
   for (const override of [{}, { AI_REVIEW_MODEL: 'gpt-6-luna', AI_REVIEW_REASONING_EFFORT: 'low', AI_REVIEW_MAX_OUTPUT_TOKENS: '1000' }]) {

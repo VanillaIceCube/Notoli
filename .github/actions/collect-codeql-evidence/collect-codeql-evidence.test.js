@@ -31,8 +31,8 @@ test('failed out-of-scope analyses stay gaps and successful reruns use the newes
   assert.equal(collectCodeqlEvidence(input).approval_eligible, true);
 });
 
-test('workflow executes accurate PR scope and full push/schedule/manual scope', () => {
-  const workflow = fs.readFileSync(path.join(__dirname, '../../workflows/gate-codeql.yml'), 'utf8');
+test('workflow executes accurate PR scope and full scheduled and manual scope', () => {
+  const workflow = fs.readFileSync(path.join(__dirname, '../../workflows/gate-codeql.yml'), 'utf8').replaceAll('\r\n', '\n');
   const match = workflow.match(/      - name: Set analysis scope[\s\S]*?        run: \|\n([\s\S]*?)\n  analyze-python:/);
   assert.ok(match);
   const source = match[1].split('\n').map((line) => line.replace(/^          /, '')).join('\n');
@@ -44,16 +44,13 @@ test('workflow executes accurate PR scope and full push/schedule/manual scope', 
       ['pull_request', 'true', 'false', 'false', ['true', 'false', 'true']],
       ['pull_request', 'false', 'true', 'false', ['false', 'true', 'true']],
       ['pull_request', 'false', 'false', 'true', ['false', 'false', 'true']],
-      ['push', '', '', '', ['true', 'true', 'true']],
       ['schedule', '', '', '', ['true', 'true', 'true']],
       ['workflow_dispatch', '', '', '', ['true', 'true', 'true']],
       ['pull_request', '', '', '', null],
     ]) {
       const output = path.join(directory, 'output').replaceAll('\\', '/');
       fs.writeFileSync(output, '');
-      let script = source.replaceAll('${{ github.event_name }}', event);
-      for (const [key, value] of Object.entries({ python, javascript, actions })) script = script.replaceAll('${{ steps.filter.outputs.' + key + ' }}', value);
-      const result = spawnSync(bash, ['-c', script], { env: { ...process.env, GITHUB_OUTPUT: output, EVENT_NAME: event, PYTHON_SCOPE: python, JAVASCRIPT_SCOPE: javascript, ACTIONS_SCOPE: actions }, encoding: 'utf8' });
+      const result = spawnSync(bash, ['-c', source], { env: { ...process.env, GITHUB_OUTPUT: output, EVENT_NAME: event, PYTHON_SCOPE: python, JAVASCRIPT_SCOPE: javascript, ACTIONS_SCOPE: actions }, encoding: 'utf8' });
       assert.equal(result.status, expected ? 0 : 1, result.stderr);
       const values = Object.fromEntries(fs.readFileSync(output, 'utf8').trim().split('\n').filter(Boolean).map((line) => line.split('=')));
       if (expected) {

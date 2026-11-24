@@ -22,7 +22,7 @@ function fixture(run, env, stubs, check) {
     fs.writeFileSync(path.join(dir, 'run.sh'), run);
     fs.writeFileSync(path.join(dir, 'diff.txt'), 'quoted "change"\nsecond line');
     fs.writeFileSync(path.join(dir, 'response.json'), JSON.stringify({ output: [{ type: 'message', content: [{ type: 'output_text', text: 'fixture response' }] }] }));
-    const values = { ...process.env, GITHUB_OUTPUT: posix(path.join(dir, 'output')), GITHUB_STEP_SUMMARY: posix(path.join(dir, 'summary')), MOCK_BIN: posix(path.join(dir, 'bin')), MOCK_CWD: posix(dir), MOCK_RESPONSE: posix(path.join(dir, 'response.json')), DIFF_PATH: posix(path.join(dir, 'diff.txt')), GIT_LOG: posix(path.join(dir, 'git.log')), ...env };
+    const values = { ...process.env, RUNNER_TEMP: dir.replaceAll('\\', '/'), GITHUB_OUTPUT: posix(path.join(dir, 'output')), GITHUB_STEP_SUMMARY: posix(path.join(dir, 'summary')), MOCK_BIN: posix(path.join(dir, 'bin')), MOCK_CWD: posix(dir), MOCK_RESPONSE: posix(path.join(dir, 'response.json')), DIFF_PATH: posix(path.join(dir, 'diff.txt')), GIT_LOG: posix(path.join(dir, 'git.log')), ...env };
     const result = spawnSync(bash, ['-c', 'export PATH="$MOCK_BIN:$PATH"; cd "$MOCK_CWD"; bash run.sh'], { env: values, encoding: 'utf8', timeout: 15000 });
     check(result, dir);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
@@ -129,7 +129,7 @@ test('uv bootstrap enforces its reviewed runner and cleans requirements on succe
 
 test('Docker uv bootstraps pass reviewed requirements through stdin and preserve pip failures', () => {
   let canonical;
-  for (const name of ['Dockerfile', 'Dockerfile.dev']) {
+  for (const name of ['Dockerfile', 'Dockerfile.hotswap']) {
     const text = fs.readFileSync(path.join(root, 'backend/docker', name), 'utf8').replace(/\\\r?\n/g, ' ');
     const run = text.split('\n').find(line => line.startsWith('RUN ') && line.includes('python -m pip')).slice(4);
     if (canonical) assert.equal(run, canonical);
@@ -163,7 +163,7 @@ import yaml
 steps = yaml.safe_load(Path('.github/actions/setup-uv/action.yml').read_text())['runs']['steps']
 run = next(step['run'] for step in steps if step.get('name') == 'Install uv')
 runs = [('CI', run)]
-for name in ('Dockerfile', 'Dockerfile.dev'):
+for name in ('Dockerfile', 'Dockerfile.hotswap'):
     source = (Path('backend/docker') / name).read_text().replace('\\\n', ' ')
     runs.append((name, next(line for line in source.splitlines() if line.startswith('RUN ') and 'python -m pip' in line)))
 with tempfile.TemporaryDirectory() as directory:
@@ -217,22 +217,19 @@ test('complete source diffs are accepted through 2 MB and marked incomplete abov
   const action = fs.readFileSync(path.join(root, '.github/actions/get-pr-diff/action.yml'), 'utf8');
   const budget = Number(action.match(/max_bytes:[\s\S]*?default: "(\d+)"/)[1]);
   assert.equal(budget, 2000000);
-  const run = steps('get-pr-diff')[0].run
-    .replaceAll('${{ inputs.base_sha }}', 'a'.repeat(40))
-    .replaceAll('${{ inputs.head_sha }}', 'b'.repeat(40))
-    .replaceAll('${{ inputs.max_bytes }}', String(budget));
+  const run = steps('get-pr-diff')[0].run;
   const stubs = {
     git: `if [ "$1" = "ls-tree" ] || [ "\${2:-}" = "--name-only" ]; then exit 0; fi
 python -c 'import os,sys; sys.stdout.buffer.write(b"+" + b"x" * (int(os.environ["DIFF_SIZE"]) - 2) + bytes([10]))'`,
     python3: 'exec python "$@"',
   };
-  for (const bytes of [budget - 1, budget, budget + 1]) fixture(run, { DIFF_SIZE: String(bytes), BASE_SHA: 'a'.repeat(40), HEAD_SHA: 'b'.repeat(40), MAX_BYTES: String(budget) }, stubs, (result, dir) => {
+  for (const bytes of [budget - 1, budget, budget + 1]) fixture(run, { DIFF_SIZE: String(bytes), BASE_SHA: 'a'.repeat(40), HEAD_SHA: 'b'.repeat(40), MAX_BYTES: String(budget), OMIT_FRONTEND_NPM_LOCKFILE: 'false' }, stubs, (result, dir) => {
     assert.equal(result.status, 0, result.stderr);
     const outputs = Object.fromEntries(fs.readFileSync(path.join(dir, 'output'), 'utf8').trim().split('\n').map(line => line.split('=')));
     assert.equal(Number(outputs.max_bytes), budget);
     assert.equal(Number(outputs.diff_bytes), bytes);
     assert.equal(outputs.truncated, String(bytes > budget));
-    assert.equal(fs.statSync(path.join(dir, 'pr.diff')).size, Math.min(bytes, budget));
+    assert.equal(fs.statSync(outputs.diff_path).size, Math.min(bytes, budget));
     if (bytes > budget) assert.match(result.stdout, /Truncated to 2000000 bytes/);
     else assert.doesNotMatch(result.stdout, /Truncated/);
   });

@@ -7,8 +7,7 @@ CI, reviews, dependency/security checks, and release behavior for Notoli.
 | Area | Entry points |
 | --- | --- |
 | Pull requests | [CI orchestrator](ci-orchestrator.yml), independent gates, and the three reviewer workflows. |
-| Security alerts | [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml), and [malware](alert-malware.yml) schedules/manual dispatches. |
-| Promotion evidence | [Read-only request](promotion-summary-request.yml) and [trusted summary](promotion-summary.yml). |
+| Security alerts | [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml), and [malware](alert-malware.yml) aggregation after the nightly scan or on a daily schedule, with manual dispatch for every feed. |
 | Releases | [Release workflow](ci-deploy.yml). |
 
 Workflow YAML is authoritative for triggers, permissions and job dependencies.
@@ -16,6 +15,19 @@ Read [repository setup](../README.md) before expecting secret-dependent workflow
 to succeed. Commands in this guide run from the repository root.
 
 ## 🔄 Pull requests and reviews
+
+A new CI run for a pull request cancels the older run for that pull request.
+The current run follows the job dependencies in the workflow.
+
+### Secret scan
+
+[Gitleaks](gate-secrets.yml) scans PR commits for exposed credentials. It runs
+with a read-only token and disables PR comments and artifact uploads. RoboCop
+receives the job result as scanner evidence. A failed scan fails PR CI and
+prevents Dependabot auto-merge.
+
+After a successful GitHub PR run confirms the `Secret scan / Gitleaks` check
+name, add that check to the `main` ruleset alongside the other required gates.
 
 ### Major-upgrade review evidence
 
@@ -47,7 +59,7 @@ What it does:
   - The shared [`.github/actions/prepare-lint-commit`](../actions/prepare-lint-commit/action.yml) action validates that identity, configures the token only as the Git remote's push URL, and the lint job restores the unauthenticated push URL immediately after the commit step.
   - Auto-fix is enabled only for non-Dependabot pull requests whose head branch belongs to this repository. Those jobs explicitly check out the writable head branch. Fork and Dependabot pull requests use GitHub's standard pull-request checkout, skip mutating lint steps, and still run strict formatting/lint checks against the submitted code. The lint workflow does not receive an App secret from forks; Dependabot review credentials are handled separately below.
 - Runs the reusable test gate: [`.github/workflows/gate-test.yml`](gate-test.yml)
-  - Frontend: Vitest via `npm test` (CI mode), then `npm run build` (strict ESLint 10 and Vite production build). Build failures fail the existing frontend test gate and remain in its captured diagnostics.
+  - Frontend: Vitest via `npm test -- --maxWorkers=2` (CI mode), then `npm run build` (strict ESLint 10 and Vite production build). Build failures fail the existing frontend test gate and remain in its captured diagnostics.
   - Backend: `python manage.py test`
   - Repository automation: Node's built-in test runner executes colocated behavioral tests for upstream major-upgrade evidence, the AI review publisher, the security-alert reconciler, and large dependency-review report transport. Changes to the report helper or vulnerability workflow also select this test job.
 - Lint and test jobs use the same change filters:
@@ -89,7 +101,7 @@ For `version-update:semver-major` updates, Obi-Wan publishes a **Major upgrade b
 
 The workflow uses pinned Dependabot metadata, the target and first release in the new major line from GitHub Releases, npm/PyPI repository metadata, the bounded Dependabot PR description, a bounded exact-match search of tracked repository text, and [Responses API web search](https://developers.openai.com/api/docs/guides/tools-web-search). Search runs only for semver-major code reviews; other reviews have no web tool. Missing releases, unsupported ecosystems such as Docker, registry and API failures are recorded as evidence gaps so the reviewer can search official sources and explain uncertainty rather than invent release rationale.
 
-Upstream release notes are capped at 12,000 characters per release, repository usage evidence at 30,000 bytes, and the PR description at 12,000 characters. The shared diff action follows MacroMapper's 2 MB (2,000,000-byte) budget and excludes generated npm, Yarn, pnpm, and Poetry lockfiles from the diff for all three reviewers; Obi-Wan's separately bounded changed-file context retains MacroMapper's behavior. Each persona publishes an incomplete-review `COMMENT` and fails its check when the source diff is truncated, withholding the normal model call and verdict. This also ports the complete-diff behavior tracked in [#660](https://github.com/VanillaIceCube/Notoli/issues/660).
+Upstream release notes are capped at 12,000 characters per release, repository usage evidence at 30,000 bytes, and the PR description at 12,000 characters. The shared diff action uses a 2 MB (2,000,000-byte) budget. All three reviewers omit only the regular frontend/package-lock.json payload covered by the independent npm malware gate. Obi-Wan's changed-file context applies the same exclusion. The full diff size and any exclusion are disclosed. Each persona publishes an incomplete-review `COMMENT` and fails its check when the source diff is truncated, withholding the normal model call and verdict. This also ports the complete-diff behavior tracked in [#660](https://github.com/VanillaIceCube/Notoli/issues/660).
 
 The publisher requires all major-brief fields before publishing a normal major-upgrade review. An incomplete brief produces one unavailable notice per persona/commit and fails the review job. An unchanged verdict retains its brief rather than collapsing to a summary. A native `REQUEST_CHANGES` review fails the corresponding reviewer check, matching MacroMapper. OpenAI requests cap combined reasoning and visible output at 16,000 tokens; invalid credentials, quota errors, and unusable model responses retain the existing visible failure behavior.
 
@@ -102,7 +114,7 @@ OpenAI and GitHub App inputs:
 - Configure `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, `ROBOCOP_OPENAI_API_KEY`, `OBI_WAN_CODE_NOBI_PRIVATE_KEY`, `LINT_EASTWOOD_PRIVATE_KEY`, and `ROBOCOP_PRIVATE_KEY` in both the Actions and Dependabot secret stores. Dependabot-triggered workflows use Dependabot secrets; repository variables supply the same App IDs and OpenAI project ID. Missing/invalid review credentials fail visibly rather than falling back to another author or granting an approval. Fork PRs receive neither secret store through these reviewer jobs.
 - `OBI_WAN_CODE_NOBI_APP_ID` repository variable and `OBI_WAN_CODE_NOBI_PRIVATE_KEY` repository secret authenticate the Obi-Wan Code-nobi GitHub App. Install it with `Contents: read` and `Pull requests: write`.
 - `LINT_EASTWOOD_APP_ID` repository variable and `LINT_EASTWOOD_PRIVATE_KEY` repository secret authenticate the Lint Eastwood GitHub App. Install it on this repository with `Contents: write` so lint auto-fix commits can be pushed, and `Pull requests: write` so build reviews can be published. The CI orchestrator passes only `LINT_EASTWOOD_PRIVATE_KEY` into the reusable lint workflow. The secret is optional so untrusted/fork and Dependabot pull requests can take the strict-check-only path; when auto-fix is enabled, a missing secret, invalid app identity, or insufficient app permission fails the auto-fix job instead of falling back to `GITHUB_TOKEN` attribution.
-- `ROBOCOP_APP_ID` repository variable and `ROBOCOP_PRIVATE_KEY` repository secret authenticate the RoboCop GitHub App. Install it with `Contents: read`, `Pull requests: write`, `Checks: read`, `Actions: read`, `Code scanning alerts: read`, `Dependabot alerts: read`, and `Issues: write`. The CodeQL alert workflow narrows its short-lived installation token to `Code scanning alerts: read` and `Issues: write`; the vulnerability and malware workflows additionally request `Dependabot alerts: read` through the token action's `vulnerability-alerts` input. The other permissions remain available only to RoboCop's PR-review workflow.
+- `ROBOCOP_APP_ID` repository variable and `ROBOCOP_PRIVATE_KEY` repository secret authenticate the RoboCop GitHub App. Install it with `Contents: read`, `Pull requests: write`, `Checks: read`, `Actions: read`, `Code scanning alerts: read`, `Dependabot alerts: read`, and `Issues: write`. The CodeQL alert workflow narrows its short-lived installation token to `Code scanning alerts: read` and `Issues: write`; the vulnerability and malware workflows request `Issues: write` and `Dependabot alerts: read` through the token action's `vulnerability-alerts` input. The other permissions remain available only to RoboCop's PR-review workflow.
 - AI reviews use `gpt-6-luna` through the local OpenAI Responses API action.
 - AI personas do not post standalone PR comments. Any bot comments are submitted as part of their native PR review.
 - If OpenAI quota or tokens are exhausted, credentials are invalid, the service is unavailable, or the model response is unusable, the affected persona publishes one native `COMMENT` review per commit explaining that no AI approval or finding was produced. The workflow remains failed until it can be rerun successfully; independent lint, test, CodeQL, vulnerability, and malware gates remain authoritative.
@@ -119,16 +131,16 @@ Review personas:
 
 Security-alert aggregation:
 
-- Daily workflows collect open CodeQL alerts plus non-urgent Dependabot vulnerability alerts and npm malware-classified Dependabot alerts. Each workflow also supports **Run workflow** from the Actions tab.
+- Daily workflows collect open CodeQL alerts plus Dependabot vulnerability alerts of every severity and malware-classified Dependabot alerts. Each workflow also supports **Run workflow** from the Actions tab.
 - The alert workflows keep scheduling in [`alert-codeql.yml`](alert-codeql.yml), [`alert-vulnerability.yml`](alert-vulnerability.yml), and [`alert-malware.yml`](alert-malware.yml). The fetching, grouping, validation, and synchronization implementation lives in the [Security Alerts composite action](../actions/security-alerts/action.yml). The response must be valid JSON and must account for every source alert exactly once; validation happens before any issue is created or updated.
 - OpenAI request failures, including exhausted quota/tokens, missing credentials, transport errors, and unusable responses, produce a warning and workflow summary with recovery guidance. Alert synchronization then fails validation before changing tickets.
 - Generated issues contain a stable marker derived from their feed and source-alert references. Reconciliation also parses the underlying references from every open workflow-managed issue, so changing AI prose or group order updates the same tickets and split or merged groups reuse a deterministic overlapping canonical ticket instead of creating overlapping coverage.
-- Every current source alert appears in exactly one open managed issue. Reused issues retain their existing GitHub Project fields, labels, and assignees while the workflow ensures the repository owner and the correct gray feed tag (`codeql`, `vulnerability`, or `malware`) remain present. New issues, and existing issues newly added to the Project, receive the documented default fields.
-- Superseded managed issues are closed as completed after all of their still-open source alerts move to current canonical tickets. Resolved or no-longer-eligible alerts are removed when a canonical issue is refreshed; a managed issue with no current coverage is closed even when the feed has zero alerts. Closed bodies retain their source-alert links and gain a lifecycle note pointing to replacement tickets when applicable. Their Project status moves to `Done`, with `End date` recorded when that field exists.
+- Every open source alert appears in exactly one managed issue per feed. Reused issues retain their labels, assignees and populated planning fields except for urgent priority increases while the workflow ensures the repository owner and the correct gray feed tag (`codeql`, `vulnerability`, or `malware`) remain present. New issues, and existing issues newly added to the Project, receive the documented default fields.
+- Superseded managed issues are closed as completed after all of their still-open source alerts move to current canonical tickets. Resolved or no-longer-eligible alerts are removed when a canonical issue is refreshed; a managed issue with no current coverage is closed even when the feed has zero alerts. Closed bodies retain their source-alert links and gain a lifecycle note pointing to replacement tickets when applicable. Their Project status moves to `Done`, after recording `End date`.
 - Required repository configuration: `ROBOCOP_OPENAI_API_KEY`, `ROBOCOP_PRIVATE_KEY`, and `SECURITY_ALERTS_TOKEN` secrets; `ROBOCOP_APP_ID`, `OPENAI_REVIEWERS_PROJECT_ID`, and `SECURITY_ALERTS_PROJECT_ID` repository variables; and a RoboCop installation on Notoli. `SECURITY_ALERTS_PROJECT_ID` is the node ID of the personal Notoli GitHub Project v2.
 - RoboCop must have `Issues: write` for issue creation, edits, labels, assignment, comments, and closure; `Code scanning alerts: read` (the `security-events` workflow input) for CodeQL reads; and `Dependabot alerts: read` (the token action's `vulnerability-alerts` input) for vulnerability and malware reads. After changing the App registration, approve the requested permission update on the existing installation. Each workflow explicitly narrows the one-hour installation token to the permissions its feed needs and to the Notoli repository.
 - `SECURITY_ALERTS_TOKEN` remains separate because the Notoli board is a personal Project v2. It is passed only to the Project GraphQL client and needs `project` access plus whatever repository visibility GitHub requires for the Project's issue content. It is no longer used to read security alerts or mutate issues.
-- The project must include these fields and options: `Status` → `Backlog`, `Domain` → `CI/CD`, `Type` → `Security`, `Priority` → `P1`/`P2`, `Size` → `M`, and numeric `Estimate` (set to `3`). CodeQL and malware groups use `P1`; non-urgent vulnerability groups use `P2`. The workflows require and write all of them.
+- The Project needs `Status` options `Backlog` and `Done`, `Domain` option `CI/CD`, `Work type` option `Security`, `Priority` options `P0`, `P1` and `P2`, `Size` option `M`, numeric `Estimate` (default 3), and an `End date` date field.
 - `GITHUB_TOKEN` is limited to `contents: read` for checkout and is not persisted in the Git remote. RoboCop performs all alert reads and issue operations. `SECURITY_ALERTS_TOKEN` performs only Project v2 reads and writes; the shared action rejects empty credentials or a shared RoboCop/Project credential instead of falling back to `GITHUB_TOKEN` or the personal token for issue authoring.
 - Missing or invalid RoboCop App IDs, private keys, installations, or requested permissions fail during installation-token creation. The shared action also emits an actionable error for missing tokens, a missing Project ID, or credential reuse before fetching alerts or changing tickets.
 - A safe attribution check is to run one alert workflow manually against current alerts after approving the App permission update. Reference-based reconciliation reuses current managed tickets, so the run exercises RoboCop-authored edits without creating duplicate production tickets. Confirm the workflow actor in an edited ticket's history and verify Project synchronization remains successful.
@@ -147,7 +159,7 @@ CodeQL details:
 - Pull request CodeQL uses the reusable workflow's change-detection job, following the same skip-by-scope pattern as linting and testing; documentation-only and unrelated pull requests run the detector but skip analysis jobs.
 - For a CodeQL-relevant pull request, Python and JavaScript/TypeScript analysis use language-specific filters, while GitHub Actions analysis runs so the `/language:actions` configuration remains present for code-scanning comparisons.
 - CI ignores pull requests targeting `env-prod`, so CodeQL is not invoked for that deployment branch.
-- Pushes to `main`, weekly scheduled scans, and manual `workflow_dispatch` runs are supported directly by `gate-codeql.yml`.
+- `gate-codeql.yml` runs full scans daily at midnight Pacific and on manual dispatch.
 - CodeQL uploads SARIF results to GitHub Code Scanning with scoped permissions: `contents: read`, `pull-requests: read`, `actions: read`, and `security-events: write`.
 - Results appear in PR checks and under GitHub Security -> Code scanning when code scanning is enabled for the repository.
 - CodeQL uses the `security-extended` and `security-and-quality` query suites for Python, JavaScript/TypeScript, and GitHub Actions workflow analysis.
@@ -182,7 +194,9 @@ GitHub accepts skipped analyzer jobs as satisfying required checks. Scope-detect
 
 When editing or recreating the ruleset, retain all 17 contexts above and exclude the standalone `CodeQL` context. Preserve the remaining ruleset settings, conditions, and bypass actors. Validate the live context list with `gh api repos/VanillaIceCube/Notoli/rules/branches/main` and inspect `gh pr checks` for both a documentation-only PR and a code-changing PR.
 
-The three reviewer requirements were activated for [#946](https://github.com/VanillaIceCube/Notoli/issues/946) after verifying exact emitted names on human PR #944 and same-repository Dependabot PR #941, the six reviewer secret names in both credential stores, and app/project variable names. [The dated evidence snapshot](../review-gating-evidence.json) records the original and updated rules, successful runs, and PR #942's genuine requested-changes/failing-check followed by approval/passing-check. The existing 14 requirements and all other ruleset settings were preserved.
+The three reviewer requirements were activated for [#946](https://github.com/VanillaIceCube/Notoli/issues/946) on October 20, 2026. The rollout verified exact check names on [human PR #944](https://github.com/VanillaIceCube/Notoli/pull/944) and [Dependabot PR #941](https://github.com/VanillaIceCube/Notoli/pull/941), the six reviewer secret names in both credential stores, and app/project variable names. The existing 14 requirements and all other ruleset settings were preserved.
+
+On PR #942, a [requested-changes review](https://github.com/VanillaIceCube/Notoli/pull/942#pullrequestreview-5583479039) caused a [failed check](https://github.com/VanillaIceCube/Notoli/actions/runs/39403822972/job/118564788557). A later [approval](https://github.com/VanillaIceCube/Notoli/pull/942#pullrequestreview-5583539374) was followed by a [passing check](https://github.com/VanillaIceCube/Notoli/actions/runs/39404568951/job/118567260315). After activation, a [failed required check on PR #947](https://github.com/VanillaIceCube/Notoli/actions/runs/39519768899/job/118960463204) confirmed the merge block.
 
 A published `REQUEST_CHANGES` fails each persona's job, including repeated or unchanged verdicts. Valid `APPROVE` and `COMMENT` succeed; missing credentials, malformed/invalid output, incomplete major briefs and oversized diffs fail visibly. Build/security reviews use `always()` so upstream failures or skipped gates do not suppress them. No reviewer path filters exclude documentation changes. Forks receive no private credentials; review from a trusted same-repository branch is required.
 
@@ -283,6 +297,7 @@ checks every persona's current-head approval. Scoped CodeQL skips must also
 match authoritative API diff paths, including previous paths on renames. Null or
 unknown mergeability and propagation of the pending policy check are polled at
 most six times with two-second waits; unstable/conflicting states fail closed.
+A previous run's successful policy check cannot replace the pending check created by this run.
 Repeated events are idempotent and genuine API failures remain visible. GitHub
 retains final enforcement of review-thread resolution and all branch rules.
 
@@ -347,7 +362,7 @@ CodeQL now forwards `scope_status`, `scope_python`, `scope_javascript` and
 `scope_actions` to RoboCop's shared evidence collector. A PR language skip is
 expected only with successful, known scope and a completed matching default-
 branch baseline. Missing, failed or unavailable evidence stays an explicit gap.
-Main pushes and scheduled/manual scans still analyze every language. Existing
+Scheduled and manual scans analyze every language. Existing
 check names, categories, queries and ruleset requirements remain unchanged;
 this does not independently resolve the historical default-branch/attribution
 acceptance in #612 or #587.
@@ -368,10 +383,7 @@ The applications retain daily updates. Infrastructure retains weekly updates,
 its owner/labels/PR limits, general Actions group for non-CodeQL updates, and
 separate Compose updates. All application CodeQL entry points use the aligned
 immutable v4.39.3 revision (`33d7b85da1a04171e211befe2c739303b9a4c066`).
-Regenerate `.github/workflows/ci-source-inventory.json` with
-`python .github/tools/ci_architecture.py` after workflow pin changes and verify it with
-`--check`. Scanner scope, permissions and merge/deployment
-gates remain unchanged. Canonical rollout:
+Canonical rollout:
 [FullStackTemplate #271](https://github.com/VanillaIceCube/FullStackTemplate/issues/271).
 The November maintenance sweep tracks the aligned upgrade and generated inventory
 in [FullStackTemplate #309](https://github.com/VanillaIceCube/FullStackTemplate/issues/309).
@@ -386,7 +398,7 @@ covers flow mappings, quoted/escaped keys, folded values, aliases and mixed-case
 owner/repository names. Negative regressions reject drift, mutable pins and
 missing analysis. The existing version/security update groups and daily cadence
 remain unchanged. Infrastructure adopts this guard and reviewer eligibility,
-retaining weekly updates, independent Required CI and owner merge.
+retaining weekly updates, independent Required CI and owner decisions on ordinary PRs.
 
 ```sh
 uv sync --locked --project backend
@@ -417,8 +429,11 @@ Existing managed source refs select the canonical issue even when wording change
 
 Project attachment retries transient failures at most three times, reading back
 possibly committed writes before retrying. Unresolved attachments identify the
-saved issue; rerun the same feed to reuse it. Interrupted field initialization fills
-only missing fields, preserving human planning. All active groups synchronize before
+saved issue; rerun the same feed to reuse it. Reconciliation fills missing fields.
+A group containing a critical alert receives P0. High or unknown severity raises
+an existing P2/P3 group to P1. Other vulnerability groups default to P2. CodeQL and
+malware groups default to P1. An urgent alert can raise an existing group's priority.
+Higher priorities and other populated planning fields are preserved. All active groups synchronize before
 superseded issues can close. Closure saves source history and End date before Done.
 Only the observed empty-error or exact Issue/custom concurrent-close HTTP 422 may
 recover, and only after readback proves closed/completed with the exact saved body.
@@ -466,18 +481,13 @@ constrain a workflow that bypasses it. GitHub rulesets and independent review
 remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
 forms, rejects aliases, duplicate and merge keys, and requires pinned PyYAML 6.0.3.
 
-Mapping-form writes are checked against `.github/workflow-write-grants.json`,
-which records reviewed per-workflow/job grants. Unknown scopes/grant levels and
-new writes fail. Changes to that policy require review with the workflow; it does
-not grant GitHub permissions itself or replace branch protection.
-
-On pull requests, grant authority comes from the platform event base SHA, never
-from the proposed policy file. Bootstrap derives existing writes from that exact
-base when no manifest exists. To add a grant, first merge a separately reviewed
-policy-only PR under the existing protected review gates; a later workflow PR
-can consume it. Fetch the base commit before local PR-policy audits. This detects
-self-authorizing policy/workflow changes; it does not make PR-owned code a sandbox
-or remove repository-writer privileges.
+Every workflow declares an explicit top-level permissions map. Jobs may narrow or override it. The checker rejects broad
+grants such as `write-all` and unknown permission scopes or levels. PR CI compares
+each workflow and job's effective write scopes to the same path and job on its
+exact base commit. New workflows and jobs start with no approved write scopes.
+The required default-branch policy repeats this comparison for main PRs using
+reviewed code and Git blobs. It never executes proposed workflows. A deliberate
+increase requires an independently reviewed change to the trusted policy.
 
 ### Security-alert configuration contract
 
@@ -492,9 +502,9 @@ Absent or empty values deliberately preserve `gpt-6-luna`, `medium`, and `16000`
 Nonempty overrides pass through the existing Responses policy. Configuration is
 validated before source reads or issue/Project writes, including empty feeds;
 invalid models, efforts or token limits fail visibly without a provider call.
-No model migration, credential/project consolidation, retry or spending policy
-change is implied. Infrastructure retains its additional Project-schema preflight,
-all-severity vulnerability feed and distinct token/Project permissions.
+All three feeds check the Project token and field schema before reading alerts.
+RoboCop receives issue write access and read access to the selected feed.
+Only the Project client receives the personal Project token.
 
 `node --test .github/actions/custom-regressions/security-alert-contract.test.js`
 checks actual YAML inputs/callers, audits local composites for unsupported `vars`,
@@ -532,17 +542,6 @@ and generated workflow synchronized; deployment parity remains mandatory.
 The [canonical architecture reference](README.md#-architecture-and-trust-boundaries) maps PR/fork/
 Dependabot paths, required checks, reviewer interactions, scheduled alerts,
 main-to-env-prod/manual release paths and credential trust boundaries to source.
-Its per-repository source inventory is checked against actual workflow YAML.
-
-`promotion-summary-request.yml` is a read-only PR/target-push signal with no checkout or
-artifact/cache handoff. Its default-branch `workflow_run` consumer
-`promotion-summary.yml` maintains one GitHub Actions-owned comment for each open
-same-repository `env-prod` PR using the actual current target comparison. Reruns
-update the same comment; stale/incomplete/denied evidence is reported visibly.
-Observed area counts are separate from inferred risks. The workflow loads trusted
-main code, never PR code/prose or secret values, and does not change review,
-merge, release or recovery authorization. Infrastructure uses gateway-specific
-wording. FullStackTemplate's inactive target is not created for symmetry.
 
 ## 🧪 Checks and diagnostics
 
@@ -554,13 +553,23 @@ profile retains their full coverage. The production policy explicitly enables MC
 
 ### Repository validation and failure diagnostics
 
+Editing `gate-test.yml` triggers all app test groups. Frontend tests use two
+Vitest workers, then build after the tests pass. The backend always attempts
+both its ordinary and MCP-enabled suites and fails if either profile fails.
+The MCP-enabled run discovers the checked-in tests under `apps.mcp`.
+
+Repository automation uses the locked dev dependencies. Workflow and Compose
+validation and release-source parity run before the test suites. The gate
+discovers JavaScript action regression tests in `.github/actions` and Python
+PR-diff regressions where present.
+
 The path-aware test gate includes `.github/**`, `deploy/**`, and maintained docs
 in automation validation. It runs workflow and
 composite syntax, parser-only script checks and synthetic Compose configuration
 plus the existing Batch 1 suites and focused mocked composite regressions.
 [Coverage and external boundaries](README.md#-coverage-boundaries) are explicit.
 
-`.github/tools/bounded_log.py` retains early, sampled failing and late context within
+The test workflow retains early, sampled failing and late log context within
 16,000 characters for reviewers. Full output is streamed with `tee`; failed
 logs have roughly 1 MiB capped artifacts retained seven days. Random delimiters
 protect multiline outputs and the original command status still determines the
@@ -571,9 +580,8 @@ validation fails. Frontend and backend test failures remain independent gates.
 See frontend/README.md for setup and local commands.
 
 Validate syntax and relevant behavioral tests after automation changes. Preserve
-original check failures and bounded/redacted diagnostics. Update the existing
-architecture inventory with `python .github/tools/ci_architecture.py` after workflow
-changes and verify it with `--check`. Do not use production as a test fixture.
+original check failures and bounded/redacted diagnostics. Use disposable fixtures
+for validation.
 
 <a id="-related-guides"></a>
 
@@ -594,58 +602,51 @@ remain distinct.
 
 ```mermaid
 flowchart TD
-  Human[Same-repository human PR] --> CI[CI orchestrator]
-  Dependabot[Same-repository Dependabot PR] --> CI
-  Fork[Fork PR] --> Isolated[Applicable checks with fork credential isolation]
-  CI --> LintTest[Lint and test workflows]
-  CI --> Scanners[CodeQL and dependency scanners]
-  CI -->|Infrastructure| Secrets[Gitleaks secret scan]
-  Secrets --> Robo
-  Secrets --> Gate
-  CI --> Obi[Obi-Wan code review]
-  LintTest --> Lint[Lint Eastwood build review]
-  Scanners --> Robo[RoboCop security review]
-  Obi --> Gate[Required results and native review state]
-  Lint --> Gate
-  Robo --> Gate
-  LintTest --> Gate
-  Scanners --> Gate
-  Isolated --> ForkEvidence[No secret-bearing AI review acceptance inferred]
-  Gate -->|Applications| Main[Normal protected main merge]
-  Gate -->|Infrastructure| RequiredCI[Required CI aggregate and owner merge]
-  RequiredCI --> Main
-  Gate --> Auto[Application Dependabot eligibility and exact-head auto-merge checks]
-  Auto --> Platform[GitHub protected auto-merge]
+    PR["PR opened, updated, reopened, or marked ready<br/>Target branch: any except env-prod"]
+    CI["ci-orchestrator.yml"]
+    L["gate-lint.yml<br/>Lint and formatting"]
+    T["gate-test.yml<br/>Changed files select tests"]
+    Q["gate-codeql.yml<br/>Changed files select analyzers"]
+    V["gate-vulnerability.yml<br/>Dependency vulnerability review"]
+    M["gate-malware.yml<br/>npm malware · app repos only"]
+    S["gate-secrets.yml<br/>Gitleaks scan"]
+    RC["review-code.yml · Obi-Wan"]
+    RB["review-build.yml · Lint Eastwood"]
+    RS["review-security.yml · RoboCop"]
+    DONE["CI finishes<br/>All gates and applicable reviews report results"]
+    AUTO["ci-auto-merge.yml<br/>Successful PR CI proceeds to Dependabot policy evaluation"]
+    PR --> CI
+    CI --> L & T & Q & V & S
+    CI -->|"App repos only"| M
+    CI --> RC
+    L & T --> RB
+    Q & V & S --> RS
+    M --> RS
+    L & T & Q & V & M & S --> DONE
+    RC & RB & RS --> DONE
+    DONE --> AUTO
 ```
 
-[The orchestrator](ci-orchestrator.yml) excludes application `env-prod` PRs;
-Infrastructure restricts it to `main`. Same-repository human and Dependabot PRs
+[The orchestrator](ci-orchestrator.yml) runs on pull requests targeting any branch except `env-prod`. Same-repository human and Dependabot PRs
 receive the configured reviewers. Forks receive no reviewer credentials: never
 execute fork code with privileged credentials or add `pull_request_target` here.
 Obi-Wan starts independently; Lint Eastwood consumes lint/test outcomes; RoboCop
-consumes scanner evidence, including Infrastructure's secret scan. Missing evidence,
+consumes scanner evidence, including the secret scan. Missing evidence,
 credentials, invalid output and `REQUEST_CHANGES` fail. Skipped or old-head reviews
-are not current-head acceptance. App Dependabot auto-merge verifies the exact head
-without executing PR code; Infrastructure retains Required CI and owner merge.
+are not current-head acceptance. The Dependabot follow-up verifies the exact head using reviewed main code.
+Infrastructure also requires its Required CI aggregate. Production promotion is a separate owner action.
 
-### Reviewer data and write boundary
+### CodeQL scans
 
 ```mermaid
 flowchart LR
-  Diff[Bounded source and changed-file diff] --> Request[Validated Responses request]
-  Human[Attributed human discussion: untrusted] --> Collector[Bounded App-owned history collector]
-  Prior[Prior persona reviews: historical claims] --> Collector
-  Collector --> Request
-  Checks[Authoritative check and scanner evidence] --> Request
-  Request --> Luna[Accepted gpt-6-luna model]
-  Luna --> Schema[Required review schema validation]
-  Schema --> Publish[Current-head native review publisher]
-  Schema --> Reconcile[Optional own-feedback reconciliation]
-  Reconcile --> Proof[Exact App ID, cited replacement, current head and checks]
-  Proof --> Own[Own follow-up or verified own-thread resolution]
-  Request --> Usage[Aggregate tokens, latency and dated partial cost estimate]
-  Luna --> Usage
+    PR["PR CI"] -->|"Select analyzers by changed files"| Q["gate-codeql.yml"]
+    WEEK["Daily · midnight Pacific"] -->|"Full scan"| Q
+    MANUAL["Manual · Run workflow"] -->|"Full scan"| Q
+    Q --> F["Publish CodeQL findings to GitHub"]
 ```
+
+### Reviewer data and write boundary
 
 The [action contract](../actions/README.md) owns byte/page/count limits, identity,
 serialized writers and reconciliation proof. Discussion and tool output are
@@ -662,63 +663,61 @@ permissions. Dependabot receives required reviewer OpenAI keys/App private keys,
 never production/Project credentials. RoboCop owns security-alert issue writes;
 the separate Project token only synchronizes Project fields. Repository Actions
 secrets are not branch-scoped: arbitrary workflow writers remain privileged.
-Immutable external Action pins and the platform-selected base permission policy
-prevent proposed workflows from approving their own new write grants. A grant
-must merge through review before a consumer requests it.
+External Actions use immutable pins. Workflow reviews cover changes to write
+permissions in the workflow or job that requests them.
 
 ### Scheduled source-alert maintenance
 
 ```mermaid
-flowchart LR
-  Schedule[Daily schedules or manual dispatch] --> Feeds[CodeQL, vulnerability and malware workflows]
-  Feeds --> Source[Authoritative source alerts and bounded classification]
-  Source --> Robo[RoboCop grouping with validated Responses policy]
-  Robo --> Validate[Complete source coverage and lifecycle validation]
-  Validate --> Issues[App-owned issue updates and verified closure]
-  Issues --> Project[Separately credentialed Project synchronization and recovery]
+flowchart TD
+    MIDNIGHT["Every day · midnight Pacific"]
+    SCAN["gate-codeql.yml<br/>Full CodeQL scan on main"]
+    C["alert-codeql.yml<br/>Read the published CodeQL findings"]
+    V["alert-vulnerability.yml<br/>Read open Dependabot vulnerabilities"]
+    M["alert-malware.yml<br/>Read open malware-classified alerts"]
+    P["security-alerts action<br/>RoboCop groups findings into GitHub Project tickets"]
+    MIDNIGHT --> SCAN
+    MIDNIGHT --> V
+    MIDNIGHT --> M
+    SCAN -->|"Scheduled scan succeeds"| C
+    C & V & M --> P
 ```
 
-[CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml) and
-[malware](alert-malware.yml) aggregation run daily or by dispatch. Incomplete
+The [vulnerability](alert-vulnerability.yml) and [malware](alert-malware.yml)
+alert workflows run daily at midnight Pacific (America/Los_Angeles). The
+[CodeQL alert workflow](alert-codeql.yml) follows a successful scheduled CodeQL
+scan on main. All three alert workflows support manual dispatch. Incomplete
 source/model evidence fails before lifecycle writes; verified closure and Project
-recovery preserve their independent credential boundaries. CodeQL analysis also
-runs on applicable main pushes, scoped PRs and manual dispatch. Alert maintenance
-neither merges code nor deploys.
+recovery preserve their independent credential boundaries.
+
+The CodeQL Gate analyzes scoped pull requests. The full scan
+is scheduled daily at midnight Pacific and can be dispatched manually.
+
+GitHub may delay or drop scheduled runs at the top of the hour. If a scheduled
+run is missing, check that workflow's run history and use **Run workflow** on
+`main` to recover the missed scan or feed. The CodeQL alert workflow runs automatically only after the scheduled scan
+on main succeeds. If tracking needs a separate retry, dispatch CodeQL Alert manually.
+[GitHub scheduled-event behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+
+Default-branch Code Scanning results can lag merges until the next full scan completes.
+For a fresher baseline, dispatch `CodeQL Gate` on `main`. Its scheduled and
+manual runs upload all three language results for that branch. For example,
+the [November 23 scheduled run](https://github.com/VanillaIceCube/Notoli/actions/runs/45276114128)
+published Python, JavaScript/TypeScript, and GitHub Actions analyses for `main`.
 
 ### Promotion, release and manual operations
 
 ```mermaid
 flowchart TD
-  Reviewed[Reviewed source merged to main] --> PR[Main-to-env-prod promotion PR]
-  PR --> Request[Read-only promotion event]
-  Request --> Trusted[Default-branch workflow_run]
-  Trusted --> Summary[One managed deterministic impact summary]
-  PR --> Gates[Existing promotion checks and owner authorization]
-  Gates --> Merge[Normal env-prod merge]
-  Merge --> App[Application deploy pipeline]
-  Merge --> Gateway[Independent gateway deploy pipeline]
-  App --> Stage[Parity, immutable images, private staging and capacity checks]
-  Stage --> Transaction[App lock, writer checkpoint, migrations and readiness]
-  Transaction --> Accepted[Accepted source and immutable image record]
-  Gateway --> Guard[Owner, branch, source and maintenance-lock checks]
-  Guard --> Same[Unchanged configuration retains gateway runtime]
-  Guard --> Changed[Changed configuration follows existing gateway transaction]
-  Accepted --> Verify[Independent VM identity, routing, auth and sanitized-log checks]
-  Same --> Verify
-  Changed --> Verify
-  Manual[Authorized manual dispatch of reviewed env-prod source] --> App
-  Manual --> Gateway
-  Recovery[Authorized documented recovery] --> RecoveryGuard[Existing owner, lock and data-generation guards]
-  RecoveryGuard --> Verify
+    MAIN["Reviewed source on main"]
+    PROMOTE["Promotion PR from main to env-prod"]
+    PUSH["Merge updates env-prod"]
+    MANUAL["Manual dispatch · retry deployment<br/>Select the existing env-prod branch"]
+    APP["ci-deploy.yml<br/>Notoli and MacroMapper release their frontend and backend"]
+    INFRA["deploy-gateway.yml<br/>Infrastructure updates the shared gateway"]
+    MAIN --> PROMOTE --> PUSH
+    PUSH & MANUAL --> APP & INFRA
 ```
-
-The [read-only listener](promotion-summary-request.yml) emits a fixed signal with
-no checkout, artifacts/caches, secrets or write token. The [trusted consumer](promotion-summary.yml)
-uses reviewed main code, independently fetches current metadata, excludes fork
-producers and serializes one managed bot comment per open same-repository promotion
-PR (up to ten). It trusts neither producer conclusions nor supplied PR identities.
-Incomplete inventories, moving revisions or uncertain writes remain visible;
-summary failures do not mask required CI or authorize a release.
 
 Promote exact reviewed main source through existing `env-prod` controls. Keep
 independent app/gateway transactions, immutable digests, private recovery sets,
@@ -732,20 +731,14 @@ its onboarding examples do not authorize new resources or an `env-prod` branch.
 
 ### Maintaining the architecture
 
-[ci-source-inventory.json](ci-source-inventory.json) records actual workflow events,
-jobs/needs, permissions, action consumers and credential names. After reviewing
-workflow/diagram edits, run `python .github/tools/ci_architecture.py`, then repeat
-with `--check`. The checker parses YAML without executing workflows and checks
-local source links plus key Mermaid edges against event/dependency/consumer
-contracts. Negative regressions reject diagram-only drift, workflow dependency
-changes and privileged PR-trigger substitution. It does not validate every label
-or general Mermaid semantics; changed diagrams also need parser/render review.
+When editing a workflow, review its triggers, job dependencies, permissions,
+and trust boundaries. Update the diagrams when those relationships change.
 
 ## 🧪 Coverage boundaries
 
 Action-local regressions cover reviewer publishing, security-alert lifecycle,
-dependency evidence, permission/pin policy and architecture contracts under their
-existing gates. App repositories retain backend, frontend/browser and shared
+dependency evidence and workflow permission and pin policy under their existing
+gates. App repositories retain backend, frontend/browser and shared
 release suites; the canonical release tests remain in Infrastructure `app-release/v1`.
 Root tooling, gateway/ingress, SQLite snapshot and release-profile suites were
 removed at the owner's request. Their former coverage is not provided by the

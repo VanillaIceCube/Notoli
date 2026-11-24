@@ -1,14 +1,14 @@
 """Inspect YAML nodes (including flow syntax) without executing YAML tags."""
 import json
 import re
-import sys
 import subprocess
+import sys
 
 import yaml
 from yaml.nodes import MappingNode, ScalarNode, SequenceNode
 
 
-def check(text, name, grants):
+def check(text, name):
     errors = []
     lines = text.splitlines()
 
@@ -26,7 +26,7 @@ def check(text, name, grants):
               "pages", "pull-requests", "repository-projects", "security-events",
               "statuses", "vulnerability-alerts"}
 
-    def walk(node, trail=()):
+    def walk(node):
         if node is None:
             return
         if id(node) in visited:
@@ -55,67 +55,109 @@ def check(text, name, grants):
                     if not isinstance(value, MappingNode):
                         error(value, "enumerate required permissions")
                     else:
-                        approved = grants.get(".".join((*trail, "permissions")), [])
                         for scope, level in value.value:
                             if (not isinstance(scope, ScalarNode) or scope.value not in scopes
                                     or not isinstance(level, ScalarNode) or level.value not in {"read", "write", "none"}):
                                 error(scope, "unknown permission scope or grant")
-                            elif level.value == "write" and scope.value not in approved:
-                                error(level, "write grant requires a reviewed workflow-write-grants.json entry")
                 if key.value == "on":
                     triggers = ([value.value] if isinstance(value, ScalarNode) else
                                 [x.value for x in value.value if isinstance(x, ScalarNode)] if isinstance(value, SequenceNode) else
                                 [k.value for k, _ in value.value if isinstance(k, ScalarNode)] if isinstance(value, MappingNode) else [])
                     if "pull_request_target" in triggers:
                         error(value, "privileged PR-target execution requires a separately reviewed policy")
-                walk(value, (*trail, key.value))
+                walk(value)
         elif isinstance(node, SequenceNode):
             for value in node.value:
-                walk(value, (*trail, "[]"))
+                walk(value)
 
+    if re.fullmatch(r"\.github/workflows/[^/]+\.ya?ml", name.replace("\\", "/")):
+        if not isinstance(document, MappingNode) or not any(
+                isinstance(key, ScalarNode) and key.value == "permissions" for key, _ in document.value):
+            errors.append(f"{name}:1: declare explicit workflow-level permissions")
     walk(document)
     return errors
 
 
-def base_policy(root, base):
-    if not re.fullmatch(r"[0-9a-f]{40}", base):
-        raise ValueError("Invalid platform base SHA")
+def effective_writes(source, *, trusted_base=False):
+    workflow = yaml.load(source, Loader=yaml.BaseLoader)
+    if not isinstance(workflow, dict):
+        raise ValueError("workflow must be a YAML mapping")
 
-    def git(*args):
-        return subprocess.check_output(["git", "-C", root, *args], text=True, encoding="utf-8")
+    def writes(permissions):
+        if not isinstance(permissions, dict):
+            raise ValueError("workflow permissions must enumerate scopes")
+        return {scope for scope, level in permissions.items() if level == "write"}
 
-    git("cat-file", "-e", base + "^{commit}")
-    name = ".github/workflow-write-grants.json"
-    if git("ls-tree", "--name-only", base, "--", name).strip():
-        return json.loads(git("show", base + ":" + name))
-    # Bootstrap only from the platform-selected base's existing grants, never
-    # from the proposed checkout. Future grant extensions merge policy first.
-    policy = {}
+    # Older trusted workflows may omit a default. Only their explicit scopes authorize writes.
+    defaults = workflow.get("permissions", {}) if trusted_base else workflow["permissions"]
+    result = {None: writes(defaults)}
+    for job, definition in workflow.get("jobs", {}).items():
+        result[job] = writes(definition.get("permissions", defaults))
+    return result
 
-    def collect(obj, trail, grants):
-        if isinstance(obj, dict):
-            for key, value in obj.items():
-                if key == "permissions" and isinstance(value, dict):
-                    writes = [scope for scope, level in value.items() if level == "write"]
-                    if writes:
-                        grants[".".join((*trail, key))] = writes
-                collect(value, (*trail, key), grants)
-        elif isinstance(obj, list):
-            for value in obj:
-                collect(value, (*trail, "[]"), grants)
 
-    for name in git("ls-tree", "-r", "--name-only", base, "--", ".github/workflows").splitlines():
-        if name.endswith((".yml", ".yaml")):
-            grants = {}
-            collect(yaml.load(git("show", base + ":" + name), Loader=yaml.BaseLoader), (), grants)
-            if grants:
-                policy[name] = grants
-    return policy
+def changed_grants(base_text, proposed_text, path):
+    approved = effective_writes(base_text, trusted_base=True) if base_text is not None else {}
+    errors = []
+    for job, writes in effective_writes(proposed_text).items():
+        for scope in sorted(writes - approved.get(job, set())):
+            context = f"jobs.{job}" if job is not None else "workflow"
+            errors.append(f"{path}: {context} requests {scope}: write outside the trusted base grant")
+    return errors
+
+
+def workflow_blobs(revision):
+    if not re.fullmatch(r"[a-f0-9]{40}", revision):
+        raise ValueError("expected an exact GitHub commit SHA")
+    records = subprocess.check_output(["git", "ls-tree", "--full-tree", "-r", "-z", revision + "^{commit}", "--", ".github/workflows/"])
+    blobs = {}
+    for record in records.split(b"\0"):
+        if not record:
+            continue
+        metadata, filename = record.split(b"\t", 1)
+        mode, kind, oid = metadata.split(b" ")
+        path = filename.decode("utf-8")
+        # Actions discovers workflows directly inside .github/workflows.
+        if not re.fullmatch(r"\.github/workflows/[^/]+\.ya?ml", path):
+            continue
+        if kind != b"blob" or mode not in (b"100644", b"100755"):
+            raise ValueError(f"{path}: expected a regular workflow file")
+        blobs[path] = oid.decode("ascii")
+    return blobs
+
+
+def compare_commits(base, head):
+    before = workflow_blobs(base)
+    after = workflow_blobs(head)
+    errors = []
+
+    def read(oid):
+        size = int(subprocess.check_output(["git", "cat-file", "-s", oid]))
+        if size > 1024 * 1024:
+            raise ValueError("workflow exceeds the one MiB inspection limit")
+        return subprocess.check_output(["git", "cat-file", "blob", oid]).decode("utf-8")
+
+    for path, oid in after.items():
+        if before.get(path) == oid:
+            continue
+        proposed = read(oid)
+        invalid = check(proposed, path)
+        if invalid:
+            errors.extend(invalid)
+            continue
+        errors.extend(changed_grants(read(before[path]) if path in before else None, proposed, path))
+    return errors
 
 
 if __name__ == "__main__":
-    data = json.load(sys.stdin)
-    if "base" in data:
-        print(json.dumps(base_policy(data["root"], data["base"])))
+    if len(sys.argv) == 4 and sys.argv[1] == "--compare-workflow-grants":
+        problems = compare_commits(sys.argv[2], sys.argv[3])
+        if problems:
+            raise SystemExit("\n".join(problems))
+        print("Workflow write grants are within the trusted base permissions.")
     else:
-        print(json.dumps(check(data["text"], data["name"], data.get("grants", {}))))
+        data = json.load(sys.stdin.buffer)
+        result = check(data["text"], data["name"])
+        if not result and "base_text" in data:
+            result = changed_grants(data["base_text"], data["text"], data["name"])
+        print(json.dumps(result))

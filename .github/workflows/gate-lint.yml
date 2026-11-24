@@ -59,11 +59,9 @@ jobs:
             frontend:
               - 'frontend/**'
               - '.github/actions/read-versions/**'
-              - '.github/actions/setup-uv/**'
               - '.github/actions/prepare-lint-commit/**'
             backend:
               - 'backend/**'
-              - '.github/actions/read-versions/**'
               - '.github/actions/setup-uv/**'
               - '.github/actions/prepare-lint-commit/**'
 
@@ -121,7 +119,7 @@ jobs:
 
       - name: ESLint (auto-fix)
         if: inputs.enable_autofix
-        run: npm run lint -- --fix
+        run: npm run lint:fix
 
       - name: Detect changes
         id: git-changes
@@ -219,7 +217,7 @@ jobs:
           ref: ${{ inputs.enable_autofix && inputs.checkout_ref || '' }}
           persist-credentials: false
 
-      - name: Synchronize locked lint tools
+      - name: Set up locked Python tooling
         uses: ./.github/actions/setup-uv
         with:
           only-dev: "true"
