@@ -183,7 +183,6 @@ including request policy, context collection, publication and reconciliation:
 ```sh
 node --test .github/actions/publish-ai-review/*.test.js
 node --test .github/actions/collect-prior-ai-reviews/*.test.js
-node --test .github/actions/promotion-summary/*.test.js
 ```
 
 Keep [review-output-examples.md](publish-ai-review/review-output-examples.md)

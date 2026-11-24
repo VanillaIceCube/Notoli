@@ -8,7 +8,6 @@ CI, reviews, dependency/security checks, and release behavior for Notoli.
 | --- | --- |
 | Pull requests | [CI orchestrator](ci-orchestrator.yml), independent gates, and the three reviewer workflows. |
 | Security alerts | [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml), and [malware](alert-malware.yml) schedules/manual dispatches. |
-| Promotion evidence | [Read-only request](promotion-summary-request.yml) and [trusted summary](promotion-summary.yml). |
 | Releases | [Release workflow](ci-deploy.yml). |
 
 Workflow YAML is authoritative for triggers, permissions and job dependencies.
@@ -525,17 +524,6 @@ and generated workflow synchronized; deployment parity remains mandatory.
 The [canonical architecture reference](README.md#-architecture-and-trust-boundaries) maps PR/fork/
 Dependabot paths, required checks, reviewer interactions, scheduled alerts,
 main-to-env-prod/manual release paths and credential trust boundaries to source.
-Its per-repository source inventory is checked against actual workflow YAML.
-
-`promotion-summary-request.yml` is a read-only PR/target-push signal with no checkout or
-artifact/cache handoff. Its default-branch `workflow_run` consumer
-`promotion-summary.yml` maintains one GitHub Actions-owned comment for each open
-same-repository `env-prod` PR using the actual current target comparison. Reruns
-update the same comment; stale/incomplete/denied evidence is reported visibly.
-Observed area counts are separate from inferred risks. The workflow loads trusted
-main code, never PR code/prose or secret values, and does not change review,
-merge, release or recovery authorization. Infrastructure uses gateway-specific
-wording. FullStackTemplate's inactive target is not created for symmetry.
 
 ## 🧪 Checks and diagnostics
 
@@ -681,9 +669,6 @@ neither merges code nor deploys.
 ```mermaid
 flowchart TD
   Reviewed[Reviewed source merged to main] --> PR[Main-to-env-prod promotion PR]
-  PR --> Request[Read-only promotion event]
-  Request --> Trusted[Default-branch workflow_run]
-  Trusted --> Summary[One managed deterministic impact summary]
   PR --> Gates[Existing promotion checks and owner authorization]
   Gates --> Merge[Normal env-prod merge]
   Merge --> App[Application deploy pipeline]
@@ -702,14 +687,6 @@ flowchart TD
   Recovery[Authorized documented recovery] --> RecoveryGuard[Existing owner, lock and data-generation guards]
   RecoveryGuard --> Verify
 ```
-
-The [read-only listener](promotion-summary-request.yml) emits a fixed signal with
-no checkout, artifacts/caches, secrets or write token. The [trusted consumer](promotion-summary.yml)
-uses reviewed main code, independently fetches current metadata, excludes fork
-producers and serializes one managed bot comment per open same-repository promotion
-PR (up to ten). It trusts neither producer conclusions nor supplied PR identities.
-Incomplete inventories, moving revisions or uncertain writes remain visible;
-summary failures do not mask required CI or authorize a release.
 
 Promote exact reviewed main source through existing `env-prod` controls. Keep
 independent app/gateway transactions, immutable digests, private recovery sets,

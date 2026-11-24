@@ -289,7 +289,6 @@ and token inputs. Run `.github/actions/custom-regressions/security-alert-contrac
 after changes; actual loading acceptance requires fresh controlled dispatches on
 corrected main. Preserve applicable bounded malware review and documented
 coverage decisions. Keep the CI architecture diagrams aligned with workflow edits.
-Promotion summaries are informational.
 
 Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs
 listed in `.github/README.md`; do not require the standalone `CodeQL` Code
