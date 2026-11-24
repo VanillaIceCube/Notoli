@@ -23,7 +23,7 @@ class User(AbstractUser):
 
     def save_with_starter_board(self, *, force_insert=False, using=None):
         """Save a new account and its starter board together, returning the board."""
-        from apps.notes.services import create_starter_board
+        from apps.tasks.services import create_starter_board
 
         database = using or router.db_for_write(type(self), instance=self)
         original_pk = self.pk

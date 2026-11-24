@@ -3,45 +3,45 @@
 from django.core.exceptions import PermissionDenied
 from rest_framework.exceptions import APIException
 
-from apps.notes import services as notes
-from apps.notes.models import Board, List, ListNote, Note
-from apps.notes.serializers import UserSummarySerializer
 from apps.notifications import services as notifications
+from apps.tasks import services as tasks
+from apps.tasks.models import Board, List, ListTask, Task
+from apps.tasks.serializers import UserSummarySerializer
 
-from .results import item_result, json_value, notification_result, page, summary
+from .results import json_value, notification_result, page, summary, task_result
 
 READ_OPERATIONS = {
     "list_boards",
     "list_lists",
-    "get_items",
+    "get_tasks",
     "get_board_collaborators",
     "get_board",
     "get_list",
-    "list_board_items",
-    "get_item",
+    "list_board_tasks",
+    "get_task",
     "list_notifications",
     "get_notification",
 }
 
 
 def board_for(user, board_id):
-    board = notes.boards_for(user).select_related("owner").filter(pk=board_id).first()
+    board = tasks.boards_for(user).select_related("owner").filter(pk=board_id).first()
     if board is None:
         raise PermissionDenied("Board not found or no longer accessible.")
     return board
 
 
 def accessible_list(user, list_id):
-    row = notes.lists_for(user).filter(pk=list_id).first()
+    row = tasks.lists_for(user).filter(pk=list_id).first()
     if row is None:
         raise PermissionDenied("List not found or no longer accessible.")
     return row
 
 
-def item_for(user, board_id, item_id):
-    row = notes.notes_for(user, board_id=board_id).filter(pk=item_id).first()
+def task_for(user, board_id, task_id):
+    row = tasks.tasks_for(user, board_id=board_id).filter(pk=task_id).first()
     if row is None:
-        raise PermissionDenied("Item not found in this board or no longer accessible.")
+        raise PermissionDenied("Task not found in this board or no longer accessible.")
     return row
 
 
@@ -54,13 +54,13 @@ def notification_for(user, notification_id):
 
 def execute(user, operation, **args):
     if operation == "list_boards":
-        rows = notes.boards_for(user).order_by("id")
+        rows = tasks.boards_for(user).order_by("id")
         if args["query"]:
             rows = rows.filter(name__icontains=args["query"])
         return page(rows, args["limit"], args["offset"], summary)
     if operation == "list_lists":
         return page(
-            notes.lists_for(user, board_id=args["board_id"]),
+            tasks.lists_for(user, board_id=args["board_id"]),
             args["limit"],
             args["offset"],
             summary,
@@ -69,22 +69,24 @@ def execute(user, operation, **args):
         return summary(board_for(user, args["board_id"]))
     if operation == "get_list":
         return summary(accessible_list(user, args["list_id"]))
-    if operation == "get_items":
-        note_list = accessible_list(user, args["list_id"])
-        rows = notes.notes_for(user, board_id=note_list.board_id, list_id=note_list.pk)
+    if operation == "get_tasks":
+        board_list = accessible_list(user, args["list_id"])
+        rows = tasks.tasks_for(
+            user, board_id=board_list.board_id, list_id=board_list.pk
+        )
         return page(
             rows,
             args["limit"],
             args["offset"],
-            lambda row: item_result(row, note_list.pk),
+            lambda row: task_result(row, board_list.pk),
         )
-    if operation == "list_board_items":
-        rows = notes.notes_for(user, board_id=args["board_id"]).order_by("id")
+    if operation == "list_board_tasks":
+        rows = tasks.tasks_for(user, board_id=args["board_id"]).order_by("id")
         return page(
-            rows, args["limit"], args["offset"], lambda row: item_result(row, None)
+            rows, args["limit"], args["offset"], lambda row: task_result(row, None)
         )
-    if operation == "get_item":
-        return item_result(item_for(user, args["board_id"], args["item_id"]), None)
+    if operation == "get_task":
+        return task_result(task_for(user, args["board_id"], args["task_id"]), None)
     if operation == "get_board_collaborators":
         board = board_for(user, args["board_id"])
         return {
@@ -144,17 +146,17 @@ def snapshot(user, action, args, selected_ids):
             )
         return json_value({"notifications": data}, 262144)
     if "list_id" in args:
-        note_list = accessible_list(user, args["list_id"])
-        board_id = note_list.board_id
+        board_list = accessible_list(user, args["list_id"])
+        board_id = board_list.board_id
     else:
         board_id = args["board_id"]
-    board = notes._locked_board(user, board_id)
+    board = tasks._locked_board(user, board_id)
     if action in {
         "delete_board",
         "add_board_collaborator",
         "remove_board_collaborator",
     }:
-        notes.require_owner(user, board)
+        tasks.require_owner(user, board)
     current = {
         "board": Board.objects.values().get(pk=board.pk),
         "owner": _profile(board.owner),
@@ -163,32 +165,34 @@ def snapshot(user, action, args, selected_ids):
         ],
     }
     lists = List.objects.filter(board=board).order_by("pk")
-    items = Note.objects.filter(board=board).order_by("pk")
-    memberships = ListNote.objects.filter(list__board=board).order_by("pk")
-    if action in {"delete_list", "set_list_items"}:
+    board_tasks = Task.objects.filter(board=board).order_by("pk")
+    memberships = ListTask.objects.filter(list__board=board).order_by("pk")
+    if action in {"delete_list", "set_list_tasks"}:
         lists = lists.filter(pk=args["list_id"])
         memberships = memberships.filter(list_id=args["list_id"])
-        item_ids = list(memberships.values_list("note_id", flat=True)[:201])
-        if action == "set_list_items":
-            if len(args["item_ids"]) > 200:
-                raise ValueError("Use Notoli for more than 200 replacement items.")
-            if items.filter(pk__in=args["item_ids"]).count() != len(args["item_ids"]):
-                raise PermissionDenied("Replacement items must belong to this board.")
-            item_ids += args["item_ids"]
-        items = items.filter(pk__in=item_ids)
-    elif action == "delete_item":
-        item_for(user, board.pk, args["item_id"])
-        items = items.filter(pk=args["item_id"])
-        memberships = memberships.filter(note_id=args["item_id"])
+        task_ids = list(memberships.values_list("task_id", flat=True)[:201])
+        if action == "set_list_tasks":
+            if len(args["task_ids"]) > 200:
+                raise ValueError("Use Notoli for more than 200 replacement tasks.")
+            if board_tasks.filter(pk__in=args["task_ids"]).count() != len(
+                args["task_ids"]
+            ):
+                raise PermissionDenied("Replacement tasks must belong to this board.")
+            task_ids += args["task_ids"]
+        board_tasks = board_tasks.filter(pk__in=task_ids)
+    elif action == "delete_task":
+        task_for(user, board.pk, args["task_id"])
+        board_tasks = board_tasks.filter(pk=args["task_id"])
+        memberships = memberships.filter(task_id=args["task_id"])
         lists = lists.filter(pk__in=memberships.values("list_id"))
     current.update(
         lists=selected_rows(lists.values()),
-        items=selected_rows(items.values()),
+        tasks=selected_rows(board_tasks.values()),
         memberships=selected_rows(memberships.values()),
     )
     if action == "add_board_collaborator":
         try:
-            target = notes.find_collaborator(args["identifier"])
+            target = tasks.find_collaborator(args["identifier"])
         except APIException:
             from .operations import OperationError
 
@@ -220,13 +224,13 @@ def require_replay_access(user, action, output):
         board_for(user, output["id"])
     elif "board_id" in output and action not in {"update_notification"}:
         board_for(user, output["board_id"])
-    elif action in {"reorder_items", "set_list_items"}:
+    elif action in {"reorder_tasks", "set_list_tasks"}:
         accessible_list(user, output["id"])
 
 
-def removes_memberships(user, list_id, item_ids):
+def removes_memberships(user, list_id, task_ids):
     """Check the live set after the writer/board lock, never a caller's preview."""
-    note_list = accessible_list(user, list_id)
-    notes._locked_board(user, note_list.board_id)
-    note_list = accessible_list(user, list_id)
-    return note_list.note_memberships.exclude(note_id__in=item_ids).exists()
+    board_list = accessible_list(user, list_id)
+    tasks._locked_board(user, board_list.board_id)
+    board_list = accessible_list(user, list_id)
+    return board_list.task_memberships.exclude(task_id__in=task_ids).exists()

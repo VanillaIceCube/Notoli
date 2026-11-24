@@ -5,8 +5,8 @@ import BoardShareDialog from './BoardShareDialog';
 import {
   addBoardCollaborator,
   removeBoardCollaborator,
-} from '../../services/notepad/notoliApiClient';
-vi.mock('../../services/notepad/notoliApiClient', () => ({
+} from '../../services/boards/notoliApiClient';
+vi.mock('../../services/boards/notoliApiClient', () => ({
   addBoardCollaborator: vi.fn(),
   removeBoardCollaborator: vi.fn(),
 }));

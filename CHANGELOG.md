@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Fixed
 
+- Label the OAuth client ID correctly on the Connected Apps consent and approval screens.
 - Ignore late authentication responses after leaving the form or changing sessions.
 - Share one board list request between the home redirect and board drawer.
 - Reject unreviewed gateway network attachments during app release preflight while allowing approved companion routes to be absent; retain app-specific network and trusted-peer checks.
@@ -15,6 +16,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 
 - Save board, list, and item changes even if their activity notification fails.
+- Standardize Board, List, and Task naming across the React UI, Django API, and MCP tools. The public API uses task terminology exclusively. Existing MCP approvals and execution receipts remain valid.
 - Use “Task” consistently in the checklist labels, empty state, and reorder screen.
 - Align the layout of the four authentication forms, give each an accessible name, and report preferred-board loading errors on the home route.
 

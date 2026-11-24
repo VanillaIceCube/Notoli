@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import models
 
-from apps.notes.models import Board, List, Note
+from apps.tasks.models import Board, List, Task
 
 
 class Notification(models.Model):
@@ -10,10 +10,10 @@ class Notification(models.Model):
     EVENT_LIST_CREATED = "list_created"
     EVENT_LIST_UPDATED = "list_updated"
     EVENT_LIST_DELETED = "list_deleted"
-    EVENT_NOTE_CREATED = "note_created"
-    EVENT_NOTE_UPDATED = "note_updated"
-    EVENT_NOTE_COMPLETED = "note_completed"
-    EVENT_NOTE_DELETED = "note_deleted"
+    EVENT_TASK_CREATED = "task_created"
+    EVENT_TASK_UPDATED = "task_updated"
+    EVENT_TASK_COMPLETED = "task_completed"
+    EVENT_TASK_DELETED = "task_deleted"
     EVENT_BOARD_UPDATED = "board_updated"
     EVENT_BOARD_DELETED = "board_deleted"
     EVENT_CHOICES = [
@@ -22,10 +22,10 @@ class Notification(models.Model):
         (EVENT_LIST_CREATED, "List created"),
         (EVENT_LIST_UPDATED, "List updated"),
         (EVENT_LIST_DELETED, "List deleted"),
-        (EVENT_NOTE_CREATED, "Note created"),
-        (EVENT_NOTE_UPDATED, "Note updated"),
-        (EVENT_NOTE_COMPLETED, "Note completed"),
-        (EVENT_NOTE_DELETED, "Note deleted"),
+        (EVENT_TASK_CREATED, "Task created"),
+        (EVENT_TASK_UPDATED, "Task updated"),
+        (EVENT_TASK_COMPLETED, "Task completed"),
+        (EVENT_TASK_DELETED, "Task deleted"),
         (EVENT_BOARD_UPDATED, "Board updated"),
         (EVENT_BOARD_DELETED, "Board deleted"),
     ]
@@ -57,8 +57,8 @@ class Notification(models.Model):
         blank=True,
         related_name="notifications",
     )
-    note = models.ForeignKey(
-        Note,
+    task = models.ForeignKey(
+        Task,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

@@ -7,8 +7,8 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.notes.models import Board, List, ListNote, Note
-from apps.notes.services import (
+from apps.tasks.models import Board, List, ListTask, Task
+from apps.tasks.services import (
     DEFAULT_PERSONAL_BOARD_CONTENT,
     seed_default_personal_board,
 )
@@ -72,7 +72,7 @@ class RegistrationOnboardingTests(APITestCase):
         seed_default_personal_board(board, user)
 
         expected_list_names = [
-            list_name for list_name, _notes in DEFAULT_PERSONAL_BOARD_CONTENT
+            list_name for list_name, _tasks in DEFAULT_PERSONAL_BOARD_CONTENT
         ]
         self.assertEqual(
             list(
@@ -86,13 +86,13 @@ class RegistrationOnboardingTests(APITestCase):
             List.objects.filter(board=board).count(),
             len(DEFAULT_PERSONAL_BOARD_CONTENT),
         )
-        expected_note_count = sum(
-            len(note_texts) for _list_name, note_texts in DEFAULT_PERSONAL_BOARD_CONTENT
+        expected_task_count = sum(
+            len(task_texts) for _list_name, task_texts in DEFAULT_PERSONAL_BOARD_CONTENT
         )
-        self.assertEqual(Note.objects.filter(board=board).count(), expected_note_count)
+        self.assertEqual(Task.objects.filter(board=board).count(), expected_task_count)
         self.assertEqual(
-            ListNote.objects.filter(list__board=board).count(),
-            expected_note_count,
+            ListTask.objects.filter(list__board=board).count(),
+            expected_task_count,
         )
 
     def test_manually_created_board_does_not_receive_default_content(self):
@@ -150,7 +150,7 @@ class AtomicOnboardingTests(APITestCase):
     def test_failed_direct_save_can_retry_with_the_same_user(self):
         user = User(username="retry", email="retry@example.com")
         with patch(
-            "apps.notes.services.seed_default_personal_board",
+            "apps.tasks.services.seed_default_personal_board",
             side_effect=RuntimeError("onboarding unavailable"),
         ):
             with self.assertRaisesMessage(RuntimeError, "onboarding unavailable"):
@@ -164,7 +164,7 @@ class AtomicOnboardingTests(APITestCase):
     def test_seeding_failure_rolls_back_all_signup_data_and_allows_retry(self):
         before = {
             model: model.objects.count()
-            for model in (User, Board, List, Note, ListNote)
+            for model in (User, Board, List, Task, ListTask)
         }
         payload = {
             "email": "onboarding@example.com",
@@ -176,7 +176,7 @@ class AtomicOnboardingTests(APITestCase):
             raise RuntimeError("onboarding unavailable")
 
         with patch(
-            "apps.notes.services.seed_default_personal_board",
+            "apps.tasks.services.seed_default_personal_board",
             side_effect=fail_after_seed,
         ):
             with self.assertRaisesMessage(RuntimeError, "onboarding unavailable"):

@@ -1,8 +1,8 @@
-"""Shared users, board, list and item fixtures for notification tests."""
+"""Shared users, board, list and task fixtures for notification tests."""
 
 from django.contrib.auth import get_user_model
 
-from apps.notes.models import Board, List, Note
+from apps.tasks.models import Board, List, Task
 
 User = get_user_model()
 
@@ -41,10 +41,10 @@ class NotificationFixture:
             board=self.board,
             created_by=self.owner,
         )
-        self.note = Note.objects.create(
-            note="Shared Note",
-            description="Shared Note Description",
+        self.task = Task.objects.create(
+            text="Shared Task",
+            description="Shared Task Description",
             board=self.board,
             created_by=self.owner,
         )
-        self.list.notes.add(self.note)
+        self.list.tasks.add(self.task)

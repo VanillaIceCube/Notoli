@@ -3,13 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '../../test-helpers/utils';
 import Login from './Login';
 import { login } from '../../services/authentication/authApiClient';
-import { fetchBoards } from '../../services/notepad/notoliApiClient';
+import { fetchBoards } from '../../services/boards/notoliApiClient';
 import { Route, Routes, useNavigate } from 'react-router';
 vi.mock('react-router', async () => ({
   ...(await vi.importActual('react-router')),
   useNavigate: vi.fn(),
 }));
-vi.mock('../../services/notepad/notoliApiClient', () => ({
+vi.mock('../../services/boards/notoliApiClient', () => ({
   fetchBoards: vi.fn(() => Promise.resolve([])),
 }));
 vi.mock('../../services/authentication/authApiClient', () => ({

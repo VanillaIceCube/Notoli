@@ -15,7 +15,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
-import { goBackToParent } from '../../utils/Navigation';
+import { goBackToParent } from '../../utils/navigation';
 import { logout } from '../../services/http/requestClient';
 import NotificationsMenu from './NotificationsMenu';
 

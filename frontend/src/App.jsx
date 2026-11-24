@@ -1,6 +1,6 @@
 import { getSessionVersion } from './services/authentication/sessionState';
 import useSession, { useSessionGuard } from './hooks/authentication/useSession';
-import useBoardList from './hooks/notepad/useBoardList';
+import useBoardList from './hooks/boards/useBoardList';
 import RouteContent from './components/app-core/RouteContent';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import appTheme from './theme';
@@ -17,8 +17,8 @@ const Login = lazy(() => import('./pages/authentication/Login'));
 const Register = lazy(() => import('./pages/authentication/Register'));
 const ForgotPassword = lazy(() => import('./pages/authentication/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/authentication/ResetPassword'));
-const BoardListsPage = lazy(() => import('./pages/notepad/BoardListsPage'));
-const ListTasksPage = lazy(() => import('./pages/notepad/ListTasksPage'));
+const BoardListsPage = lazy(() => import('./pages/boards/BoardListsPage'));
+const ListTasksPage = lazy(() => import('./pages/boards/ListTasksPage'));
 const ConnectedApps = lazy(() => import('./pages/connections/Connections'));
 const OAuthConsent = lazy(() =>
   import('./pages/connections/Connections').then((module) => ({ default: module.OAuthConsent })),
@@ -28,11 +28,11 @@ function getLocationSignature(location) {
   return `${location.pathname}${location.search}${location.hash}`;
 }
 
-function isNotepadRoute(pathname) {
+function isBoardRoute(pathname) {
   return /^\/board\/[^/]+(?:\/list\/[^/]+)?$/.test(pathname);
 }
 
-function NotepadRoutes({ setAppBarHeader }) {
+function BoardRoutes({ setAppBarHeader }) {
   const location = useLocation();
   const currentSignature = getLocationSignature(location);
   const [routeSlots, setRouteSlots] = useState([
@@ -42,10 +42,10 @@ function NotepadRoutes({ setAppBarHeader }) {
   useEffect(() => {
     setRouteSlots((slots) => {
       const activeSlot = slots.find((slot) => slot.active) ?? slots[0];
-      const activeIsNotepadRoute = activeSlot && isNotepadRoute(activeSlot.location.pathname);
-      const currentIsNotepadRoute = isNotepadRoute(location.pathname);
+      const activeIsBoardRoute = activeSlot && isBoardRoute(activeSlot.location.pathname);
+      const currentIsBoardRoute = isBoardRoute(location.pathname);
 
-      if (!activeSlot || !activeIsNotepadRoute || !currentIsNotepadRoute) {
+      if (!activeSlot || !activeIsBoardRoute || !currentIsBoardRoute) {
         return [{ signature: currentSignature, location, active: true }];
       }
 
@@ -176,7 +176,7 @@ function ApplicationSession({ showSnackbar }) {
           )}
 
           <Route path="/connections/*" element={<Navigate to="/" replace />} />
-          <Route path="*" element={<NotepadRoutes setAppBarHeader={setAppBarHeader} />} />
+          <Route path="*" element={<BoardRoutes setAppBarHeader={setAppBarHeader} />} />
         </Routes>
       </RouteContent>
     </>

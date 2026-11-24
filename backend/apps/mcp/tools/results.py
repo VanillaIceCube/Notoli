@@ -6,16 +6,16 @@ from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 
 
-def item_result(note, list_id):
+def task_result(task, list_id):
     return {
-        "id": note.pk,
+        "id": task.pk,
         "list_id": list_id,
-        "board_id": note.board_id,
-        "note": note.note,
-        "description": note.description,
-        "status": note.status,
-        "updated_at": note.updated_at.isoformat(),
-        "url": f"{settings.FRONTEND_BASE_URL.rstrip('/')}/board/{note.board_id}"
+        "board_id": task.board_id,
+        "text": task.text,
+        "description": task.description,
+        "status": task.status,
+        "updated_at": task.updated_at.isoformat(),
+        "url": f"{settings.FRONTEND_BASE_URL.rstrip('/')}/board/{task.board_id}"
         + (f"/list/{list_id}" if list_id is not None else ""),
     }
 
@@ -136,7 +136,7 @@ def notification_result(row):
         "board_id": row.board_id,
         "board_name": row.board_name,
         "list_id": row.list_id,
-        "item_id": row.note_id,
+        "task_id": row.task_id,
         "target_path": row.target_path,
     }
 

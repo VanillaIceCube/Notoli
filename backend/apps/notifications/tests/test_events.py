@@ -1,11 +1,11 @@
-"""Board, list, item and sharing changes produce the expected notifications."""
+"""Board, list, task and sharing changes produce the expected notifications."""
 
 from unittest.mock import patch
 
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.notes.models import List, Note
+from apps.tasks.models import List, Task
 
 from ..models import Notification
 from .helpers import NotificationFixture, User
@@ -139,12 +139,12 @@ class NotificationEventTests(NotificationFixture, APITestCase):
         )
 
     @patch(
-        "apps.notes.services.notify_board_members",
+        "apps.tasks.services.notify_board_members",
         side_effect=Exception("notifications table is unavailable"),
     )
     def test_list_create_succeeds_when_notification_fails(self, mock_notify):
         self.client.force_authenticate(user=self.collaborator)
-        with self.assertLogs("apps.notes.services", level="ERROR") as logs:
+        with self.assertLogs("apps.tasks.services", level="ERROR") as logs:
             response = self.client.post(
                 "/api/lists/",
                 {
@@ -241,14 +241,14 @@ class NotificationEventTests(NotificationFixture, APITestCase):
         self.assertFalse(notifications.filter(recipient=self.collaborator).exists())
         self.assertIn("Shared List", notifications.first().message)
 
-    def test_collaborator_note_create_update_and_delete_notify_other_board_members(
+    def test_collaborator_task_create_update_and_delete_notify_other_board_members(
         self,
     ):
         self.client.force_authenticate(user=self.collaborator)
         create_response = self.client.post(
-            "/api/notes/",
+            "/api/tasks/",
             {
-                "note": "Collaborator Note",
+                "text": "Collaborator Task",
                 "description": "Collaborator Description",
                 "list": self.list.id,
             },
@@ -257,10 +257,10 @@ class NotificationEventTests(NotificationFixture, APITestCase):
         self.assertEqual(
             create_response.status_code, status.HTTP_201_CREATED, create_response.data
         )
-        note_id = create_response.data["id"]
+        task_id = create_response.data["id"]
 
         update_response = self.client.patch(
-            f"/api/notes/{note_id}/",
+            f"/api/tasks/{task_id}/",
             {"description": "Updated by collaborator"},
             format="json",
         )
@@ -269,8 +269,8 @@ class NotificationEventTests(NotificationFixture, APITestCase):
             update_response.status_code, status.HTTP_200_OK, update_response.data
         )
         for event_type in (
-            Notification.EVENT_NOTE_CREATED,
-            Notification.EVENT_NOTE_UPDATED,
+            Notification.EVENT_TASK_CREATED,
+            Notification.EVENT_TASK_UPDATED,
         ):
             notifications = Notification.objects.filter(event_type=event_type)
             self.assertEqual(
@@ -278,18 +278,18 @@ class NotificationEventTests(NotificationFixture, APITestCase):
                 {self.owner.id, self.other_collaborator.id},
             )
             notification = notifications.first()
-            self.assertEqual(notification.note_id, note_id)
+            self.assertEqual(notification.task_id, task_id)
             self.assertEqual(notification.list, self.list)
             self.assertEqual(
                 notification.target_path,
                 f"/board/{self.board.id}/list/{self.list.id}",
             )
 
-        delete_response = self.client.delete(f"/api/notes/{note_id}/")
+        delete_response = self.client.delete(f"/api/tasks/{task_id}/")
 
         self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
         deleted_notifications = Notification.objects.filter(
-            event_type=Notification.EVENT_NOTE_DELETED
+            event_type=Notification.EVENT_TASK_DELETED
         )
         self.assertEqual(
             set(deleted_notifications.values_list("recipient_id", flat=True)),
@@ -298,19 +298,19 @@ class NotificationEventTests(NotificationFixture, APITestCase):
         self.assertFalse(
             deleted_notifications.filter(recipient=self.collaborator).exists()
         )
-        self.assertIn("Collaborator Note", deleted_notifications.first().message)
+        self.assertIn("Collaborator Task", deleted_notifications.first().message)
 
-    def test_note_completion_notifies_once_with_list_and_note_context(self):
+    def test_task_completion_notifies_once_with_list_and_task_context(self):
         self.client.force_authenticate(user=self.collaborator)
         response = self.client.patch(
-            f"/api/notes/{self.note.id}/",
-            {"status": Note.STATUS_COMPLETE},
+            f"/api/tasks/{self.task.id}/",
+            {"status": Task.STATUS_COMPLETE},
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         completed_notifications = Notification.objects.filter(
-            event_type=Notification.EVENT_NOTE_COMPLETED
+            event_type=Notification.EVENT_TASK_COMPLETED
         )
         self.assertEqual(
             set(completed_notifications.values_list("recipient_id", flat=True)),
@@ -318,22 +318,22 @@ class NotificationEventTests(NotificationFixture, APITestCase):
         )
         self.assertFalse(
             Notification.objects.filter(
-                event_type=Notification.EVENT_NOTE_UPDATED
+                event_type=Notification.EVENT_TASK_UPDATED
             ).exists()
         )
         notification = completed_notifications.first()
         self.assertEqual(notification.board, self.board)
         self.assertEqual(notification.list, self.list)
-        self.assertEqual(notification.note, self.note)
+        self.assertEqual(notification.task, self.task)
         self.assertEqual(
             notification.target_path, f"/board/{self.board.id}/list/{self.list.id}"
         )
         self.assertIn("completed", notification.message)
-        self.assertIn("Shared Note", notification.message)
+        self.assertIn("Shared Task", notification.message)
         self.assertNotIn("Shared List", notification.message)
 
         repeat_response = self.client.patch(
-            f"/api/notes/{self.note.id}/",
+            f"/api/tasks/{self.task.id}/",
             {"description": "Saved again after completion"},
             format="json",
         )
@@ -341,13 +341,13 @@ class NotificationEventTests(NotificationFixture, APITestCase):
         self.assertEqual(repeat_response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             Notification.objects.filter(
-                event_type=Notification.EVENT_NOTE_COMPLETED
+                event_type=Notification.EVENT_TASK_COMPLETED
             ).count(),
             2,
         )
         self.assertTrue(
             Notification.objects.filter(
-                event_type=Notification.EVENT_NOTE_UPDATED
+                event_type=Notification.EVENT_TASK_UPDATED
             ).exists()
         )
 

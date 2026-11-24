@@ -7,7 +7,7 @@ permissions, notifications, and application integrations.
 
 - `config/`: Django settings, URL configuration, and ASGI/WSGI entry points.
 - `docker/`: production/development Dockerfiles and their adjacent Dockerfile-specific ignore files; keep `backend/` as the build context.
-- `apps/notes/`: boards, lists, and notes; `services.py` owns actor-scoped queries, mutations, membership, ordering and activity events shared by REST and MCP.
+- `apps/tasks/`: boards, lists, and tasks; `services.py` owns actor-scoped queries, mutations, membership, ordering and activity events shared by REST and MCP.
 - `apps/authentication/`, `apps/notifications/`: accounts and notifications; recipient-scoped notification operations live in `apps/notifications/services.py`.
 - `apps/mcp/`: shared framework, Notoli tools and ChatGPT packaging in `framework/`, `tools/` and `chatgpt/`.
 
@@ -19,7 +19,7 @@ separate signed-in app approval. Tools validate
 with the same serializers using an actor context, and call domain services
 directly. Domain writes recheck live board membership and ownership under a
 transaction; caller-provided or previously fetched objects do not authorize a
-write. Removing a collaborator also removes access to lists and items they
+write. Removing a collaborator also removes access to lists and tasks they
 created on that board. List creation retains its existing successful-write
 behavior if activity delivery fails; other domain writes and their activity
 records roll back together.
@@ -78,7 +78,7 @@ See the [production network contract](../deploy/production/README.md).
 Top-level routes (without any path prefix):
 
 - Auth: `/auth/` (register/login/refresh)
-- API: `/api/` (boards/lists/notes/notifications)
+- API: `/api/` (boards/lists/tasks/notifications)
 - Admin: `/admin/`
 - MCP: `/mcp` (Streamable HTTP, exact path without trailing slash)
 - OAuth for MCP: `/auth/mcp/` and discovery at `/.well-known/oauth-authorization-server` and `/.well-known/oauth-protected-resource/mcp`
@@ -110,7 +110,7 @@ ordinary new-user saves use the same account setup. The starter board is named
 after the username, such as `"andrew's Board"`. An email-derived name capitalizes
 the first letter of the prefix, such as `"Example_02's Board"` for
 `example_02@gmail.com`. The lists `Grocery List`, `Chores List`, and `Todo List`
-contain sample notes defined in [notes services](apps/notes/services.py).
+contain sample tasks defined in [task services](apps/tasks/services.py).
 
 All `/api/*` endpoints require:
 
@@ -118,24 +118,25 @@ All `/api/*` endpoints require:
 
 ## 🧱 Data model and access
 
-- A board contains lists and items.
-- A list belongs to one board and orders items from that board.
-- An item is stored as a `Note` with a title in `note`, an optional description, and a status. An item can appear in multiple lists.
+- A board contains lists and tasks.
+- A list belongs to one board and orders tasks from that board.
+- A task has `text`, an optional description, and a status. A task can appear in multiple lists.
 - A notification belongs to one recipient and stores its read status and a copy of the board name.
 
 ### Permissions, ordering, and notifications
 
-- Lists and items inherit access from the board's owner, creator, and collaborators. Each list and item records its own creator in `created_by`.
+- Lists and tasks inherit access from the board's owner, creator, and collaborators. Each list and task records its own creator in `created_by`.
 - Board owners can update board metadata and delete boards; collaborators receive a 403 response for board `PATCH`/`DELETE` attempts while retaining read access to shared boards.
 - Board owners can manage board collaborators with `POST /api/boards/<id>/collaborators/` using `{ "identifier": "<username-or-email>" }` and `DELETE /api/boards/<id>/collaborators/<user_id>/`.
 - Board responses include `owner_details` and `collaborators_details` summaries for sharing/access UI.
 - Lists are returned in their saved board order. Persist a new board order with `PATCH /api/lists/reorder/` and `{ "board": <id>, "ordered_ids": [<list-id>, ...] }`.
-- Items inside a list are returned in their saved order. Persist a new item order with `PATCH /api/notes/reorder/` and `{ "list": <id>, "ordered_ids": [<item-id>, ...] }`.
-- Each `ListNote` membership stores the item's position in that list.
+- Tasks inside a list are returned in their saved order. Persist a new task order with `PATCH /api/tasks/reorder/` and `{ "list": <id>, "ordered_ids": [<task-id>, ...] }`.
+- Each `ListTask` membership stores the task's position in that list.
+- Tasks use `/api/tasks/` with a `text` field. List membership uses `tasks`. Notification responses expose `task`, `task_text`, and `task_*` event values. The Django app label `notes` preserves migration history.
 - Notifications are only visible to their recipient. Clients can list them with `GET /api/notifications/`, mark one read with `PATCH /api/notifications/<id>/`, clear one with `DELETE /api/notifications/<id>/`, mark all read with `PATCH /api/notifications/mark-all-read/`, and clear all with `DELETE /api/notifications/clear-all/`.
-- Notification responses include board, list, and item context plus `target_path` for navigation.
-- Shared board activity notifies other board members about board renames and deletions, list and item changes, item completions, and collaborator changes. Added and removed collaborators also receive a direct notification.
-- Board, list, and item activity notifications are best effort. If a notification write fails, the backend logs the failure and saves the edit. The add and remove collaborator actions save their notifications and the access change in one transaction. Both roll back on failure.
+- Notification responses include board, list, and task context plus `target_path` for navigation.
+- Shared board activity notifies other board members about board renames and deletions, list and task changes, task completions, and collaborator changes. Added and removed collaborators also receive a direct notification.
+- Board, list, and task activity notifications are best effort. If a notification write fails, the backend logs the failure and saves the edit. The add and remove collaborator actions save their notifications and the access change in one transaction. Both roll back on failure.
 
 ## ✉️ Email
 
@@ -202,8 +203,8 @@ recovery-privacy groups. Configuration owns production settings and email
 configuration/delivery. The canonical MCP framework has identical profile, OAuth
 and transport test modules in all three applications; app tools remain app-owned.
 
-Notes tests separate board/list APIs from item lifecycle, access and membership;
-`apps/notes/tests/test_ordering.py` covers both board-list and per-list item order.
+Task tests separate board/list APIs from task lifecycle, access and membership;
+`apps/tasks/tests/test_ordering.py` covers both board-list and per-list task order.
 Authentication retains onboarding and HTTP-method coverage. Notification events
 and bulk actions, app-owned MCP tools and exact proxy trust retain their own
 groups. The ordinary profile defaults MCP off. Run the app-owned MCP suites

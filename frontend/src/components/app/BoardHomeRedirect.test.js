@@ -1,17 +1,17 @@
-import useBoardList from '../../hooks/notepad/useBoardList';
+import useBoardList from '../../hooks/boards/useBoardList';
 import useSession from '../../hooks/authentication/useSession';
 import { startSession } from '../../services/authentication/sessionState';
 import { createElement } from 'react';
 import { act, waitFor } from '@testing-library/react';
 import { createDeferred, renderWithProviders } from '../../test-helpers/utils';
 import BoardHomeRedirect from './BoardHomeRedirect';
-import { fetchBoards } from '../../services/notepad/notoliApiClient';
+import { fetchBoards } from '../../services/boards/notoliApiClient';
 import { useNavigate } from 'react-router';
 vi.mock('react-router', async () => ({
   ...(await vi.importActual('react-router')),
   useNavigate: vi.fn(),
 }));
-vi.mock('../../services/notepad/notoliApiClient', () => ({
+vi.mock('../../services/boards/notoliApiClient', () => ({
   fetchBoards: vi.fn(),
 }));
 function RedirectWithBoards(props) {

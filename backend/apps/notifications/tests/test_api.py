@@ -13,7 +13,7 @@ class NotificationApiTests(NotificationFixture, APITestCase):
             recipient=self.owner,
             actor=self.collaborator,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_TASK_UPDATED,
             title="Owner notification",
             message="Visible to owner.",
         )
@@ -21,7 +21,7 @@ class NotificationApiTests(NotificationFixture, APITestCase):
             recipient=self.outsider,
             actor=self.owner,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_TASK_UPDATED,
             title="Outsider notification",
             message="Hidden from owner.",
         )
@@ -31,7 +31,7 @@ class NotificationApiTests(NotificationFixture, APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         self.assertEqual(
-            [item["id"] for item in response.data], [owner_notification.id]
+            [task["id"] for task in response.data], [owner_notification.id]
         )
 
     def test_user_can_mark_own_notification_read(self):
@@ -39,7 +39,7 @@ class NotificationApiTests(NotificationFixture, APITestCase):
             recipient=self.owner,
             actor=self.collaborator,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_TASK_UPDATED,
             title="Owner notification",
             message="Visible to owner.",
         )
@@ -61,7 +61,7 @@ class NotificationApiTests(NotificationFixture, APITestCase):
             recipient=self.outsider,
             actor=self.owner,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_TASK_UPDATED,
             title="Outsider notification",
             message="Hidden from owner.",
         )
@@ -82,7 +82,7 @@ class NotificationApiTests(NotificationFixture, APITestCase):
             recipient=self.owner,
             actor=self.collaborator,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_TASK_UPDATED,
             title="Owner notification",
             message="Visible to owner.",
         )
@@ -98,7 +98,7 @@ class NotificationApiTests(NotificationFixture, APITestCase):
             recipient=self.outsider,
             actor=self.owner,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_TASK_UPDATED,
             title="Outsider notification",
             message="Hidden from owner.",
         )
@@ -115,10 +115,10 @@ class NotificationApiTests(NotificationFixture, APITestCase):
             actor=self.collaborator,
             board=self.board,
             list=self.list,
-            note=self.note,
-            event_type=Notification.EVENT_NOTE_COMPLETED,
-            title="Item completed",
-            message="Shared Note was completed.",
+            task=self.task,
+            event_type=Notification.EVENT_TASK_COMPLETED,
+            title="Task completed",
+            message="Shared Task was completed.",
             target_path=f"/board/{self.board.id}/list/{self.list.id}",
         )
 
@@ -129,8 +129,41 @@ class NotificationApiTests(NotificationFixture, APITestCase):
         self.assertEqual(response.data[0]["id"], notification.id)
         self.assertEqual(response.data[0]["board_name"], "Shared Board")
         self.assertEqual(response.data[0]["list_name"], "Shared List")
-        self.assertEqual(response.data[0]["note_text"], "Shared Note")
+        self.assertEqual(response.data[0]["event_type"], "task_completed")
+        self.assertEqual(response.data[0]["task"], self.task.pk)
+        self.assertEqual(response.data[0]["task_text"], "Shared Task")
+        self.assertNotIn("note", response.data[0])
+        self.assertNotIn("note_text", response.data[0])
         self.assertEqual(
             response.data[0]["target_path"],
             f"/board/{self.board.id}/list/{self.list.id}",
         )
+
+    def test_notification_writes_reject_old_task_fields_before_changing_read_status(
+        self,
+    ):
+        notification = Notification.objects.create(
+            recipient=self.owner,
+            task=self.task,
+            event_type=Notification.EVENT_TASK_UPDATED,
+            title="Task updated",
+        )
+        self.client.force_authenticate(user=self.owner)
+
+        for payload in ({"note": self.task.pk}, {"note_text": "Old", "is_read": True}):
+            with self.subTest(payload=payload):
+                response = self.client.patch(
+                    f"/api/notifications/{notification.pk}/", payload, format="json"
+                )
+                self.assertEqual(
+                    response.status_code, status.HTTP_400_BAD_REQUEST, response.data
+                )
+
+        bulk_response = self.client.patch(
+            "/api/notifications/mark-all-read/", {"note": self.task.pk}, format="json"
+        )
+        self.assertEqual(
+            bulk_response.status_code, status.HTTP_400_BAD_REQUEST, bulk_response.data
+        )
+        notification.refresh_from_db()
+        self.assertFalse(notification.is_read)

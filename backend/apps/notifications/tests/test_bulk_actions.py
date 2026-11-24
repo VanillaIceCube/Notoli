@@ -13,7 +13,7 @@ class NotificationBulkActionTests(NotificationFixture, APITestCase):
             recipient=self.owner,
             actor=self.collaborator,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_TASK_UPDATED,
             title="Owner notification",
             message="Visible to owner.",
         )
@@ -21,7 +21,7 @@ class NotificationBulkActionTests(NotificationFixture, APITestCase):
             recipient=self.outsider,
             actor=self.owner,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_TASK_UPDATED,
             title="Outsider notification",
             message="Hidden from owner.",
         )
@@ -41,7 +41,7 @@ class NotificationBulkActionTests(NotificationFixture, APITestCase):
             recipient=self.owner,
             actor=self.collaborator,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_TASK_UPDATED,
             title="Owner notification",
             message="Visible to owner.",
         )
@@ -49,7 +49,7 @@ class NotificationBulkActionTests(NotificationFixture, APITestCase):
             recipient=self.outsider,
             actor=self.owner,
             board=self.board,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_TASK_UPDATED,
             title="Outsider notification",
             message="Hidden from owner.",
         )

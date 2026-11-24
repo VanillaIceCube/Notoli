@@ -6,7 +6,7 @@ from apps.mcp.framework.oauth import resolve_token
 
 def required_scopes(operation):
     scopes = ["notoli:read"]
-    if operation in {"add_item", "update_item", "add_board_item", "update_board_item"}:
+    if operation in {"add_task", "update_task", "add_board_task", "update_board_task"}:
         scopes.append("notoli:write")
     if operation in {
         "create_board",
@@ -14,9 +14,9 @@ def required_scopes(operation):
         "create_list",
         "update_list",
         "reorder_lists",
-        "reorder_items",
-        "attach_item",
-        "set_list_items",
+        "reorder_tasks",
+        "attach_task",
+        "set_list_tasks",
     }:
         scopes.append("notoli:organize")
     if operation in {
@@ -31,7 +31,7 @@ def required_scopes(operation):
     if operation in {
         "delete_board",
         "delete_list",
-        "delete_item",
+        "delete_task",
         "delete_notification",
         "clear_notifications",
     }:

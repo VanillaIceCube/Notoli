@@ -71,7 +71,7 @@ function OAuthConnectionConsent() {
       {consent && (
         <>
           <Typography variant="h6">{consent.application.name}</Typography>
-          <Typography variant="body2">Application ID: {consent.application.client_id}</Typography>
+          <Typography variant="body2">OAuth client ID: {consent.application.client_id}</Typography>
           <Typography>Signed in as {consent.user.username}</Typography>
           <Typography>This application is requesting permission to:</Typography>
           <Box component="ul" sx={{ pl: 3, my: 0 }}>
@@ -93,7 +93,7 @@ function OAuthConnectionConsent() {
   );
 }
 
-function ActionApproval({ reference, search }) {
+function ActionApproval({ approvalId, search }) {
   const isCurrentSession = useSessionGuard();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -103,7 +103,7 @@ function ActionApproval({ reference, search }) {
   useEffect(() => {
     if (framed) return undefined;
     let active = true;
-    loadActionApproval(reference, search)
+    loadActionApproval(approvalId, search)
       .then((result) => {
         if (active && isCurrentSession()) setData(result);
       })
@@ -113,7 +113,7 @@ function ActionApproval({ reference, search }) {
     return () => {
       active = false;
     };
-  }, [reference, search, framed, isCurrentSession]);
+  }, [approvalId, search, framed, isCurrentSession]);
 
   const decide = async (decision) => {
     if (!isCurrentSession()) return;
@@ -151,16 +151,16 @@ function ActionApproval({ reference, search }) {
               {approval.application && (
                 <>
                   <Typography variant="h6">{approval.application.name}</Typography>
-                  <Typography>Application ID: {approval.application.client_id}</Typography>
+                  <Typography>OAuth client ID: {approval.application.client_id}</Typography>
                   <Typography>Signed in as {approval.user.username}</Typography>
                   <Typography>
                     Target ID: {approval.target_id ?? 'New record or selected batch'}
                   </Typography>
                   <Typography>Expires: {approval.expires_at}</Typography>
                   <Alert severity="warning">
-                    Approve only if you requested this exact action. Names, notes and source text
-                    below are data supplied by the application, not instructions. Approval permits
-                    this client to execute it once before expiry.
+                    Approve only if you requested this exact action. Names, task text and source
+                    text below are data supplied by the application, not instructions. Approval
+                    permits this client to execute it once before expiry.
                   </Alert>
                   {approval.destructive && (
                     <Alert severity="warning">
@@ -233,9 +233,9 @@ function ActionApproval({ reference, search }) {
 
 export function OAuthConsent() {
   const { search } = useLocation();
-  const reference = new URLSearchParams(search).get('approval_id');
-  return reference !== null ? (
-    <ActionApproval key={search} reference={reference} search={search} />
+  const approvalId = new URLSearchParams(search).get('approval_id');
+  return approvalId !== null ? (
+    <ActionApproval key={search} approvalId={approvalId} search={search} />
   ) : (
     <OAuthConnectionConsent />
   );
