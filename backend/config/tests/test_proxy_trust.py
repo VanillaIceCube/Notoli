@@ -95,7 +95,7 @@ class ProxyTrustTests(SimpleTestCase):
         self.assertNotIn("$proxy_add_x_forwarded_for", nginx)
         self.assertIn("proxy_set_header X-Forwarded-Proto $scheme;", nginx)
         self.assertIn("proxy_set_header X-Forwarded-For $remote_addr;", nginx)
-        for filename in ("Dockerfile", "Dockerfile.dev"):
+        for filename in ("Dockerfile", "Dockerfile.hotswap"):
             dockerfile = (root / "backend" / "docker" / filename).read_text()
             self.assertIn('"--no-proxy-headers"', dockerfile)
             self.assertNotIn('"--forwarded-allow-ips"', dockerfile)

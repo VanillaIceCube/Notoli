@@ -3,7 +3,7 @@ const test = require('node:test');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawnSync } = require('node:child_process');
 const { check, audit } = require('./check-workflow-security');
 test('repository workflows and composite actions obey the immutable-reference policy', () => assert.deepEqual(audit(process.cwd()), []));
 test('mutable references, absent version comments and broad/unsafe policies fail with line diagnostics', () => {
@@ -11,49 +11,66 @@ test('mutable references, absent version comments and broad/unsafe policies fail
     assert.match(check(source, 'example.yml')[0], /^example.yml:1:/);
   }
 });
-test('PR policy is loaded from the platform base commit even when the checkout adds grants', () => {
-  const { policyFor } = require('./check-workflow-security');
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'batch2-policy-'));
-  const prior = { name: process.env.GITHUB_EVENT_NAME, path: process.env.GITHUB_EVENT_PATH };
-  try {
-    const git = (...args) => execFileSync('git', ['-C', root, ...args], { encoding: 'utf8' }).trim();
-    fs.mkdirSync(path.join(root, '.github/workflows'), { recursive: true });
-    fs.writeFileSync(path.join(root, '.github/workflows/example.yml'), 'permissions: {contents: read}\n');
-    git('init'); git('add', '.'); git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-m', 'base');
-    const base = git('rev-parse', 'HEAD');
-    fs.writeFileSync(path.join(root, '.github/workflow-write-grants.json'), JSON.stringify({ '.github/workflows/example.yml': { permissions: ['contents'] } }));
-    const event = path.join(root, 'event.json');
-    fs.writeFileSync(event, JSON.stringify({ pull_request: { base: { sha: base } } }));
-    process.env.GITHUB_EVENT_NAME = 'pull_request'; process.env.GITHUB_EVENT_PATH = event;
-    assert.match(check('permissions: {contents: write}', '.github/workflows/example.yml', policyFor(root)).join('\n'), /reviewed/);
-    git('add', '.github/workflow-write-grants.json'); git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-m', 'approved policy fixture');
-    fs.writeFileSync(event, JSON.stringify({ pull_request: { base: { sha: git('rev-parse', 'HEAD') } } }));
-    assert.deepEqual(check('permissions: {contents: write}', '.github/workflows/example.yml', policyFor(root)), []);
-  } finally {
-    for (const [key, value] of [['GITHUB_EVENT_NAME', prior.name], ['GITHUB_EVENT_PATH', prior.path]]) {
-      if (value === undefined) delete process.env[key]; else process.env[key] = value;
-    }
-    fs.rmSync(root, { recursive: true, force: true });
-  }
-});
 test('local actions and reusable workflows retain local paths; verified external refs carry comments', () => {
   assert.deepEqual(check(`steps:\n- uses: ./local\n- uses: ./.github/workflows/test.yml\n- uses: actions/checkout@${'a'.repeat(40)} # v7`, 'example.yml'), []);
 });
-test('mapping grants cannot introduce unknown scopes, values, or unapproved writes', () => {
-  for (const source of ['permissions: {contents: write}', 'permissions: {all: write}', 'permissions: {contents: admin}', 'jobs: {evil: {permissions: {issues: write}}}']) {
-    assert.ok(check(source, 'example.yml').length);
+test('explicit permissions accept valid scopes and reject unknown scopes or levels', () => {
+  for (const source of ['permissions: {all: write}', 'permissions: {contents: admin}']) {
+    assert.match(check(source, 'example.yml')[0], /unknown permission scope or grant/);
   }
   assert.deepEqual(check('permissions: {contents: read, issues: none}', 'example.yml'), []);
 });
-test('an approved mapping cannot authorize another job through a YAML alias', () => {
+test('effective write permissions cannot expand beyond the same trusted workflow and job', () => {
+  const path = '.github/workflows/example.yml';
+  const base = 'permissions: {contents: read, checks: write}\njobs: {lint: {runs-on: linux}, build: {permissions: {contents: read}}}';
+  const compare = (before, after) => check(after, path, before);
+  assert.deepEqual(compare(base, base), []);
+  assert.match(compare(base, 'jobs: {lint: {runs-on: linux}}').join('\n'), /explicit workflow-level permissions/);
+  assert.match(compare(null, 'jobs: {lint: {permissions: {contents: read}}}').join('\n'), /explicit workflow-level permissions/);
+  assert.deepEqual(compare('jobs: {lint: {permissions: {checks: write}}}', 'permissions: {}\njobs: {lint: {permissions: {checks: write}}}'), []);
+  assert.deepEqual(compare(base, 'permissions: {}\njobs: {lint: {permissions: {checks: write}}}'), []);
+  assert.deepEqual(compare(null, 'permissions: {contents: read}'), []);
+  assert.match(compare(null, 'permissions: {contents: write}').join('\n'), /workflow requests contents: write/);
+  assert.match(compare(base, 'permissions: {}\njobs: {lint: {permissions: {pull-requests: write}}}').join('\n'), /jobs.lint requests pull-requests: write/);
+  assert.match(compare(base, 'permissions: {checks: write}\njobs: {new: {runs-on: linux}}').join('\n'), /jobs.new requests checks: write/);
+  assert.match(compare(base, 'permissions: {checks: write}\njobs: {build: {runs-on: linux}}').join('\n'), /jobs.build requests checks: write/);
+});
+test('the grant check reads exact Git blobs and fails closed on missing history', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'workflow-grants-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
+  git('init', '--quiet');
+  git('config', 'user.name', 'Workflow test');
+  git('config', 'user.email', 'test@example.invalid');
+  git('config', 'commit.gpgSign', 'false');
+  const dir = path.join(root, '.github', 'workflows');
+  fs.mkdirSync(dir, { recursive: true });
+  const workflow = path.join(dir, 'example.yml');
+  fs.writeFileSync(workflow, 'permissions: {contents: read}\n');
+  git('add', '.');
+  git('commit', '--quiet', '-m', 'baseline');
+  const base = git('rev-parse', 'HEAD');
+  fs.writeFileSync(workflow, 'permissions: {contents: write}\n');
+  git('add', '.');
+  git('commit', '--quiet', '-m', 'proposal');
+  const head = git('rev-parse', 'HEAD');
+  fs.writeFileSync(workflow, 'permissions: {contents: read}\n');
+  const compare = (from, to) => spawnSync(process.platform === 'win32' ? 'python' : 'python3',
+    [path.join(__dirname, 'check.py'), '--compare-workflow-grants', from, to], { cwd: root, encoding: 'utf8' });
+  assert.equal(compare(base, base).status, 0);
+  const result = compare(base, head);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /workflow requests contents: write/);
+  fs.writeFileSync(workflow, 'jobs: {build: {runs-on: ubuntu-latest}}\n');
+  git('add', '.');
+  git('commit', '--quiet', '-m', 'remove explicit workflow permissions');
+  const missing = compare(base, git('rev-parse', 'HEAD'));
+  assert.notEqual(missing.status, 0);
+  assert.match(missing.stderr, /explicit workflow-level permissions/);
+  assert.notEqual(compare('0'.repeat(40), head).status, 0);
+});
+test('YAML aliases cannot reuse permission or trigger declarations', () => {
   const source = 'jobs:\n  codeql: &granted\n    permissions: {security-events: write}\n  evil: *granted\n';
   assert.match(check(source, '.github/workflows/ci-orchestrator.yml').join('\n'), /aliases/);
   assert.match(check('on: &event push\nother: *event', 'example.yml').join('\n'), /aliases/);
-});
-test('a proposed policy cannot authorize a new write before the base policy approves it', () => {
-  const source = 'permissions: {contents: write}';
-  const proposed = { 'example.yml': { permissions: ['contents'] } };
-  const trustedBase = {};
-  assert.equal(check(source, 'example.yml', proposed).length, 0);
-  assert.match(check(source, 'example.yml', trustedBase).join('\n'), /reviewed/);
 });

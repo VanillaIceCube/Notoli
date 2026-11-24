@@ -15,17 +15,8 @@ on:
       scope_actions:
         description: Whether the pull request requires GitHub Actions analysis.
         value: ${{ jobs.changes.outputs.actions }}
-  push:
-    branches:
-      - main
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - ".github/actions/**"
-      - ".github/workflows/**"
-      - ".github/codeql/**"
   schedule:
-    - cron: "0 0 * * 1"
+    - cron: "0 0 * * *"
       timezone: America/Los_Angeles
   workflow_dispatch:
 
@@ -53,6 +44,8 @@ jobs:
       actions: ${{ steps.scope.outputs.actions }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Synchronize locked repository tooling
         uses: ./.github/actions/setup-uv
@@ -120,14 +113,14 @@ jobs:
           fi
           {
             echo "scope_status=success"
-            if [ "${{ github.event_name }}" = "pull_request" ]; then
-              echo "python=${{ steps.filter.outputs.python }}"
-              echo "javascript=${{ steps.filter.outputs.javascript }}"
+            if [ "$EVENT_NAME" = "pull_request" ]; then
+              echo "python=$PYTHON_SCOPE"
+              echo "javascript=$JAVASCRIPT_SCOPE"
               # Keep the Actions configuration present for relevant PRs so
               # GitHub can compare it with the configuration on the base branch.
-              if [ "${{ steps.filter.outputs.actions }}" = "true" ] || \
-                 [ "${{ steps.filter.outputs.python }}" = "true" ] || \
-                 [ "${{ steps.filter.outputs.javascript }}" = "true" ]; then
+              if [ "$ACTIONS_SCOPE" = "true" ] || \
+                 [ "$PYTHON_SCOPE" = "true" ] || \
+                 [ "$JAVASCRIPT_SCOPE" = "true" ]; then
                 echo "actions=true"
               else
                 echo "actions=false"
@@ -152,15 +145,17 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: python
           queries: security-extended,security-and-quality
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           category: "/language:python"
 
@@ -177,15 +172,17 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: javascript-typescript
           queries: security-extended,security-and-quality
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           category: "/language:javascript-typescript"
 
@@ -202,14 +199,16 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: actions
           queries: security-extended,security-and-quality
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           category: "/language:actions"

@@ -64,6 +64,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Create Lint Eastwood GitHub App token
         id: app-token
@@ -90,6 +91,7 @@ jobs:
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
+          omit_frontend_npm_lockfile: "true"
 
       - name: Build review context
         if: steps.pr-diff.outputs.truncated != 'true'
@@ -222,7 +224,7 @@ jobs:
               "summary": "**Review incomplete; check failed.** This change is bigger than the byte budget in this town. I will not stamp a clean build on evidence I could not inspect from end to end.",
               "unchanged": false,
               "findings": [],
-              "evidence": ["The complete diff is ${{ steps.pr-diff.outputs.diff_bytes }} bytes; my review budget is ${{ steps.pr-diff.outputs.max_bytes }} bytes."],
+              "evidence": ["The reviewable source diff is ${{ steps.pr-diff.outputs.diff_bytes }} bytes; my review budget is ${{ steps.pr-diff.outputs.max_bytes }} bytes."],
               "actions": ["Break the change into smaller pull requests or intentionally raise my reviewed diff budget, then send it back through."],
               "comments": []
             }

@@ -4,13 +4,24 @@ All notable changes to this project are documented in this file.
 
 ## 2026-11-24
 
+### Added
+
+- Run the shared Gitleaks secret scan on pull requests and pass its result to RoboCop.
+
 ### Fixed
 
 - Require the current auto-merge run's pending Dependabot Policy check before enabling native auto-merge.
 
 ### Changed
 
-- Schedule daily security alert processing and Monday CodeQL scans for midnight Pacific.
+- Require explicit workflow-level permissions, compare proposed write grants with the exact base commit, and verify them again using reviewed default-branch code.
+- Raise existing security groups to at least P1 for unknown source severity.
+- Run full CodeQL scans and Dependabot alert tracking daily at midnight Pacific. Track CodeQL alerts after the scheduled scan succeeds.
+- Run CodeQL for scoped pull requests, daily full scans, and manual requests, and skip duplicate scans after merges to main.
+- Include Dependabot findings of every severity in grouped Project issues. Critical findings raise priority to P0 and high findings to at least P1.
+- Limit reviewer lockfile exclusions to the regular frontend npm lockfile, align CodeQL evidence and narrow CI permissions.
+- Align test-gate paths, frontend build sequencing, backend test profiles, and automation checks across the app repositories.
+- Rename the hot-swap Dockerfiles and their matching ignore files to mirror compose.hotswap.yml.
 
 ## 2026-11-23
 
@@ -25,6 +36,12 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Cancel older CI runs when a new run starts for the same pull request.
+- Install the pinned Actionlint release directly in the CI workflow.
+- Inline CI validation and reporting in the workflows that use them.
+- Remove the automated production promotion comment workflows.
+- Remove the generated CI workflow inventory and its architecture drift check.
+- Review GitHub Actions write permissions in workflow PRs and remove the separate approval file.
 - Save board, list, and item changes even if their activity notification fails.
 - Standardize Board, List, and Task naming across the React UI, Django API, and MCP tools. The public API uses task terminology exclusively. Existing MCP approvals and execution receipts remain valid.
 - Use “Task” consistently in the checklist labels, empty state, and reorder screen.

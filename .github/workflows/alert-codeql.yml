@@ -1,10 +1,13 @@
 name: CodeQL Alert
 
 on:
-  schedule:
-    - cron: "0 0 * * *"
-      timezone: America/Los_Angeles
+  workflow_run:
+    workflows: [CodeQL Gate]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
+
+permissions: {}
 
 concurrency:
   group: security-alerts-codeql
@@ -12,6 +15,12 @@ concurrency:
 
 jobs:
   aggregate:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'schedule' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -24,7 +33,7 @@ jobs:
 
       - name: Create RoboCop GitHub App token
         id: robocop-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           app-id: ${{ vars.ROBOCOP_APP_ID }}
           private-key: ${{ secrets.ROBOCOP_PRIVATE_KEY }}

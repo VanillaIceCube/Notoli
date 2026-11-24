@@ -1,6 +1,10 @@
 name: Set up Python with uv
-description: Install the pinned Python toolchain and synchronize the locked backend environment.
+description: Install the pinned Python toolchain and synchronize the locked project environment.
 inputs:
+  project-directory:
+    description: Directory containing pyproject.toml and uv.lock, relative to the repository root.
+    required: false
+    default: "backend"
   only-dev:
     description: Install only repository tooling without application dependencies.
     required: false
@@ -10,7 +14,7 @@ runs:
   steps:
     - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
       with:
-        python-version-file: backend/pyproject.toml
+        python-version-file: ${{ inputs.project-directory }}/pyproject.toml
     - name: Install uv
       shell: bash
       working-directory: ${{ github.workspace }}
@@ -29,17 +33,17 @@ runs:
           --no-cache-dir --force-reinstall --no-deps --only-binary=:all: \
           --require-hashes --index-url https://pypi.org/simple \
           --requirement "$requirements"
-    - name: Synchronize the backend environment
+    - name: Synchronize the project environment
       if: inputs.only-dev != 'true'
       shell: bash
-      working-directory: ${{ github.workspace }}
-      run: uv sync --locked --project backend
+      working-directory: ${{ github.workspace }}/${{ inputs.project-directory }}
+      run: uv sync --locked
     - name: Synchronize repository tooling only
       if: inputs.only-dev == 'true'
       shell: bash
-      working-directory: ${{ github.workspace }}
-      run: uv sync --locked --project backend --only-group dev
+      working-directory: ${{ github.workspace }}/${{ inputs.project-directory }}
+      run: uv sync --locked --only-group dev
     - name: Expose the synchronized Python environment
       shell: bash
-      working-directory: ${{ github.workspace }}
-      run: echo "$GITHUB_WORKSPACE/backend/.venv/bin" >> "$GITHUB_PATH"
+      working-directory: ${{ github.workspace }}/${{ inputs.project-directory }}
+      run: echo "$PWD/.venv/bin" >> "$GITHUB_PATH"

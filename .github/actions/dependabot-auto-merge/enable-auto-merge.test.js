@@ -173,7 +173,7 @@ test("lint and test skips require the actual detector to authorize that path sco
 
 
 test("repository automation documentation and helper changes cannot authorize a skip", () => {
-  for (const file of ["README.md", "CHANGELOG.md", "AGENTS.md", ".github/workflows/README.md", ".github/tools/bounded_log.py", ".github/tools/validate_repository.py"]) {
+  for (const file of ["README.md", "CHANGELOG.md", "AGENTS.md", ".github/workflows/README.md", ".github/workflows/gate-test.yml", ".github/workflows/ci-orchestrator.yml"]) {
     assert.equal(scopeAllowsSkip("Tests / Automation Tests (Node)", [file]), false, file);
   }
 });
@@ -349,6 +349,8 @@ test("privileged workflow uses only main code and verified metadata, with no imm
   assert.match(workflow, /workflow_run:/);
   assert.match(workflow, /workflows: \[CI\]/);
   assert.match(workflow, /ref: main/);
+  assert.match(workflow, /Compare workflow write grants using reviewed main code\s+if: steps\.pr\.outputs\.policy_id != ''/);
+  assert.match(workflow, /--compare-workflow-grants "\$BASE_SHA" "\$HEAD_SHA"/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /context: \{ repo: context.repo, eventName: 'pull_request', payload \}/);
   assert.doesNotMatch(workflow, /pull_request_target|workflow_dispatch|secrets\.|download-artifact|actions\/cache|skip-verification|skip-commit-verification/);
@@ -357,11 +359,13 @@ test("privileged workflow uses only main code and verified metadata, with no imm
   assert.doesNotMatch(source, /pulls\.merge|mergePullRequest\(/);
   const orchestrator = fs.readFileSync(path.join(workflows, "ci-orchestrator.yml"), "utf8");
   assert.doesNotMatch(orchestrator, /uses: .*ci-auto-merge.yml/);
-  assert.match(orchestrator, /needs: \[lints, tests, codeql, dependency-vulnerability, dependency-malware, code-review, build-review, security-review\]/);
+  assert.match(orchestrator, /needs: \[lints, tests, codeql, dependency-vulnerability, dependency-malware, secrets, code-review, build-review, security-review\]/);
   const gate = fs.readFileSync(path.join(workflows, "gate-test.yml"), "utf8");
-  assert.match(gate, /\.github\/actions\/dependabot-auto-merge\/\*\.test.js/);
-  assert.match(gate, /'\.github\/workflows\/ci-auto-merge.yml'/);
-  assert.match(gate, /'\.github\/workflows\/ci-orchestrator.yml'/);
+  assert.match(gate, /automation_tests=\(\.github\/actions\/\*\*\/\*\.test.js\)/);
+  assert.match(gate, /node --test "\$\{automation_tests\[@\]\}"/);
+  for (const file of [".github/workflows/ci-auto-merge.yml", ".github/workflows/ci-orchestrator.yml"]) {
+    assert.equal(scopeAllowsSkip("Tests / Automation Tests (Node)", [file]), false, file);
+  }
   assert.match(workflow, /vulnerability-alerts: read/);
   assert.match(workflow, /checks: write/);
   assert.match(workflow, /github.rest.checks.create/);
