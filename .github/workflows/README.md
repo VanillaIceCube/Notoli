@@ -687,6 +687,12 @@ recovery preserve their independent credential boundaries. CodeQL analysis also
 runs on scoped PRs, every Monday at 10:24 UTC, and on manual dispatch. Alert maintenance
 neither merges code nor deploys.
 
+Default-branch Code Scanning results can lag merges until the next weekly run.
+For a fresher baseline, dispatch `CodeQL Gate` on `main`. Its scheduled and
+manual runs upload all three language results for that branch. For example,
+the [November 23 scheduled run](https://github.com/VanillaIceCube/Notoli/actions/runs/45276114128)
+published Python, JavaScript/TypeScript, and GitHub Actions analyses for `main`.
+
 ### Promotion, release and manual operations
 
 ```mermaid
