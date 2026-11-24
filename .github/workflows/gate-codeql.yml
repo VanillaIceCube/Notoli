@@ -15,15 +15,6 @@ on:
       scope_actions:
         description: Whether the pull request requires GitHub Actions analysis.
         value: ${{ jobs.changes.outputs.actions }}
-  push:
-    branches:
-      - main
-    paths:
-      - "backend/**"
-      - "frontend/**"
-      - ".github/actions/**"
-      - ".github/workflows/**"
-      - ".github/codeql/**"
   schedule:
     - cron: "24 10 * * 1"
   workflow_dispatch:

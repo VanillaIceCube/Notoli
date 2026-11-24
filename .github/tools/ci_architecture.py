@@ -77,8 +77,8 @@ def contracts(data, root):
             if schedule["cron"].split()[2:] != ["*", "*", "*"]:
                 raise ValueError("Daily-alert diagram drift")
     codeql = workflows["gate-codeql.yml"]["events"]
-    if "main" not in codeql.get("push", {}).get("branches", []) or not {"schedule", "workflow_dispatch"}.issubset(codeql):
-        raise ValueError("Default-branch/manual/scheduled CodeQL diagram drift")
+    if set(codeql) != {"workflow_call", "schedule", "workflow_dispatch"} or codeql["schedule"] != [{"cron": "24 10 * * 1"}]:
+        raise ValueError("Pull-request, weekly or manual CodeQL trigger drift")
     deploy = workflows["deploy-gateway.yml" if infrastructure else "ci-deploy.yml"]["events"]
     if deploy.get("push", {}).get("branches") != ["env-prod"] or "workflow_dispatch" not in deploy:
         raise ValueError("Production/manual diagram drift")

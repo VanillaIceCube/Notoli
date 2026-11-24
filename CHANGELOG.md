@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file.
 
 - Require the current auto-merge run's pending Dependabot Policy check before enabling native auto-merge.
 
+### Changed
+
+- Run CodeQL for scoped pull requests, weekly scans, and manual requests, and skip duplicate scans after merges to main.
+
 ## 2026-11-23
 
 ### Fixed
