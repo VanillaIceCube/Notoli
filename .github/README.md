@@ -89,10 +89,11 @@ Preserve the existing main ruleset, including all independent scanner/lint/test 
 
 ## 🧪 Checks
 
-Repository CI helpers live in `.github/tools/`: `bounded_log.py` retains bounded
-reviewer diagnostics; `install_actionlint.sh` installs the pinned, checksum-verified
-Linux Actionlint release; `validate_repository.py` checks workflow/script syntax
-and synthetic Compose configuration. Run these from the repository root. See the
+Repository CI helpers live in `.github/tools/`. `bounded_log.py` limits reviewer
+diagnostics. `validate_repository.py` checks workflow and script syntax and
+validates Docker Compose configuration with test settings. The
+[test workflow](workflows/gate-test.yml) installs the pinned, checksum-verified
+Actionlint release. Run local checks from the repository root. See the
 [workflow checks](workflows/README.md#-checks-and-diagnostics) for dependencies
 and commands.
 
