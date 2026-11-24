@@ -70,11 +70,15 @@ def check(text, name):
             for value in node.value:
                 walk(value)
 
+    if re.fullmatch(r"\.github/workflows/[^/]+\.ya?ml", name.replace("\\", "/")):
+        if not isinstance(document, MappingNode) or not any(
+                isinstance(key, ScalarNode) and key.value == "permissions" for key, _ in document.value):
+            errors.append(f"{name}:1: declare explicit workflow-level permissions")
     walk(document)
     return errors
 
 
-def effective_writes(source):
+def effective_writes(source, *, trusted_base=False):
     workflow = yaml.load(source, Loader=yaml.BaseLoader)
     if not isinstance(workflow, dict):
         raise ValueError("workflow must be a YAML mapping")
@@ -84,7 +88,8 @@ def effective_writes(source):
             raise ValueError("workflow permissions must enumerate scopes")
         return {scope for scope, level in permissions.items() if level == "write"}
 
-    defaults = workflow.get("permissions", {})
+    # Older trusted workflows may omit a default. Only their explicit scopes authorize writes.
+    defaults = workflow.get("permissions", {}) if trusted_base else workflow["permissions"]
     result = {None: writes(defaults)}
     for job, definition in workflow.get("jobs", {}).items():
         result[job] = writes(definition.get("permissions", defaults))
@@ -92,7 +97,7 @@ def effective_writes(source):
 
 
 def changed_grants(base_text, proposed_text, path):
-    approved = effective_writes(base_text) if base_text is not None else {}
+    approved = effective_writes(base_text, trusted_base=True) if base_text is not None else {}
     errors = []
     for job, writes in effective_writes(proposed_text).items():
         for scope in sorted(writes - approved.get(job, set())):
@@ -104,7 +109,7 @@ def changed_grants(base_text, proposed_text, path):
 def workflow_blobs(revision):
     if not re.fullmatch(r"[a-f0-9]{40}", revision):
         raise ValueError("expected an exact GitHub commit SHA")
-    records = subprocess.check_output(["git", "ls-tree", "-z", revision + "^{commit}", "--", ".github/workflows/"])
+    records = subprocess.check_output(["git", "ls-tree", "--full-tree", "-r", "-z", revision + "^{commit}", "--", ".github/workflows/"])
     blobs = {}
     for record in records.split(b"\0"):
         if not record:
@@ -112,7 +117,8 @@ def workflow_blobs(revision):
         metadata, filename = record.split(b"\t", 1)
         mode, kind, oid = metadata.split(b" ")
         path = filename.decode("utf-8")
-        if not path.endswith((".yml", ".yaml")):
+        # Actions discovers workflows directly inside .github/workflows.
+        if not re.fullmatch(r"\.github/workflows/[^/]+\.ya?ml", path):
             continue
         if kind != b"blob" or mode not in (b"100644", b"100755"):
             raise ValueError(f"{path}: expected a regular workflow file")

@@ -481,7 +481,7 @@ constrain a workflow that bypasses it. GitHub rulesets and independent review
 remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
 forms, rejects aliases, duplicate and merge keys, and requires pinned PyYAML 6.0.3.
 
-Declare permissions explicitly in the workflow or job. The checker rejects broad
+Every workflow declares an explicit top-level permissions map. Jobs may narrow or override it. The checker rejects broad
 grants such as `write-all` and unknown permission scopes or levels. PR CI compares
 each workflow and job's effective write scopes to the same path and job on its
 exact base commit. New workflows and jobs start with no approved write scopes.

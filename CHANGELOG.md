@@ -14,7 +14,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
-- Compare proposed GitHub Actions write grants with the exact base commit and verify them again using reviewed default-branch code.
+- Require explicit workflow-level permissions, compare proposed write grants with the exact base commit, and verify them again using reviewed default-branch code.
 - Raise existing security groups to at least P1 for unknown source severity.
 - Run full CodeQL scans and Dependabot alert tracking daily at midnight Pacific. Track CodeQL alerts after the scheduled scan succeeds.
 - Run CodeQL for scoped pull requests, daily full scans, and manual requests, and skip duplicate scans after merges to main.

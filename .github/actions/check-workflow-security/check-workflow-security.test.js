@@ -25,10 +25,13 @@ test('effective write permissions cannot expand beyond the same trusted workflow
   const base = 'permissions: {contents: read, checks: write}\njobs: {lint: {runs-on: linux}, build: {permissions: {contents: read}}}';
   const compare = (before, after) => check(after, path, before);
   assert.deepEqual(compare(base, base), []);
-  assert.deepEqual(compare(base, 'jobs: {lint: {permissions: {checks: write}}}'), []);
+  assert.match(compare(base, 'jobs: {lint: {runs-on: linux}}').join('\n'), /explicit workflow-level permissions/);
+  assert.match(compare(null, 'jobs: {lint: {permissions: {contents: read}}}').join('\n'), /explicit workflow-level permissions/);
+  assert.deepEqual(compare('jobs: {lint: {permissions: {checks: write}}}', 'permissions: {}\njobs: {lint: {permissions: {checks: write}}}'), []);
+  assert.deepEqual(compare(base, 'permissions: {}\njobs: {lint: {permissions: {checks: write}}}'), []);
   assert.deepEqual(compare(null, 'permissions: {contents: read}'), []);
   assert.match(compare(null, 'permissions: {contents: write}').join('\n'), /workflow requests contents: write/);
-  assert.match(compare(base, 'jobs: {lint: {permissions: {pull-requests: write}}}').join('\n'), /jobs.lint requests pull-requests: write/);
+  assert.match(compare(base, 'permissions: {}\njobs: {lint: {permissions: {pull-requests: write}}}').join('\n'), /jobs.lint requests pull-requests: write/);
   assert.match(compare(base, 'permissions: {checks: write}\njobs: {new: {runs-on: linux}}').join('\n'), /jobs.new requests checks: write/);
   assert.match(compare(base, 'permissions: {checks: write}\njobs: {build: {runs-on: linux}}').join('\n'), /jobs.build requests checks: write/);
 });
@@ -58,6 +61,12 @@ test('the grant check reads exact Git blobs and fails closed on missing history'
   const result = compare(base, head);
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /workflow requests contents: write/);
+  fs.writeFileSync(workflow, 'jobs: {build: {runs-on: ubuntu-latest}}\n');
+  git('add', '.');
+  git('commit', '--quiet', '-m', 'remove explicit workflow permissions');
+  const missing = compare(base, git('rev-parse', 'HEAD'));
+  assert.notEqual(missing.status, 0);
+  assert.match(missing.stderr, /explicit workflow-level permissions/);
   assert.notEqual(compare('0'.repeat(40), head).status, 0);
 });
 test('YAML aliases cannot reuse permission or trigger declarations', () => {
