@@ -173,7 +173,7 @@ test("lint and test skips require the actual detector to authorize that path sco
 
 
 test("repository automation documentation and helper changes cannot authorize a skip", () => {
-  for (const file of ["README.md", "CHANGELOG.md", "AGENTS.md", ".github/workflows/README.md", ".github/tools/bounded_log.py", ".github/tools/validate_repository.py"]) {
+  for (const file of ["README.md", "CHANGELOG.md", "AGENTS.md", ".github/workflows/README.md", ".github/workflows/gate-test.yml", ".github/workflows/ci-orchestrator.yml"]) {
     assert.equal(scopeAllowsSkip("Tests / Automation Tests (Node)", [file]), false, file);
   }
 });

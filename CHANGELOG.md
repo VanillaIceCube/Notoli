@@ -17,6 +17,7 @@ All notable changes to this project are documented in this file.
 
 - Cancel older CI runs when a new run starts for the same pull request.
 - Install the pinned Actionlint release directly in the CI workflow.
+- Inline CI validation and reporting in the workflows that use them.
 - Remove the generated CI workflow inventory and its architecture drift check.
 - Review GitHub Actions write permissions in workflow PRs and remove the separate approval file.
 - Save board, list, and item changes even if their activity notification fails.

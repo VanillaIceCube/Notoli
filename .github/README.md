@@ -89,13 +89,10 @@ Preserve the existing main ruleset, including all independent scanner/lint/test 
 
 ## 🧪 Checks
 
-Repository CI helpers live in `.github/tools/`. `bounded_log.py` limits reviewer
-diagnostics. `validate_repository.py` checks workflow and script syntax and
-validates Docker Compose configuration with test settings. The
-[test workflow](workflows/gate-test.yml) installs the pinned, checksum-verified
-Actionlint release. Run local checks from the repository root. See the
-[workflow checks](workflows/README.md#-checks-and-diagnostics) for dependencies
-and commands.
+The [test workflow](workflows/gate-test.yml) validates workflow and script syntax,
+checks Docker Compose configuration with test settings, and limits logs sent to
+the build reviewer. See the [workflow checks](workflows/README.md#-checks-and-diagnostics)
+for local dependencies and commands.
 
 Verify the current head's independent checks and all three native review identities.
 Distinguish synthetic local tests from actual GitHub runner/credential acceptance.

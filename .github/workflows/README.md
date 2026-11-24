@@ -553,7 +553,7 @@ composite syntax, parser-only script checks and synthetic Compose configuration
 plus the existing Batch 1 suites and focused mocked composite regressions.
 [Coverage and external boundaries](README.md#-coverage-boundaries) are explicit.
 
-`.github/tools/bounded_log.py` retains early, sampled failing and late context within
+The test workflow retains early, sampled failing and late log context within
 16,000 characters for reviewers. Full output is streamed with `tee`; failed
 logs have roughly 1 MiB capped artifacts retained seven days. Random delimiters
 protect multiline outputs and the original command status still determines the
