@@ -598,29 +598,29 @@ remain distinct.
 
 ```mermaid
 flowchart TD
-  Human[Same-repository human PR] --> CI[CI orchestrator]
-  Dependabot[Same-repository Dependabot PR] --> CI
-  Fork[Fork PR] --> Isolated[Applicable checks with fork credential isolation]
-  CI --> LintTest[Lint and test workflows]
-  CI --> Scanners[CodeQL and dependency scanners]
-  CI --> Secrets[Gitleaks secret scan]
-  Secrets --> Robo
-  Secrets --> Gate
-  CI --> Obi[Obi-Wan code review]
-  LintTest --> Lint[Lint Eastwood build review]
-  Scanners --> Robo[RoboCop security review]
-  Obi --> Gate[Required results and native review state]
-  Lint --> Gate
-  Robo --> Gate
-  LintTest --> Gate
-  Scanners --> Gate
-  Isolated --> ForkEvidence[No secret-bearing AI review acceptance inferred]
-  Gate -->|Applications| Main[Normal protected main merge]
-  Gate -->|Infrastructure| RequiredCI[Required CI aggregate]
-  RequiredCI --> Main
-  Gate -->|Applications| Auto[Protected Dependabot policy for the current head]
-  RequiredCI --> Auto
-  Auto --> Platform[GitHub protected auto-merge]
+    PR["PR opened, updated, reopened, or marked ready<br/>Target branch: any except env-prod"]
+    CI["ci-orchestrator.yml"]
+    L["gate-lint.yml<br/>Lint and formatting"]
+    T["gate-test.yml<br/>Changed files select tests"]
+    Q["gate-codeql.yml<br/>Changed files select analyzers"]
+    V["gate-vulnerability.yml<br/>Dependency vulnerability review"]
+    M["gate-malware.yml<br/>npm malware · app repos only"]
+    S["gate-secrets.yml<br/>Gitleaks scan"]
+    RC["review-code.yml · Obi-Wan"]
+    RB["review-build.yml · Lint Eastwood"]
+    RS["review-security.yml · RoboCop"]
+    DONE["CI finishes<br/>All gates and applicable reviews report results"]
+    AUTO["ci-auto-merge.yml<br/>Successful PR CI proceeds to Dependabot policy evaluation"]
+    PR --> CI
+    CI --> L & T & Q & V & S
+    CI -->|"App repos only"| M
+    CI --> RC
+    L & T --> RB
+    Q & V & S --> RS
+    M --> RS
+    L & T & Q & V & M & S --> DONE
+    RC & RB & RS --> DONE
+    DONE --> AUTO
 ```
 
 [The orchestrator](ci-orchestrator.yml) runs on pull requests targeting any branch except `env-prod`. Same-repository human and Dependabot PRs
@@ -632,24 +632,17 @@ credentials, invalid output and `REQUEST_CHANGES` fail. Skipped or old-head revi
 are not current-head acceptance. The Dependabot follow-up verifies the exact head using reviewed main code.
 Infrastructure also requires its Required CI aggregate. Production promotion is a separate owner action.
 
-### Reviewer data and write boundary
+### CodeQL scans
 
 ```mermaid
 flowchart LR
-  Diff[Bounded source and changed-file diff] --> Request[Validated Responses request]
-  Human[Attributed human discussion: untrusted] --> Collector[Bounded App-owned history collector]
-  Prior[Prior persona reviews: historical claims] --> Collector
-  Collector --> Request
-  Checks[Authoritative check and scanner evidence] --> Request
-  Request --> Luna[Accepted gpt-6-luna model]
-  Luna --> Schema[Required review schema validation]
-  Schema --> Publish[Current-head native review publisher]
-  Schema --> Reconcile[Optional own-feedback reconciliation]
-  Reconcile --> Proof[Exact App ID, cited replacement, current head and checks]
-  Proof --> Own[Own follow-up or verified own-thread resolution]
-  Request --> Usage[Aggregate tokens, latency and dated partial cost estimate]
-  Luna --> Usage
+    PR["PR CI"] -->|"Select analyzers by changed files"| Q["gate-codeql.yml"]
+    WEEK["Daily · midnight Pacific"] -->|"Full scan"| Q
+    MANUAL["Manual · Run workflow"] -->|"Full scan"| Q
+    Q --> F["Publish CodeQL findings to GitHub"]
 ```
+
+### Reviewer data and write boundary
 
 The [action contract](../actions/README.md) owns byte/page/count limits, identity,
 serialized writers and reconciliation proof. Discussion and tool output are
@@ -672,17 +665,18 @@ permissions in the workflow or job that requests them.
 ### Scheduled source-alert maintenance
 
 ```mermaid
-flowchart LR
-  Scan[Successful scheduled CodeQL scan on main] --> CodeQLFeed[CodeQL alert workflow]
-  Schedule[Midnight Pacific] --> DependencyFeeds[Vulnerability and malware alert workflows]
-  Manual[Manual dispatch] --> CodeQLFeed & DependencyFeeds
-  CodeQLFeed & DependencyFeeds --> Feeds[Alert aggregation]
-  Feeds --> Preflight[Verify Project access and fields]
-  Preflight --> Source[All open source alerts and bounded malware classification]
-  Source --> Robo[RoboCop grouping with validated Responses policy]
-  Robo --> Validate[Complete source coverage and lifecycle validation]
-  Validate --> Issues[App-owned issue updates and verified closure]
-  Issues --> Project[Separately credentialed Project synchronization and recovery]
+flowchart TD
+    MIDNIGHT["Every day · midnight Pacific"]
+    SCAN["gate-codeql.yml<br/>Full CodeQL scan on main"]
+    C["alert-codeql.yml<br/>Read the published CodeQL findings"]
+    V["alert-vulnerability.yml<br/>Read open Dependabot vulnerabilities"]
+    M["alert-malware.yml<br/>Read open malware-classified alerts"]
+    P["security-alerts action<br/>RoboCop groups findings into GitHub Project tickets"]
+    MIDNIGHT --> SCAN
+    MIDNIGHT --> V
+    MIDNIGHT --> M
+    SCAN -->|"Scheduled scan succeeds"| C
+    C & V & M --> P
 ```
 
 The [vulnerability](alert-vulnerability.yml) and [malware](alert-malware.yml)
@@ -711,24 +705,14 @@ published Python, JavaScript/TypeScript, and GitHub Actions analyses for `main`.
 
 ```mermaid
 flowchart TD
-  Reviewed[Reviewed source merged to main] --> PR[Main-to-env-prod promotion PR]
-  PR --> Gates[Existing promotion checks and owner authorization]
-  Gates --> Merge[Normal env-prod merge]
-  Merge --> App[Application deploy pipeline]
-  Merge --> Gateway[Independent gateway deploy pipeline]
-  App --> Stage[Parity, immutable images, private staging and capacity checks]
-  Stage --> Transaction[App lock, writer checkpoint, migrations and readiness]
-  Transaction --> Accepted[Accepted source and immutable image record]
-  Gateway --> Guard[Owner, branch, source and maintenance-lock checks]
-  Guard --> Same[Unchanged configuration retains gateway runtime]
-  Guard --> Changed[Changed configuration follows existing gateway transaction]
-  Accepted --> Verify[Independent VM identity, routing, auth and sanitized-log checks]
-  Same --> Verify
-  Changed --> Verify
-  Manual[Authorized manual dispatch of reviewed env-prod source] --> App
-  Manual --> Gateway
-  Recovery[Authorized documented recovery] --> RecoveryGuard[Existing owner, lock and data-generation guards]
-  RecoveryGuard --> Verify
+    MAIN["Reviewed source on main"]
+    PROMOTE["Promotion PR from main to env-prod"]
+    PUSH["Merge updates env-prod"]
+    MANUAL["Manual dispatch · retry deployment<br/>Select the existing env-prod branch"]
+    APP["ci-deploy.yml<br/>Notoli and MacroMapper release their frontend and backend"]
+    INFRA["deploy-gateway.yml<br/>Infrastructure updates the shared gateway"]
+    MAIN --> PROMOTE --> PUSH
+    PUSH & MANUAL --> APP & INFRA
 ```
 
 Promote exact reviewed main source through existing `env-prod` controls. Keep
