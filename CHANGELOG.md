@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file.
 
 - Run the shared Gitleaks secret scan on pull requests and pass its result to RoboCop.
 
+### Fixed
+
+- Require the current auto-merge run's pending Dependabot Policy check before enabling native auto-merge.
+
 ### Changed
 
 - Include Dependabot findings of every severity in grouped Project issues. Critical findings raise priority to P0 and high findings to at least P1.
