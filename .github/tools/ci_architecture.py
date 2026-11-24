@@ -73,11 +73,12 @@ def contracts(data, root):
     for name in ["alert-codeql.yml", "alert-vulnerability.yml", "alert-malware.yml"]:
         if set(workflows[name]["events"]) != {"schedule", "workflow_dispatch"}:
             raise ValueError(f"Scheduled-alert diagram drift: {name}")
-        for schedule in workflows[name]["events"]["schedule"]:
-            if schedule["cron"].split()[2:] != ["*", "*", "*"]:
-                raise ValueError("Daily-alert diagram drift")
+        if workflows[name]["events"]["schedule"] != [{"cron": "0 0 * * *", "timezone": "America/Los_Angeles"}]:
+            raise ValueError(f"Midnight Pacific alert schedule drift: {name}")
     codeql = workflows["gate-codeql.yml"]["events"]
-    if set(codeql) != {"workflow_call", "schedule", "workflow_dispatch"} or codeql["schedule"] != [{"cron": "24 10 * * 1"}]:
+    if codeql.get("schedule") != [{"cron": "0 0 * * 1", "timezone": "America/Los_Angeles"}]:
+        raise ValueError("Monday midnight Pacific CodeQL schedule drift")
+    if set(codeql) != {"workflow_call", "schedule", "workflow_dispatch"}:
         raise ValueError("Pull-request, weekly or manual CodeQL trigger drift")
     deploy = workflows["deploy-gateway.yml" if infrastructure else "ci-deploy.yml"]["events"]
     if deploy.get("push", {}).get("branches") != ["env-prod"] or "workflow_dispatch" not in deploy:

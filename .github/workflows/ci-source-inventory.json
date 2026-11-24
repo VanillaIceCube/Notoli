@@ -53,7 +53,8 @@
       "events": {
         "schedule": [
           {
-            "cron": "10 11 * * *"
+            "cron": "0 0 * * *",
+            "timezone": "America/Los_Angeles"
           }
         ],
         "workflow_dispatch": ""
@@ -67,7 +68,7 @@
       },
       "name": "CodeQL Alert",
       "permissions": {},
-      "source_sha256": "a3b1a6290ab7ebcba903dc29623353f121d53f9a691ae79ce0bc3fbad6535136",
+      "source_sha256": "7ba407e1bcf0c181eb67a7d644f8b8b1fea226d255a5184349f25b870491f885",
       "variable_names": [
         "AI_REVIEW_MAX_OUTPUT_TOKENS",
         "AI_REVIEW_MODEL",
@@ -86,7 +87,8 @@
       "events": {
         "schedule": [
           {
-            "cron": "35 11 * * *"
+            "cron": "0 0 * * *",
+            "timezone": "America/Los_Angeles"
           }
         ],
         "workflow_dispatch": ""
@@ -100,7 +102,7 @@
       },
       "name": "Malware Alert",
       "permissions": {},
-      "source_sha256": "bcc7923fe65e0a7847a2198d4dbbbb4e85db630539ecff9190b3d4148b504564",
+      "source_sha256": "6869b71489f901675131aab320151c68e795d4f31fef559eef536a950f14850a",
       "variable_names": [
         "AI_REVIEW_MAX_OUTPUT_TOKENS",
         "AI_REVIEW_MODEL",
@@ -119,7 +121,8 @@
       "events": {
         "schedule": [
           {
-            "cron": "20 11 * * *"
+            "cron": "0 0 * * *",
+            "timezone": "America/Los_Angeles"
           }
         ],
         "workflow_dispatch": ""
@@ -133,7 +136,7 @@
       },
       "name": "Vulnerability Alert",
       "permissions": {},
-      "source_sha256": "1bf46185df14bb28a4da4289533f1bd6fb6cec5426dee162281174747b50ca04",
+      "source_sha256": "0b3cbb8716f375edcd10917b6e13310e15cbc3f7b39a72ab1d1f753c1745b17f",
       "variable_names": [
         "AI_REVIEW_MAX_OUTPUT_TOKENS",
         "AI_REVIEW_MODEL",
@@ -352,7 +355,8 @@
       "events": {
         "schedule": [
           {
-            "cron": "24 10 * * 1"
+            "cron": "0 0 * * 1",
+            "timezone": "America/Los_Angeles"
           }
         ],
         "workflow_call": {
@@ -426,7 +430,7 @@
         "pull-requests": "read",
         "security-events": "write"
       },
-      "source_sha256": "7d23bd6e6683038b449d3daa422f15fdea9831a87993469ad5aa0c162bf867ca",
+      "source_sha256": "e307db7d79383f425a40fccd8b507e42f63f82d7af2b54ef0336a39fba1f53f0",
       "variable_names": []
     },
     "gate-lint.yml": {

@@ -16,7 +16,8 @@ on:
         description: Whether the pull request requires GitHub Actions analysis.
         value: ${{ jobs.changes.outputs.actions }}
   schedule:
-    - cron: "24 10 * * 1"
+    - cron: "0 0 * * 1"
+      timezone: America/Los_Angeles
   workflow_dispatch:
 
 concurrency:

@@ -147,7 +147,7 @@ CodeQL details:
 - Pull request CodeQL uses the reusable workflow's change-detection job, following the same skip-by-scope pattern as linting and testing; documentation-only and unrelated pull requests run the detector but skip analysis jobs.
 - For a CodeQL-relevant pull request, Python and JavaScript/TypeScript analysis use language-specific filters, while GitHub Actions analysis runs so the `/language:actions` configuration remains present for code-scanning comparisons.
 - CI ignores pull requests targeting `env-prod`, so CodeQL is not invoked for that deployment branch.
-- `gate-codeql.yml` runs full scans every Monday at 10:24 UTC and on manual dispatch.
+- `gate-codeql.yml` runs full scans every Monday at midnight Pacific and on manual dispatch.
 - CodeQL uploads SARIF results to GitHub Code Scanning with scoped permissions: `contents: read`, `pull-requests: read`, `actions: read`, and `security-events: write`.
 - Results appear in PR checks and under GitHub Security -> Code scanning when code scanning is enabled for the repository.
 - CodeQL uses the `security-extended` and `security-and-quality` query suites for Python, JavaScript/TypeScript, and GitHub Actions workflow analysis.
@@ -672,7 +672,7 @@ must merge through review before a consumer requests it.
 
 ```mermaid
 flowchart LR
-  Schedule[Daily schedules or manual dispatch] --> Feeds[CodeQL, vulnerability and malware workflows]
+  Schedule[Midnight Pacific or manual dispatch] --> Feeds[CodeQL, vulnerability and malware workflows]
   Feeds --> Source[Authoritative source alerts and bounded classification]
   Source --> Robo[RoboCop grouping with validated Responses policy]
   Robo --> Validate[Complete source coverage and lifecycle validation]
@@ -680,13 +680,20 @@ flowchart LR
   Issues --> Project[Separately credentialed Project synchronization and recovery]
 ```
 
-[CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml) and
-[malware](alert-malware.yml) aggregation run daily or by dispatch. Incomplete
+The [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml), and
+[malware](alert-malware.yml) alert workflows each run at midnight Pacific
+(`America/Los_Angeles`) every day and support manual dispatch. Incomplete
 source/model evidence fails before lifecycle writes; verified closure and Project
 recovery preserve their independent credential boundaries.
 
-The CodeQL Gate analyzes scoped pull requests. It also runs a full scan every
-Monday at 10:24 UTC and on manual dispatch.
+The CodeQL Gate analyzes scoped pull requests. The full weekly scan
+is scheduled for Monday at midnight Pacific and can be dispatched manually.
+
+GitHub may delay or drop scheduled runs at the top of the hour. If a scheduled
+run is missing, check that workflow's run history and use **Run workflow** on
+`main` to recover the missed scan or feed. The daily CodeQL alert feed reads
+published results, so it can pick up Monday's new scan on the following day.
+[GitHub scheduled-event behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
 
 Default-branch Code Scanning results can lag merges until the next weekly run.
 For a fresher baseline, dispatch `CodeQL Gate` on `main`. Its scheduled and

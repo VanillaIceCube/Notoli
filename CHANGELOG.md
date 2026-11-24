@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Schedule daily security alert processing and Monday CodeQL scans for midnight Pacific.
 - Run CodeQL for scoped pull requests, weekly scans, and manual requests, and skip duplicate scans after merges to main.
 
 ## 2026-11-23
