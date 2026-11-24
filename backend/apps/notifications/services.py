@@ -24,13 +24,13 @@ def board_path(board):
     return f"/board/{board.id}"
 
 
-def list_path(note_list):
-    return f"/board/{note_list.board_id}/list/{note_list.id}"
+def list_path(board_list):
+    return f"/board/{board_list.board_id}/list/{board_list.id}"
 
 
-def first_note_list(note):
+def first_item_list(item):
     membership = (
-        note.list_memberships.select_related("list", "list__board")
+        item.list_memberships.select_related("list", "list__board")
         .order_by("position", "id")
         .first()
     )

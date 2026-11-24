@@ -16,7 +16,7 @@ from apps.notes.serializers import (
 from apps.notifications import services as notifications
 from apps.notifications.serializers import NotificationSerializer
 
-from .queries import accessible_list, board_for, item_for
+from .queries import accessible_list, board_for, item_for, notification_for
 from .results import item_result, notification_result, summary
 
 
@@ -24,25 +24,9 @@ class OperationError(ValueError):
     """Expected, locally authored validation guidance safe for tool callers."""
 
 
-OPERATIONS = {
-    "create_board",
-    "update_board",
-    "delete_board",
-    "create_list",
-    "update_list",
-    "delete_list",
-    "reorder_lists",
-    "add_board_item",
-    "update_board_item",
-    "delete_item",
-    "attach_item",
-    "set_list_items",
-    "reorder_items",
-    "update_notification",
-    "mark_all_notifications_read",
-    "delete_notification",
-    "clear_notifications",
-}
+CHANGE_REJECTED = (
+    "Notoli rejected the change. Check the supplied fields and current record."
+)
 
 
 # Closed transport policy: unknown fields cannot become ownership or membership edits.
@@ -129,177 +113,243 @@ def validate_arguments(operation, arguments):
     return arguments
 
 
-def save(user, kind, data, instance=None):
-    serializer_class, create, update = {
-        "board": (BoardSerializer, notes.create_board, notes.update_board),
-        "list": (ListSerializer, notes.create_list, notes.update_list),
-        "note": (NoteSerializer, notes.create_note, notes.update_note),
-        "notification": (
-            NotificationSerializer,
-            None,
-            notifications.update_notification,
-        ),
-    }[kind]
+def _validated_fields(serializer_class, actor, fields, instance=None):
     serializer = serializer_class(
-        instance, data=data, partial=instance is not None, context={"actor": user}
+        instance, data=fields, partial=instance is not None, context={"actor": actor}
     )
     serializer.is_valid(raise_exception=True)
-    if instance is None:
-        return create(user, serializer.validated_data)
-    return update(user, serializer.validated_data, instance)
+    return serializer.validated_data
 
 
-def updates(arguments, fields):
-    data = {key: arguments[key] for key in fields if arguments.get(key) is not None}
-    if not data:
-        raise OperationError(f"Provide at least one of: {', '.join(fields)}.")
-    return data
+def _changed_fields(arguments, allowed_fields):
+    fields = {
+        key: arguments[key] for key in allowed_fields if arguments.get(key) is not None
+    }
+    if not fields:
+        raise OperationError(f"Provide at least one of: {', '.join(allowed_fields)}.")
+    return fields
 
 
-def execute_feature(user, operation, args):
-    try:
-        return perform(user, operation, args)
-    except APIException as error:
-        if error.status_code in {403, 404}:
-            raise PermissionDenied(str(error.detail)) from None
-        raise OperationError(
-            "Notoli rejected the change. Check the supplied fields and current record."
-        ) from None
-
-
-def perform(user, operation, args):
-    if operation == "create_board":
-        return summary(
-            save(
-                user,
-                "board",
-                {"name": args["name"], "description": args["description"]},
-            )
-        )
-    if operation in {"update_board", "delete_board", "reorder_lists"}:
-        board = board_for(user, args["board_id"])
-        if operation == "update_board":
-            return summary(
-                save(user, "board", updates(args, ("name", "description")), board)
-            )
-        if operation == "delete_board":
-            board_id = board.pk
-            notes.delete_board(user, board)
-            return {"id": board_id, "action": "deleted"}
-        notes.reorder_lists(user, board.pk, args["ordered_ids"])
-        return {"id": board.pk, "ordered_ids": args["ordered_ids"]}
-    if operation == "create_list":
-        board = board_for(user, args["board_id"])
-        return summary(
-            save(
-                user,
-                "list",
-                {
-                    "board": board.pk,
-                    "name": args["name"],
-                    "description": args["description"],
-                },
-            )
-        )
-    if operation in {
-        "update_list",
-        "delete_list",
-        "set_list_items",
-        "reorder_items",
-        "attach_item",
-    }:
-        note_list = accessible_list(user, args["list_id"])
-        if operation == "update_list":
-            return summary(
-                save(user, "list", updates(args, ("name", "description")), note_list)
-            )
-        if operation == "delete_list":
-            list_id = note_list.pk
-            notes.delete_list(user, note_list)
-            return {"id": list_id, "action": "deleted"}
-        if operation == "attach_item":
-            item = item_for(user, note_list.board_id, args["item_id"])
-            return item_result(
-                save(user, "note", {"list": note_list.pk}, item), note_list.pk
-            )
-        if operation == "set_list_items":
-            ids = args["item_ids"]
-            if len(ids) != len(set(ids)):
-                raise OperationError("Duplicate item IDs are not allowed.")
-            if notes.notes_for(user, board_id=note_list.board_id).filter(
-                pk__in=ids
-            ).count() != len(ids):
-                raise PermissionDenied(
-                    "Every item must belong to the accessible list's board."
-                )
-            save(user, "list", {"notes": ids}, note_list)
-            return {"id": note_list.pk, "ordered_ids": ids}
-        notes.reorder_notes(user, note_list.pk, args["ordered_ids"])
-        return {"id": note_list.pk, "ordered_ids": args["ordered_ids"]}
-    if operation in {"add_board_item", "update_board_item", "delete_item"}:
-        board = board_for(user, args["board_id"])
-        if operation == "add_board_item":
-            return item_result(
-                save(
-                    user,
-                    "note",
-                    {
-                        "board": board.pk,
-                        "note": args["note"],
-                        "description": args["description"],
-                    },
-                ),
-                None,
-            )
-        item = item_for(user, board.pk, args["item_id"])
-        if operation == "update_board_item":
-            return item_result(
-                save(
-                    user, "note", updates(args, ("note", "description", "status")), item
-                ),
-                None,
-            )
-        item_id = item.pk
-        notes.delete_note(user, item)
-        return {"id": item_id, "action": "deleted"}
-    if operation == "mark_all_notifications_read":
-        return {"count": notifications.mark_all_read(user)}
-    if operation == "clear_notifications":
-        return {
-            "count": notifications.clear_all(user, selected_ids=args["selected_ids"])
-        }
-    row = (
-        notifications.notifications_for(user).filter(pk=args["notification_id"]).first()
+def _create_board(actor, *, name, description):
+    fields = _validated_fields(
+        BoardSerializer, actor, {"name": name, "description": description}
     )
-    if row is None:
-        raise PermissionDenied("Notification not found or not yours.")
-    if operation == "update_notification":
-        return notification_result(
-            save(user, "notification", {"is_read": args["is_read"]}, row)
+    return summary(notes.create_board(actor, fields))
+
+
+def _update_board(actor, *, board_id, **arguments):
+    board = board_for(actor, board_id)
+    fields = _changed_fields(arguments, ("name", "description"))
+    fields = _validated_fields(BoardSerializer, actor, fields, board)
+    return summary(notes.update_board(actor, fields, board))
+
+
+def _delete_board(actor, *, board_id):
+    board = board_for(actor, board_id)
+    notes.delete_board(actor, board)
+    return {"id": board_id, "action": "deleted"}
+
+
+def _create_list(actor, *, board_id, name, description):
+    board = board_for(actor, board_id)
+    fields = _validated_fields(
+        ListSerializer,
+        actor,
+        {"board": board.pk, "name": name, "description": description},
+    )
+    return summary(notes.create_list(actor, fields))
+
+
+def _update_list(actor, *, list_id, **arguments):
+    note_list = accessible_list(actor, list_id)
+    fields = _changed_fields(arguments, ("name", "description"))
+    fields = _validated_fields(ListSerializer, actor, fields, note_list)
+    return summary(notes.update_list(actor, fields, note_list))
+
+
+def _delete_list(actor, *, list_id):
+    note_list = accessible_list(actor, list_id)
+    notes.delete_list(actor, note_list)
+    return {"id": list_id, "action": "deleted"}
+
+
+def _reorder_lists(actor, *, board_id, ordered_ids):
+    board = board_for(actor, board_id)
+    notes.reorder_lists(actor, board.pk, ordered_ids)
+    return {"id": board.pk, "ordered_ids": ordered_ids}
+
+
+def _add_item(actor, *, list_id, note, description):
+    note_list = accessible_list(actor, list_id)
+    try:
+        fields = _validated_fields(
+            NoteSerializer,
+            actor,
+            {"list": note_list.pk, "note": note, "description": description},
         )
-    notification_id = row.pk
-    notifications.delete_notification(user, row)
+        item = notes.create_note(actor, fields)
+    except APIException:
+        raise OperationError(CHANGE_REJECTED) from None
+    return item_result(item, note_list.pk)
+
+
+def _update_item(actor, *, list_id, item_id, **arguments):
+    note_list = accessible_list(actor, list_id)
+    item = (
+        notes.notes_for(actor, board_id=note_list.board_id, list_id=note_list.pk)
+        .filter(pk=item_id)
+        .first()
+    )
+    if item is None:
+        raise PermissionDenied("Item not found in this list or no longer accessible.")
+    fields = {
+        key: arguments[key]
+        for key in ("note", "description", "status")
+        if arguments[key] is not None
+    }
+    if not fields:
+        raise OperationError("Provide note, description, or status to update.")
+    try:
+        fields = _validated_fields(NoteSerializer, actor, fields, item)
+        item = notes.update_note(actor, fields, item)
+    except APIException:
+        raise OperationError(CHANGE_REJECTED) from None
+    return item_result(item, note_list.pk)
+
+
+def _add_board_item(actor, *, board_id, note, description):
+    board = board_for(actor, board_id)
+    fields = _validated_fields(
+        NoteSerializer,
+        actor,
+        {"board": board.pk, "note": note, "description": description},
+    )
+    return item_result(notes.create_note(actor, fields), None)
+
+
+def _update_board_item(actor, *, board_id, item_id, **arguments):
+    board = board_for(actor, board_id)
+    item = item_for(actor, board.pk, item_id)
+    fields = _changed_fields(arguments, ("note", "description", "status"))
+    fields = _validated_fields(NoteSerializer, actor, fields, item)
+    return item_result(notes.update_note(actor, fields, item), None)
+
+
+def _delete_item(actor, *, board_id, item_id):
+    board = board_for(actor, board_id)
+    item = item_for(actor, board.pk, item_id)
+    notes.delete_note(actor, item)
+    return {"id": item_id, "action": "deleted"}
+
+
+def _attach_item(actor, *, list_id, item_id):
+    note_list = accessible_list(actor, list_id)
+    item = item_for(actor, note_list.board_id, item_id)
+    fields = _validated_fields(NoteSerializer, actor, {"list": note_list.pk}, item)
+    return item_result(notes.update_note(actor, fields, item), note_list.pk)
+
+
+def _set_list_items(actor, *, list_id, item_ids):
+    note_list = accessible_list(actor, list_id)
+    if len(item_ids) != len(set(item_ids)):
+        raise OperationError("Duplicate item IDs are not allowed.")
+    visible_items = notes.notes_for(actor, board_id=note_list.board_id)
+    if visible_items.filter(pk__in=item_ids).count() != len(item_ids):
+        raise PermissionDenied("Every item must belong to the accessible list's board.")
+    fields = _validated_fields(ListSerializer, actor, {"notes": item_ids}, note_list)
+    notes.update_list(actor, fields, note_list)
+    return {"id": note_list.pk, "ordered_ids": item_ids}
+
+
+def _reorder_items(actor, *, list_id, ordered_ids):
+    note_list = accessible_list(actor, list_id)
+    notes.reorder_notes(actor, note_list.pk, ordered_ids)
+    return {"id": note_list.pk, "ordered_ids": ordered_ids}
+
+
+def _collaborator_result(board, action):
+    return {
+        "board_id": board.pk,
+        "board_name": board.name,
+        "sharing_level": "board",
+        "action": action,
+    }
+
+
+def _add_board_collaborator(actor, *, board_id, identifier=None, resolved_user_id=None):
+    board = board_for(actor, board_id)
+    notes.add_collaborator(
+        actor, board.pk, identifier, expected_user_id=resolved_user_id
+    )
+    return _collaborator_result(board, "added")
+
+
+def _remove_board_collaborator(actor, *, board_id, user_id):
+    board = board_for(actor, board_id)
+    notes.remove_collaborator(actor, board.pk, user_id)
+    return _collaborator_result(board, "removed")
+
+
+def _update_notification(actor, *, notification_id, is_read):
+    notification = notification_for(actor, notification_id)
+    fields = _validated_fields(
+        NotificationSerializer, actor, {"is_read": is_read}, notification
+    )
+    return notification_result(
+        notifications.update_notification(actor, fields, notification)
+    )
+
+
+def _mark_all_notifications_read(actor):
+    return {"count": notifications.mark_all_read(actor)}
+
+
+def _delete_notification(actor, *, notification_id):
+    notification = notification_for(actor, notification_id)
+    notifications.delete_notification(actor, notification)
     return {"id": notification_id, "action": "deleted"}
 
 
-def execute(user, operation, **arguments):
-    if operation in OPERATIONS:
-        return execute_feature(user, operation, arguments)
-    if operation in {"add_board_collaborator", "remove_board_collaborator"}:
-        board = board_for(user, arguments["board_id"])
-        try:
-            if operation == "add_board_collaborator":
-                notes.add_collaborator(
-                    user,
-                    board.pk,
-                    arguments.get("identifier"),
-                    expected_user_id=arguments.get("resolved_user_id"),
-                )
-            else:
-                notes.remove_collaborator(user, board.pk, arguments["user_id"])
-        except notes.SharingChangeError as error:
-            raise OperationError(str(error.detail["error"])) from None
-        except APIException as error:
+def _clear_notifications(actor, *, selected_ids):
+    return {"count": notifications.clear_all(actor, selected_ids=selected_ids)}
+
+
+_ACTION_HANDLERS = {
+    "create_board": _create_board,
+    "update_board": _update_board,
+    "delete_board": _delete_board,
+    "create_list": _create_list,
+    "update_list": _update_list,
+    "delete_list": _delete_list,
+    "reorder_lists": _reorder_lists,
+    "add_item": _add_item,
+    "update_item": _update_item,
+    "add_board_item": _add_board_item,
+    "update_board_item": _update_board_item,
+    "delete_item": _delete_item,
+    "attach_item": _attach_item,
+    "set_list_items": _set_list_items,
+    "reorder_items": _reorder_items,
+    "add_board_collaborator": _add_board_collaborator,
+    "remove_board_collaborator": _remove_board_collaborator,
+    "update_notification": _update_notification,
+    "mark_all_notifications_read": _mark_all_notifications_read,
+    "delete_notification": _delete_notification,
+    "clear_notifications": _clear_notifications,
+}
+
+
+def apply_action(actor, action, arguments):
+    """Run the named mutation inside the caller's authorization and receipt transaction."""
+    handler = _ACTION_HANDLERS.get(action)
+    if handler is None:
+        raise OperationError("Unknown tool.")
+    try:
+        return handler(actor, **arguments)
+    except notes.SharingChangeError as error:
+        raise OperationError(str(error.detail["error"])) from None
+    except APIException as error:
+        if action in {"add_board_collaborator", "remove_board_collaborator"}:
             if error.status_code == 400:
                 if isinstance(error.detail, dict) and "error" in error.detail:
                     raise OperationError(str(error.detail["error"])) from None
@@ -307,43 +357,6 @@ def execute(user, operation, **arguments):
                     "Notoli rejected the sharing change. Check the supplied fields and current board."
                 ) from None
             raise PermissionDenied(str(error.detail)) from None
-        return {
-            "board_id": board.pk,
-            "board_name": board.name,
-            "sharing_level": "board",
-            "action": "added" if operation == "add_board_collaborator" else "removed",
-        }
-    note_list = accessible_list(user, arguments["list_id"])
-    if operation == "add_item":
-        data = {
-            "list": note_list.pk,
-            "note": arguments["note"],
-            "description": arguments["description"],
-        }
-        item = None
-    elif operation == "update_item":
-        item = (
-            notes.notes_for(user, board_id=note_list.board_id, list_id=note_list.pk)
-            .filter(pk=arguments["item_id"])
-            .first()
-        )
-        if item is None:
-            raise PermissionDenied(
-                "Item not found in this list or no longer accessible."
-            )
-        data = {
-            key: arguments[key]
-            for key in ("note", "description", "status")
-            if arguments[key] is not None
-        }
-        if not data:
-            raise OperationError("Provide note, description, or status to update.")
-    else:
-        raise OperationError("Unknown tool.")
-    try:
-        item = save(user, "note", data, item)
-    except APIException:
-        raise OperationError(
-            "Notoli rejected the change. Check the supplied fields and current record."
-        ) from None
-    return item_result(item, note_list.pk)
+        if error.status_code in {403, 404}:
+            raise PermissionDenied(str(error.detail)) from None
+        raise OperationError(CHANGE_REJECTED) from None

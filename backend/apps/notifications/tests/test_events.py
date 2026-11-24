@@ -159,7 +159,11 @@ class NotificationEventTests(NotificationFixture, APITestCase):
         created_list = List.objects.get(name="List Without Notification")
         self.assertEqual(response.data["id"], created_list.id)
         mock_notify.assert_called_once()
-        self.assertIn("List creation notification failed", logs.output[0])
+        self.assertIn(
+            f"Could not save {Notification.EVENT_LIST_CREATED} activity notification "
+            f"for board_id={self.board.id}",
+            logs.output[0],
+        )
 
     def test_owner_board_rename_notifies_collaborators(self):
         self.client.force_authenticate(user=self.owner)

@@ -104,7 +104,13 @@ Common endpoints:
 - `POST /auth/forgot-password/` -> accepts `email`; sends a reset link if the account exists and returns a generic success message
 - `POST /auth/reset-password/` -> accepts `uid`, `token`, and `password`; sets a new password when the token is valid
 
-New users get a default board named after their username, such as `"andrew's Board"`, created automatically via a post-save signal in `apps/notes/signals.py`. If the username is auto-derived from the email prefix, the board name uses that prefix with its first letter capitalized, such as `"Example_02's Board"` for `example_02@gmail.com`. The default personal board is also bootstrapped with ordered starter lists: `Grocery List`, `Chores List`, and `Todo List`, each with starter notes.
+Signup explicitly saves the account and creates its starter board before issuing
+session tokens. Registration returns the ID of that board. Django admin and
+ordinary new-user saves use the same account setup. The starter board is named
+after the username, such as `"andrew's Board"`. An email-derived name capitalizes
+the first letter of the prefix, such as `"Example_02's Board"` for
+`example_02@gmail.com`. The lists `Grocery List`, `Chores List`, and `Todo List`
+contain sample notes defined in [notes services](apps/notes/services.py).
 
 All `/api/*` endpoints require:
 
@@ -112,24 +118,24 @@ All `/api/*` endpoints require:
 
 ## 🧱 Data model and access
 
-- Board: top-level container for organizing lists
-- List: belongs to a board; associates notes via a many-to-many relation
-- Note: a single checklist item (`note` + optional `description` + `status`); can be linked into multiple lists
-- Notification: recipient-scoped in-app activity item with persistent read/unread state, board-name snapshots, optional board/list/note context, and frontend navigation targets, owned by the `notifications` app
+- A board contains lists and items.
+- A list belongs to one board and orders items from that board.
+- An item is stored as a `Note` with a title in `note`, an optional description, and a status. An item can appear in multiple lists.
+- A notification belongs to one recipient and stores its read status and a copy of the board name.
 
-Access scoping:
+### Permissions, ordering, and notifications
 
-- Board membership is the source of truth for access. `Board.owner` and `Board.collaborators` control access to child lists and notes.
-- Lists and notes keep `created_by` metadata, but do not have separate owner or collaborator fields.
+- Lists and items inherit access from the board's owner, creator, and collaborators. Each list and item records its own creator in `created_by`.
 - Board owners can update board metadata and delete boards; collaborators receive a 403 response for board `PATCH`/`DELETE` attempts while retaining read access to shared boards.
 - Board owners can manage board collaborators with `POST /api/boards/<id>/collaborators/` using `{ "identifier": "<username-or-email>" }` and `DELETE /api/boards/<id>/collaborators/<user_id>/`.
 - Board responses include `owner_details` and `collaborators_details` summaries for sharing/access UI.
 - Lists are returned in their saved board order. Persist a new board order with `PATCH /api/lists/reorder/` and `{ "board": <id>, "ordered_ids": [<list-id>, ...] }`.
-- Notes inside a list are returned in their saved list-membership order. Persist a new note order with `PATCH /api/notes/reorder/` and `{ "list": <id>, "ordered_ids": [<note-id>, ...] }`.
-- Note order is stored on the `ListNote` membership table so the same note can appear in multiple lists with different positions.
+- Items inside a list are returned in their saved order. Persist a new item order with `PATCH /api/notes/reorder/` and `{ "list": <id>, "ordered_ids": [<item-id>, ...] }`.
+- Each `ListNote` membership stores the item's position in that list.
 - Notifications are only visible to their recipient. Clients can list them with `GET /api/notifications/`, mark one read with `PATCH /api/notifications/<id>/`, clear one with `DELETE /api/notifications/<id>/`, mark all read with `PATCH /api/notifications/mark-all-read/`, and clear all with `DELETE /api/notifications/clear-all/`.
-- Notification responses include board/list/note context plus `target_path` so the frontend can route users to the relevant board or list.
-- Shared board activity creates notifications for other board members when a collaborator is added or removed, when a board is renamed, when a list is created or updated, when a note is created, updated, or transitions to `Complete`, and when boards/lists/notes are deleted. Added and removed collaborators also receive direct access-change notifications.
+- Notification responses include board, list, and item context plus `target_path` for navigation.
+- Shared board activity notifies other board members about board renames and deletions, list and item changes, item completions, and collaborator changes. Added and removed collaborators also receive a direct notification.
+- Board, list, and item activity notifications are best effort. If a notification write fails, the backend logs the failure and saves the edit. The add and remove collaborator actions save their notifications and the access change in one transaction. Both roll back on failure.
 
 ## ✉️ Email
 

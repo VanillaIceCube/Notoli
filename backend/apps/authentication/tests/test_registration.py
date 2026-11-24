@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from apps.notes.models import Board, Note
-from apps.notes.signals import (
+from apps.notes.services import (
     DEFAULT_PERSONAL_BOARD_CONTENT,
 )
 
@@ -343,20 +343,17 @@ class RegistrationInputTests(CredentialFixtures, APITestCase):
         self.assertFalse(user.check_password(password.strip()))
 
     def test_registration_collision_is_a_client_error(self):
-        from django.db import IntegrityError
-
-        with patch(
-            "apps.authentication.views.User.objects.create_user",
-            side_effect=IntegrityError("duplicate"),
-        ):
-            response = self.client.post(
-                "/auth/register/",
-                {
-                    "email": "new-contract@example.com",
-                    "password": "New-Contract-Password-89!",
-                },
-                format="json",
-            )
+        User.objects.create_user(username="duplicate", email="duplicate@example.com")
+        # Django normalizes the fullwidth letter before inserting the username.
+        response = self.client.post(
+            "/auth/register/",
+            {
+                "email": "new-contract@example.com",
+                "username": "\uff44uplicate",
+                "password": "New-Contract-Password-89!",
+            },
+            format="json",
+        )
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.data, {"error": "Email or username already exists."})
         self.assertFalse(User.objects.filter(email="new-contract@example.com").exists())

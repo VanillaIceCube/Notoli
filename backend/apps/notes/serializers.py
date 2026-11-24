@@ -2,8 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from . import services
-from .models import Board, Note
-from .models import List as NoteList
+from .models import Board, List, Note
 
 User = get_user_model()
 
@@ -40,7 +39,7 @@ class ListSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        model = NoteList
+        model = List
         fields = "__all__"
         # Domain creation supplies the authenticated owner and creator.
         extra_kwargs = {
@@ -54,7 +53,7 @@ class ListSerializer(serializers.ModelSerializer):
 
 class NoteSerializer(serializers.ModelSerializer):
     list = serializers.PrimaryKeyRelatedField(
-        queryset=NoteList.objects.all(),
+        queryset=List.objects.all(),
         write_only=True,
         required=False,
     )

@@ -124,17 +124,6 @@ def _prepared(record, pending, replayed=False):
     }
 
 
-def _dispatch(user, action, arguments):
-    try:
-        return operations.execute(user, action, **arguments)
-    except APIException as error:
-        if error.status_code in {403, 404}:
-            raise PermissionDenied("Object not found or permission denied.") from None
-        raise operations.OperationError(
-            "Notoli rejected the change. Check the supplied fields and current record."
-        ) from None
-
-
 def _complete(record, output, *, envelope):
     output = bounded_result(output, mutation=True)
     if envelope:
@@ -165,9 +154,7 @@ def execute(raw_token, operation, **arguments):
     except APIException as error:
         if error.status_code in {403, 404}:
             raise PermissionDenied("Object not found or permission denied.") from None
-        raise operations.OperationError(
-            "Notoli rejected the change. Check the supplied fields and current record."
-        ) from None
+        raise operations.OperationError(operations.CHANGE_REJECTED) from None
 
 
 def _execute(raw_token, operation, **arguments):
@@ -237,7 +224,7 @@ def _execute(raw_token, operation, **arguments):
             )
             return _complete(
                 record,
-                _dispatch(token.user, operation, arguments),
+                operations.apply_action(token.user, operation, arguments),
                 envelope=operation in operations.PREPARABLE,
             )
         selected_ids = []
@@ -392,5 +379,7 @@ def confirm_change(raw_token, request_id, confirmation_id):
         record.save(update_fields=["state", "updated_at"])
         pending.delete()
         return _complete(
-            record, _dispatch(token.user, record.action, arguments), envelope=True
+            record,
+            operations.apply_action(token.user, record.action, arguments),
+            envelope=True,
         )
