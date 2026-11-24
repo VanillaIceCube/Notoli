@@ -16,10 +16,10 @@ export default defineConfig({
           include: [
             'src/services/authentication/authRedirect.test.js',
             'src/services/navigation/navigationService.test.js',
-            'src/services/notepad/notoliApiClient.test.js',
+            'src/services/boards/notoliApiClient.test.js',
             'src/services/authentication/authApiClient.test.js',
             'src/services/notifications/notificationApiClient.test.js',
-            'src/utils/Navigation.test.js',
+            'src/utils/navigation.test.js',
           ],
         },
       },
@@ -33,10 +33,10 @@ export default defineConfig({
           exclude: [
             'src/services/authentication/authRedirect.test.js',
             'src/services/navigation/navigationService.test.js',
-            'src/services/notepad/notoliApiClient.test.js',
+            'src/services/boards/notoliApiClient.test.js',
             'src/services/authentication/authApiClient.test.js',
             'src/services/notifications/notificationApiClient.test.js',
-            'src/utils/Navigation.test.js',
+            'src/utils/navigation.test.js',
           ],
           deps: {
             optimizer: {

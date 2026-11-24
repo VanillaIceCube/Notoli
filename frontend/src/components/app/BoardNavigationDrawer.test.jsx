@@ -1,4 +1,4 @@
-import useBoardList from '../../hooks/notepad/useBoardList';
+import useBoardList from '../../hooks/boards/useBoardList';
 import useSession from '../../hooks/authentication/useSession';
 import {
   getSessionVersion,
@@ -19,7 +19,7 @@ import {
   fetchBoards as fetchBoardsApi,
   removeBoardCollaborator,
   updateBoard,
-} from '../../services/notepad/notoliApiClient';
+} from '../../services/boards/notoliApiClient';
 const { mockNavigate, mockUseLocation } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockUseLocation: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock('react-router', async () => ({
   useNavigate: () => mockNavigate,
   useLocation: () => mockUseLocation(),
 }));
-vi.mock('../../services/notepad/notoliApiClient', () => ({
+vi.mock('../../services/boards/notoliApiClient', () => ({
   addBoardCollaborator: vi.fn(),
   createBoard: vi.fn(),
   deleteBoard: vi.fn(),

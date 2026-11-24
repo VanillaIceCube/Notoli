@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "notoli",
   "version": "0.3.1",
-  "description": "Manage Notoli boards, lists, items, ordering, collaborators, and activity notifications.",
+  "description": "Manage Notoli boards, lists, tasks, ordering, collaborators, and activity notifications.",
   "author": {
     "name": "Jude Andrew Alaba",
     "url": "https://github.com/VanillaIceCube"
@@ -15,7 +15,7 @@
       "interface": {
         "displayName": "Notoli",
         "shortDescription": "Manage tasks and shared lists",
-        "longDescription": "Work with your Notoli boards, lists, and tasks from ChatGPT. Find and update tasks, organize boards and lists, change item order and list membership, manage board collaborators, and read activity notifications. Requires a Notoli account and an OAuth connection with the permissions you choose. Sharing applies to every list and item in a board and is restricted to the board owner. Permanent deletions require explicit confirmation. Account administration and ownership transfers are not supported.",
+        "longDescription": "Work with your Notoli boards, lists, and tasks from ChatGPT. Find and update tasks, organize boards and lists, change task order and list membership, manage board collaborators, and read activity notifications. Requires a Notoli account and an OAuth connection with the permissions you choose. Sharing applies to every list and task in a board and is restricted to the board owner. Permanent deletions require explicit confirmation. Account administration and ownership transfers are not supported.",
         "developerName": "Jude Andrew Alaba",
         "category": "Productivity",
         "capabilities": ["Read", "Write"],

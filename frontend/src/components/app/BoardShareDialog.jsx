@@ -20,7 +20,7 @@ import PersonAdd from '@mui/icons-material/PersonAdd';
 import {
   addBoardCollaborator,
   removeBoardCollaborator,
-} from '../../services/notepad/notoliApiClient';
+} from '../../services/boards/notoliApiClient';
 
 const userLabel = (user) =>
   user?.display_name || user?.username || user?.email || `User ${user?.id}`;

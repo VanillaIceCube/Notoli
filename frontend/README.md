@@ -34,7 +34,7 @@ adjacent test in exactly one purpose-named subfolder. Use lowercase names with h
 | Shared colors, typography, and component styles | [Theme](src/theme.js)                                                                                                              |
 | Preferred board on sign-in                      | [BoardHomeRedirect](src/components/app/BoardHomeRedirect.js)                                                                       |
 | Board navigation and sharing                    | [BoardNavigationDrawer](src/components/app/BoardNavigationDrawer.jsx), [BoardShareDialog](src/components/app/BoardShareDialog.jsx) |
-| Lists and tasks                                 | [BoardListsPage](src/pages/notepad/BoardListsPage.jsx), [ListTasksPage](src/pages/notepad/ListTasksPage.jsx)                       |
+| Lists and tasks                                 | [BoardListsPage](src/pages/boards/BoardListsPage.jsx), [ListTasksPage](src/pages/boards/ListTasksPage.jsx)                         |
 
 ## 💻 Local development
 
@@ -191,11 +191,11 @@ and session-lifecycle contract.
 
 Board management lives in the right sidebar. Open the Board list, use a board row's action menu, and choose Share. The Share dialog displays the board owner and collaborators. Owners can add collaborators by username/email and remove collaborators; non-owners can view access in read-only mode.
 
-### Task checklist items
+### Tasks
 
 Tasks in a list render as checklist rows. Checking a task sets its `status` to `Complete` and strikes through the task text immediately. Unchecking sets it to `Not Started`. The API also supports `In Progress`.
 
-Authentication and notification requests live in `src/services/authentication/authApiClient.js` and `src/services/notifications/notificationApiClient.js`. The board, list and task client `src/services/notepad/notoliApiClient.js` translates between task `text` and the existing `note` field on `/api/notes/` routes.
+Authentication and notification requests live in `src/services/authentication/authApiClient.js` and `src/services/notifications/notificationApiClient.js`. The board, list and task client `src/services/boards/notoliApiClient.js` uses `/api/tasks/` with the `text` field.
 
 ### In-app notifications
 
@@ -203,7 +203,7 @@ The app bar notification icon opens a popover with the newest notifications firs
 
 ### Drag-and-drop reordering
 
-To reorder lists or tasks, open a row’s action menu and choose **Reorder**. Drag items by the handles on the right. Each drop saves the new order. Select **Done Reordering** to return to the regular list.
+To reorder lists or tasks, open a row’s action menu and choose **Reorder**. Drag rows by the handles on the right. Each drop saves the new order. Select **Done Reordering** to return to the regular list.
 
 Loaded board/list pages may report readiness again when their parent renders. The route coordinator keeps an already active single-page state unchanged, preventing a render feedback loop that can make controls unresponsive. Unit tests exercise automatic and repeated readiness. See issue #1022.
 

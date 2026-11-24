@@ -28,9 +28,9 @@ def list_path(board_list):
     return f"/board/{board_list.board_id}/list/{board_list.id}"
 
 
-def first_item_list(item):
+def first_task_list(task):
     membership = (
-        item.list_memberships.select_related("list", "list__board")
+        task.list_memberships.select_related("list", "list__board")
         .order_by("position", "id")
         .first()
     )
@@ -46,8 +46,8 @@ def notify_board_members(
     title,
     message,
     exclude_user_ids=None,
-    note_list=None,
-    note=None,
+    board_list=None,
+    task=None,
     target_path="",
 ):
     recipients = list(board_recipients(board, actor, exclude_user_ids))
@@ -61,8 +61,8 @@ def notify_board_members(
                 actor=actor,
                 board=board,
                 board_name=board.name,
-                list=note_list,
-                note=note,
+                list=board_list,
+                task=task,
                 event_type=event_type,
                 title=title,
                 message=message,
@@ -80,7 +80,7 @@ def notifications_for(actor):
         raise PermissionDenied("An active authenticated account is required.")
     return (
         Notification.objects.filter(recipient=actor)
-        .select_related("actor", "board", "list", "note")
+        .select_related("actor", "board", "list", "task")
         .order_by("-created_at", "-id")
     )
 

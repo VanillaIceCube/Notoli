@@ -6,8 +6,8 @@ from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.notes.models import Board, Note
-from apps.notes.services import (
+from apps.tasks.models import Board, Task
+from apps.tasks.services import (
     DEFAULT_PERSONAL_BOARD_CONTENT,
 )
 
@@ -93,27 +93,27 @@ class RegistrationTests(APITestCase):
         )
         default_lists = list(board.lists.order_by("position", "created_at", "id"))
         expected_list_names = [
-            list_name for list_name, _notes in DEFAULT_PERSONAL_BOARD_CONTENT
+            list_name for list_name, _tasks in DEFAULT_PERSONAL_BOARD_CONTENT
         ]
         self.assertEqual(
-            [note_list.name for note_list in default_lists],
+            [board_list.name for board_list in default_lists],
             expected_list_names,
             "Default board lists were not created in the expected order.",
         )
-        for note_list, (_list_name, expected_notes) in zip(
+        for board_list, (_list_name, expected_tasks) in zip(
             default_lists, DEFAULT_PERSONAL_BOARD_CONTENT, strict=True
         ):
-            actual_notes = list(
-                Note.objects.filter(list_memberships__list=note_list).order_by(
+            actual_tasks = list(
+                Task.objects.filter(list_memberships__list=board_list).order_by(
                     "list_memberships__position",
                     "list_memberships__id",
                     "id",
                 )
             )
             self.assertEqual(
-                [note.note for note in actual_notes],
-                expected_notes,
-                f"Unexpected starter notes for {note_list.name}.",
+                [task.text for task in actual_tasks],
+                expected_tasks,
+                f"Unexpected starter tasks for {board_list.name}.",
             )
 
         self.assertEqual(
@@ -154,7 +154,7 @@ class RegistrationTests(APITestCase):
             lists_response.data,
         )
         self.assertEqual(
-            [item["name"] for item in lists_response.data],
+            [task["name"] for task in lists_response.data],
             expected_list_names,
             f"Unexpected list API order: {lists_response.data}",
         )

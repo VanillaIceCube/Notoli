@@ -23,7 +23,7 @@ from oauth2_provider.models import AccessToken
 from rest_framework_simplejwt.tokens import RefreshToken as JWTRefreshToken
 
 from apps.mcp.framework.oauth import resolve_token
-from apps.notes.models import List as NoteList
+from apps.tasks.models import List as TaskList
 
 from .helpers import (
     make_client,
@@ -42,7 +42,7 @@ class MCPToolTransportTests(TransactionTestCase):
     def test_asgi_protocol_auth_schemas_and_tools(self):
         from config.asgi import application
 
-        note_list = NoteList.objects.filter(board__owner=self.user).first()
+        board_list = TaskList.objects.filter(board__owner=self.user).first()
         jwt = str(JWTRefreshToken.for_user(self.user).access_token)
 
         async def check():
@@ -94,9 +94,9 @@ class MCPToolTransportTests(TransactionTestCase):
                         {
                             "list_boards",
                             "list_lists",
-                            "get_items",
-                            "add_item",
-                            "update_item",
+                            "get_tasks",
+                            "add_task",
+                            "update_task",
                             "get_board_collaborators",
                             "add_board_collaborator",
                             "remove_board_collaborator",
@@ -109,14 +109,14 @@ class MCPToolTransportTests(TransactionTestCase):
                             "update_list",
                             "delete_list",
                             "reorder_lists",
-                            "list_board_items",
-                            "get_item",
-                            "add_board_item",
-                            "update_board_item",
-                            "delete_item",
-                            "attach_item",
-                            "set_list_items",
-                            "reorder_items",
+                            "list_board_tasks",
+                            "get_task",
+                            "add_board_task",
+                            "update_board_task",
+                            "delete_task",
+                            "attach_task",
+                            "set_list_tasks",
+                            "reorder_tasks",
                             "list_notifications",
                             "get_notification",
                             "update_notification",
@@ -126,14 +126,14 @@ class MCPToolTransportTests(TransactionTestCase):
                             "confirm_change",
                         },
                     )
-                    self.assertTrue(tools["get_items"]["annotations"]["readOnlyHint"])
-                    self.assertFalse(tools["add_item"]["annotations"]["readOnlyHint"])
+                    self.assertTrue(tools["get_tasks"]["annotations"]["readOnlyHint"])
+                    self.assertFalse(tools["add_task"]["annotations"]["readOnlyHint"])
                     self.assertEqual(
-                        tools["add_item"]["_meta"]["securitySchemes"],
+                        tools["add_task"]["_meta"]["securitySchemes"],
                         [{"type": "oauth2", "scopes": ["notoli:read", "notoli:write"]}],
                     )
                     self.assertEqual(
-                        tools["get_items"]["inputSchema"]["properties"]["limit"][
+                        tools["get_tasks"]["inputSchema"]["properties"]["limit"][
                             "maximum"
                         ],
                         100,
@@ -182,6 +182,28 @@ class MCPToolTransportTests(TransactionTestCase):
                         self.assertEqual(result.status_code, 200, result.text)
                         return result.json()["result"]
 
+                    retired_tool = await invoke(
+                        "add_item", {"list_id": board_list.pk, "note": "Old"}
+                    )
+                    self.assertTrue(retired_tool.get("isError"), retired_tool)
+                    for tool_name, arguments in (
+                        ("add_task", {"list_id": board_list.pk, "note": "Old"}),
+                        (
+                            "add_task",
+                            {"list_id": board_list.pk, "text": "New", "note": "Old"},
+                        ),
+                        (
+                            "set_list_tasks",
+                            {"list_id": board_list.pk, "task_ids": [], "item_ids": []},
+                        ),
+                    ):
+                        rejected = await invoke(tool_name, arguments)
+                        self.assertTrue(rejected.get("isError"), rejected)
+                        self.assertIn(
+                            "Use the current task arguments",
+                            rejected["content"][0]["text"],
+                        )
+
                     async def approve(result):
                         self.assertFalse(result.get("isError"), result)
                         prepared = result["structuredContent"]
@@ -221,34 +243,34 @@ class MCPToolTransportTests(TransactionTestCase):
                         }
 
                     created = await invoke(
-                        "add_item", {"list_id": note_list.pk, "note": "HTTP item"}
+                        "add_task", {"list_id": board_list.pk, "text": "HTTP task"}
                     )
                     self.assertFalse(created.get("isError"), created)
-                    item_id = created["structuredContent"]["id"]
+                    task_id = created["structuredContent"]["id"]
                     updated = await invoke(
-                        "update_item",
+                        "update_task",
                         {
-                            "list_id": note_list.pk,
-                            "item_id": item_id,
+                            "list_id": board_list.pk,
+                            "task_id": task_id,
                             "status": "Complete",
                         },
                     )
                     self.assertEqual(updated["structuredContent"]["status"], "Complete")
                     invalid = await invoke(
-                        "get_items", {"list_id": note_list.pk, "limit": 101}
+                        "get_tasks", {"list_id": board_list.pk, "limit": 101}
                     )
                     self.assertTrue(invalid["isError"])
                     await sync_to_async(
                         AccessToken.objects.filter(pk=self.token.pk).update
                     )(scope="notoli:read")
                     denied = await invoke(
-                        "add_item", {"list_id": note_list.pk, "note": "Should fail"}
+                        "add_task", {"list_id": board_list.pk, "text": "Should fail"}
                     )
                     self.assertTrue(denied["isError"])
                     self.assertIn(
                         "insufficient_scope", denied["_meta"]["mcp/www_authenticate"][0]
                     )
-                    board_id = note_list.board_id
+                    board_id = board_list.board_id
                     target = await sync_to_async(get_user_model().objects.create_user)(
                         "http-collaborator", email="http-collaborator@example.com"
                     )
@@ -300,8 +322,8 @@ class MCPToolTransportTests(TransactionTestCase):
                         ("create_board", {"name": "Denied"}, "notoli:organize"),
                         ("list_notifications", {}, "notoli:notifications"),
                         (
-                            "delete_item",
-                            {"board_id": board_id, "item_id": item_id},
+                            "delete_task",
+                            {"board_id": board_id, "task_id": task_id},
                             "notoli:delete",
                         ),
                     ):
@@ -331,36 +353,36 @@ class MCPToolTransportTests(TransactionTestCase):
                     pending = await invoke("delete_board", {"board_id": new_board_id})
                     self.assertEqual(pending["structuredContent"]["status"], "prepared")
                     invalid = await invoke(
-                        "set_list_items",
+                        "set_list_tasks",
                         {
                             "list_id": new_list["structuredContent"]["id"],
-                            "item_ids": [0],
+                            "task_ids": [0],
                         },
                     )
                     self.assertTrue(invalid["isError"])
                     invalid = await invoke(
-                        "reorder_items",
-                        {"list_id": note_list.pk, "ordered_ids": [item_id] * 1001},
+                        "reorder_tasks",
+                        {"list_id": board_list.pk, "ordered_ids": [task_id] * 1001},
                     )
                     self.assertTrue(invalid["isError"])
                     orphan = await invoke(
-                        "add_board_item", {"board_id": new_board_id, "note": "Unlisted"}
+                        "add_board_task", {"board_id": new_board_id, "text": "Unlisted"}
                     )
                     self.assertFalse(orphan.get("isError"), orphan)
                     self.assertIsNone(orphan["structuredContent"]["list_id"])
                     attached = await invoke(
-                        "attach_item",
+                        "attach_task",
                         {
                             "list_id": new_list["structuredContent"]["id"],
-                            "item_id": orphan["structuredContent"]["id"],
+                            "task_id": orphan["structuredContent"]["id"],
                         },
                     )
                     self.assertFalse(attached.get("isError"), attached)
                     direct_memberships = await invoke(
-                        "set_list_items",
+                        "set_list_tasks",
                         {
                             "list_id": new_list["structuredContent"]["id"],
-                            "item_ids": [orphan["structuredContent"]["id"]],
+                            "task_ids": [orphan["structuredContent"]["id"]],
                         },
                     )
                     self.assertEqual(
@@ -373,10 +395,10 @@ class MCPToolTransportTests(TransactionTestCase):
                         [orphan["structuredContent"]["id"]],
                     )
                     removal_memberships = await invoke(
-                        "set_list_items",
+                        "set_list_tasks",
                         {
                             "list_id": new_list["structuredContent"]["id"],
-                            "item_ids": [],
+                            "task_ids": [],
                         },
                     )
                     self.assertEqual(

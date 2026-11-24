@@ -21,14 +21,14 @@ import Edit from '@mui/icons-material/Edit';
 import MoreVert from '@mui/icons-material/MoreVert';
 import Share from '@mui/icons-material/Share';
 import Divider from '@mui/material/Divider';
-import { getBoardId } from '../../utils/Navigation';
+import { getBoardId } from '../../utils/navigation';
 import { useLocation, useNavigate } from 'react-router';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import BoardShareDialog from './BoardShareDialog';
 
-import { createBoard, deleteBoard, updateBoard } from '../../services/notepad/notoliApiClient';
+import { createBoard, deleteBoard, updateBoard } from '../../services/boards/notoliApiClient';
 
 export default function BoardNavigationDrawer({ boardList, open, setDrawerOpen, showSnackbar }) {
   const navigate = useNavigate();

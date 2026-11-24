@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useSessionGuard } from '../../hooks/authentication/useSession';
-import { getPreferredBoardId } from '../../services/notepad/lastBoard';
+import { getPreferredBoardId } from '../../services/boards/lastBoard';
 
 export default function BoardHomeRedirect({ boardList, showSnackbar }) {
   const navigate = useNavigate();
