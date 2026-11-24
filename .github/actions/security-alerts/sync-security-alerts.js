@@ -510,7 +510,7 @@ async function synchronizeSecurityAlerts({
       Status: "Backlog", Domain: "CI/CD", "Work type": "Security",
       Priority: alertPriority(source.feed, alerts), Size: "M", Estimate: 3,
     };
-    const urgent = alerts.some(alert => alert.severity === "high" || alert.severity === "critical");
+    const urgent = alerts.some(alert => ["critical", "high", "unknown"].includes(alert.severity));
     const values = await projectValuesToUpdate(projectGithub, itemId, defaults, urgent);
     if (Object.keys(values).length) {
       await setProjectValues(

@@ -922,10 +922,17 @@ test("urgent alerts joining a group raise priority without resetting planning or
   assert.equal(priority(), "P1");
   assert.deepEqual(alertRefsFromBody(h.issues[0].body), h.groups[0].alert_refs);
 
+  joined.severity = "unknown";
+  for (const prior of ["P2", "P3"]) {
+    fields.set("Priority", { singleSelectOptionId: prior });
+    await h.run();
+    assert.equal(priority(), "P1");
+  }
+
   joined.severity = "critical";
   await h.run();
   assert.equal(priority(), "P0");
-  for (const severity of ["high", "medium"]) {
+  for (const severity of ["high", "unknown", "medium"]) {
     joined.severity = severity;
     await h.run();
     assert.equal(priority(), "P0");

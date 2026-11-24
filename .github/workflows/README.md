@@ -430,8 +430,8 @@ Existing managed source refs select the canonical issue even when wording change
 Project attachment retries transient failures at most three times, reading back
 possibly committed writes before retrying. Unresolved attachments identify the
 saved issue; rerun the same feed to reuse it. Reconciliation fills missing fields.
-A group containing a critical alert receives P0. High alerts receive at least P1.
-Other vulnerability groups default to P2, or P1 when severity is unknown. CodeQL and
+A group containing a critical alert receives P0. High or unknown severity raises
+an existing P2/P3 group to P1. Other vulnerability groups default to P2. CodeQL and
 malware groups default to P1. An urgent alert can raise an existing group's priority.
 Higher priorities and other populated planning fields are preserved. All active groups synchronize before
 superseded issues can close. Closure saves source history and End date before Done.
@@ -482,8 +482,12 @@ remain necessary. The checker parses YAML nodes, including quoted/flow/sequence
 forms, rejects aliases, duplicate and merge keys, and requires pinned PyYAML 6.0.3.
 
 Declare permissions explicitly in the workflow or job. The checker rejects broad
-grants such as `write-all` and unknown permission scopes or levels. Review changes
-to write permissions in the pull request that changes the workflow.
+grants such as `write-all` and unknown permission scopes or levels. PR CI compares
+each workflow and job's effective write scopes to the same path and job on its
+exact base commit. New workflows and jobs start with no approved write scopes.
+The required default-branch policy repeats this comparison for main PRs using
+reviewed code and Git blobs. It never executes proposed workflows. A deliberate
+increase requires an independently reviewed change to the trusted policy.
 
 ### Security-alert configuration contract
 

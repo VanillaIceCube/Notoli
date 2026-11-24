@@ -48,14 +48,34 @@ jobs:
               status: 'in_progress', external_id: String(context.payload.workflow_run.id),
             });
             core.setOutput('policy_id', check.id);
+            core.setOutput('base_sha', pr.base.sha);
+            core.setOutput('head_sha', pr.head.sha);
+            core.setOutput('number', pr.number);
             core.setOutput('eligible', trusted(pr, `${context.repo.owner}/${context.repo.repo}`));
             require('node:fs').writeFileSync(`${process.env.RUNNER_TEMP}/dependabot-pr-event.json`, JSON.stringify({ pull_request: pr }));
 
       - name: Set up locked Python tooling
-        if: steps.pr.outputs.eligible == 'true'
+        if: steps.pr.outputs.policy_id != ''
         uses: ./.github/actions/setup-uv
         with:
           only-dev: "true"
+
+      - name: Compare workflow write grants using reviewed main code
+        if: steps.pr.outputs.policy_id != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ steps.pr.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$BASE_SHA" =~ ^[a-f0-9]{40}$ && "$HEAD_SHA" =~ ^[a-f0-9]{40}$ && "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
+          # Fetch immutable Git objects from this repository. Proposed files are never checked out.
+          git -c credential.helper= -c 'credential.helper=!gh auth git-credential' fetch \
+            --no-tags --depth=1 origin "$BASE_SHA" "refs/pull/$PR_NUMBER/head"
+          unset GH_TOKEN
+          python3 .github/actions/check-workflow-security/check.py --compare-workflow-grants "$BASE_SHA" "$HEAD_SHA"
 
       - name: Validate this head and enable native protected-branch auto-merge
         id: enable
@@ -87,6 +107,6 @@ jobs:
             await github.rest.checks.update({ ...context.repo, check_run_id: Number(process.env.POLICY_CHECK_ID),
               status: 'completed', conclusion: process.env.JOB_STATUS === 'success' ? 'success' : 'failure',
               output: { title: 'Dependabot policy for this exact head', summary: process.env.JOB_STATUS === 'success'
-                ? 'Policy passed or automatic merging is inapplicable. GitHub still enforces all branch requirements.'
+                ? 'Workflow write grants passed. Eligible Dependabot updates also met the auto-merge policy. GitHub enforces all branch requirements.'
                 : 'Policy validation failed; native auto-merge remains blocked by this required check.' },
             });

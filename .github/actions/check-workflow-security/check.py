@@ -1,6 +1,7 @@
 """Inspect YAML nodes (including flow syntax) without executing YAML tags."""
 import json
 import re
+import subprocess
 import sys
 
 import yaml
@@ -73,6 +74,84 @@ def check(text, name):
     return errors
 
 
+def effective_writes(source):
+    workflow = yaml.load(source, Loader=yaml.BaseLoader)
+    if not isinstance(workflow, dict):
+        raise ValueError("workflow must be a YAML mapping")
+
+    def writes(permissions):
+        if not isinstance(permissions, dict):
+            raise ValueError("workflow permissions must enumerate scopes")
+        return {scope for scope, level in permissions.items() if level == "write"}
+
+    defaults = workflow.get("permissions", {})
+    result = {None: writes(defaults)}
+    for job, definition in workflow.get("jobs", {}).items():
+        result[job] = writes(definition.get("permissions", defaults))
+    return result
+
+
+def changed_grants(base_text, proposed_text, path):
+    approved = effective_writes(base_text) if base_text is not None else {}
+    errors = []
+    for job, writes in effective_writes(proposed_text).items():
+        for scope in sorted(writes - approved.get(job, set())):
+            context = f"jobs.{job}" if job is not None else "workflow"
+            errors.append(f"{path}: {context} requests {scope}: write outside the trusted base grant")
+    return errors
+
+
+def workflow_blobs(revision):
+    if not re.fullmatch(r"[a-f0-9]{40}", revision):
+        raise ValueError("expected an exact GitHub commit SHA")
+    records = subprocess.check_output(["git", "ls-tree", "-z", revision + "^{commit}", "--", ".github/workflows/"])
+    blobs = {}
+    for record in records.split(b"\0"):
+        if not record:
+            continue
+        metadata, filename = record.split(b"\t", 1)
+        mode, kind, oid = metadata.split(b" ")
+        path = filename.decode("utf-8")
+        if not path.endswith((".yml", ".yaml")):
+            continue
+        if kind != b"blob" or mode not in (b"100644", b"100755"):
+            raise ValueError(f"{path}: expected a regular workflow file")
+        blobs[path] = oid.decode("ascii")
+    return blobs
+
+
+def compare_commits(base, head):
+    before = workflow_blobs(base)
+    after = workflow_blobs(head)
+    errors = []
+
+    def read(oid):
+        size = int(subprocess.check_output(["git", "cat-file", "-s", oid]))
+        if size > 1024 * 1024:
+            raise ValueError("workflow exceeds the one MiB inspection limit")
+        return subprocess.check_output(["git", "cat-file", "blob", oid]).decode("utf-8")
+
+    for path, oid in after.items():
+        if before.get(path) == oid:
+            continue
+        proposed = read(oid)
+        invalid = check(proposed, path)
+        if invalid:
+            errors.extend(invalid)
+            continue
+        errors.extend(changed_grants(read(before[path]) if path in before else None, proposed, path))
+    return errors
+
+
 if __name__ == "__main__":
-    data = json.load(sys.stdin.buffer)
-    print(json.dumps(check(data["text"], data["name"])))
+    if len(sys.argv) == 4 and sys.argv[1] == "--compare-workflow-grants":
+        problems = compare_commits(sys.argv[2], sys.argv[3])
+        if problems:
+            raise SystemExit("\n".join(problems))
+        print("Workflow write grants are within the trusted base permissions.")
+    else:
+        data = json.load(sys.stdin.buffer)
+        result = check(data["text"], data["name"])
+        if not result and "base_text" in data:
+            result = changed_grants(data["base_text"], data["text"], data["name"])
+        print(json.dumps(result))

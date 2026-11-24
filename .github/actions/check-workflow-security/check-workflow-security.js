@@ -3,9 +3,9 @@ const path = require('node:path');
 const { execFileSync } = require('node:child_process');
 
 const python = process.platform === 'win32' ? 'python' : 'python3';
-function check(text, name) {
+function check(text, name, baseText) {
   return JSON.parse(execFileSync(python, [path.join(__dirname, 'check.py')], {
-    input: JSON.stringify({ text, name }),
+    input: JSON.stringify({ text, name, base_text: baseText }),
     encoding: 'utf8',
     timeout: 10000,
   }));
@@ -21,6 +21,10 @@ function audit(root) {
     }
   }
   walk(path.join(root, '.github'));
+  if (process.env.GITHUB_EVENT_NAME === 'pull_request') {
+    const { pull_request: pr } = JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH, 'utf8'));
+    execFileSync(python, [path.join(__dirname, 'check.py'), '--compare-workflow-grants', pr.base.sha, pr.head.sha], { cwd: root, stdio: 'inherit' });
+  }
   return errors;
 }
 module.exports = { check, audit };

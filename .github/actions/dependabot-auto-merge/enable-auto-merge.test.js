@@ -349,6 +349,8 @@ test("privileged workflow uses only main code and verified metadata, with no imm
   assert.match(workflow, /workflow_run:/);
   assert.match(workflow, /workflows: \[CI\]/);
   assert.match(workflow, /ref: main/);
+  assert.match(workflow, /Compare workflow write grants using reviewed main code\s+if: steps\.pr\.outputs\.policy_id != ''/);
+  assert.match(workflow, /--compare-workflow-grants "\$BASE_SHA" "\$HEAD_SHA"/);
   assert.match(workflow, /persist-credentials: false/);
   assert.match(workflow, /context: \{ repo: context.repo, eventName: 'pull_request', payload \}/);
   assert.doesNotMatch(workflow, /pull_request_target|workflow_dispatch|secrets\.|download-artifact|actions\/cache|skip-verification|skip-commit-verification/);
