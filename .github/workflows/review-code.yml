@@ -27,6 +27,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Create Obi-Wan Code-nobi GitHub App token
         id: app-token
@@ -101,6 +102,7 @@ jobs:
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
+          omit_frontend_npm_lockfile: "true"
 
       - name: Collect read-only auto-merge API evidence
         if: steps.pr-diff.outputs.truncated != 'true'
@@ -134,6 +136,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           DIFF_PATH: ${{ steps.pr-diff.outputs.linediff_path }}
+          EXCLUDED_FILES: ${{ steps.pr-diff.outputs.excluded_files }}
           PRIOR_REVIEWS_PATH: ${{ runner.temp }}/code-prior-reviews.json
           CONTEXT_PATH: ${{ runner.temp }}/code-review-context.txt
           DEPENDABOT_UPDATE_TYPE: ${{ steps.dependabot-metadata.outputs.update-type }}
@@ -156,8 +159,12 @@ jobs:
           total_bytes=0
           max_total_bytes=180000
           max_file_bytes=30000
-          while IFS= read -r file; do
-            if [ ! -f "$file" ]; then
+          while IFS= read -r -d '' file; do
+            if [ -n "$EXCLUDED_FILES" ] && [ "$file" = "$EXCLUDED_FILES" ]; then
+              printf '\n--- %s ---\n[generated lockfile payload excluded; see AI REVIEW SCOPE]\n' "$file" >> "$CONTEXT_PATH"
+              continue
+            fi
+            if [ -L "$file" ] || [ ! -f "$file" ]; then
               continue
             fi
             if ! grep -Iq . "$file"; then
@@ -202,7 +209,7 @@ jobs:
             else
               total_bytes=$((total_bytes + file_bytes))
             fi
-          done < <(git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA")
+          done < <(git diff --name-only -z --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA")
 
           if [ "$total_bytes" -gt "$max_total_bytes" ]; then
             echo "Changed-file context exceeded budget: $total_bytes > $max_total_bytes" >&2
@@ -343,7 +350,7 @@ jobs:
             - Use "actions" only when the author must fix, clarify, or verify something. Do not repeat the finding.
             - Set "major_upgrade_brief" to null unless the Dependabot major-upgrade evidence section is present. When present, populate every field. `upgrade_story` must distinguish what the evidence proves about the update trigger from what it does not, lead with the causal compatibility break rather than a feature inventory, and include only material evidenced gains. `repository_impact` must cite exact repository paths from supplied evidence and must not claim that unchanged files were searched beyond the bounded usage evidence. `recommendation` must be plain and unambiguous. `sources` must contain primary upstream URLs, not search-result pages. Do not include confidence scores, generic test summaries, empty headings, routine package metadata, or boilerplate.
             - For a major-upgrade-only review, do not repeat the brief in `evidence` or `actions`; leave those arrays empty unless they describe a separate implementation finding outside the upgrade brief.
-            - The diff collection step fails before review when the complete diff exceeds its review budget; never claim to have reviewed omitted diff content.
+            - The diff collection step fails before review when the source diff exceeds its review budget; never claim to have reviewed omitted generated lockfile payloads. Independent dependency/security gates remain authoritative for those files.
             - Put the complete verdict wording in "summary". Do not generate Markdown headings, bullet prefixes, or automation notes; the shared publisher owns section layout.
             - Inline comments should state the problem, its impact, and the required action in as few sentences as practical. Do not repeat the review summary or use emojis, catchphrases, or persona jokes.
 
@@ -375,7 +382,7 @@ jobs:
               "summary": "**Review incomplete; check failed.** The full diff extends beyond my review horizon, and a partial reading cannot guide a safe verdict. The path remains closed until every changed line is brought into view.",
               "unchanged": false,
               "findings": [],
-              "evidence": ["The complete diff is ${{ steps.pr-diff.outputs.diff_bytes }} bytes; my review budget is ${{ steps.pr-diff.outputs.max_bytes }} bytes."],
+              "evidence": ["The reviewable source diff is ${{ steps.pr-diff.outputs.diff_bytes }} bytes; my review budget is ${{ steps.pr-diff.outputs.max_bytes }} bytes."],
               "actions": ["Split the change into smaller pull requests or intentionally raise my reviewed diff budget, then call for my review again."],
               "comments": []
             }

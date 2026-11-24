@@ -18,9 +18,9 @@ triggers, repository-specific gates and token permissions; the
 
 All three reviewers (Obi-Wan Code-nobi, Lint Eastwood and RoboCop) inherit a
 2 MB (2,000,000-byte) source-diff limit from [`get-pr-diff`](get-pr-diff/action.yml)
-in all four repositories. No reviewer workflow overrides that limit. Existing
-repository-specific generated-lockfile exclusions and independent scanner gates
-still apply. A source diff at the limit is reviewed in full; a larger source diff
+in all four repositories. The three applications omit only the regular
+`frontend/package-lock.json` covered by the npm malware gate. Infrastructure
+includes every lockfile. A source diff at the limit is reviewed in full; a larger source diff
 withholds the model call, publishes an incomplete-review notice and fails the
 reviewer's check. Truncated content cannot produce an approval.
 
@@ -33,7 +33,8 @@ independent gate.
 ## 🐍 Python toolchain bootstrap
 
 [`setup-uv`](setup-uv/action.yml) installs uv 0.13.8 for the current Ubuntu
-Linux X64 CI runners. Its reviewed manylinux x86_64 wheel SHA-256 is embedded in
+Linux X64 CI runners. Its `project-directory` defaults to `backend` in the
+applications and the repository root in Infrastructure. Its reviewed manylinux x86_64 wheel SHA-256 is embedded in
 the action, independently of the downloaded artifact; pip requires that hash,
 permits only wheels, installs no dependencies and ignores cached/preinstalled uv.
 Unsupported runner targets fail before installation. Existing local Windows/macOS

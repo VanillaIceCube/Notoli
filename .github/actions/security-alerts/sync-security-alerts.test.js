@@ -371,6 +371,11 @@ test("synchronization preserves canonical project fields and completes supersede
   assert.deepEqual(result, { created: 0, updated: 1, closed: 1 });
   assert.equal(issueUpdates[0].issue_number, 10);
   assert.equal(issueUpdates[0].state, undefined);
+  assert.match(
+    issueUpdates[0].body,
+    /\[dependabot:1\]\(https:\/\/example\.test\/1\)/,
+  );
+  assert.doesNotMatch(issueUpdates[0].body, /\]\(undefined\)/);
   assert.equal(issueUpdates[1].issue_number, 11);
   assert.equal(issueUpdates[1].state, undefined);
   assert.equal(issueUpdates[2].state, "closed");
@@ -435,7 +440,7 @@ test("synchronization sends issue creation, labels, and assignment only through 
   };
   const projectGithub = {
     graphql: async (query, variables) => {
-      if (query.includes('fieldValues(first: 100)')) return { node: { fieldValues: { nodes: ['Status', 'Domain', 'Work type', 'Priority', 'Size', 'Estimate'].map(name => ({ field: { name } })) } } };
+      if (query.includes('fieldValues(first: 100)')) return { node: { fieldValues: { nodes: [] } } };
       projectCalls.push({ query, variables });
       if (query.includes("fields(first: 100)")) {
         return {
@@ -498,12 +503,7 @@ test("synchronization sends issue creation, labels, and assignment only through 
       }
       if (query.includes("addProjectV2ItemById")) {
         throw {
-          errors: [
-            {
-              type: "UNPROCESSABLE",
-              message: "Content already exists in this project",
-            },
-          ],
+          errors: [{ type: "UNPROCESSABLE", message: "Content already exists in the project." }],
         };
       }
       if (query.includes("updateProjectV2ItemFieldValue")) {
@@ -561,6 +561,25 @@ test("source refs remain parseable and lifecycle notes are replaced idempotently
   assert.doesNotMatch(second, /Closed once/);
 });
 
+test("Dependabot alert compaction preserves the source URL used in issue links", () => {
+  const repositoryRoot = path.resolve(__dirname, "../../..");
+  const action = fs.readFileSync(
+    path.join(
+      repositoryRoot,
+      ".github",
+      "actions",
+      "security-alerts",
+      "action.yml",
+    ),
+    "utf8",
+  );
+
+  assert.match(
+    action,
+    /const compactDependabotAlert = \(alert\) => \(\{[\s\S]*?url: alert\.html_url,/,
+  );
+});
+
 test("alert workflows scope RoboCop to alert and issue APIs while reserving the personal token for Projects", () => {
   const repositoryRoot = path.resolve(__dirname, "../../..");
   const workflowNames = [
@@ -576,10 +595,11 @@ test("alert workflows scope RoboCop to alert and issue APIs while reserving the 
     );
     assert.match(
       workflow,
-      /uses: actions\/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3/,
+      /uses: actions\/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3\.3\.0/,
     );
     assert.match(workflow, /permission-issues: write/);
-    assert.match(workflow, /permission-security-events: read/);
+    assert.equal(workflow.includes("permission-security-events: read"), workflowName === "alert-codeql.yml");
+    assert.doesNotMatch(workflow, /permission-contents:/);
     assert.match(
       workflow,
       /robocop-token: \$\{\{ steps\.robocop-token\.outputs\.token \}\}/,
@@ -845,7 +865,7 @@ function recoveryFixture() {
   const items = new Map();
   const fields = [
     ["Status", ["Backlog", "In Progress", "Done"]], ["Domain", ["CI/CD"]], ["Work type", ["Security"]],
-    ["Priority", ["P0", "P1", "P2"]], ["Size", ["M"]], ["Estimate", null], ["End date", null],
+    ["Priority", ["P0", "P1", "P2", "P3"]], ["Size", ["M"]], ["Estimate", null], ["End date", null],
   ].map(([name, options]) => ({ name, id: name, dataType: options ? "SINGLE_SELECT" : name === "Estimate" ? "NUMBER" : "DATE", options: options?.map(name => ({ name, id: name })) }));
   const h = { issues, items, creates: 0, adds: 0, waits: 0, fault: null, fieldFault: false, accepted: false };
   const issueGithub = {
@@ -859,7 +879,13 @@ function recoveryFixture() {
   };
   const projectGithub = { graphql: async (query, vars) => {
     if (query.includes("fields(first: 100)")) return { node: { fields: { nodes: fields } } };
-    if (query.includes("fieldValues(first: 100)")) return { node: { fieldValues: { nodes: [...items.get(vars.item).values.keys()].map(name => ({ field: { name } })) } } };
+    if (query.includes("fieldValues(first: 100)")) {
+      assert.match(query, /ProjectV2ItemFieldSingleSelectValue\s*\{\s*name\b/);
+      const nodes = [...items.get(vars.item).values].map(([name, value]) => ({
+        field: { name }, name: value.singleSelectOptionId,
+      }));
+      return { node: { fieldValues: { nodes } } };
+    }
     if (query.includes("items(first: 100")) return { node: { items: { nodes: [...items].map(([id, item]) => ({ id, content: { id: item.content } })), pageInfo: {} } } };
     if (query.includes("addProjectV2ItemById")) {
       h.adds++;
@@ -879,6 +905,47 @@ function recoveryFixture() {
   h.run = () => synchronizeSecurityAlerts({ issueGithub, projectGithub, core: { info() {} }, context: { repo: { owner: "owner", repo: "repo" } }, projectId: "P", source: h.source, groups: h.groups, sleep: async () => { h.waits++; } });
   return h;
 }
+
+test("urgent alerts joining a group raise priority without resetting planning or lowering a higher priority", async () => {
+  const h = recoveryFixture();
+  await h.run();
+  const fields = h.items.get("I0").values;
+  const priority = () => fields.get("Priority").singleSelectOptionId;
+  assert.equal(priority(), "P2");
+  fields.set("Status", { singleSelectOptionId: "In Progress" });
+  fields.set("Estimate", { number: 8 });
+
+  const joined = { ...h.source.alerts[0], ref: "dependabot:3", url: "https://example.test/3", severity: "high" };
+  h.source.alerts.push(joined);
+  h.groups = [group(h.source.alerts.map(alert => alert.ref))];
+  await h.run();
+  assert.equal(priority(), "P1");
+  assert.deepEqual(alertRefsFromBody(h.issues[0].body), h.groups[0].alert_refs);
+
+  joined.severity = "critical";
+  await h.run();
+  assert.equal(priority(), "P0");
+  for (const severity of ["high", "medium"]) {
+    joined.severity = severity;
+    await h.run();
+    assert.equal(priority(), "P0");
+  }
+  assert.equal(h.creates, 1);
+  assert.equal(h.items.size, 1);
+  assert.deepEqual(fields.get("Status"), { singleSelectOptionId: "In Progress" });
+  assert.deepEqual(fields.get("Estimate"), { number: 8 });
+});
+
+test("initial Project priorities use the most urgent source in each group", async () => {
+  for (const [severity, expected] of [
+    ["critical", "P0"], ["high", "P1"], ["unknown", "P1"], ["medium", "P2"], ["low", "P2"],
+  ]) {
+    const h = recoveryFixture();
+    h.source.alerts[0].severity = severity;
+    await h.run();
+    assert.equal(h.items.get("I0").values.get("Priority").singleSelectOptionId, expected, severity);
+  }
+});
 
 test("transient Project writes recover boundedly, including a committed write with lost response", async () => {
   for (const accepted of [false, true]) {

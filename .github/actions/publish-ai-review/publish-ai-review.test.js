@@ -638,13 +638,13 @@ test("reviewer identities explain truncated reviews before their checks fail", (
   const actionPath = path.resolve(__dirname, "../get-pr-diff/action.yml");
   const action = fs.readFileSync(actionPath, "utf8");
   assert.match(action, /default: "2000000"/);
-  assert.match(action, /:\(exclude\)\*\*\/package-lock\.json/);
-  assert.match(action, /:\(exclude\)\*\*\/pnpm-lock\.yaml/);
+  assert.match(action, /:\(exclude,top\)frontend\/package-lock\.json/);
   assert.match(action, /echo "max_bytes=\$MAX_BYTES"/);
   assert.match(action, /echo "truncated=\$TRUNCATED"/);
   assert.doesNotMatch(action, /exit 1/);
 
   const workflowRoot = path.resolve(__dirname, "../../workflows");
+  const hasNpmMalwareGate = fs.existsSync(path.resolve(__dirname, "../review-npm-malware/action.yml"));
   for (const workflowName of [
     "review-code.yml",
     "review-build.yml",
@@ -655,6 +655,7 @@ test("reviewer identities explain truncated reviews before their checks fail", (
       "utf8",
     );
     assert.doesNotMatch(workflow, /^\s+max_bytes:/m);
+    assert.equal(/^\s+omit_frontend_npm_lockfile: "true"/m.test(workflow), hasNpmMalwareGate);
     assert.match(workflow, /steps\.pr-diff\.outputs\.max_bytes/);
     const publishIndex = workflow.indexOf("Publish incomplete");
     const failIndex = workflow.indexOf("Fail incomplete");

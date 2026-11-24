@@ -51,7 +51,7 @@ jobs:
             core.setOutput('eligible', trusted(pr, `${context.repo.owner}/${context.repo.repo}`));
             require('node:fs').writeFileSync(`${process.env.RUNNER_TEMP}/dependabot-pr-event.json`, JSON.stringify({ pull_request: pr }));
 
-      - name: Synchronize locked repository tooling
+      - name: Set up locked Python tooling
         if: steps.pr.outputs.eligible == 'true'
         uses: ./.github/actions/setup-uv
         with:

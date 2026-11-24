@@ -5,7 +5,7 @@ inputs:
     description: Alert feed to aggregate.
     required: true
   robocop-token:
-    description: RoboCop installation token with security-events read and issues write access.
+    description: RoboCop installation token with issue write access and read access to the selected alert feed.
     required: true
   project-token:
     description: Token used only for GitHub Project v2 reads and writes.
@@ -50,7 +50,7 @@ runs:
       run: |
         if [ -z "$ROBOCOP_TOKEN" ]; then
           echo "RoboCop did not produce an installation token." >&2
-          echo "Verify ROBOCOP_APP_ID, ROBOCOP_PRIVATE_KEY, the app installation, and its Issues/Security events permissions." >&2
+          echo "Verify ROBOCOP_APP_ID, ROBOCOP_PRIVATE_KEY, the app installation, and its Issues and feed-specific alert permissions." >&2
           exit 1
         fi
         if [ -z "$PROJECT_TOKEN" ]; then
@@ -90,9 +90,37 @@ runs:
         }
         NODE
 
+    - name: Validate Project access and schema before issue changes
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+      with:
+        github-token: ${{ inputs.project-token }}
+        script: |
+          const result = await github.graphql(`query($id: ID!) {
+            node(id: $id) { ... on ProjectV2 {
+              title fields(first: 100) { nodes {
+                ... on ProjectV2Field { name dataType }
+                ... on ProjectV2SingleSelectField { name dataType options { name } }
+              } }
+            } }
+          }`, { id: process.env.PROJECT_ID });
+          if (!result.node?.fields?.nodes) throw new Error('Project credential cannot read the configured Project.');
+          const fields = new Map(result.node.fields.nodes.map(field => [field.name, field]));
+          for (const [name, options] of Object.entries({
+            Status: ['Backlog', 'Done'], Domain: ['CI/CD'], 'Work type': ['Security'],
+            Priority: ['P0', 'P1', 'P2'], Size: ['M'],
+          })) {
+            const field = fields.get(name);
+            if (field?.dataType !== 'SINGLE_SELECT' || options.some(option => !field.options.some(value => value.name === option))) {
+              throw new Error(`Project field/options unavailable: ${name}`);
+            }
+          }
+          if (fields.get('Estimate')?.dataType !== 'NUMBER') throw new Error('Project numeric Estimate field unavailable.');
+          if (fields.get('End date')?.dataType !== 'DATE') throw new Error('Project End date field unavailable.');
+          core.info(`Validated Project access and schema: ${result.node.title}`);
+
     - name: Fetch open structured alerts
       id: alerts
-      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       with:
         github-token: ${{ inputs.robocop-token }}
         script: |
@@ -132,8 +160,7 @@ runs:
             });
             const dependabotAlerts = results.map(compactDependabotAlert);
             if (feed === 'vulnerability') {
-              // High and critical findings are handled by immediate remediation/incident work.
-              alerts = dependabotAlerts.filter((alert) => ['low', 'medium', 'unknown'].includes(alert.severity));
+              alerts = dependabotAlerts;
             } else if (feed === 'malware') {
               const malwareGhsas = new Set();
               for (const ghsa of new Set(dependabotAlerts.map(alert => alert.ghsa))) {
@@ -182,7 +209,7 @@ runs:
 
     - name: Validate LLM output
       if: steps.alerts.outputs.has_alerts == 'true'
-      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       env:
         ALERT_PATH: ${{ runner.temp }}/security-alerts.json
         GROUP_PATH: ${{ runner.temp }}/security-alert-groups.json
@@ -201,7 +228,7 @@ runs:
 
     - name: Prepare empty alert groups
       if: steps.alerts.outputs.has_alerts != 'true'
-      uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       env:
         ALERT_PATH: ${{ runner.temp }}/security-alerts.json
         GROUP_PATH: ${{ runner.temp }}/security-alert-groups.json
@@ -216,7 +243,7 @@ runs:
           );
 
     - name: Reconcile grouped issues
-      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       env:
         ALERT_PATH: ${{ runner.temp }}/security-alerts.json
         GROUP_PATH: ${{ runner.temp }}/security-alert-groups.json
