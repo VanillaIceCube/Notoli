@@ -78,7 +78,7 @@ What it does:
   - Uses GitHub Dependency Review and fails when a PR introduces a high or critical vulnerability.
   - Emits a bounded vulnerability report output for RoboCop instead of posting a standalone PR comment. The scanner publishes its native summary and job logs. The report includes change counts, vulnerable entries up to 16 KiB, and an explicit omitted-entry count. Every non-success Dependency Review outcome fails the gate, independently of report size.
 - Runs the reusable malware gate: [`.github/workflows/gate-malware.yml`](gate-malware.yml)
-  - The [malware action](../actions/review-npm-malware/action.yml) checks both application lockfiles against GitHub malware advisories and OpenSSF reports via OSV.
+  - The [malware scanner](../actions/review-npm-malware/review.cjs) checks both application lockfiles against GitHub malware advisories and OpenSSF reports via OSV.
   - Emits a malware report output for RoboCop and fails when a changed package/version matches a known malware advisory.
 - For trusted same-repository PRs, including Dependabot, runs [`.github/workflows/review-code.yml`](review-code.yml)
   - Runs Obi-Wan Code-nobi, the AI Code Reviewer, for general implementation review

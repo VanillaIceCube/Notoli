@@ -12,7 +12,7 @@ triggers, repository-specific gates and token permissions; the
 | [collect-prior-ai-reviews](collect-prior-ai-reviews/action.yml) | Attributed, bounded prior discussion and review evidence. |
 | [openai-chat](openai-chat/action.yml) | Validated request policy, configuration and aggregate usage. |
 | [publish-ai-review](publish-ai-review/action.yml) | Current-head native review publication and conservative own-feedback reconciliation. |
-| [review-npm-malware](review-npm-malware/action.yml) | Known-malware review for changed public npm and PyPI versions using GitHub and OpenSSF advisories. |
+| [Malware scanner](review-npm-malware/review.cjs) | Known-malware review for changed public npm and PyPI versions using GitHub and OpenSSF advisories. |
 | [security-alerts](security-alerts/action.yml) | Validated alert classification, issue lifecycle and separate Project synchronization. |
 
 ## 📏 Complete source-diff review limit
