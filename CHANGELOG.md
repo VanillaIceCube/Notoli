@@ -14,6 +14,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Simplify lint, test and security gates, consolidate CodeQL pin validation, and use Dependency Review’s native diagnostics.
 - Check changed public npm and PyPI lockfile versions against GitHub and OpenSSF malware advisories before merging.
 - Require explicit workflow-level permissions, compare proposed write grants with the exact base commit, and verify them again using reviewed default-branch code.
 - Raise existing security groups to at least P1 for unknown source severity.

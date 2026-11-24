@@ -3,6 +3,7 @@ import json
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 import yaml
 from yaml.nodes import MappingNode, ScalarNode, SequenceNode
@@ -149,7 +150,58 @@ def compare_commits(base, head):
     return errors
 
 
+def check_codeql_pins():
+    revisions = set()
+    entries = set()
+    count = 0
+
+    def uses(document, seen):
+        if not isinstance(document, (list, dict)) or id(document) in seen:
+            return
+        seen.add(id(document))
+        if isinstance(document, dict):
+            for key, value in document.items():
+                if key == "uses" and isinstance(value, str):
+                    yield value
+                yield from uses(value, seen)
+        else:
+            for value in document:
+                yield from uses(value, seen)
+
+    for source in sorted(Path(".github").rglob("*")):
+        if not source.is_file() or source.suffix.lower() not in {".yml", ".yaml"}:
+            continue
+        try:
+            document = yaml.safe_load(source.read_text(encoding="utf-8"))
+        except yaml.YAMLError as exc:
+            raise ValueError(f"{source}: unable to parse workflow YAML") from exc
+        for reference in uses(document, set()):
+            prefix = "github/codeql-action/"
+            if not reference.lower().startswith(prefix):
+                continue
+            entry, _, revision = reference[len(prefix):].partition("@")
+            if not re.fullmatch(r"[a-f0-9]{40}", revision):
+                raise ValueError(f"{source}: CodeQL {entry} requires an immutable SHA")
+            entries.add(entry)
+            revisions.add(revision)
+            count += 1
+
+    for required in ("init", "analyze"):
+        if required not in entries:
+            raise ValueError(f"Missing CodeQL {required} reference")
+    if len(revisions) != 1:
+        raise ValueError("CodeQL action revisions differ; update all entry points atomically")
+    return count
+
+
 if __name__ == "__main__":
+    if sys.argv[1:] == ["--check-codeql-pins"]:
+        try:
+            count = check_codeql_pins()
+        except ValueError as exc:
+            raise SystemExit(str(exc)) from exc
+        print(f"Verified {count} aligned immutable CodeQL references.")
+        raise SystemExit(0)
     if len(sys.argv) == 4 and sys.argv[1] == "--compare-workflow-grants":
         problems = compare_commits(sys.argv[2], sys.argv[3])
         if problems:

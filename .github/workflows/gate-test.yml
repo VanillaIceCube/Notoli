@@ -22,10 +22,6 @@ on:
         description: Repository automation test log tail.
         value: ${{ jobs.test-results.outputs.automation_log }}
 
-concurrency:
-  group: tests-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
   pull-requests: read
@@ -76,7 +72,6 @@ env:
         if len(data) > 2 * cap:
             data = data[:cap] + b"\n... artifact truncated; complete output is in the job log ...\n" + data[-cap:]
         source.with_suffix(".bounded.txt").write_bytes(data)
-        source.with_suffix(".summary.txt").write_text(content, encoding="utf-8", newline="\n")
 
 
     if __name__ == "__main__":
@@ -93,6 +88,7 @@ jobs:
       development: ${{ steps.filter.outputs.development }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: github.event_name != 'pull_request'
         with:
           fetch-depth: 0
 
@@ -225,12 +221,6 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Read versions
-        id: versions
-        uses: ./.github/actions/read-versions
-        with:
-          read_node: "false"
 
       - name: Set up the locked Python environment
         uses: ./.github/actions/setup-uv

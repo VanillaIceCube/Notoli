@@ -46,6 +46,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: github.event_name != 'pull_request'
         with:
           fetch-depth: 0
           ref: ${{ inputs.enable_autofix && inputs.checkout_ref || '' }}

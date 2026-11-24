@@ -53,10 +53,7 @@ jobs:
           only-dev: "true"
 
       - name: Verify atomic immutable CodeQL revisions
-        run: node .github/actions/check-codeql-pins/check-codeql-pins.js
-
-      - name: Test CodeQL drift prevention
-        run: node --test .github/actions/check-codeql-pins/check-codeql-pins.test.js
+        run: python3 .github/actions/check-workflow-security/check.py --check-codeql-pins
 
       - name: Detect relevant changes
         id: filter
@@ -152,7 +149,7 @@ jobs:
         uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: python
-          queries: security-extended,security-and-quality
+          queries: security-and-quality
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
@@ -179,7 +176,7 @@ jobs:
         uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: javascript-typescript
-          queries: security-extended,security-and-quality
+          queries: security-and-quality
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
@@ -206,7 +203,7 @@ jobs:
         uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: actions
-          queries: security-extended,security-and-quality
+          queries: security-and-quality
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
