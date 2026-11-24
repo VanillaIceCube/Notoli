@@ -9,33 +9,52 @@ MODEL_NAMES = (
 
 
 def move_permissions(apps, database, *, reverse=False):
-    # Django renames the content types alongside RenameModel. Preserve the
-    # existing permission rows (including user/group assignments) as well.
+    content_types = (
+        apps.get_model("contenttypes", "ContentType")
+        .objects.using(database)
+        .filter(app_label="notes")
+    )
     permissions = apps.get_model("auth", "Permission").objects.using(database)
     for old, new, old_label, new_label in MODEL_NAMES:
         source, target, label = (
             (new, old, old_label) if reverse else (old, new, new_label)
         )
-        for action in ("add", "change", "delete", "view"):
-            current = permissions.filter(
-                content_type__app_label="notes",
-                content_type__model=new,
-                codename=f"{action}_{source}",
-            ).first()
-            if current is None:
+        target_type = content_types.filter(model=target).first()
+        if target_type is None:
+            # The content type can still have the old name during rollback or
+            # when running without Django's injected RenameContentType operation.
+            target_type = content_types.filter(model=source).first()
+            if target_type is None:
                 continue
+            target_type.model = target
+            target_type.save(using=database, update_fields=["model"])
+
+        for action in ("add", "change", "delete", "view"):
+            # A preexisting target content type can prevent Django's automatic
+            # rename. The old grants may then be on either content type.
+            original = permissions.filter(
+                content_type__app_label="notes",
+                content_type__model__in=(source, target),
+                codename=f"{action}_{source}",
+            )
             codename = f"{action}_{target}"
             existing = permissions.filter(
-                content_type_id=current.content_type_id, codename=codename
+                content_type=target_type, codename=codename
             ).first()
-            if existing is None:
-                current.codename = codename
-                current.name = f"Can {action} {label}"
-                current.save(using=database, update_fields=["codename", "name"])
-            else:
-                existing.group_set.add(*current.group_set.all())
-                existing.user_set.add(*current.user_set.all())
-                current.delete(using=database)
+            for permission in original:
+                if existing is None:
+                    permission.content_type = target_type
+                    permission.codename = codename
+                    permission.name = f"Can {action} {label}"
+                    permission.save(
+                        using=database,
+                        update_fields=["content_type", "codename", "name"],
+                    )
+                    existing = permission
+                else:
+                    existing.group_set.add(*permission.group_set.all())
+                    existing.user_set.add(*permission.user_set.all())
+                    permission.delete(using=database)
 
 
 def rename_permissions(apps, schema_editor):

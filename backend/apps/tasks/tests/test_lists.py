@@ -1,6 +1,10 @@
 """List lifecycle and board membership boundaries."""
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group, Permission
+from django.contrib.contenttypes.models import ContentType
+from django.core.management import call_command
+from django.test import TransactionTestCase
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -319,3 +323,61 @@ class ListApiTests(ListApiFixtures, APITestCase):
             status.HTTP_404_NOT_FOUND,
             f"Expected no access to another board's list, got {response.status_code}: {response.data}",
         )
+
+
+class TaskPermissionMigrationTests(TransactionTestCase):
+    def test_user_and_group_permissions_survive_upgrade_and_rollback(self):
+        self.addCleanup(call_command, "migrate", interactive=False, verbosity=0)
+        call_command("migrate", "notes", "0011", interactive=False, verbosity=0)
+
+        user_model = get_user_model()
+        (user,) = user_model.objects.bulk_create(
+            [
+                user_model(
+                    username="permission-holder", email="permission-holder@example.test"
+                )
+            ]
+        )
+        legacy_group = Group.objects.create(name="Legacy List Task grants")
+        current_group = Group.objects.create(name="Existing List Task grants")
+        user.user_permissions.add(
+            Permission.objects.get(
+                content_type__app_label="notes", codename="change_note"
+            )
+        )
+        legacy_group.permissions.add(
+            Permission.objects.get(
+                content_type__app_label="notes", codename="view_listnote"
+            )
+        )
+        stale_type = ContentType.objects.create(app_label="notes", model="listtask")
+        existing_permission = Permission.objects.create(
+            content_type=stale_type, codename="view_listtask", name="Can view List Task"
+        )
+        current_group.permissions.add(existing_permission)
+
+        def assert_grants(task, membership):
+            self.assertTrue(
+                user.user_permissions.filter(
+                    content_type__app_label="notes",
+                    content_type__model=task,
+                    codename=f"change_{task}",
+                ).exists()
+            )
+            permission = Permission.objects.get(
+                content_type__app_label="notes",
+                content_type__model=membership,
+                codename=f"view_{membership}",
+            )
+            self.assertCountEqual(
+                permission.group_set.values_list("pk", flat=True),
+                [legacy_group.pk, current_group.pk],
+            )
+
+        with self.assertWarnsRegex(RuntimeWarning, "existing conflicting content type"):
+            call_command("migrate", interactive=False, verbosity=0)
+        assert_grants("task", "listtask")
+
+        with self.assertWarnsRegex(RuntimeWarning, "existing conflicting content type"):
+            call_command("migrate", "notes", "0011", interactive=False, verbosity=0)
+        assert_grants("note", "listnote")
