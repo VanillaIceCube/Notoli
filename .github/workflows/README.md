@@ -683,9 +683,10 @@ flowchart LR
 [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml) and
 [malware](alert-malware.yml) aggregation run daily or by dispatch. Incomplete
 source/model evidence fails before lifecycle writes; verified closure and Project
-recovery preserve their independent credential boundaries. CodeQL analysis also
-runs on scoped PRs, every Monday at 10:24 UTC, and on manual dispatch. Alert maintenance
-neither merges code nor deploys.
+recovery preserve their independent credential boundaries.
+
+The CodeQL Gate analyzes scoped pull requests. It also runs a full scan every
+Monday at 10:24 UTC and on manual dispatch.
 
 Default-branch Code Scanning results can lag merges until the next weekly run.
 For a fresher baseline, dispatch `CodeQL Gate` on `main`. Its scheduled and
