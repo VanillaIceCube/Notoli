@@ -299,9 +299,10 @@ PRs; detector/analyzer failures block merging. Main also requires
 `AI Code Review / Obi-Wan Code-nobi code review`,
 `AI Build Sheriff Review / Lint Eastwood build sheriff review`, and
 `AI Security Review / RoboCop security review`. Preserve the existing 14
-scanner/lint/test requirements and all other ruleset settings; see
-`.github/review-gating-evidence.json`. Run both publisher test files when changing
-the reviewer contract. Keep dependency-usage loop fixes coordinated
+scanner/lint/test requirements and all other ruleset settings. See the
+[workflow guide](.github/workflows/README.md) for rule verification and rollout
+checks. Run both publisher test files when changing the reviewer contract. Keep
+dependency-usage loop fixes coordinated
 with #890 and remaining branch-policy work in #656. Batch 2 controls and Python
 malware coverage remain documented in `.github/README.md` and
 [the Python malware decision](.github/workflows/README.md#python-malware-coverage-limitation).
