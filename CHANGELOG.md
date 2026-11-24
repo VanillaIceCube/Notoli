@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file.
 
 - Require the current auto-merge run's pending Dependabot Policy check before enabling native auto-merge.
 
+### Changed
+
+- Schedule daily security alert processing and Monday CodeQL scans for midnight Pacific.
+
 ## 2026-11-23
 
 ### Fixed

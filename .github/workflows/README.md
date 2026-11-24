@@ -147,7 +147,7 @@ CodeQL details:
 - Pull request CodeQL uses the reusable workflow's change-detection job, following the same skip-by-scope pattern as linting and testing; documentation-only and unrelated pull requests run the detector but skip analysis jobs.
 - For a CodeQL-relevant pull request, Python and JavaScript/TypeScript analysis use language-specific filters, while GitHub Actions analysis runs so the `/language:actions` configuration remains present for code-scanning comparisons.
 - CI ignores pull requests targeting `env-prod`, so CodeQL is not invoked for that deployment branch.
-- Pushes to `main`, weekly scheduled scans, and manual `workflow_dispatch` runs are supported directly by `gate-codeql.yml`.
+- Pushes to `main`, full scans each Monday at midnight Pacific, and manual `workflow_dispatch` runs are supported directly by `gate-codeql.yml`.
 - CodeQL uploads SARIF results to GitHub Code Scanning with scoped permissions: `contents: read`, `pull-requests: read`, `actions: read`, and `security-events: write`.
 - Results appear in PR checks and under GitHub Security -> Code scanning when code scanning is enabled for the repository.
 - CodeQL uses the `security-extended` and `security-and-quality` query suites for Python, JavaScript/TypeScript, and GitHub Actions workflow analysis.
@@ -672,7 +672,7 @@ must merge through review before a consumer requests it.
 
 ```mermaid
 flowchart LR
-  Schedule[Daily schedules or manual dispatch] --> Feeds[CodeQL, vulnerability and malware workflows]
+  Schedule[Midnight Pacific or manual dispatch] --> Feeds[CodeQL, vulnerability and malware workflows]
   Feeds --> Source[Authoritative source alerts and bounded classification]
   Source --> Robo[RoboCop grouping with validated Responses policy]
   Robo --> Validate[Complete source coverage and lifecycle validation]
@@ -681,10 +681,10 @@ flowchart LR
 ```
 
 [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml) and
-[malware](alert-malware.yml) aggregation run daily or by dispatch. Incomplete
+[malware](alert-malware.yml) aggregation run daily at midnight Pacific (`America/Los_Angeles`) or by dispatch. Incomplete
 source/model evidence fails before lifecycle writes; verified closure and Project
 recovery preserve their independent credential boundaries. CodeQL analysis also
-runs on applicable main pushes, scoped PRs and manual dispatch. Alert maintenance
+runs on applicable main pushes, scoped PRs, Mondays at midnight Pacific, and manual dispatch. Alert maintenance
 neither merges code nor deploys.
 
 ### Promotion, release and manual operations
