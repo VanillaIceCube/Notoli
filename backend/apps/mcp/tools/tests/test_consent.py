@@ -112,7 +112,7 @@ class ConsentTests(OAuthClientFixture, TestCase):
         permissions = {
             p["scope"]: p["description"] for p in consent.json()["permissions"]
         }
-        self.assertIn("every list and item", permissions["notoli:share"])
+        self.assertIn("every list and task", permissions["notoli:share"])
         approved = self.client.post(
             "/auth/mcp/authorize/",
             {"ticket": consent.json()["ticket"], "decision": "allow"},

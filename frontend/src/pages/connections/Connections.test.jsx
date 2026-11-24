@@ -8,9 +8,9 @@ import ConnectedApps, { OAuthConsent } from './Connections';
 import Login from '../authentication/Login';
 import * as connections from '../../services/connections/connectionsClient';
 import { login } from '../../services/authentication/authApiClient';
-import { fetchBoards } from '../../services/notepad/notoliApiClient';
+import { fetchBoards } from '../../services/boards/notoliApiClient';
 vi.mock('../../services/connections/connectionsClient');
-vi.mock('../../services/notepad/notoliApiClient', () => ({
+vi.mock('../../services/boards/notoliApiClient', () => ({
   fetchBoards: vi.fn(),
 }));
 vi.mock('../../services/authentication/authApiClient', () => ({
@@ -19,7 +19,7 @@ vi.mock('../../services/authentication/authApiClient', () => ({
 const query =
   '?client_id=notoli-chatgpt&state=a%26b%3D%3F&resource=https%3A%2F%2Fnotoli.example%2Fmcp';
 const readDescription =
-  'Read your accessible Notoli boards, lists, and items, including board owner and collaborator IDs, usernames, and email addresses';
+  'Read your accessible Notoli boards, lists, and tasks, including board owner and collaborator IDs, usernames, and email addresses';
 const consent = {
   application: {
     name: 'Notoli for ChatGPT',
@@ -35,7 +35,7 @@ const consent = {
     },
     {
       scope: 'notoli:write',
-      description: 'Add and update items',
+      description: 'Add and update tasks',
     },
   ],
   ticket: 'SIGNED-CONSENT',
@@ -111,7 +111,7 @@ test('an authenticated user goes directly to consent with application, identity 
   expect(screen.getByText('Notoli for ChatGPT')).toBeInTheDocument();
   expect(screen.getByText('OAuth client ID: notoli-chatgpt')).toBeInTheDocument();
   expect(screen.getByText(readDescription)).toBeInTheDocument();
-  expect(screen.getByText('Add and update items')).toBeInTheDocument();
+  expect(screen.getByText('Add and update tasks')).toBeInTheDocument();
   expect(connections.loadConsent).toHaveBeenCalledWith(query);
   expect(login).not.toHaveBeenCalled();
 });
@@ -120,12 +120,12 @@ test('expanded consent explains sharing, organization, notifications and permane
     {
       scope: 'notoli:share',
       description:
-        'Add and remove collaborators on boards you own, granting access to every list and item in those boards',
+        'Add and remove collaborators on boards you own, granting access to every list and task in those boards',
     },
     {
       scope: 'notoli:organize',
       description:
-        'Create and edit boards and lists, reorder lists and items, and change which lists contain items',
+        'Create and edit boards and lists, reorder lists and tasks, and change which lists contain tasks',
     },
     {
       scope: 'notoli:notifications',
@@ -134,7 +134,7 @@ test('expanded consent explains sharing, organization, notifications and permane
     {
       scope: 'notoli:delete',
       description:
-        'Permanently delete accessible items and lists, boards you own with all their contents, and your notifications',
+        'Permanently delete accessible tasks and lists, boards you own with all their contents, and your notifications',
     },
   ];
   connections.loadConsent.mockResolvedValue({

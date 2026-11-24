@@ -17,8 +17,8 @@ from asgiref.sync import async_to_sync
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from apps.notes.models import Board
 from apps.notifications.models import Notification
+from apps.tasks.models import Board
 
 from .. import operations, results, server
 from .helpers import execute_action as execute

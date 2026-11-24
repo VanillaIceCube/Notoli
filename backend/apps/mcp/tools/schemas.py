@@ -23,11 +23,11 @@ class ListSummary(BoardSummary):
     board_id: int
 
 
-class Item(ResultMetadata):
+class Task(ResultMetadata):
     id: int
     list_id: int | None
     board_id: int
-    note: str
+    text: str
     description: str
     status: Literal["Not Started", "In Progress", "Complete"]
     updated_at: str
@@ -44,8 +44,8 @@ class ListPage(ResultMetadata):
     next_offset: int | None
 
 
-class ItemPage(ResultMetadata):
-    results: list[Item]
+class TaskPage(ResultMetadata):
+    results: list[Task]
     next_offset: int | None
 
 
@@ -98,7 +98,7 @@ class NotificationSummary(ResultMetadata):
     board_id: int | None
     board_name: str
     list_id: int | None
-    item_id: int | None
+    task_id: int | None
     target_path: str
 
 

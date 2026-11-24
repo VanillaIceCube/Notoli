@@ -64,7 +64,7 @@ INSTALLED_APPS = [
     "anymail",
     # My apps
     "apps.authentication",
-    "apps.notes",
+    "apps.tasks",
     "apps.notifications",
     "apps.mcp.tools",
     "apps.mcp.framework",
@@ -152,12 +152,12 @@ MCP_ACTION_APPROVAL_HANDLER = "apps.mcp.tools.services.action_approval"
 OAUTH2_PROVIDER = oauth_settings(
     base_url=MCP_BASE_URL,
     scopes={
-        "notoli:read": "Read your accessible Notoli boards, lists, and items, including board owner and collaborator IDs, usernames, and email addresses",
-        "notoli:write": "Add and update items in your accessible Notoli boards and lists",
-        "notoli:share": "Add collaborators directly to boards you own, granting access to every list and item; removing a collaborator requires your separate approval in Notoli",
-        "notoli:organize": "Create and edit boards and lists, reorder lists and items, and add list memberships directly; removing any existing list membership requires your separate approval in Notoli",
+        "notoli:read": "Read your accessible Notoli boards, lists, and tasks, including board owner and collaborator IDs, usernames, and email addresses",
+        "notoli:write": "Add and update tasks in your accessible Notoli boards and lists",
+        "notoli:share": "Add collaborators directly to boards you own, granting access to every list and task; removing a collaborator requires your separate approval in Notoli",
+        "notoli:organize": "Create and edit boards and lists, reorder lists and tasks, and add list memberships directly; removing any existing list membership requires your separate approval in Notoli",
         "notoli:notifications": "Read your activity notifications and mark them read or unread",
-        "notoli:delete": "Prepare permanent deletion of accessible items and lists, owned boards with their contents, and your notifications; each deletion requires your separate approval in Notoli",
+        "notoli:delete": "Prepare permanent deletion of accessible tasks and lists, owned boards with their contents, and your notifications; each deletion requires your separate approval in Notoli",
     },
     required_scopes=MCP_REQUIRED_SCOPES,
 )

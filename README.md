@@ -4,7 +4,7 @@
 
 Notoli is my personalized take on a list application, inspired by the
 flexibility of Notion databases. It is designed so my wife, Diana, and I can
-each use our lists in the way that works best for us, from a simple notes
+each use our lists in the way that works best for us, from a simple task
 interface to a more structured view.
 
 <details>
@@ -26,11 +26,11 @@ Anyways, it's deployed and works! And Diana and I use it today! Check it out!
 
 ## ✨ Features
 
-- Boards, lists, notes, and checklist items.
+- Boards, lists, and tasks with completion tracking.
 - Flexible organization and drag-and-drop ordering.
 - Board sharing, collaboration, and in-app notifications.
 - Email-first accounts, protected pages, and password recovery.
-- A ChatGPT integration for working with boards, lists, and notes.
+- A ChatGPT integration for working with boards, lists, and tasks.
 
 ## 🚀 Tech stack
 

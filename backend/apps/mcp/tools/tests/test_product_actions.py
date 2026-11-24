@@ -1,4 +1,4 @@
-"""Board, list, item and notification tool actions preserve domain rules."""
+"""Board, list, task and notification tool actions preserve domain rules."""
 
 # ruff: noqa: E402 -- skip before importing optional OAuth ORM models.
 from unittest import SkipTest
@@ -21,9 +21,9 @@ from oauth2_provider.models import AccessToken, Application
 from rest_framework_simplejwt.tokens import AccessToken as JWTToken
 
 from apps.mcp.framework.errors import ConnectionPermissionDenied
-from apps.notes.models import Board, ListNote, Note
-from apps.notes.models import List as NoteList
 from apps.notifications.models import Notification
+from apps.tasks.models import Board, ListTask, Task
+from apps.tasks.models import List as TaskList
 
 from .. import operations, queries, services
 from ..models import Confirmation, Execution
@@ -65,25 +65,25 @@ class ProductToolTests(TestCase):
             name="Work", owner=self.owner, created_by=self.owner
         )
         self.board.collaborators.add(self.member)
-        self.first = NoteList.objects.create(
+        self.first = TaskList.objects.create(
             name="First", board=self.board, created_by=self.owner
         )
-        self.second = NoteList.objects.create(
+        self.second = TaskList.objects.create(
             name="Second", board=self.board, created_by=self.owner, position=1
         )
-        self.items = [
-            Note.objects.create(
-                board=self.board, created_by=self.owner, note=f"Task {i}"
+        self.tasks = [
+            Task.objects.create(
+                board=self.board, created_by=self.owner, text=f"Task {i}"
             )
             for i in range(3)
         ]
-        self.first.notes.add(*self.items[:2])
-        self.second.notes.add(self.items[0])
+        self.first.tasks.add(*self.tasks[:2])
+        self.second.tasks.add(self.tasks[0])
         self.foreign_board = Board.objects.create(
             name="Private", owner=self.outsider, created_by=self.outsider
         )
-        self.foreign_item = Note.objects.create(
-            board=self.foreign_board, created_by=self.outsider, note="Secret"
+        self.foreign_task = Task.objects.create(
+            board=self.foreign_board, created_by=self.outsider, text="Secret"
         )
 
     def call(self, operation, token="owner", **arguments):
@@ -95,7 +95,7 @@ class ProductToolTests(TestCase):
             actor=self.owner,
             board=self.board,
             board_name=self.board.name,
-            event_type=Notification.EVENT_NOTE_UPDATED,
+            event_type=Notification.EVENT_TASK_UPDATED,
             title="Activity",
             message="Task updated",
         )
@@ -123,7 +123,7 @@ class ProductToolTests(TestCase):
             name="Third",
             description="Next",
         )
-        self.assertEqual(NoteList.objects.get(pk=new_list["id"]).position, 2)
+        self.assertEqual(TaskList.objects.get(pk=new_list["id"]).position, 2)
         self.assertEqual(
             self.call("get_list", list_id=new_list["id"]),
             {key: new_list[key] for key in ("id", "name", "description", "board_id")},
@@ -164,15 +164,15 @@ class ProductToolTests(TestCase):
                     "ordered_ids": [self.second.pk, self.first.pk],
                 },
             ),
-            ("list_board_items", {"board_id": self.board.pk, "limit": 50, "offset": 0}),
+            ("list_board_tasks", {"board_id": self.board.pk, "limit": 50, "offset": 0}),
             (
-                "delete_item",
+                "delete_task",
                 {
                     "board_id": self.board.pk,
-                    "item_id": self.items[0].pk,
+                    "task_id": self.tasks[0].pk,
                 },
             ),
-            ("attach_item", {"list_id": self.first.pk, "item_id": self.items[2].pk}),
+            ("attach_task", {"list_id": self.first.pk, "task_id": self.tasks[2].pk}),
         ):
             with self.assertRaises(PermissionDenied):
                 self.call(operation, token="outsider", **args)
@@ -180,35 +180,35 @@ class ProductToolTests(TestCase):
         self.assertEqual(self.board.name, "Work")
         self.assertFalse(Notification.objects.exists())
 
-    def test_board_wide_items_include_orphans_and_use_existing_update_service(self):
+    def test_board_wide_tasks_include_orphans_and_use_existing_update_service(self):
         result = self.call(
-            "list_board_items", board_id=self.board.pk, limit=2, offset=0
+            "list_board_tasks", board_id=self.board.pk, limit=2, offset=0
         )
         self.assertEqual(result["next_offset"], 2)
         orphan = self.call(
-            "list_board_items", board_id=self.board.pk, limit=2, offset=2
+            "list_board_tasks", board_id=self.board.pk, limit=2, offset=2
         )["results"][0]
-        self.assertEqual(orphan["id"], self.items[2].pk)
+        self.assertEqual(orphan["id"], self.tasks[2].pk)
         self.assertIsNone(orphan["list_id"])
         self.assertNotIn("/list/None", orphan["url"])
         created = self.call(
-            "add_board_item",
+            "add_board_task",
             token="member",
             board_id=self.board.pk,
-            note="Orphan",
+            text="Orphan",
             description="Details",
         )
-        self.assertFalse(ListNote.objects.filter(note_id=created["id"]).exists())
+        self.assertFalse(ListTask.objects.filter(task_id=created["id"]).exists())
         changed = self.call(
-            "update_board_item",
+            "update_board_task",
             token="member",
             board_id=self.board.pk,
-            item_id=created["id"],
+            task_id=created["id"],
             status="Complete",
         )
         self.assertEqual(changed["status"], "Complete")
         self.assertEqual(
-            self.call("get_item", board_id=self.board.pk, item_id=created["id"]),
+            self.call("get_task", board_id=self.board.pk, task_id=created["id"]),
             {
                 key: value
                 for key, value in changed.items()
@@ -217,16 +217,16 @@ class ProductToolTests(TestCase):
         )
         self.assertTrue(
             Notification.objects.filter(
-                recipient=self.owner, event_type=Notification.EVENT_NOTE_COMPLETED
+                recipient=self.owner, event_type=Notification.EVENT_TASK_COMPLETED
             ).exists()
         )
         with self.assertRaises(PermissionDenied):
-            self.call("get_item", board_id=self.board.pk, item_id=self.foreign_item.pk)
+            self.call("get_task", board_id=self.board.pk, task_id=self.foreign_task.pk)
         with self.assertRaises(ValueError):
             self.call(
-                "update_board_item",
+                "update_board_task",
                 board_id=self.board.pk,
-                item_id=self.items[0].pk,
+                task_id=self.tasks[0].pk,
                 status="Invalid",
             )
 
@@ -242,20 +242,20 @@ class ProductToolTests(TestCase):
             [self.second.pk, self.first.pk],
         )
         self.call(
-            "reorder_items",
+            "reorder_tasks",
             list_id=self.first.pk,
-            ordered_ids=[self.items[1].pk, self.items[0].pk],
+            ordered_ids=[self.tasks[1].pk, self.tasks[0].pk],
         )
         self.assertEqual(
             list(
-                ListNote.objects.filter(list=self.first).values_list(
-                    "note_id", flat=True
+                ListTask.objects.filter(list=self.first).values_list(
+                    "task_id", flat=True
                 )
             ),
-            [self.items[1].pk, self.items[0].pk],
+            [self.tasks[1].pk, self.tasks[0].pk],
         )
         self.assertEqual(
-            list(self.second.notes.values_list("pk", flat=True)), [self.items[0].pk]
+            list(self.second.tasks.values_list("pk", flat=True)), [self.tasks[0].pk]
         )
         for operation, args in (
             (
@@ -270,86 +270,86 @@ class ProductToolTests(TestCase):
                 },
             ),
             (
-                "reorder_items",
-                {"list_id": self.first.pk, "ordered_ids": [self.items[0].pk]},
+                "reorder_tasks",
+                {"list_id": self.first.pk, "ordered_ids": [self.tasks[0].pk]},
             ),
             (
-                "reorder_items",
+                "reorder_tasks",
                 {
                     "list_id": self.first.pk,
-                    "ordered_ids": [self.items[0].pk, self.foreign_item.pk],
+                    "ordered_ids": [self.tasks[0].pk, self.foreign_task.pk],
                 },
             ),
         ):
             with self.assertRaises(ValueError):
                 self.call(operation, **args)
 
-    def test_membership_replacement_keeps_items_and_rejects_cross_board_ids(self):
+    def test_membership_replacement_keeps_tasks_and_rejects_cross_board_ids(self):
         self.call(
-            "attach_item",
+            "attach_task",
             token="member",
             list_id=self.first.pk,
-            item_id=self.items[2].pk,
+            task_id=self.tasks[2].pk,
         )
-        self.assertTrue(self.first.notes.filter(pk=self.items[2].pk).exists())
+        self.assertTrue(self.first.tasks.filter(pk=self.tasks[2].pk).exists())
         self.call(
-            "set_list_items",
+            "set_list_tasks",
             list_id=self.first.pk,
-            item_ids=[self.items[2].pk, self.items[0].pk],
+            task_ids=[self.tasks[2].pk, self.tasks[0].pk],
         )
         self.assertEqual(
             list(
-                ListNote.objects.filter(list=self.first).values_list(
-                    "note_id", flat=True
+                ListTask.objects.filter(list=self.first).values_list(
+                    "task_id", flat=True
                 )
             ),
-            [self.items[2].pk, self.items[0].pk],
+            [self.tasks[2].pk, self.tasks[0].pk],
         )
-        self.assertTrue(Note.objects.filter(pk=self.items[1].pk).exists())
-        self.assertTrue(self.second.notes.filter(pk=self.items[0].pk).exists())
+        self.assertTrue(Task.objects.filter(pk=self.tasks[1].pk).exists())
+        self.assertTrue(self.second.tasks.filter(pk=self.tasks[0].pk).exists())
         for operation, args in (
             (
-                "attach_item",
-                {"list_id": self.first.pk, "item_id": self.foreign_item.pk},
+                "attach_task",
+                {"list_id": self.first.pk, "task_id": self.foreign_task.pk},
             ),
             (
-                "set_list_items",
-                {"list_id": self.first.pk, "item_ids": [self.foreign_item.pk]},
+                "set_list_tasks",
+                {"list_id": self.first.pk, "task_ids": [self.foreign_task.pk]},
             ),
         ):
             with self.assertRaises(PermissionDenied):
                 self.call(operation, **args)
         with self.assertRaises(ValueError):
             self.call(
-                "set_list_items", list_id=self.first.pk, item_ids=[self.items[0].pk] * 2
+                "set_list_tasks", list_id=self.first.pk, task_ids=[self.tasks[0].pk] * 2
             )
-        self.call("set_list_items", list_id=self.first.pk, item_ids=[])
-        self.assertFalse(self.first.notes.exists())
-        self.assertEqual(Note.objects.filter(board=self.board).count(), 3)
+        self.call("set_list_tasks", list_id=self.first.pk, task_ids=[])
+        self.assertFalse(self.first.tasks.exists())
+        self.assertEqual(Task.objects.filter(board=self.board).count(), 3)
 
     def test_deletion_confirmation_and_distinct_cascade_effects(self):
         for operation, args in (
             ("delete_board", {"board_id": self.board.pk}),
             ("delete_list", {"list_id": self.first.pk}),
-            ("delete_item", {"board_id": self.board.pk, "item_id": self.items[0].pk}),
+            ("delete_task", {"board_id": self.board.pk, "task_id": self.tasks[0].pk}),
         ):
             for confirmation in (None, False, True, "true", 1):
                 with self.assertRaises(ValueError):
                     self.call(operation, confirm=confirmation, **args)
         self.call("delete_list", token="member", list_id=self.first.pk)
-        self.assertEqual(Note.objects.filter(board=self.board).count(), 3)
+        self.assertEqual(Task.objects.filter(board=self.board).count(), 3)
         self.call(
-            "delete_item",
+            "delete_task",
             token="member",
             board_id=self.board.pk,
-            item_id=self.items[0].pk,
+            task_id=self.tasks[0].pk,
         )
-        self.assertFalse(self.second.notes.exists())
-        self.assertFalse(Note.objects.filter(pk=self.items[0].pk).exists())
+        self.assertFalse(self.second.tasks.exists())
+        self.assertFalse(Task.objects.filter(pk=self.tasks[0].pk).exists())
         self.call("delete_board", board_id=self.board.pk)
         self.assertFalse(Board.objects.filter(pk=self.board.pk).exists())
-        self.assertFalse(NoteList.objects.filter(pk=self.second.pk).exists())
-        self.assertFalse(Note.objects.filter(pk=self.items[2].pk).exists())
+        self.assertFalse(TaskList.objects.filter(pk=self.second.pk).exists())
+        self.assertFalse(Task.objects.filter(pk=self.tasks[2].pk).exists())
         self.assertTrue(
             Notification.objects.filter(
                 recipient=self.member,
@@ -402,12 +402,12 @@ class ProductToolTests(TestCase):
         for operation, args in (
             ("create_board", {"name": "New", "description": ""}),
             ("update_list", {"list_id": self.first.pk, "name": "No"}),
-            ("attach_item", {"list_id": self.first.pk, "item_id": self.items[2].pk}),
+            ("attach_task", {"list_id": self.first.pk, "task_id": self.tasks[2].pk}),
             (
-                "reorder_items",
+                "reorder_tasks",
                 {
                     "list_id": self.first.pk,
-                    "ordered_ids": [n.pk for n in self.items[:2]],
+                    "ordered_ids": [n.pk for n in self.tasks[:2]],
                 },
             ),
             ("list_notifications", {"limit": 50, "offset": 0}),
@@ -416,10 +416,10 @@ class ProductToolTests(TestCase):
                 {"notification_id": notification.pk, "is_read": True},
             ),
             (
-                "delete_item",
+                "delete_task",
                 {
                     "board_id": self.board.pk,
-                    "item_id": self.items[0].pk,
+                    "task_id": self.tasks[0].pk,
                 },
             ),
             ("clear_notifications", {}),
@@ -440,30 +440,30 @@ class ProductToolTests(TestCase):
     def test_removed_creator_loses_access_to_every_product_action(self):
         self.first.created_by = self.member
         self.first.save()
-        self.items[0].created_by = self.member
-        self.items[0].save()
+        self.tasks[0].created_by = self.member
+        self.tasks[0].save()
         self.board.collaborators.remove(self.member)
         for operation, args in (
             ("get_list", {"list_id": self.first.pk}),
             ("update_list", {"list_id": self.first.pk, "name": "No"}),
-            ("get_item", {"board_id": self.board.pk, "item_id": self.items[0].pk}),
+            ("get_task", {"board_id": self.board.pk, "task_id": self.tasks[0].pk}),
             (
-                "update_board_item",
-                {"board_id": self.board.pk, "item_id": self.items[0].pk, "note": "No"},
+                "update_board_task",
+                {"board_id": self.board.pk, "task_id": self.tasks[0].pk, "text": "No"},
             ),
             (
-                "delete_item",
+                "delete_task",
                 {
                     "board_id": self.board.pk,
-                    "item_id": self.items[0].pk,
+                    "task_id": self.tasks[0].pk,
                 },
             ),
-            ("set_list_items", {"list_id": self.first.pk, "item_ids": []}),
+            ("set_list_tasks", {"list_id": self.first.pk, "task_ids": []}),
             (
-                "reorder_items",
+                "reorder_tasks",
                 {
                     "list_id": self.first.pk,
-                    "ordered_ids": [n.pk for n in self.items[:2]],
+                    "ordered_ids": [n.pk for n in self.tasks[:2]],
                 },
             ),
         ):
@@ -499,26 +499,126 @@ class ProductToolTests(TestCase):
             token, prepared["request_id"], prepared["result"]["confirmation_id"]
         )
 
+    def test_retry_replays_receipt_created_under_legacy_task_name(self):
+        request_id = str(uuid4())
+        previous_args = {
+            "list_id": self.first.pk,
+            "note": "Already added",
+            "description": "",
+        }
+        existing = Task.objects.create(
+            board=self.board, created_by=self.owner, text=previous_args["note"]
+        )
+        self.first.tasks.add(existing)
+        Execution.objects.create(
+            id=request_id,
+            owner=self.owner,
+            client_id=self.app.client_id,
+            action="add_item",
+            request_digest=services._digest(
+                {"action": "add_item", "arguments": previous_args}
+            ),
+            state=Execution.State.COMPLETED,
+            outcome={
+                "id": existing.pk,
+                "board_id": self.board.pk,
+                "note": existing.text,
+                "execution_status": "completed",
+            },
+        )
+
+        replay = services.execute(
+            "owner",
+            "add_task",
+            request_id=request_id,
+            list_id=self.first.pk,
+            text=existing.text,
+        )
+        self.assertTrue(replay["replayed"])
+        self.assertEqual(replay["text"], existing.text)
+        self.assertNotIn("note", replay)
+        self.assertEqual(Task.objects.filter(text=existing.text).count(), 1)
+        with self.assertRaisesMessage(ValueError, "different action arguments"):
+            services.execute(
+                "owner",
+                "add_task",
+                request_id=request_id,
+                list_id=self.first.pk,
+                text="Changed",
+            )
+
+    def test_legacy_confirmation_keeps_its_signed_in_approval_and_exact_target(self):
+        target = self.tasks[0]
+        request_id = str(uuid4())
+        current_args = {"board_id": self.board.pk, "task_id": target.pk}
+        previous_args = {"board_id": self.board.pk, "item_id": target.pk}
+        prepared = services.execute(
+            "owner", "delete_task", request_id=request_id, **current_args
+        )
+        snapshot = queries.snapshot(self.owner, "delete_task", current_args, [])
+        previous_snapshot = {
+            key: value
+            for key, value in snapshot.items()
+            if key not in {"tasks", "memberships"}
+        }
+        previous_snapshot["items"] = [
+            {("note" if key == "text" else key): value for key, value in row.items()}
+            for row in snapshot["tasks"]
+        ]
+        previous_snapshot["memberships"] = [
+            {
+                ("note_id" if key == "task_id" else key): value
+                for key, value in row.items()
+            }
+            for row in snapshot["memberships"]
+        ]
+        Execution.objects.filter(id=request_id).update(
+            action="delete_item",
+            request_digest=services._digest(
+                {"action": "delete_item", "arguments": previous_args}
+            ),
+        )
+        Confirmation.objects.filter(id=prepared["result"]["confirmation_id"]).update(
+            action="delete_item",
+            payload=previous_args,
+            fingerprint=services._digest(previous_snapshot),
+        )
+
+        retried = services.execute(
+            "owner", "delete_task", request_id=request_id, **current_args
+        )
+        self.assertEqual(retried["action"], "delete_task")
+        self.assertEqual(retried["result"]["changes"], current_args)
+        self.assertEqual(
+            retried["result"]["confirmation_id"], prepared["result"]["confirmation_id"]
+        )
+        self.assertEqual(self.confirm_action(retried)["status"], "prepared")
+        self.assertTrue(Task.objects.filter(pk=target.pk).exists())
+        self.approve_action(retried)
+        self.assertEqual(self.confirm_action(retried)["status"], "completed")
+        self.assertFalse(Task.objects.filter(pk=target.pk).exists())
+        self.assertTrue(Task.objects.filter(pk=self.tasks[1].pk).exists())
+
     def test_routine_uuid_receipt_preserves_status_and_prevents_duplicate_creation(
         self,
     ):
         request_id = str(uuid4())
-        args = {"list_id": self.first.pk, "note": "Once", "description": ""}
+        args = {"list_id": self.first.pk, "text": "Once", "description": ""}
         with self.assertRaises(ValueError):
-            services.execute("owner", "add_item", **args)
-        first = services.execute("owner", "add_item", request_id=request_id, **args)
-        replay = services.execute("owner", "add_item", request_id=request_id, **args)
+            services.execute("owner", "add_task", **args)
+        first = services.execute("owner", "add_task", request_id=request_id, **args)
+        replay = services.execute("owner", "add_task", request_id=request_id, **args)
         self.assertEqual(first["status"], "Not Started")
         self.assertEqual(first["execution_status"], "completed")
         self.assertEqual(replay, dict(first, replayed=True))
-        self.assertEqual(Note.objects.filter(note="Once").count(), 1)
+        self.assertEqual(Task.objects.filter(text="Once").count(), 1)
         self.assertFalse(Confirmation.objects.exists())
         with self.assertRaises(ValueError):
             services.execute(
-                "owner", "add_item", request_id=request_id, **dict(args, note="Changed")
+                "owner", "add_task", request_id=request_id, **dict(args, text="Changed")
             )
         with self.assertRaises(PermissionDenied):
-            services.execute("member", "add_item", request_id=request_id, **args)
+            services.execute("member", "add_task", request_id=request_id, **args)
         app = Application.objects.create(
             client_id="other-client",
             client_type="public",
@@ -526,10 +626,10 @@ class ProductToolTests(TestCase):
         )
         make_token(self.owner, app, "other-client", scope="notoli:read notoli:write")
         with self.assertRaises(PermissionDenied):
-            services.execute("other-client", "add_item", request_id=request_id, **args)
+            services.execute("other-client", "add_task", request_id=request_id, **args)
         AccessToken.objects.filter(token="owner").update(scope="notoli:read")
         with self.assertRaises(ConnectionPermissionDenied):
-            services.execute("owner", "add_item", request_id=request_id, **args)
+            services.execute("owner", "add_task", request_id=request_id, **args)
 
     def test_routine_receipt_failure_rolls_back_mutation_and_notifications(self):
         before = Notification.objects.count()
@@ -539,13 +639,13 @@ class ProductToolTests(TestCase):
             with self.assertRaises(RuntimeError):
                 services.execute(
                     "owner",
-                    "add_item",
+                    "add_task",
                     request_id=str(uuid4()),
                     list_id=self.first.pk,
-                    note="Rollback",
+                    text="Rollback",
                     description="",
                 )
-        self.assertFalse(Note.objects.filter(note="Rollback").exists())
+        self.assertFalse(Task.objects.filter(text="Rollback").exists())
         self.assertEqual(Notification.objects.count(), before)
         self.assertFalse(Execution.objects.exists())
 
@@ -586,14 +686,14 @@ class ProductToolTests(TestCase):
 
     def test_stale_content_collaborators_memberships_and_payload_cancel_actions(self):
         prepared = self.prepare_action(
-            "delete_item", board_id=self.board.pk, item_id=self.items[0].pk
+            "delete_task", board_id=self.board.pk, task_id=self.tasks[0].pk
         )
-        Note.objects.filter(pk=self.items[0].pk).update(description="Changed content")
+        Task.objects.filter(pk=self.tasks[0].pk).update(description="Changed content")
         self.assertEqual(self.confirm_action(prepared)["status"], "cancelled")
         prepared = self.prepare_action(
-            "set_list_items", list_id=self.first.pk, item_ids=[]
+            "set_list_tasks", list_id=self.first.pk, task_ids=[]
         )
-        self.first.notes.add(self.items[2])
+        self.first.tasks.add(self.tasks[2])
         self.assertEqual(self.confirm_action(prepared)["status"], "cancelled")
         prepared = self.prepare_action()
         self.board.collaborators.add(self.outsider)
@@ -603,10 +703,10 @@ class ProductToolTests(TestCase):
             payload={"list_id": self.second.pk}
         )
         self.assertEqual(self.confirm_action(prepared)["status"], "cancelled")
-        self.assertTrue(self.first.notes.exists())
+        self.assertTrue(self.first.tasks.exists())
         self.assertTrue(Board.objects.filter(pk=self.board.pk).exists())
         for args in (
-            {"notes": []},
+            {"tasks": []},
             {"board": self.foreign_board.pk},
             {"owner": self.outsider.pk},
         ):
@@ -719,12 +819,12 @@ class ProductToolTests(TestCase):
 
     def test_routine_replay_requires_live_shared_board_membership(self):
         request_id = str(uuid4())
-        args = {"list_id": self.first.pk, "note": "Member action", "description": ""}
-        services.execute("member", "add_item", request_id=request_id, **args)
+        args = {"list_id": self.first.pk, "text": "Member action", "description": ""}
+        services.execute("member", "add_task", request_id=request_id, **args)
         self.board.collaborators.remove(self.member)
         with self.assertRaises(PermissionDenied):
-            services.execute("member", "add_item", request_id=request_id, **args)
-        self.assertEqual(Note.objects.filter(note="Member action").count(), 1)
+            services.execute("member", "add_task", request_id=request_id, **args)
+        self.assertEqual(Task.objects.filter(text="Member action").count(), 1)
 
     def test_add_collaborator_executes_directly_but_old_preparations_do_not_downgrade(
         self,
@@ -764,70 +864,70 @@ class ProductToolTests(TestCase):
     def test_membership_additions_and_reorders_are_direct_but_omissions_prepare(self):
         args = {
             "list_id": self.first.pk,
-            "item_ids": [row.pk for row in reversed(self.items)],
+            "task_ids": [row.pk for row in reversed(self.tasks)],
         }
         request_id = str(uuid4())
         output = services.execute(
-            "member", "set_list_items", request_id=request_id, **args
+            "member", "set_list_tasks", request_id=request_id, **args
         )
         self.assertEqual(output["status"], "completed")
-        self.assertEqual(output["result"]["ordered_ids"], args["item_ids"])
+        self.assertEqual(output["result"]["ordered_ids"], args["task_ids"])
         self.assertTrue(
-            services.execute("member", "set_list_items", request_id=request_id, **args)[
+            services.execute("member", "set_list_tasks", request_id=request_id, **args)[
                 "replayed"
             ]
         )
         self.assertFalse(Confirmation.objects.exists())
         removed = self.prepare_action(
-            "set_list_items", list_id=self.first.pk, item_ids=[self.items[0].pk]
+            "set_list_tasks", list_id=self.first.pk, task_ids=[self.tasks[0].pk]
         )
         self.assertEqual(removed["status"], "prepared")
-        self.assertEqual(self.first.notes.count(), 3)
+        self.assertEqual(self.first.tasks.count(), 3)
         self.board.collaborators.remove(self.member)
         with self.assertRaises(PermissionDenied):
-            services.execute("member", "set_list_items", request_id=request_id, **args)
+            services.execute("member", "set_list_tasks", request_id=request_id, **args)
         self.assertEqual(self.confirm_action(removed)["status"], "cancelled")
         removed = self.prepare_action(
-            "set_list_items", list_id=self.first.pk, item_ids=[self.items[0].pk]
+            "set_list_tasks", list_id=self.first.pk, task_ids=[self.tasks[0].pk]
         )
         self.approve_action(removed)
         self.confirm_action(removed)
         self.assertEqual(
-            list(self.first.notes.values_list("pk", flat=True)), [self.items[0].pk]
+            list(self.first.tasks.values_list("pk", flat=True)), [self.tasks[0].pk]
         )
 
     def test_membership_policy_reads_live_set_after_board_lock_and_preserves_old_preps(
         self,
     ):
-        locked_board = queries.notes._locked_board
+        locked_board = queries.tasks._locked_board
 
         def add_before_lock_returns(actor, board_id):
             board = locked_board(actor, board_id)
-            self.first.notes.add(self.items[2])
+            self.first.tasks.add(self.tasks[2])
             return board
 
         with patch.object(
-            queries.notes, "_locked_board", side_effect=add_before_lock_returns
+            queries.tasks, "_locked_board", side_effect=add_before_lock_returns
         ):
             pending = self.prepare_action(
-                "set_list_items",
+                "set_list_tasks",
                 list_id=self.first.pk,
-                item_ids=[item.pk for item in self.items[:2]],
+                task_ids=[task.pk for task in self.tasks[:2]],
             )
         self.assertEqual(pending["status"], "prepared")
-        self.assertTrue(self.first.notes.filter(pk=self.items[2].pk).exists())
+        self.assertTrue(self.first.tasks.filter(pk=self.tasks[2].pk).exists())
         # An older additive preparation stays gated despite today's direct policy.
-        args = {"list_id": self.second.pk, "item_ids": [item.pk for item in self.items]}
+        args = {"list_id": self.second.pk, "task_ids": [task.pk for task in self.tasks]}
         with patch.object(
             operations,
             "REMOVAL_ACTIONS",
-            operations.REMOVAL_ACTIONS | {"set_list_items"},
+            operations.REMOVAL_ACTIONS | {"set_list_tasks"},
         ):
-            older = self.prepare_action("set_list_items", **args)
+            older = self.prepare_action("set_list_tasks", **args)
         recovered = services.execute(
-            "owner", "set_list_items", request_id=older["request_id"], **args
+            "owner", "set_list_tasks", request_id=older["request_id"], **args
         )
         self.assertEqual(recovered["status"], "prepared")
-        self.assertEqual(self.second.notes.count(), 1)
+        self.assertEqual(self.second.tasks.count(), 1)
         self.approve_action(older)
         self.assertEqual(self.confirm_action(older)["status"], "completed")

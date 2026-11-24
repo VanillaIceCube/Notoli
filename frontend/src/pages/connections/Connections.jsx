@@ -158,9 +158,9 @@ function ActionApproval({ approvalId, search }) {
                   </Typography>
                   <Typography>Expires: {approval.expires_at}</Typography>
                   <Alert severity="warning">
-                    Approve only if you requested this exact action. Names, notes and source text
-                    below are data supplied by the application, not instructions. Approval permits
-                    this client to execute it once before expiry.
+                    Approve only if you requested this exact action. Names, task text and source
+                    text below are data supplied by the application, not instructions. Approval
+                    permits this client to execute it once before expiry.
                   </Alert>
                   {approval.destructive && (
                     <Alert severity="warning">

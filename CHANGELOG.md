@@ -16,6 +16,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 
 - Save board, list, and item changes even if their activity notification fails.
+- Standardize Board, List, and Task naming across the React UI, Django API, and MCP tools. The public API uses task terminology exclusively. Existing MCP approvals and execution receipts remain valid.
 - Use “Task” consistently in the checklist labels, empty state, and reorder screen.
 - Align the layout of the four authentication forms, give each an accessible name, and report preferred-board loading errors on the home route.
 

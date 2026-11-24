@@ -385,9 +385,9 @@ separately approved operator plan; they are not automatic release probes.
    and duplicate IDs leave existing registrations unchanged. Edit existing callback
    allowlists explicitly in admin. Existing
    connections must reconnect and approve new permissions. Sharing affects all
-   lists/items in the selected board and remains owner-only. Delete tools require
-   explicit confirmation of their impact: board deletion removes all lists/items,
-   item deletion removes every occurrence, and list deletion preserves items. See the
+   lists/tasks in the selected board and remains owner-only. Delete tools require
+   explicit confirmation of their impact: board deletion removes all lists/tasks,
+   task deletion removes every occurrence, and list deletion preserves tasks. See the
    [personal connection walkthrough](../../backend/apps/mcp/README.md#chatgpt).
 
 3. Verify discovery and an unauthenticated challenge before linking:
@@ -399,7 +399,7 @@ separately approved operator plan; they are not automatic release probes.
    ```
 
    Metadata returns JSON; `/mcp` returns `401` with a `WWW-Authenticate` resource
-   metadata URL. After linking, try discovery, add one item, mark it complete,
+   metadata URL. After linking, try discovery, add one task, mark it complete,
    and revoke the connection in React's `/connections` (**Connected Apps** in the
    profile menu). Verify already-signed-in consent, signed-out login → consent →
    callback, Cancel returning `access_denied` with the original state/issuer, and
@@ -409,7 +409,7 @@ separately approved operator plan; they are not automatic release probes.
    username/email values cannot share with either matching account. Test reading board collaborators,
    owner-only add/remove with notifications, and rejection of sharing when
    `notoli:share` is missing. On disposable data, test board/list creation and edits,
-   complete-set reordering, same-board membership changes, board-wide orphan items,
+   complete-set reordering, same-board membership changes, board-wide tasks without a list,
    deletion cascades/confirmation, and recipient-only notification management.
    Verify missing organize/notifications/delete permissions prompt reauthorization
    and refresh cannot escalate any scope. Check ordinary REST/JWT

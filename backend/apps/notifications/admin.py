@@ -11,7 +11,7 @@ class NotificationAdmin(admin.ModelAdmin):
         "actor",
         "board",
         "list",
-        "note",
+        "task",
         "event_type",
         "is_read",
         "created_at",
@@ -26,14 +26,14 @@ class NotificationAdmin(admin.ModelAdmin):
         "actor__email",
         "board__name",
         "list__name",
-        "note__note",
+        "task__text",
     )
-    autocomplete_fields = ("recipient", "actor", "board", "list", "note")
+    autocomplete_fields = ("recipient", "actor", "board", "list", "task")
     readonly_fields = ("created_at", "read_at")
 
     def get_queryset(self, request):
         return (
             super()
             .get_queryset(request)
-            .select_related("recipient", "actor", "board", "list", "note")
+            .select_related("recipient", "actor", "board", "list", "task")
         )

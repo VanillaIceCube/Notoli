@@ -16,9 +16,9 @@ from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 from oauth2_provider.models import AccessToken
 
-from apps.notes.models import Board
-from apps.notes.models import List as NoteList
 from apps.notifications.models import Notification
+from apps.tasks.models import Board
+from apps.tasks.models import List as TaskList
 
 from .helpers import execute_action as execute
 from .helpers import make_client, make_token
@@ -42,7 +42,7 @@ class SharingToolTests(TestCase):
         )
         self.board.collaborators.add(self.member)
         self.lists = [
-            NoteList.objects.create(
+            TaskList.objects.create(
                 name=f"Team list {index}", board=self.board, created_by=self.owner
             )
             for index in range(2)
@@ -103,7 +103,7 @@ class SharingToolTests(TestCase):
                     offset=0,
                 )["results"]
             },
-            {note_list.pk for note_list in self.lists},
+            {board_list.pk for board_list in self.lists},
         )
         self.assertTrue(
             Notification.objects.filter(
@@ -157,12 +157,12 @@ class SharingToolTests(TestCase):
                 event_type=Notification.EVENT_COLLABORATOR_REMOVED,
             ).exists()
         )
-        for note_list in self.lists:
+        for board_list in self.lists:
             with self.assertRaises(PermissionDenied):
                 execute(
                     "target-reading",
-                    "get_items",
-                    list_id=note_list.pk,
+                    "get_tasks",
+                    list_id=board_list.pk,
                     limit=50,
                     offset=0,
                 )
@@ -222,7 +222,7 @@ class SharingToolTests(TestCase):
 
     def test_notification_failure_rolls_back_membership(self):
         with patch(
-            "apps.notes.services.notify_board_members",
+            "apps.tasks.services.notify_board_members",
             side_effect=RuntimeError("notification failure"),
         ):
             with self.assertRaises(RuntimeError):

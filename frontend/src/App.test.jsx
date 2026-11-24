@@ -48,7 +48,7 @@ vi.mock('./pages/authentication/ResetPassword', () => ({
 vi.mock('./components/app/BoardHomeRedirect', () => ({
   default: () => <div>BoardHomeRedirect</div>,
 }));
-vi.mock('./pages/notepad/BoardListsPage', async () => {
+vi.mock('./pages/boards/BoardListsPage', async () => {
   const { useNavigate } = await import('react-router');
   return {
     default: function MockBoardListsPage({ active }) {
@@ -64,7 +64,7 @@ vi.mock('./pages/notepad/BoardListsPage', async () => {
     },
   };
 });
-vi.mock('./pages/notepad/ListTasksPage', async () => {
+vi.mock('./pages/boards/ListTasksPage', async () => {
   const React = await import('react');
   return {
     default: function MockListTasksPage({ active, onPageReady }) {
@@ -162,7 +162,7 @@ describe('App', () => {
     );
     expect(screen.getByTestId('drawer')).toHaveTextContent('DrawerOpen');
   });
-  test('when a notepad route is loading, it keeps the previous page visible until ready', async () => {
+  test('when a board route is loading, it keeps the previous page visible until ready', async () => {
     sessionStorage.setItem('accessToken', 'token');
     renderApp('/board/1');
     await userEvent.click(
@@ -204,14 +204,14 @@ describe('App', () => {
   });
 });
 
-test('a failed pending notepad chunk becomes a visible recoverable route', async () => {
+test('a failed pending board chunk becomes a visible recoverable route', async () => {
   vi.resetModules();
   sessionStorage.setItem('accessToken', 'token');
   let rejectChunk;
   const pending = new Promise((_resolve, reject) => {
     rejectChunk = reject;
   });
-  vi.doMock('./pages/notepad/ListTasksPage', () => pending);
+  vi.doMock('./pages/boards/ListTasksPage', () => pending);
   const { default: FailedApp } = await import('./App');
   const { browserLocation } = await import('./services/navigation/navigationService');
   const reload = vi.spyOn(browserLocation, 'reload').mockImplementation(() => {});
@@ -234,7 +234,7 @@ test('a failed pending notepad chunk becomes a visible recoverable route', async
   await userEvent.click(screen.getByRole('link', { name: 'Sign in' }));
   expect(await screen.findByText('LoginPage')).toBeVisible();
   vi.restoreAllMocks();
-  vi.doUnmock('./pages/notepad/ListTasksPage');
+  vi.doUnmock('./pages/boards/ListTasksPage');
 });
 
 describe('real session route lifecycle', () => {
@@ -251,8 +251,8 @@ describe('real session route lifecycle', () => {
     vi.doUnmock('./pages/authentication/Register');
     vi.doUnmock('./pages/authentication/ForgotPassword');
     vi.doUnmock('./pages/authentication/ResetPassword');
-    vi.doUnmock('./pages/notepad/BoardListsPage');
-    vi.doUnmock('./pages/notepad/ListTasksPage');
+    vi.doUnmock('./pages/boards/BoardListsPage');
+    vi.doUnmock('./pages/boards/ListTasksPage');
     SessionApp = (await import('./App')).default;
   });
 
