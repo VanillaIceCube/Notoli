@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file.
 
 - Run the shared Gitleaks secret scan on pull requests and pass its result to RoboCop.
 
+### Changed
+
+- Align test-gate paths, frontend build sequencing, backend test profiles, and automation checks across the app repositories.
+
 ## 2026-11-23
 
 ### Fixed

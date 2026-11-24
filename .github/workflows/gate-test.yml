@@ -105,16 +105,16 @@ jobs:
             frontend:
               - 'frontend/**'
               - '.github/actions/read-versions/**'
-              - '.github/actions/setup-uv/**'
+              - '.github/workflows/gate-test.yml'
             backend:
               - 'backend/**'
+              - '.github/actions/setup-uv/**'
               - '.github/workflows/gate-test.yml'
               - '.github/actions/read-versions/**'
-              - '.github/actions/setup-uv/**'
             development:
-              - 'backend/docker/Dockerfile.dev'
               - 'backend/docker/Dockerfile.dockerignore'
               - 'backend/docker/Dockerfile.dev.dockerignore'
+              - 'backend/docker/Dockerfile.dev'
               - 'backend/pyproject.toml'
               - 'backend/uv.lock'
               - 'frontend/docker/Dockerfile.dev'
@@ -123,32 +123,13 @@ jobs:
               - 'frontend/package*.json'
               - '.github/workflows/gate-test.yml'
             automation:
+              - '.github/**'
+              - 'deploy/**'
               - 'docs/**'
               - 'README.md'
               - 'CHANGELOG.md'
               - 'AGENTS.md'
               - 'LICENSE.md'
-              - '.github/**'
-              - '.github/actions/dependabot-auto-merge/**'
-              - '.github/actions/check-codeql-pins/**'
-              - '.github/workflows/ci-auto-merge.yml'
-              - '.github/actions/review-npm-malware/**'
-              - '.github/actions/collect-codeql-evidence/**'
-              - 'deploy/**'
-              - '.github/workflows/ci-deploy.yml'
-              - '.github/actions/collect-prior-ai-reviews/**'
-              - '.github/actions/collect-upstream-major-upgrade-evidence/**'
-              - '.github/actions/openai-chat/**'
-              - '.github/actions/get-pr-diff/**'
-              - '.github/workflows/ci-orchestrator.yml'
-              - '.github/actions/publish-ai-review/**'
-              - '.github/actions/security-alerts/**'
-              - '.github/actions/prepare-vulnerability-report/**'
-              - '.github/workflows/gate-vulnerability.yml'
-              - '.github/workflows/gate-test.yml'
-              - '.github/workflows/review-build.yml'
-              - '.github/workflows/review-code.yml'
-              - '.github/workflows/review-security.yml'
 
       - name: Report path detection failure
         if: steps.filter.outcome == 'failure'
@@ -185,13 +166,13 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ steps.versions.outputs.node_version }}
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package-lock.json'
+          cache: "npm"
+          cache-dependency-path: "frontend/package-lock.json"
 
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Run frontend tests
+      - name: Run frontend tests and production build
         id: test_run
         continue-on-error: true
         env:
@@ -199,10 +180,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          npm test -- --maxWorkers=2 2>&1 | tee test_output.txt || status=$?
-          if [ "$status" = "0" ]; then
-            npm run build 2>&1 | tee -a test_output.txt || status=$?
-          fi
+          { npm test -- --maxWorkers=2 && npm run build; } 2>&1 | tee test_output.txt || status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
       - name: Test summary
@@ -248,7 +226,13 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Synchronize locked backend dependencies
+      - name: Read versions
+        id: versions
+        uses: ./.github/actions/read-versions
+        with:
+          read_node: "false"
+
+      - name: Set up the locked Python environment
         uses: ./.github/actions/setup-uv
 
       - name: Run backend tests
@@ -259,7 +243,9 @@ jobs:
           status=0
           {
             DJANGO_MCP_ENABLED=0 uv run --locked python manage.py test --verbosity=2 || status=$?
-            DJANGO_MCP_ENABLED=1 DJANGO_MCP_BASE_URL=http://localhost:8000 uv run --locked python manage.py test apps.mcp.framework apps.mcp.tools --verbosity=2 || status=$?
+            DJANGO_MCP_ENABLED=1 DJANGO_MCP_BASE_URL=http://localhost:8000 \
+              DJANGO_MCP_SERVER_FACTORY=apps.mcp.tools.server.create_server \
+              uv run --locked python manage.py test apps.mcp --verbosity=2 || status=$?
             exit "$status"
           } 2>&1 | tee test_output.txt || status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
@@ -316,8 +302,10 @@ jobs:
         with:
           node-version: ${{ steps.versions.outputs.node_version }}
 
-      - name: Synchronize locked repository dependencies
+      - name: Set up the locked Python environment
         uses: ./.github/actions/setup-uv
+        with:
+          only-dev: "true"
 
       - name: Install verified workflow validator
         shell: bash
@@ -340,16 +328,8 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          node --test .github/actions/custom-regressions/*.test.js .github/actions/collect-prior-ai-reviews/*.test.js .github/actions/check-workflow-security/*.test.js .github/actions/review-npm-malware/*.test.js .github/actions/dependabot-auto-merge/*.test.js .github/actions/check-codeql-pins/*.test.js .github/actions/collect-codeql-evidence/collect-codeql-evidence.test.js \
-            .github/actions/review-npm-malware/review-npm-malware.test.js \
-            .github/actions/collect-prior-ai-reviews/collect-prior-ai-reviews.test.js \
-            .github/actions/collect-upstream-major-upgrade-evidence/*.test.js \
-            .github/actions/publish-ai-review/publish-ai-review.test.js \
-            .github/actions/publish-ai-review/review-gating.test.js \
-            .github/actions/security-alerts/sync-security-alerts.test.js \
-            .github/actions/prepare-vulnerability-report/prepare-vulnerability-report.test.js \
-            2>&1 | tee automation_test_output.txt || status=$?
-          python3 - <<'PY' 2>&1 | tee -a automation_test_output.txt || status=$?
+          (
+            python3 - <<'PY' || exit 1
           """Non-deploying workflow, script and Compose validation using synthetic env."""
           import ast
           import json
@@ -546,10 +526,21 @@ jobs:
           if __name__ == "__main__":
               main()
           PY
-          python3 deploy/production/build_bundle.py --check-parity \
-            2>&1 | tee -a automation_test_output.txt || status=$?
-          python3 -m unittest discover -s deploy/tests -v \
-            2>&1 | tee -a automation_test_output.txt || status=$?
+            python3 deploy/production/build_bundle.py --check-parity || exit 1
+            group_status=0
+            python3 -m unittest discover -s deploy/tests -v || group_status=$?
+            shopt -s globstar nullglob dotglob
+            automation_tests=(.github/actions/**/*.test.js)
+            if [ "${#automation_tests[@]}" -eq 0 ]; then
+              echo "No GitHub action regression tests were found." >&2
+              exit 1
+            fi
+            node --test "${automation_tests[@]}" || group_status=$?
+            if compgen -G '.github/actions/get-pr-diff/test_*.py' > /dev/null; then
+              python3 -m unittest discover -s .github/actions/get-pr-diff -p 'test_*.py' -v || group_status=$?
+            fi
+            exit "$group_status"
+          ) 2>&1 | tee automation_test_output.txt || status=$?
           echo "exit_code=$status" >> "$GITHUB_OUTPUT"
 
       - name: Test summary

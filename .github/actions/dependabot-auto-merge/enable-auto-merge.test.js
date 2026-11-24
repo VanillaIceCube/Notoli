@@ -345,9 +345,11 @@ test("privileged workflow uses only main code and verified metadata, with no imm
   assert.doesNotMatch(orchestrator, /uses: .*ci-auto-merge.yml/);
   assert.match(orchestrator, /needs: \[lints, tests, codeql, dependency-vulnerability, dependency-malware, secrets, code-review, build-review, security-review\]/);
   const gate = fs.readFileSync(path.join(workflows, "gate-test.yml"), "utf8");
-  assert.match(gate, /\.github\/actions\/dependabot-auto-merge\/\*\.test.js/);
-  assert.match(gate, /'\.github\/workflows\/ci-auto-merge.yml'/);
-  assert.match(gate, /'\.github\/workflows\/ci-orchestrator.yml'/);
+  assert.match(gate, /automation_tests=\(\.github\/actions\/\*\*\/\*\.test.js\)/);
+  assert.match(gate, /node --test "\$\{automation_tests\[@\]\}"/);
+  for (const file of [".github/workflows/ci-auto-merge.yml", ".github/workflows/ci-orchestrator.yml"]) {
+    assert.equal(scopeAllowsSkip("Tests / Automation Tests (Node)", [file]), false, file);
+  }
   assert.match(workflow, /vulnerability-alerts: read/);
   assert.match(workflow, /checks: write/);
   assert.match(workflow, /github.rest.checks.create/);

@@ -59,7 +59,7 @@ What it does:
   - The shared [`.github/actions/prepare-lint-commit`](../actions/prepare-lint-commit/action.yml) action validates that identity, configures the token only as the Git remote's push URL, and the lint job restores the unauthenticated push URL immediately after the commit step.
   - Auto-fix is enabled only for non-Dependabot pull requests whose head branch belongs to this repository. Those jobs explicitly check out the writable head branch. Fork and Dependabot pull requests use GitHub's standard pull-request checkout, skip mutating lint steps, and still run strict formatting/lint checks against the submitted code. The lint workflow does not receive an App secret from forks; Dependabot review credentials are handled separately below.
 - Runs the reusable test gate: [`.github/workflows/gate-test.yml`](gate-test.yml)
-  - Frontend: Vitest via `npm test` (CI mode), then `npm run build` (strict ESLint 10 and Vite production build). Build failures fail the existing frontend test gate and remain in its captured diagnostics.
+  - Frontend: Vitest via `npm test -- --maxWorkers=2` (CI mode), then `npm run build` (strict ESLint 10 and Vite production build). Build failures fail the existing frontend test gate and remain in its captured diagnostics.
   - Backend: `python manage.py test`
   - Repository automation: Node's built-in test runner executes colocated behavioral tests for upstream major-upgrade evidence, the AI review publisher, the security-alert reconciler, and large dependency-review report transport. Changes to the report helper or vulnerability workflow also select this test job.
 - Lint and test jobs use the same change filters:
@@ -544,6 +544,16 @@ MCP hides discovery/OAuth routes and skips app-owned OAuth tests; the enabled
 profile retains their full coverage. The production policy explicitly enables MCP.
 
 ### Repository validation and failure diagnostics
+
+Editing `gate-test.yml` triggers all app test groups. Frontend tests use two
+Vitest workers, then build after the tests pass. The backend always attempts
+both its ordinary and MCP-enabled suites and fails if either profile fails.
+The MCP-enabled run discovers the checked-in tests under `apps.mcp`.
+
+Repository automation uses the locked dev dependencies. Workflow and Compose
+validation and release-source parity run before the test suites. The gate
+discovers JavaScript action regression tests in `.github/actions` and Python
+PR-diff regressions where present.
 
 The path-aware test gate includes `.github/**`, `deploy/**`, and maintained docs
 in automation validation. It runs workflow and
