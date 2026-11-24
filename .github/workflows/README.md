@@ -283,6 +283,7 @@ checks every persona's current-head approval. Scoped CodeQL skips must also
 match authoritative API diff paths, including previous paths on renames. Null or
 unknown mergeability and propagation of the pending policy check are polled at
 most six times with two-second waits; unstable/conflicting states fail closed.
+A previous run's successful policy check cannot replace the pending check created by this run.
 Repeated events are idempotent and genuine API failures remain visible. GitHub
 retains final enforcement of review-thread resolution and all branch rules.
 
@@ -386,7 +387,7 @@ covers flow mappings, quoted/escaped keys, folded values, aliases and mixed-case
 owner/repository names. Negative regressions reject drift, mutable pins and
 missing analysis. The existing version/security update groups and daily cadence
 remain unchanged. Infrastructure adopts this guard and reviewer eligibility,
-retaining weekly updates, independent Required CI and owner merge.
+retaining weekly updates, independent Required CI and owner decisions on ordinary PRs.
 
 ```sh
 uv sync --locked --project backend
@@ -612,9 +613,10 @@ flowchart TD
   Scanners --> Gate
   Isolated --> ForkEvidence[No secret-bearing AI review acceptance inferred]
   Gate -->|Applications| Main[Normal protected main merge]
-  Gate -->|Infrastructure| RequiredCI[Required CI aggregate and owner merge]
+  Gate -->|Infrastructure| RequiredCI[Required CI aggregate]
   RequiredCI --> Main
-  Gate --> Auto[Application Dependabot eligibility and exact-head auto-merge checks]
+  Gate -->|Applications| Auto[Protected Dependabot policy for the current head]
+  RequiredCI --> Auto
   Auto --> Platform[GitHub protected auto-merge]
 ```
 
@@ -625,8 +627,8 @@ execute fork code with privileged credentials or add `pull_request_target` here.
 Obi-Wan starts independently; Lint Eastwood consumes lint/test outcomes; RoboCop
 consumes scanner evidence, including Infrastructure's secret scan. Missing evidence,
 credentials, invalid output and `REQUEST_CHANGES` fail. Skipped or old-head reviews
-are not current-head acceptance. App Dependabot auto-merge verifies the exact head
-without executing PR code; Infrastructure retains Required CI and owner merge.
+are not current-head acceptance. The Dependabot follow-up verifies the exact head using reviewed main code.
+Infrastructure also requires its Required CI aggregate. Production promotion is a separate owner action.
 
 ### Reviewer data and write boundary
 

@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-24
+
+### Fixed
+
+- Require the current auto-merge run's pending Dependabot Policy check before enabling native auto-merge.
+
 ## 2026-11-23
 
 ### Fixed
