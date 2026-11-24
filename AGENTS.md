@@ -103,7 +103,7 @@ Backend image definitions live in `backend/docker/`; keep `backend/` as the
 Docker build context. Frontend image definitions and Nginx configuration live in
 `frontend/docker/`; keep `frontend/` as the Docker build context.
 Both Docker folders contain `Dockerfile.dockerignore` and
-`Dockerfile.dev.dockerignore`; their patterns are relative to the corresponding
+`Dockerfile.hotswap.dockerignore`; their patterns are relative to the corresponding
 backend/frontend context. Preserve Nginx configuration and development entrypoint
 inputs when adjusting exclusions.
 

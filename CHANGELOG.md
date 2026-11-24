@@ -11,6 +11,7 @@ All notable changes to this project are documented in this file.
 ### Changed
 
 - Align test-gate paths, frontend build sequencing, backend test profiles, and automation checks across the app repositories.
+- Rename the hot-swap Dockerfiles and their matching ignore files to mirror compose.hotswap.yml.
 
 ## 2026-11-23
 

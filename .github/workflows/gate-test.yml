@@ -113,13 +113,13 @@ jobs:
               - '.github/actions/read-versions/**'
             development:
               - 'backend/docker/Dockerfile.dockerignore'
-              - 'backend/docker/Dockerfile.dev.dockerignore'
-              - 'backend/docker/Dockerfile.dev'
+              - 'backend/docker/Dockerfile.hotswap.dockerignore'
+              - 'backend/docker/Dockerfile.hotswap'
               - 'backend/pyproject.toml'
               - 'backend/uv.lock'
-              - 'frontend/docker/Dockerfile.dev'
+              - 'frontend/docker/Dockerfile.hotswap'
               - 'frontend/docker/Dockerfile.dockerignore'
-              - 'frontend/docker/Dockerfile.dev.dockerignore'
+              - 'frontend/docker/Dockerfile.hotswap.dockerignore'
               - 'frontend/package*.json'
               - '.github/workflows/gate-test.yml'
             automation:
@@ -586,8 +586,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Build reviewed development images
         run: |
-          docker build --file backend/docker/Dockerfile.dev --tag batch2-backend-dev backend
-          docker build --file frontend/docker/Dockerfile.dev --tag batch2-frontend-dev frontend
+          docker build --file backend/docker/Dockerfile.hotswap --tag batch2-backend-dev backend
+          docker build --file frontend/docker/Dockerfile.hotswap --tag batch2-frontend-dev frontend
 
   test-results:
     name: Test Results

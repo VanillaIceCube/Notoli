@@ -129,7 +129,7 @@ test('uv bootstrap enforces its reviewed runner and cleans requirements on succe
 
 test('Docker uv bootstraps pass reviewed requirements through stdin and preserve pip failures', () => {
   let canonical;
-  for (const name of ['Dockerfile', 'Dockerfile.dev']) {
+  for (const name of ['Dockerfile', 'Dockerfile.hotswap']) {
     const text = fs.readFileSync(path.join(root, 'backend/docker', name), 'utf8').replace(/\\\r?\n/g, ' ');
     const run = text.split('\n').find(line => line.startsWith('RUN ') && line.includes('python -m pip')).slice(4);
     if (canonical) assert.equal(run, canonical);
@@ -163,7 +163,7 @@ import yaml
 steps = yaml.safe_load(Path('.github/actions/setup-uv/action.yml').read_text())['runs']['steps']
 run = next(step['run'] for step in steps if step.get('name') == 'Install uv')
 runs = [('CI', run)]
-for name in ('Dockerfile', 'Dockerfile.dev'):
+for name in ('Dockerfile', 'Dockerfile.hotswap'):
     source = (Path('backend/docker') / name).read_text().replace('\\\n', ' ')
     runs.append((name, next(line for line in source.splitlines() if line.startswith('RUN ') and 'python -m pip' in line)))
 with tempfile.TemporaryDirectory() as directory:
