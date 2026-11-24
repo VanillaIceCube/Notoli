@@ -7,7 +7,7 @@ CI, reviews, dependency/security checks, and release behavior for Notoli.
 | Area | Entry points |
 | --- | --- |
 | Pull requests | [CI orchestrator](ci-orchestrator.yml), independent gates, and the three reviewer workflows. |
-| Security alerts | [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml), and [malware](alert-malware.yml) schedules/manual dispatches. |
+| Security alerts | [CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml), and [malware](alert-malware.yml) aggregation after the nightly scan or on a daily schedule, with manual dispatch for every feed. |
 | Releases | [Release workflow](ci-deploy.yml). |
 
 Workflow YAML is authoritative for triggers, permissions and job dependencies.
@@ -159,7 +159,7 @@ CodeQL details:
 - Pull request CodeQL uses the reusable workflow's change-detection job, following the same skip-by-scope pattern as linting and testing; documentation-only and unrelated pull requests run the detector but skip analysis jobs.
 - For a CodeQL-relevant pull request, Python and JavaScript/TypeScript analysis use language-specific filters, while GitHub Actions analysis runs so the `/language:actions` configuration remains present for code-scanning comparisons.
 - CI ignores pull requests targeting `env-prod`, so CodeQL is not invoked for that deployment branch.
-- Pushes to `main`, weekly scheduled scans, and manual `workflow_dispatch` runs are supported directly by `gate-codeql.yml`.
+- `gate-codeql.yml` runs full scans daily at midnight Pacific and on manual dispatch.
 - CodeQL uploads SARIF results to GitHub Code Scanning with scoped permissions: `contents: read`, `pull-requests: read`, `actions: read`, and `security-events: write`.
 - Results appear in PR checks and under GitHub Security -> Code scanning when code scanning is enabled for the repository.
 - CodeQL uses the `security-extended` and `security-and-quality` query suites for Python, JavaScript/TypeScript, and GitHub Actions workflow analysis.
@@ -362,7 +362,7 @@ CodeQL now forwards `scope_status`, `scope_python`, `scope_javascript` and
 `scope_actions` to RoboCop's shared evidence collector. A PR language skip is
 expected only with successful, known scope and a completed matching default-
 branch baseline. Missing, failed or unavailable evidence stays an explicit gap.
-Main pushes and scheduled/manual scans still analyze every language. Existing
+Scheduled and manual scans analyze every language. Existing
 check names, categories, queries and ruleset requirements remain unchanged;
 this does not independently resolve the historical default-branch/attribution
 acceptance in #612 or #587.
@@ -673,7 +673,10 @@ permissions in the workflow or job that requests them.
 
 ```mermaid
 flowchart LR
-  Schedule[Daily schedules or manual dispatch] --> Feeds[CodeQL, vulnerability and malware workflows]
+  Scan[Successful scheduled CodeQL scan on main] --> CodeQLFeed[CodeQL alert workflow]
+  Schedule[Midnight Pacific] --> DependencyFeeds[Vulnerability and malware alert workflows]
+  Manual[Manual dispatch] --> CodeQLFeed & DependencyFeeds
+  CodeQLFeed & DependencyFeeds --> Feeds[Alert aggregation]
   Feeds --> Preflight[Verify Project access and fields]
   Preflight --> Source[All open source alerts and bounded malware classification]
   Source --> Robo[RoboCop grouping with validated Responses policy]
@@ -682,12 +685,27 @@ flowchart LR
   Issues --> Project[Separately credentialed Project synchronization and recovery]
 ```
 
-[CodeQL](alert-codeql.yml), [vulnerability](alert-vulnerability.yml) and
-[malware](alert-malware.yml) aggregation run daily or by dispatch. Incomplete
+The [vulnerability](alert-vulnerability.yml) and [malware](alert-malware.yml)
+alert workflows run daily at midnight Pacific (America/Los_Angeles). The
+[CodeQL alert workflow](alert-codeql.yml) follows a successful scheduled CodeQL
+scan on main. All three alert workflows support manual dispatch. Incomplete
 source/model evidence fails before lifecycle writes; verified closure and Project
-recovery preserve their independent credential boundaries. CodeQL analysis also
-runs on applicable main pushes, scoped PRs, the weekly schedule and manual dispatch. Alert maintenance
-neither merges code nor deploys.
+recovery preserve their independent credential boundaries.
+
+The CodeQL Gate analyzes scoped pull requests. The full scan
+is scheduled daily at midnight Pacific and can be dispatched manually.
+
+GitHub may delay or drop scheduled runs at the top of the hour. If a scheduled
+run is missing, check that workflow's run history and use **Run workflow** on
+`main` to recover the missed scan or feed. The CodeQL alert workflow runs automatically only after the scheduled scan
+on main succeeds. If tracking needs a separate retry, dispatch CodeQL Alert manually.
+[GitHub scheduled-event behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+
+Default-branch Code Scanning results can lag merges until the next full scan completes.
+For a fresher baseline, dispatch `CodeQL Gate` on `main`. Its scheduled and
+manual runs upload all three language results for that branch. For example,
+the [November 23 scheduled run](https://github.com/VanillaIceCube/Notoli/actions/runs/45276114128)
+published Python, JavaScript/TypeScript, and GitHub Actions analyses for `main`.
 
 ### Promotion, release and manual operations
 

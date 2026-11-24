@@ -1,8 +1,10 @@
 name: CodeQL Alert
 
 on:
-  schedule:
-    - cron: "10 11 * * *"
+  workflow_run:
+    workflows: [CodeQL Gate]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -11,6 +13,12 @@ concurrency:
 
 jobs:
   aggregate:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'schedule' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     permissions:
       contents: read
     runs-on: ubuntu-latest

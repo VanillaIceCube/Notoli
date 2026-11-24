@@ -31,7 +31,7 @@ test('failed out-of-scope analyses stay gaps and successful reruns use the newes
   assert.equal(collectCodeqlEvidence(input).approval_eligible, true);
 });
 
-test('workflow executes accurate PR scope and full push/schedule/manual scope', () => {
+test('workflow executes accurate PR scope and full scheduled and manual scope', () => {
   const workflow = fs.readFileSync(path.join(__dirname, '../../workflows/gate-codeql.yml'), 'utf8').replaceAll('\r\n', '\n');
   const match = workflow.match(/      - name: Set analysis scope[\s\S]*?        run: \|\n([\s\S]*?)\n  analyze-python:/);
   assert.ok(match);
@@ -44,7 +44,6 @@ test('workflow executes accurate PR scope and full push/schedule/manual scope', 
       ['pull_request', 'true', 'false', 'false', ['true', 'false', 'true']],
       ['pull_request', 'false', 'true', 'false', ['false', 'true', 'true']],
       ['pull_request', 'false', 'false', 'true', ['false', 'false', 'true']],
-      ['push', '', '', '', ['true', 'true', 'true']],
       ['schedule', '', '', '', ['true', 'true', 'true']],
       ['workflow_dispatch', '', '', '', ['true', 'true', 'true']],
       ['pull_request', '', '', '', null],

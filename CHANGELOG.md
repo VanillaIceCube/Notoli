@@ -14,6 +14,8 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Run full CodeQL scans and Dependabot alert tracking daily at midnight Pacific. Track CodeQL alerts after the scheduled scan succeeds.
+- Run CodeQL for scoped pull requests, daily full scans, and manual requests, and skip duplicate scans after merges to main.
 - Include Dependabot findings of every severity in grouped Project issues. Critical findings raise priority to P0 and high findings to at least P1.
 - Limit reviewer lockfile exclusions to the regular frontend npm lockfile, align CodeQL evidence and narrow CI permissions.
 - Align test-gate paths, frontend build sequencing, backend test profiles, and automation checks across the app repositories.
