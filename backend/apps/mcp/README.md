@@ -71,10 +71,9 @@ checks; `framework/oauth.py` retains the OAuth lifecycle.
 
 MCP is off by default in FullStackTemplate. Derived applications own their
 enablement and tool registries; see the [backend guide](../../README.md#-mcp-integration)
-for this application's profile. Disabled applications keep
-their existing Gunicorn/REST behavior, install no OAuth Django app, and expose no
-backend MCP/discovery/OAuth routes. Dependencies are installed so enabling the
-profile does not require changing the image's Python packages.
+for this application's profile. Notoli runs Uvicorn in both profiles. The enabled
+profile adds the OAuth Django app and the MCP, discovery and OAuth routes. Both
+profiles use the same image.
 
 For an isolated development database:
 

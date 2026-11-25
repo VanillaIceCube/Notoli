@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-25
+
+### Removed
+
+- Remove the unused Gunicorn dependency from the backend image. Uvicorn serves both MCP profiles.
+
 ## 2026-11-24
 
 ### Added
