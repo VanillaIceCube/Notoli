@@ -128,10 +128,15 @@ history and valid UTF-8 text when editing or merging entries.
 
 ## 💻 Local development
 
-Use manual setup; do not assume Django or Node dependencies are installed.
-Use uv 0.13.8 to manage Python 3.12 and the backend environment, and the Node
-version range in `frontend/package.json`. Follow the backend README for uv setup.
-Uvicorn serves REST and MCP; Django `runserver` serves REST/auth only.
+Use the locked Python 3.12 environment and the Node version declared in
+`frontend/package.json`. The [backend guide](backend/README.md) covers uv,
+migrations and startup. The [frontend guide](frontend/README.md) covers `npm ci`
+and Vite. Use Uvicorn for MCP. Django’s development server serves REST and authentication.
+
+Follow the [local Docker guide](deploy/README.md) for hot reload, HTTPS and
+dependency changes. Build from the `backend/` and `frontend/` contexts with
+their matching Dockerfile ignore files. Create missing local environment and
+SQLite files only. Production uses the [app release guide](deploy/production/README.md).
 
 ### Codex cloud environment
 
@@ -157,45 +162,6 @@ npm ci
 ```
 
 Use the same script as the Codex maintenance script so cached containers refresh backend and frontend dependencies after checkout.
-
-### uv setup
-
-1) Install uv 0.13.8 following its official installation guide, then run
-   `uv sync --locked --project backend` from the repository root.
-2) Optional backend `.env` for local non-Docker runs:
-   - `backend/.env` is auto-loaded by Django settings (`python-dotenv`).
-   - Add `DJANGO_*` keys there if you don't want to set shell vars manually.
-3) Run backend migrations: `uv run --locked --project backend python backend/manage.py migrate`
-4) Start backend including MCP: `cd backend` then `uv run --locked uvicorn config.asgi:application --port 8000 --reload --no-proxy-headers` (Django `runserver` serves only REST/auth, not `/mcp`). Return to the repo root for the frontend steps.
-5) Frontend setup:
-   - `cd frontend`
-   - `npm install`
-   - Optional: set `VITE_API_BASE_URL` (default: `http://localhost:8000`)
-     - For production builds, leave this blank/unset for relative `/api/...` calls on `https://notoli.judeandrewalaba.com`
-   - `npm start`
-
-### Docker setup
-
-Backend image definitions live in `backend/docker/`; keep `backend/` as the
-Docker build context. Frontend image definitions and Nginx configuration live in
-`frontend/docker/`; keep `frontend/` as the Docker build context.
-Both Docker folders contain `Dockerfile.dockerignore` and
-`Dockerfile.hotswap.dockerignore`; their patterns are relative to the corresponding
-backend/frontend context. Preserve Nginx configuration and development entrypoint
-inputs when adjusting exclusions.
-
-Use the [local Docker guide](deploy/README.md) for hot reload at
-`notoli.localhost` and optional standalone HTTPS. Initialize only missing local
-env/database files; never truncate an existing SQLite file. Development Compose
-mounts backend/frontend source, binds ports to loopback and runs Uvicorn/Vite
-reload. After dependency changes, run `npm ci` explicitly in the frontend
-container, then restart it; follow the commands in the local Docker guide. Keep
-the reviewed development base-image digest and lockfile in sync.
-
-`deploy/compose.yml` and `deploy/nginx.conf` are local/legacy-only.
-Do not use them on the shared production host. The
-[production guide](deploy/production/README.md) is the sole app release/recovery
-procedure; Infrastructure owns gateway, certificates and host routing.
 
 ## ⚙️ Configuration
 
