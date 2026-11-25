@@ -83,7 +83,7 @@ function checkReleaseDocumentation() {
   const { shared_source } = JSON.parse(fs.readFileSync("deploy/production/app.json", "utf8"));
   const guide = fs.readFileSync("deploy/production/README.md", "utf8");
   const source = "https://github.com/" + shared_source.repository + "/blob/" + shared_source.commit;
-  if (!guide.includes("(" + source + "/app-release/README.md)")) {
+  if (!guide.includes("(" + source + "/deploy/README.md)")) {
     throw new Error("Link the production guide to the release guide at the commit pinned in app.json");
   }
 }

@@ -19,7 +19,7 @@ module.exports = async function getSecurityEvidence({ github, context, infrastru
     per_page: 100,
   });
   const sensitivePaths = infrastructure
-    ? /(^app-release\/|^scripts\/|^nginx\/|compose\.ya?ml$|^\.github\/|pyproject\.toml|uv\.lock|requirements|package|Dockerfile|auth|token|secret|password)/i
+    ? /(^deploy\/|^scripts\/|^gateway\/|compose\.ya?ml$|^\.github\/|pyproject\.toml|uv\.lock|requirements|package|Dockerfile|auth|token|secret|password)/i
     : /(^backend\/authentication\/|\/permissions?\.py$|\/settings\.py$|\/urls\.py$|(?:requirements\.txt|pyproject\.toml|uv\.lock)$|package-lock\.json$|package\.json$|^\.github\/(?:workflows|actions|scripts|tests)\/|^deploy\/|Dockerfile|nginx|auth|csrf|cors|token|secret|password)/i;
   const securitySensitiveFiles = files
     .map((file) => file.filename)
