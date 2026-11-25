@@ -1,15 +1,17 @@
 """Launch the two application services on their existing host networks."""
 
 import argparse
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
+import sqlite3
 import stat
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -23,6 +25,7 @@ FRONTEND = CONFIG["services"]["frontend"]
 SERVICES = (BACKEND, FRONTEND)
 DOMAIN = CONFIG["domain"]
 ORIGIN = "https://" + DOMAIN
+READINESS_TIMEOUT = 90
 EGRESS = CONFIG["egress"]
 DB_FILE = CONFIG["database"]["filename"]
 DB_TARGET = CONFIG["database"]["target"]
@@ -105,6 +108,14 @@ def write_private(path, value):
     with path.open("x", encoding="utf-8", newline="\n") as stream:
         stream.write(value)
     path.chmod(0o600)
+
+
+def sync_to_disk(path):
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 @contextmanager
@@ -219,13 +230,20 @@ def validate_candidate_ports(candidate):
     require_frontend_ports(ports, CONFIG["frontend_port_bindings"])
 
 
-def check_host(root, *, require_app=True):
-    private_dir(root)
-    regular(root / DB_FILE)
-    if any((root / (DB_FILE + suffix)).exists() for suffix in ("-wal", "-journal")):
+def check_host_journals(database):
+    if any(
+        database.with_name(database.name + suffix).exists()
+        for suffix in ("-wal", "-journal")
+    ):
         raise ReleaseError(
             "Host SQLite journal is present. Checkpoint the database before deploying."
         )
+
+
+def check_host(root, *, require_app=True):
+    private_dir(root)
+    regular(root / DB_FILE)
+    check_host_journals(root / DB_FILE)
     if not (root / DB_FILE).stat().st_size:
         raise ReleaseError(
             "Existing nonempty SQLite database is required; bootstrap is separate"
@@ -336,7 +354,7 @@ def readiness(directory):
         + str(policy["direct_status"])
         + " else 1)"
     )
-    deadline = time.monotonic() + 90
+    deadline = time.monotonic() + READINESS_TIMEOUT
     while True:
         probe = "direct backend API"
         try:
@@ -381,6 +399,88 @@ def check_stopped_writer(container, database):
             )
 
 
+def stop_app_for_backup(database):
+    containers = {}
+    for role, service in CONFIG["services"].items():
+        ids = docker(
+            "ps",
+            "-aq",
+            "--filter",
+            "label=com.docker.compose.project=" + APP,
+            "--filter",
+            "label=com.docker.compose.service=" + service,
+        ).split()
+        name = CONFIG["containers"][role]
+        named = docker(
+            "ps", "-aq", "--filter", "name=^/" + re.escape(name) + "$"
+        ).split()
+        if len(ids) > 1 or (named and named != ids):
+            raise ReleaseError(
+                "Ambiguous ownership of the existing " + role + " container"
+            )
+        if not ids:
+            continue
+        state = inspect(ids[0])
+        if role == "backend":
+            check_database_mount(state, database)
+        # Docker commits omit mounted data. SQLite is the only app data mount.
+        if len(state["Mounts"]) != (1 if role == "backend" else 0):
+            raise ReleaseError(
+                "Unexpected mount on the existing " + role + " container"
+            )
+        containers[role] = state
+
+    for state in containers.values():
+        if state["HostConfig"]["RestartPolicy"]["Name"] == "always":
+            docker("update", "--restart=unless-stopped", state["Id"])
+    if containers:
+        docker("stop", *(state["Id"] for state in containers.values()))
+    if "backend" in containers:
+        check_stopped_writer(containers["backend"]["Id"], database)
+    check_host_journals(database)
+    return containers
+
+
+def backup_before_migration(bundle, database):
+    containers = stop_app_for_backup(database)
+    with tempfile.TemporaryDirectory(
+        prefix=".before-migration-", dir=bundle
+    ) as staging:
+        backup = Path(staging)
+        snapshot = backup / DB_FILE
+        # All app writers are stopped and both host and container journals were checked.
+        with (
+            closing(
+                sqlite3.connect(database.as_uri() + "?mode=ro&immutable=1", uri=True)
+            ) as source,
+            closing(sqlite3.connect(snapshot)) as destination,
+        ):
+            source.backup(destination)
+            if destination.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
+                raise ReleaseError(
+                    "Pre-migration SQLite backup failed its integrity check"
+                )
+        snapshot.chmod(0o600)
+
+        for role, state in containers.items():
+            tag = f"{APP}-backup-{role}:{bundle.name}"
+            docker("commit", state["Id"], tag)
+            try:
+                archive = backup / (role + ".tar")
+                docker("image", "save", "--output", archive, tag)
+                archive.chmod(0o600)
+            finally:
+                docker("image", "rm", tag)
+        write_private(
+            backup / "containers.json", json.dumps(containers, indent=2) + "\n"
+        )
+        # Persist the complete backup and its directory entry before SQLite can change.
+        for path in (*backup.iterdir(), backup):
+            sync_to_disk(path)
+        backup.rename(bundle / "before-migration")
+        sync_to_disk(bundle)
+
+
 def migrate(bundle, image, database):
     name = APP + "-deploy-migrate"
     prior = docker("ps", "-aq", "--filter", "name=^/" + name + "$").strip()
@@ -393,18 +493,9 @@ def migrate(bundle, image, database):
         docker("rm", prior)
     if docker("ps", "-q", "--filter", "label=org.jude.release.app=" + APP).strip():
         raise ReleaseError("Another application migration is running")
-    writers = docker(
-        "ps",
-        "-aq",
-        "--filter",
-        "label=com.docker.compose.project=" + APP,
-        "--filter",
-        "label=com.docker.compose.service=" + BACKEND,
-    ).splitlines()
-    for writer in writers:
-        check_database_mount(inspect(writer), database)
-        docker("stop", writer)
-        check_stopped_writer(writer, database)
+    progress("Stopping existing services and saving the pre-migration backup")
+    backup_before_migration(bundle, database)
+    progress("Checking Django settings and applying migrations")
     # A one-off with only egress avoids claiming the backend's fixed gateway address.
     docker(
         "run",
@@ -440,18 +531,23 @@ def deploy(root, bundle):
     validate_candidate_ports(bundle)
     progress("Pulling pinned application images")
     compose(bundle, "pull", *SERVICES)
-    progress("Checking Django settings and applying migrations")
+    progress("Checking for prior migration writers")
     migrate(bundle, release["backend"], database)
     progress("Starting backend and frontend")
-    compose(bundle, "up", "-d", "--no-deps", "--pull", "never", *SERVICES)
     try:
+        compose(bundle, "up", "-d", "--no-deps", "--pull", "never", *SERVICES)
         check_host(root)
-    except ReleaseError:
-        # Contain a deployment that exposes a port or violates the trust boundary.
-        compose(bundle, "stop", *SERVICES)
+        progress("Checking backend and public readiness")
+        readiness(bundle)
+    except Exception:
+        # Compose can start one service before failing. Stop both on every failed launch.
+        try:
+            compose(bundle, "stop", *SERVICES)
+        except (ReleaseError, OSError) as error:
+            raise ReleaseError(
+                "Could not take both services offline. Check their state on the host."
+            ) from error
         raise
-    progress("Checking backend and public readiness")
-    readiness(bundle)
     progress("Release accepted")
 
 
@@ -478,6 +574,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except (ReleaseError, OSError, ValueError, KeyError) as error:
+    except (ReleaseError, sqlite3.Error, OSError, ValueError, KeyError) as error:
         report_failure(error)
         sys.exit(1)

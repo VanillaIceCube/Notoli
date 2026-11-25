@@ -6,7 +6,7 @@ services:
   backend:
     image: ${BACKEND_IMAGE:?Set the reviewed backend digest}
     container_name: notoli-backend
-    restart: always
+    restart: unless-stopped
     env_file:
       - path: .backend.env
         # Preserve literal dollar signs, hashes and quotes in private settings.
@@ -34,7 +34,7 @@ services:
   frontend:
     image: ${FRONTEND_IMAGE:?Set the reviewed frontend digest}
     container_name: notoli-frontend
-    restart: always
+    restart: unless-stopped
     networks:
       # Keep the frontend separate from the backend's private and egress networks.
       frontend:

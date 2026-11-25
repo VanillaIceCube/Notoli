@@ -219,7 +219,8 @@ Change `app-release/v1` at the source, regenerate its manifest, then synchronize
 all consumers to the same immutable source commit. Application repositories track
 that source in `shared_source` in `deploy/production/app.json`; never edit only a vendored copy.
 Preserve app-specific Compose, network/readiness policy, immutable image digests,
-SQLite writer integrity and launch-only operation. Keep shared ingress/certificates
+SQLite writer integrity and private pre-migration copies of the database and app
+containers. A failed deployment health check takes both app services offline. Keep shared ingress/certificates
 and host operations within their separately authorized Infrastructure scope.
 
 Use the [app-only launch guide](deploy/production/README.md).

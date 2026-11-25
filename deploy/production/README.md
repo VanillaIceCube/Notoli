@@ -1,13 +1,13 @@
 # Production launches
 
-Notoli serves `https://notoli.judeandrewalaba.com`. The backend trusts only the gateway at `172.30.88.2` on its private network. Application settings and readiness checks live in [app.json](app.json). The [Compose file](compose.yml) defines the two services. The [shared release guide](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/0c45c727198d057c8bba3c72699588b6672a6362/app-release/README.md) describes the Infrastructure-owned launcher. For local development, see the [deployment README](../README.md).
+Notoli serves `https://notoli.judeandrewalaba.com`. The backend trusts only the gateway at `172.30.88.2` on its private network. Application settings and readiness checks live in [app.json](app.json). The [Compose file](compose.yml) defines the two services. The [shared release guide](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/7ad35f592ccfc3b37515328ac4cec1088d06f263/app-release/README.md) describes the Infrastructure-owned launcher. For local development, see the [deployment README](../README.md).
 
 ## Release sequence
 
 1. The owner promotes the reviewed source to `env-prod`. The [workflow](../../.github/workflows/ci-deploy.yml) verifies its shared source pin, builds the images, and records their immutable digests.
 2. The workflow verifies the SSH host key, reserves a private incoming directory, and uploads the app’s Compose file, configuration and environment there.
-3. The launcher validates the bundle, existing SQLite database, trusted gateway and ports. It pulls both images, stops this app’s database writers, and runs Django’s deployment checks and migrations.
-4. Compose starts the backend and frontend. The launcher checks network isolation, the direct backend and the public routes before reporting success.
+3. The launcher validates the bundle and host, pulls the images, stops this app's services and saves the pre-migration SQLite database and any existing backend and frontend containers. Django's deployment checks and migrations run after the backup completes.
+4. Compose starts both services. A failed startup, network isolation check or exhausted backend or public health check takes both services offline. The shared gateway and other apps continue serving.
 
 ## Host preparation and activation
 
@@ -20,7 +20,7 @@ python3 "$DEPLOY_PATH/incoming/$RELEASE_ID/release.py" \
   --root "$DEPLOY_PATH" --bundle "$DEPLOY_PATH/incoming/$RELEASE_ID"
 ```
 
-The launcher operates only this app’s services. It makes no database copies and offers no rollback command. A migration or readiness failure exits with the failed step. Inspect the affected app’s containers and their private logs before retrying with a new attempt. A WAL or rollback journal can contain committed data outside the single-file bind. If the launcher reports a journal, preserve that writer and have the database owner checkpoint it before attempting replacement. Avoid host-wide Docker pruning.
+The private `$DEPLOY_PATH/incoming/$RELEASE_ID/before-migration/` directory holds the verified database, loadable container archives and their runtime settings. Each retry keeps its own copy. The shared release guide above covers retention and manual recovery. A failed deployment leaves the database in place. Preserve any reported SQLite journal and its writer container for the database owner. Check for writes accepted since the backup before any manual restore.
 
 ## ⚙️ Configuration
 

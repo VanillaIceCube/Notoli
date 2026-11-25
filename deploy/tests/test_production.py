@@ -311,20 +311,26 @@ class LaunchTests(unittest.TestCase):
             (self.root / release.DB_FILE).read_bytes(), b"existing database"
         )
 
-    def test_readiness_failure_surfaces_without_another_compose_operation(self):
+    def test_failed_direct_backend_check_stops_both_services(self):
+        def fail_backend_exec(directory, operation, *args, **kwargs):
+            if operation == "exec":
+                raise release.ReleaseError("offline")
+
         with (
             patch.object(release, "check_host"),
             patch.object(release, "validate_candidate_ports"),
-            patch.object(release, "compose") as compose,
+            patch.object(release, "compose", side_effect=fail_backend_exec) as compose,
             patch.object(release, "migrate"),
-            patch.object(
-                release, "readiness", side_effect=release.ReleaseError("unhealthy")
-            ),
-            self.assertRaisesRegex(release.ReleaseError, "unhealthy"),
+            patch.object(release.time, "monotonic", side_effect=[0, 91]),
+            self.assertRaisesRegex(release.ReleaseError, "direct backend API"),
         ):
             release.deploy(self.root, self.bundle)
         self.assertEqual(
-            [call.args[1] for call in compose.call_args_list], ["pull", "up"]
+            [call.args[1] for call in compose.call_args_list],
+            ["pull", "up", "exec", "stop"],
+        )
+        self.assertEqual(
+            compose.call_args.args, (self.bundle, "stop", *release.SERVICES)
         )
 
     def test_stable_locks_exclude_maintenance_and_other_app_attempts(self):
