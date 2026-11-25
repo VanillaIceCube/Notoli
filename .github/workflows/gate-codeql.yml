@@ -47,16 +47,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Synchronize locked repository tooling
-        uses: ./.github/actions/setup-uv
-        with:
-          only-dev: "true"
+      - name: Install locked workflow dependencies
+        run: npm ci --prefix .github --ignore-scripts --no-audit --no-fund
 
       - name: Verify atomic immutable CodeQL revisions
-        run: node .github/actions/check-codeql-pins/check-codeql-pins.js
-
-      - name: Test CodeQL drift prevention
-        run: node --test .github/actions/check-codeql-pins/check-codeql-pins.test.js
+        run: node .github/scripts/validate-workflows.js --check-codeql-pins
 
       - name: Detect relevant changes
         id: filter
@@ -68,32 +63,44 @@ jobs:
             python:
               - 'backend/**'
               - '.github/actions/**'
+              - '.github/scripts/**'
+              - '.github/tests/**'
+              - '.github/fixtures/**'
+              - '.github/package.json'
+              - '.github/package-lock.json'
               - '.github/workflows/**'
               - '.github/codeql/**'
             javascript:
               - 'frontend/**'
               - '.github/actions/**'
+              - '.github/scripts/**'
+              - '.github/tests/**'
+              - '.github/fixtures/**'
+              - '.github/package.json'
+              - '.github/package-lock.json'
               - '.github/workflows/**'
               - '.github/codeql/**'
             actions:
               - '.github/actions/**'
+              - '.github/scripts/**'
+              - '.github/tests/**'
+              - '.github/fixtures/**'
+              - '.github/package.json'
+              - '.github/package-lock.json'
               - '.github/workflows/**'
               - '.github/codeql/**'
 
       - name: Report path detection failure
         if: github.event_name == 'pull_request' && steps.filter.outcome != 'success'
-        shell: bash
-        run: |
-          message="GitHub API path detection failed, so CodeQL scope was not evaluated. Rerun the workflow after the API limit or service error clears."
-          echo "::error title=CodeQL path detection unavailable::$message"
-          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
-            {
-              echo "### CodeQL path detection unavailable"
-              echo
-              echo "$message"
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-          exit 1
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          TITLE: CodeQL path detection unavailable
+          MESSAGE: GitHub API path detection failed, so CodeQL scope was not evaluated. Rerun the workflow after the API limit or service error clears.
+        with:
+          script: |
+            core.error(process.env.MESSAGE, { title: process.env.TITLE });
+            await core.summary.addHeading(process.env.TITLE, 3).addRaw(process.env.MESSAGE).write();
+            process.exitCode = 1;
 
       - name: Set analysis scope
         id: scope
@@ -102,35 +109,7 @@ jobs:
           PYTHON_SCOPE: ${{ steps.filter.outputs.python }}
           JAVASCRIPT_SCOPE: ${{ steps.filter.outputs.javascript }}
           ACTIONS_SCOPE: ${{ steps.filter.outputs.actions }}
-        run: |
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            for value in "$PYTHON_SCOPE" "$JAVASCRIPT_SCOPE" "$ACTIONS_SCOPE"; do
-              case "$value" in
-                true|false) ;;
-                *) echo '::error::CodeQL scope output is missing or invalid'; exit 1 ;;
-              esac
-            done
-          fi
-          {
-            echo "scope_status=success"
-            if [ "$EVENT_NAME" = "pull_request" ]; then
-              echo "python=$PYTHON_SCOPE"
-              echo "javascript=$JAVASCRIPT_SCOPE"
-              # Keep the Actions configuration present for relevant PRs so
-              # GitHub can compare it with the configuration on the base branch.
-              if [ "$ACTIONS_SCOPE" = "true" ] || \
-                 [ "$PYTHON_SCOPE" = "true" ] || \
-                 [ "$JAVASCRIPT_SCOPE" = "true" ]; then
-                echo "actions=true"
-              else
-                echo "actions=false"
-              fi
-            else
-              echo "python=true"
-              echo "javascript=true"
-              echo "actions=true"
-            fi
-          } >> "$GITHUB_OUTPUT"
+        run: node .github/scripts/set-codeql-scope.js
 
   analyze-python:
     name: Analyze Python
@@ -152,7 +131,8 @@ jobs:
         uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: python
-          queries: security-extended,security-and-quality
+          # GitHub's security-and-quality suite includes security-extended: https://docs.github.com/en/code-security/concepts/code-scanning/codeql/codeql-query-suites
+          queries: security-and-quality
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
@@ -179,7 +159,7 @@ jobs:
         uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: javascript-typescript
-          queries: security-extended,security-and-quality
+          queries: security-and-quality
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
@@ -206,7 +186,7 @@ jobs:
         uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: actions
-          queries: security-extended,security-and-quality
+          queries: security-and-quality
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3

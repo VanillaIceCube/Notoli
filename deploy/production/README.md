@@ -175,11 +175,11 @@ Infrastructure's `nginx/check_host.py` retains detailed full-host topology check
 all frontend builds use `VITE_API_BASE_URL=` for same-origin API requests.
 Infrastructure owns `app-release/v1`, its manifest, tests and workflow template.
 `shared_source` in `app.json` pins that source to immutable commit
-`4a7c8549875c7fc596d509a01b1facf92f3951ec` across all three consumers. CI verifies
+`d599c839873874fbcce3d4a1e113e623263cb754` across all three consumers. CI verifies
 the common files and generated workflow, failing on drift or unavailable source.
 Change the Infrastructure source, regenerate its manifest, then synchronize all
 consumers; never edit only a vendored common file. See the
-[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/4a7c8549875c7fc596d509a01b1facf92f3951ec/app-release/README.md)
+[release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/d599c839873874fbcce3d4a1e113e623263cb754/app-release/README.md)
 for the parity matrix and coordinated update procedure.
 
 Required Actions access variables: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PATH`,
@@ -592,4 +592,4 @@ production status.
 - [Workflow guide](../../.github/workflows/README.md)
 - [App policy](app.json), [Compose](compose.yml), [bundle builder](build_bundle.py),
   [release controller](release.py) and [deployment workflow](../../.github/workflows/ci-deploy.yml)
-- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/4a7c8549875c7fc596d509a01b1facf92f3951ec/app-release/README.md)
+- [Infrastructure release standard](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/d599c839873874fbcce3d4a1e113e623263cb754/app-release/README.md)

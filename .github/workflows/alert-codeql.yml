@@ -43,7 +43,7 @@ jobs:
           permission-security-events: read
 
       - name: Aggregate CodeQL alerts
-        uses: ./.github/actions/security-alerts
+        uses: ./.github/actions/track-security-alerts
         with:
           feed: codeql
           model: ${{ vars.AI_REVIEW_MODEL || 'gpt-6-luna' }}
