@@ -21,8 +21,10 @@ authentication, and the application shell.
 - `src/test-helpers/`: shared test setup and reusable helpers.
   App, startup and feature tests stay beside the files they exercise.
 
-Use `.jsx` for React components and pages, including components that return `null`.
-Hooks, services and plain data use `.js`. Test helpers that render JSX use `.jsx`.
+Use PascalCase `.jsx` filenames for React components and pages, including components
+that return `null`. Hooks use `useName.js`. Services and plain data use `.js`. Test
+helpers that render JSX use `.jsx`. Frontend lint checks JSX markup and the component
+and hook filename patterns.
 
 Under `components/`, `pages/`, `hooks/` and `services/`, put every module and its
 adjacent test in exactly one purpose-named subfolder. Use lowercase names with hyphens between words.

@@ -30,4 +30,23 @@ export default [
       'no-unused-vars': ['warn', { args: 'none', caughtErrors: 'none', ignoreRestSiblings: true }],
     },
   },
+  {
+    files: ['src/**/*.js'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        { selector: 'Program:has(JSXElement, JSXFragment)', message: 'Use .jsx for JSX markup.' },
+      ],
+    },
+  },
+  {
+    files: ['src/[A-Z]*.js', 'src/{components,pages}/**/[A-Z]*.js', 'src/**/use[A-Z0-9]*.jsx'],
+    ignores: ['**/*.test.{js,jsx}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        { selector: 'Program', message: 'Use .jsx for React components and .js for hooks.' },
+      ],
+    },
+  },
 ];
