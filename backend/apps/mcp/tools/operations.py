@@ -47,45 +47,28 @@ ROUTINE = {
     "add_board_collaborator": ("board_id", "identifier"),
     "set_list_tasks": ("list_id", "task_ids"),
 }
-PREPARABLE = {
-    "add_board_collaborator": ("board_id", "identifier"),
+REMOVALS = {
     "remove_board_collaborator": ("board_id", "user_id"),
     "delete_board": ("board_id",),
     "delete_list": ("list_id",),
     "delete_task": ("board_id", "task_id"),
-    "set_list_tasks": ("list_id", "task_ids"),
     "delete_notification": ("notification_id",),
     "clear_notifications": (),
 }
-
-
-REMOVAL_ACTIONS = frozenset(
-    {
-        "delete_board",
-        "delete_list",
-        "delete_task",
-        "delete_notification",
-        "clear_notifications",
-        "remove_board_collaborator",
-    }
-)
+PREPARABLE = REMOVALS.keys() | {"set_list_tasks"}
 
 
 def requires_approval(user, operation, arguments):
     """Membership omissions are removals; hold the board lock through dispatch."""
-    if operation in REMOVAL_ACTIONS:
-        return True
     if operation == "set_list_tasks":
         from .queries import removes_memberships
 
         return removes_memberships(user, arguments["list_id"], arguments["task_ids"])
-    if operation in ROUTINE:
-        return False
-    raise OperationError("Unknown operation policy.")
+    return operation in REMOVALS
 
 
 def validate_arguments(operation, arguments):
-    fields = (ROUTINE | PREPARABLE).get(operation)
+    fields = (ROUTINE | REMOVALS).get(operation)
     if fields is None or set(arguments) - set(fields):
         raise OperationError("Unknown action or writable fields.")
     arguments = dict(arguments)
@@ -276,11 +259,9 @@ def _collaborator_result(board, action):
     }
 
 
-def _add_board_collaborator(actor, *, board_id, identifier=None, resolved_user_id=None):
+def _add_board_collaborator(actor, *, board_id, identifier):
     board = board_for(actor, board_id)
-    tasks.add_collaborator(
-        actor, board.pk, identifier, expected_user_id=resolved_user_id
-    )
+    tasks.add_collaborator(actor, board.pk, identifier)
     return _collaborator_result(board, "added")
 
 

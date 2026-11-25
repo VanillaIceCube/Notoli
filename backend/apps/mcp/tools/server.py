@@ -87,30 +87,6 @@ async def call(operation, **arguments):
         ) from None
 
 
-async def reject_retired_task_arguments(context, call_next):
-    # The SDK drops undeclared arguments during tool validation. Reject retired
-    # names at the raw request boundary so a mixed request cannot write.
-    if context.method == "tools/call" and context.params:
-        arguments = context.params.get("arguments")
-        if isinstance(arguments, dict) and arguments.keys() & {
-            "item_id",
-            "item_ids",
-            "note",
-            "notes",
-            "note_text",
-        }:
-            return CallToolResult(
-                content=[
-                    TextContent(
-                        type="text",
-                        text="Use the current task arguments listed by this tool.",
-                    )
-                ],
-                is_error=True,
-            )
-    return await call_next(context)
-
-
 def create_server():
     server = create_framework_server(
         instructions="Discover boards and lists before making changes. Use returned IDs; ask the user when names are ambiguous. "
@@ -125,7 +101,35 @@ def create_server():
         "Results may mark truncated text; review full details in Notoli before editing. A truncated mutation with applied=true completed successfully: do not repeat it. Follow next_offset for remaining records.",
     )
 
-    server.middleware.append(reject_retired_task_arguments)
+    async def validate_tool_arguments(context, call_next):
+        # The SDK drops undeclared fields before calling the tool.
+        if context.method == "tools/call" and context.params:
+            arguments = context.params.get("arguments")
+            if isinstance(arguments, dict):
+                tool = next(
+                    (
+                        tool
+                        for tool in await server.list_tools()
+                        if tool.name == context.params.get("name")
+                    ),
+                    None,
+                )
+                if (
+                    tool is not None
+                    and arguments.keys() - tool.input_schema["properties"].keys()
+                ):
+                    return CallToolResult(
+                        content=[
+                            TextContent(
+                                type="text",
+                                text="Use only the arguments listed by this tool.",
+                            )
+                        ],
+                        is_error=True,
+                    )
+        return await call_next(context)
+
+    server.middleware.append(validate_tool_arguments)
 
     # Python's versioned MCP wire schemas preserve OpenAI extensions in _meta.
     # ChatGPT supports securitySchemes in this compatibility placement.

@@ -19,59 +19,6 @@ from .models import Confirmation, Execution
 from .permissions import lock_actor, principal, required_scopes
 from .results import bounded_result, json_value
 
-# Older MCP receipts and approvals keep their original stored names and fingerprints.
-_LEGACY_ACTIONS = {
-    "add_task": "add_item",
-    "update_task": "update_item",
-    "add_board_task": "add_board_item",
-    "update_board_task": "update_board_item",
-    "attach_task": "attach_item",
-    "reorder_tasks": "reorder_items",
-    "set_list_tasks": "set_list_items",
-    "delete_task": "delete_item",
-}
-_CURRENT_ACTIONS = {previous: current for current, previous in _LEGACY_ACTIONS.items()}
-_LEGACY_FIELDS = {"text": "note", "task_id": "item_id", "task_ids": "item_ids"}
-_CURRENT_FIELDS = {previous: current for current, previous in _LEGACY_FIELDS.items()}
-
-
-def _current_action(value):
-    return _CURRENT_ACTIONS.get(value, value)
-
-
-def _rename_fields(value, field_names):
-    return {field_names.get(key, key): field for key, field in value.items()}
-
-
-def _canonical_outcome(outcome):
-    result = _rename_fields(outcome, _CURRENT_FIELDS)
-    if "action" in result:
-        result["action"] = _current_action(result["action"])
-    if "result" in result:
-        result["result"] = _canonical_outcome(result["result"])
-    if result.get("event_type", "").startswith("note_"):
-        result["event_type"] = "task_" + result["event_type"][5:]
-    return result
-
-
-def _legacy_snapshot(snapshot):
-    """Restore the exact pre-rename shape solely for old fingerprint checks."""
-    result = snapshot.copy()
-    if "tasks" in result:
-        result["items"] = [
-            _rename_fields(row, {"text": "note"}) for row in result.pop("tasks")
-        ]
-    for collection in ("memberships", "notifications"):
-        if collection in result:
-            result[collection] = [
-                _rename_fields(row, {"task_id": "note_id"})
-                for row in result[collection]
-            ]
-    for row in result.get("notifications", []):
-        if row["event_type"].startswith("task_"):
-            row["event_type"] = "note_" + row["event_type"][5:]
-    return result
-
 
 def _uuid(value):
     try:
@@ -98,17 +45,17 @@ def _owned(record, token):
         raise PermissionDenied("Execution belongs to another connection.")
 
 
-def _outcome(record, replayed=True):
+def _outcome(record):
     if record.state == Execution.State.COMPLETED:
-        return dict(_canonical_outcome(record.outcome), replayed=replayed)
+        return dict(record.outcome, replayed=True)
     return {
         "request_id": str(record.pk),
-        "action": _current_action(record.action),
+        "action": record.action,
         "status": record.state,
         "applied": False
         if record.state in {Execution.State.CANCELLED, Execution.State.EXPIRED}
         else None,
-        "replayed": replayed,
+        "replayed": True,
         "result": {
             "detail": "This request cannot execute again. Inspect current records before requesting another action."
         },
@@ -137,7 +84,7 @@ def _preparation(record):
         or pending.target_id != record.target_id
         or _digest({"action": pending.action, "arguments": pending.payload})
         != record.request_digest
-        or _current_action(record.action) not in operations.PREPARABLE
+        or record.action not in operations.PREPARABLE
     ):
         _close(record, Execution.State.CANCELLED)
         return None
@@ -148,17 +95,14 @@ def _fresh(record, pending, user):
     try:
         current = queries.snapshot(
             user,
-            _current_action(record.action),
-            _rename_fields(pending.payload, _CURRENT_FIELDS),
+            record.action,
+            pending.payload,
             pending.selected_ids,
         )
     except (PermissionDenied, APIException, ValueError):
         _close(record, Execution.State.CANCELLED)
         return None
-    if (
-        _digest(current) != pending.fingerprint
-        and _digest(_legacy_snapshot(current)) != pending.fingerprint
-    ):
+    if _digest(current) != pending.fingerprint:
         _close(record, Execution.State.CANCELLED)
         return None
     return current
@@ -167,7 +111,7 @@ def _fresh(record, pending, user):
 def _prepared(record, pending, replayed=False):
     return {
         "request_id": str(record.pk),
-        "action": _current_action(record.action),
+        "action": record.action,
         "status": record.state,
         "applied": False,
         "replayed": replayed,
@@ -177,7 +121,7 @@ def _prepared(record, pending, replayed=False):
             + "/connections/authorize?approval_id="
             + str(pending.pk),
             "expires_at": pending.expires_at.isoformat(),
-            "changes": _rename_fields(pending.payload, _CURRENT_FIELDS),
+            "changes": pending.payload,
             "detail": "Open this URL and approve the exact action while signed in to Notoli, then call confirm_change with the same request and confirmation IDs. An MCP token cannot approve.",
         },
     }
@@ -188,7 +132,7 @@ def _complete(record, output, *, envelope):
     if envelope:
         output = {
             "request_id": str(record.pk),
-            "action": _current_action(record.action),
+            "action": record.action,
             "status": "completed",
             "applied": True,
             "replayed": False,
@@ -238,21 +182,7 @@ def _execute(raw_token, operation, **arguments):
         record = Execution.objects.select_for_update().filter(pk=request_id).first()
         if record is not None:
             _owned(record, token)
-            if _current_action(record.action) != operation:
-                raise operations.OperationError(
-                    "This UUID belongs to different action arguments."
-                )
-            recorded_digest = (
-                digest
-                if record.action == operation
-                else _digest(
-                    {
-                        "action": record.action,
-                        "arguments": _rename_fields(arguments, _LEGACY_FIELDS),
-                    }
-                )
-            )
-            if record.request_digest != recorded_digest:
+            if record.action != operation or record.request_digest != digest:
                 raise operations.OperationError(
                     "This UUID belongs to different action arguments."
                 )
@@ -266,7 +196,7 @@ def _execute(raw_token, operation, **arguments):
                         operation,
                         record.outcome
                         if "execution_status" in record.outcome
-                        else record.outcome.get("result", record.outcome),
+                        else record.outcome["result"],
                     )
                 return _outcome(record)
             pending = _preparation(record)
@@ -298,7 +228,7 @@ def _execute(raw_token, operation, **arguments):
             return _complete(
                 record,
                 operations.apply_action(token.user, operation, arguments),
-                envelope=operation in operations.PREPARABLE,
+                envelope=operation in {"add_board_collaborator", "set_list_tasks"},
             )
         selected_ids = []
         if operation == "clear_notifications":
@@ -357,7 +287,7 @@ def action_approval(user, reference, decision=None):
             raise Http404
         base = {
             "status": record.state,
-            "action": _current_action(record.action),
+            "action": record.action,
             "target_id": record.target_id,
             "paid": False,
         }
@@ -380,8 +310,7 @@ def action_approval(user, reference, decision=None):
             or token.application is None
             or token.application.client_id != record.client_id
             or token.application.authorization_grant_type != "authorization-code"
-            or not set(required_scopes(_current_action(record.action)))
-            <= set(token.scope.split())
+            or not set(required_scopes(record.action)) <= set(token.scope.split())
         ):
             raise PermissionDenied("This action's connection is no longer authorized.")
         current = _fresh(record, pending, user)
@@ -404,9 +333,9 @@ def action_approval(user, reference, decision=None):
                     "client_id": record.client_id,
                 },
                 user={"username": user.get_username()},
-                changes=_rename_fields(pending.payload, _CURRENT_FIELDS),
+                changes=pending.payload,
                 current=current,
-                destructive=record.action != "add_board_collaborator",
+                destructive=True,
                 expires_at=pending.expires_at.isoformat(),
             ),
             327680,
@@ -424,15 +353,15 @@ def confirm_change(raw_token, request_id, confirmation_id):
             )
         _owned(record, token)
         # A generic confirm tool never substitutes its baseline scopes for the real action.
-        operation = _current_action(record.action)
-        token = principal(raw_token, operation)
+        operation = record.action
         if (
-            _current_action(record.action) not in operations.PREPARABLE
+            operation not in operations.PREPARABLE
             or record.confirmation_id != confirmation_id
         ):
             raise operations.OperationError(
                 "Use the original sensitive action identifiers."
             )
+        token = principal(raw_token, operation)
         if record.state not in {Execution.State.PREPARED, Execution.State.APPROVED}:
             return _outcome(record)
         pending = _preparation(record)
@@ -440,16 +369,13 @@ def confirm_change(raw_token, request_id, confirmation_id):
             return _outcome(record)
         if pending.token_checksum != token.token_checksum:
             raise PermissionDenied("Preparation belongs to a different token.")
-        current = _fresh(record, pending, token.user)
-        if current is None:
+        if _fresh(record, pending, token.user) is None:
             return _outcome(record)
         if record.state != Execution.State.APPROVED:
             return _prepared(record, pending, True)
-        arguments = _rename_fields(pending.payload, _CURRENT_FIELDS)
+        arguments = pending.payload.copy()
         if record.action == "clear_notifications":
             arguments["selected_ids"] = pending.selected_ids
-        elif record.action == "add_board_collaborator":
-            arguments["resolved_user_id"] = current["sharing_target"]["id"]
         record.state = Execution.State.IN_PROGRESS
         record.save(update_fields=["state", "updated_at"])
         pending.delete()
