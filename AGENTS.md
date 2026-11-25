@@ -1,5 +1,82 @@
 # AGENTS.md
 
+## Human-First Engineering
+
+This repository is intended to be understood, maintained, and owned by humans. AI-assisted development must not come at the expense of human comprehension.
+
+### Simplicity and Readability
+
+- Prefer simple, explicit, conventional implementations over clever or unnecessarily flexible solutions.
+- Follow KISS, YAGNI, and separation of concerns without applying them dogmatically.
+- Every abstraction, dependency, helper, and layer of indirection must justify its existence.
+- Keep related functionality together. Minimize the number of files a developer must navigate to understand an operation.
+- Prefer native framework and standard library functionality over custom implementations.
+- Do not introduce abstractions for hypothetical future requirements.
+- Prioritize readability over minimizing lines of code.
+- Comments should explain why something exists, not restate what the code does.
+
+### Deletion and Consolidation
+
+- Prefer removing unnecessary complexity over introducing additional code to manage it.
+- Remove unused imports, functions, files, dependencies, configuration, and obsolete implementation paths when verified safe.
+- Maintain a single source of truth for business logic.
+- Do not introduce parallel implementations, transitional wrappers, or compatibility layers without a demonstrated requirement.
+- Leave modified code simpler or equally understandable whenever reasonably possible.
+
+### Validation and Error Handling
+
+- Address root causes rather than masking symptoms.
+- Establish invariants and validate inputs at the appropriate upstream boundaries.
+- Do not repeatedly validate conditions that are already guaranteed.
+- Avoid speculative defensive checks, unnecessary fallbacks, broad exception handling, and silent failures.
+- Unexpected internal failures should surface clearly.
+- Preserve necessary security, authorization, data integrity, concurrency, external input validation, and legitimate recovery mechanisms.
+
+### Testing
+
+- Test meaningful, observable behavior rather than implementation details.
+- Prefer straightforward tests with realistic inputs and minimal mocking.
+- Do not create redundant tests solely to increase coverage.
+- Do not weaken meaningful test coverage to make an implementation pass.
+- Keep test infrastructure proportional to the complexity of the application.
+- Follow established testing conventions.
+
+### Architectural Consistency
+
+- Understand existing conventions before introducing new patterns.
+- Prefer extending an established, sound pattern over creating another.
+- Maintain appropriate consistency across Notoli, MacroMapper, FullStackTemplate, and shared infrastructure.
+- Where functionality is genuinely shared, maintain a canonical implementation through FullStackTemplate.
+- Do not propagate unnecessary complexity in the name of parity.
+- Respect legitimate product-specific requirements.
+
+### Scope and Ownership
+
+- Implement what was requested, not what might eventually be requested.
+- Avoid unrelated refactoring and speculative improvements.
+- Do not introduce new dependencies, architectural layers, or infrastructure without clear justification.
+- Preserve existing behavior unless a behavioral change is explicitly intended.
+- Flag consequential architectural decisions and uncertain deletions for human review.
+- Verify changes using relevant tests, linting, type checks, and builds.
+
+### Final Self-Review
+
+Before completing any change, ask:
+
+- Can this implementation be simpler?
+- Is every new abstraction necessary?
+- Can a human easily trace the execution flow?
+- Am I solving a real problem or a hypothetical one?
+- Am I addressing the root cause or masking it?
+- Have I introduced unnecessary maintenance overhead?
+- Would a human developer reasonably choose this implementation without AI assistance?
+
+If a simpler, equally correct implementation exists, prefer it.
+
+
+
+Complexity must be earned. Code is a liability as well as an asset. The objective is not to maximize output, but to deliver reliable functionality with the lowest reasonable maintenance burden.
+
 ## 🧭 Ownership and shared rollout
 
 FullStackTemplate owns reusable application engineering and the canonical MCP
@@ -122,26 +199,9 @@ procedure; Infrastructure owns gateway, certificates and host routing.
 
 ## ⚙️ Configuration
 
-Optional backend variables (defaults are used if unset):
-
-- `DJANGO_SECRET_KEY` (required when `DJANGO_DEBUG=0`; debug runs generate a temporary random key if unset/blank, so set a stable local key to retain sessions across restarts)
-- `DJANGO_DEBUG` (default: `1`)
-- `DJANGO_SQLITE_PATH` (default: `backend/db.sqlite3`)
-- `DJANGO_ALLOWED_HOSTS` (comma-separated)
-- `DJANGO_CORS_ALLOWED_ORIGINS` (comma-separated)
-- `DJANGO_CSRF_TRUSTED_ORIGINS` (comma-separated)
-- `DJANGO_FRONTEND_BASE_URL` (default: `http://localhost:3000`; used in password-reset email links)
-- `DJANGO_MCP_ENABLED` (only `1` enables MCP; bare settings and the local Docker example default off; the production policy explicitly sets `1`)
-- `DJANGO_MCP_BASE_URL` (origin only, no path; defaults to `http://localhost:8000`; production policy explicitly sets `https://notoli.judeandrewalaba.com`; OAuth issuer and MCP resource base)
-- `DJANGO_TRUSTED_PROXY_IPS` (individual proxy IPs only; default empty; production Compose sets Nginx's private address `172.30.88.2`; never use wildcards or CIDRs)
-- `DJANGO_EMAIL_BACKEND` (default: `django.core.mail.backends.console.EmailBackend`)
-- `DJANGO_EMAIL_HOST` (default: `smtp.resend.com`)
-- `DJANGO_EMAIL_PORT` (default: `587`)
-- `DJANGO_EMAIL_USE_TLS` (default: `1`)
-- `DJANGO_EMAIL_HOST_USER` (default: `resend`)
-- `DJANGO_EMAIL_HOST_KEY` (Resend API key)
-- `DJANGO_EMAIL_TIMEOUT` (default: `10`)
-- `DJANGO_DEFAULT_FROM_EMAIL` (default: `notoli@example.com`)
+Use the [backend configuration guide](backend/README.md) for Django settings
+and the [frontend configuration guide](frontend/README.md) for Vite build inputs.
+Keep credentials in the backend environment. Frontend build inputs are public.
 
 ## 🧪 Checks
 
