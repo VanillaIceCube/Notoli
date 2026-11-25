@@ -45,8 +45,12 @@ def _owned(record, token):
         raise PermissionDenied("Execution belongs to another connection.")
 
 
-def _outcome(record):
+def _outcome(record, user):
     if record.state == Execution.State.COMPLETED:
+        if record.action in operations.ROUTINE:
+            outcome = record.outcome
+            details = outcome if "execution_status" in outcome else outcome["result"]
+            queries.require_replay_access(user, record.action, details)
         return dict(record.outcome, replayed=True)
     return {
         "request_id": str(record.pk),
@@ -187,25 +191,14 @@ def _execute(raw_token, operation, **arguments):
                     "This UUID belongs to different action arguments."
                 )
             if record.state not in {Execution.State.PREPARED, Execution.State.APPROVED}:
-                if (
-                    record.state == Execution.State.COMPLETED
-                    and operation in operations.ROUTINE
-                ):
-                    queries.require_replay_access(
-                        token.user,
-                        operation,
-                        record.outcome
-                        if "execution_status" in record.outcome
-                        else record.outcome["result"],
-                    )
-                return _outcome(record)
+                return _outcome(record, token.user)
             pending = _preparation(record)
             if pending is None:
-                return _outcome(record)
+                return _outcome(record, token.user)
             if pending.token_checksum != token.token_checksum:
                 raise PermissionDenied("Preparation belongs to a different token.")
             if _fresh(record, pending, token.user) is None:
-                return _outcome(record)
+                return _outcome(record, token.user)
             return _prepared(record, pending, True)
         target_id = next(
             (
@@ -354,6 +347,7 @@ def confirm_change(raw_token, request_id, confirmation_id):
         _owned(record, token)
         # A generic confirm tool never substitutes its baseline scopes for the real action.
         operation = record.action
+        token = principal(raw_token, operation)
         if (
             operation not in operations.PREPARABLE
             or record.confirmation_id != confirmation_id
@@ -361,16 +355,15 @@ def confirm_change(raw_token, request_id, confirmation_id):
             raise operations.OperationError(
                 "Use the original sensitive action identifiers."
             )
-        token = principal(raw_token, operation)
         if record.state not in {Execution.State.PREPARED, Execution.State.APPROVED}:
-            return _outcome(record)
+            return _outcome(record, token.user)
         pending = _preparation(record)
         if pending is None:
-            return _outcome(record)
+            return _outcome(record, token.user)
         if pending.token_checksum != token.token_checksum:
             raise PermissionDenied("Preparation belongs to a different token.")
         if _fresh(record, pending, token.user) is None:
-            return _outcome(record)
+            return _outcome(record, token.user)
         if record.state != Execution.State.APPROVED:
             return _prepared(record, pending, True)
         arguments = pending.payload.copy()

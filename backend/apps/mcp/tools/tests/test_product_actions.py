@@ -480,8 +480,8 @@ class ProductToolTests(TestCase):
             HTTP_AUTHORIZATION=f"Bearer {JWTToken.for_user(user or self.owner)}"
         )
 
-    def approve_action(self, prepared, decision="allow"):
-        client = self.approval_client()
+    def approve_action(self, prepared, decision="allow", *, user=None):
+        client = self.approval_client(user)
         response = client.get(
             "/auth/mcp/action-approval/",
             {"approval_id": prepared["result"]["confirmation_id"]},
@@ -820,6 +820,16 @@ class ProductToolTests(TestCase):
         self.assertEqual(
             list(self.first.tasks.values_list("pk", flat=True)), [self.tasks[0].pk]
         )
+
+    def test_completed_membership_receipt_requires_current_board_access(self):
+        prepared = self.prepare_action(
+            "set_list_tasks", token="member", list_id=self.first.pk, task_ids=[]
+        )
+        self.approve_action(prepared, user=self.member)
+        self.assertEqual(self.confirm_action(prepared, "member")["status"], "completed")
+        self.board.collaborators.remove(self.member)
+        with self.assertRaises(PermissionDenied):
+            self.confirm_action(prepared, "member")
 
     def test_membership_policy_reads_live_set_after_board_lock(
         self,
