@@ -1,45 +1,27 @@
-const normalizePath = (path) => {
-  if (typeof path !== 'string') return '';
-  const clean = path.split('?')[0].split('#')[0];
-  if (clean.length > 1 && clean.endsWith('/')) {
-    return clean.slice(0, -1);
-  }
-  return clean;
-};
-
-export const getBoardId = (path) => {
-  if (typeof path !== 'string') return null;
-  const cleanPath = normalizePath(path);
-
-  // /board/:boardId/list/:listId or /boards/:boardId/list/:listId
-  const listMatch = cleanPath.match(/^\/boards?\/([^/]+)\/list\/[^/]+$/);
-  if (listMatch) return listMatch[1]; // just boardId
-
-  // /board/:boardId or /boards/:boardId
-  const boardMatch = cleanPath.match(/^\/boards?\/([^/]+)$/);
-  if (boardMatch) return boardMatch[1]; // just boardId
-
-  return null;
-};
-
-export const getParentPath = (path) => {
+function parseBoardPath(path) {
   if (typeof path !== 'string') return undefined;
-  const cleanPath = normalizePath(path);
+  const [pathname] = path.split(/[?#]/, 1);
+  const segments = pathname.replace(/\/$/, '').split('/');
+  const [root, collection, boardId, child, listId] = segments;
 
-  //  list <-- tasks
-  //  /board/:boardId/list/:listId or /boards/:boardId/list/:listId
-  const listPath = cleanPath.match(/^(\/boards?\/[^/]+)\/list\/[^/]+$/);
-  if (listPath) return `${listPath[1]}`;
+  if (root !== '' || !['board', 'boards'].includes(collection) || !boardId) return undefined;
+  if (segments.length === 3) return { boardId, parent: '/' };
+  if (segments.length === 5 && child === 'list' && listId) {
+    return { boardId, parent: `/${collection}/${boardId}` };
+  }
+}
 
-  //  board <-- lists
-  //  /board/:boardId or /boards/:boardId
-  const boardPath = cleanPath.match(/^\/boards?\/[^/]+$/);
-  if (boardPath) return '/';
-};
+export function getBoardId(path) {
+  return parseBoardPath(path)?.boardId ?? null;
+}
+
+export function getParentPath(path) {
+  return parseBoardPath(path)?.parent;
+}
 
 export const goBackToParent = (path, navigate) => {
   const target = getParentPath(path);
   if (target && typeof navigate === 'function') {
-    navigate(target, { replace: true }); // replace prevents stacking history
+    navigate(target, { replace: true });
   }
 };
