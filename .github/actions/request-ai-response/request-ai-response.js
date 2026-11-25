@@ -40,6 +40,11 @@ function requestResponse(body, env) {
       },
       signal: AbortSignal.timeout(180_000),
     }, response => {
+      if (response.statusCode >= 400) {
+        const retryAfter = response.headers["retry-after"];
+        const retry = /^\d{1,7}$/.test(retryAfter) ? ` (retry after ${retryAfter}s)` : "";
+        console.warn(`OpenAI HTTP ${response.statusCode}${retry}`);
+      }
       const chunks = [];
       response.on("data", chunk => chunks.push(chunk));
       response.on("error", reject);
@@ -64,7 +69,12 @@ function outputText(response) {
     return parts.map(item => item.text).join("\n") || "OpenAI did not return usable output.";
   }
   if (response?.error?.message) {
-    return "OpenAI API error: provider rejected the request; inspect access/configuration and provider status without logging raw error content.";
+    const { code, type } = response.error;
+    const known = ["insufficient_quota", "rate_limit_exceeded", "context_length_exceeded",
+      "invalid_api_key", "model_not_found", "permission_denied", "invalid_request_error",
+      "server_error", "billing_hard_limit_reached", "organization_deactivated"];
+    const category = known.find(value => value === code || value === type);
+    return category ? `OpenAI API error: ${category}.` : "OpenAI API error: provider rejected the request.";
   }
   return "OpenAI did not return a response.";
 }

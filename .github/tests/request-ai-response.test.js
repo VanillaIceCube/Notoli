@@ -123,7 +123,9 @@ test('Responses action validates requests and handles unavailable output without
     [async () => { throw new Error('private transport details'); }, /request failed before a response/],
     [async () => 'not-json', /not valid JSON/],
     [async () => 'null', /did not return a response/],
-    [async () => '{"error":{"message":"private provider details"}}', /provider rejected the request/],
+    [async () => '{"error":{"message":"private provider details","code":"private provider details"}}', /provider rejected the request/],
+    [async () => '{"error":{"message":"private provider details","code":"rate_limit_exceeded","type":"tokens"}}', /OpenAI API error: rate_limit_exceeded/],
+    [async () => '{"error":{"message":"private provider details","type":"insufficient_quota"}}', /OpenAI API error: insufficient_quota/],
   ]) {
     const result = await invoke({}, send);
     assert.match(result.output, expected);
