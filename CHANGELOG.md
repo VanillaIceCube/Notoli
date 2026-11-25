@@ -11,7 +11,8 @@ All notable changes to this project are documented in this file.
 ### Fixed
 
 - Install the hash-pinned uv wheel directly so Python checks can start on hosted Linux runners.
-- Supply the legacy malware scanner’s pinned semver dependency when a PR targets a base that predates the scanner migration.
+- Supply the legacy malware scanner’s pinned semver dependency and include automation lockfile changes when the PR base predates the scanner migration.
+- Pin application deployment parity checks to the Infrastructure commit that supplies the updated workflow template.
 - Require the current auto-merge run's pending Dependabot Policy check before enabling native auto-merge.
 
 ### Changed

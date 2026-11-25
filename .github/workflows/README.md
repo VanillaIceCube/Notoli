@@ -11,7 +11,7 @@ Start with [ci-orchestrator.yml](ci-orchestrator.yml) for a pull request. The ot
 | [gate-test.yml](gate-test.yml) | Called by PR CI | Selects frontend tests and build, Django and MCP tests, automation checks and development-image builds by changed files. |
 | [gate-codeql.yml](gate-codeql.yml) | Called by PR CI, daily at midnight Pacific, or manually | Scans the selected Python, JavaScript/TypeScript and Actions configurations on PRs. Scheduled and manual runs select all three. |
 | [gate-vulnerability.yml](gate-vulnerability.yml) | Called by PR CI | GitHub Dependency Review checks dependency changes and fails on high or critical advisories. Its native check has the findings. RoboCop gets a bounded 16 KiB summary. |
-| [gate-malware.yml](gate-malware.yml) | Called by PR CI | Checks changed public npm and PyPI package versions against published malware advisories. The scanner runs from the PR’s trusted base and reads the proposed Git objects as data. Older bases use their original npm scanner and its pinned semver dependency. |
+| [gate-malware.yml](gate-malware.yml) | Called by PR CI | Checks changed public npm and PyPI package versions against published malware advisories. The scanner runs from the PR’s trusted base and reads the proposed Git objects as data. Older bases use their original npm scanner with its pinned semver dependency to check both frontend and automation lockfiles. |
 | [gate-secrets.yml](gate-secrets.yml) | Called by PR CI | Gitleaks checks the PR for exposed credentials using a checkout with full history. The result is an independent check. |
 | [review-code.yml](review-code.yml) | Same-repository PR, including Dependabot | Obi-Wan reviews the source diff and prior discussion. A major Dependabot update also needs a complete upstream evidence brief. |
 | [review-build.yml](review-build.yml) | Same-repository PR, after lint and tests finish | Lint Eastwood reviews build and test results with their bounded diagnostics, including failures. |
@@ -44,6 +44,8 @@ Frontend jobs read their Node range from `frontend/package.json`. The automation
 The read-only verifier accepts a ruleset and a current-head check-run response saved from GitHub. It verifies required evidence, including successful reviewers. Run `node .github/scripts/validate-reviewer-gates.js <ruleset.json> <check-runs.json>`. Do not count a skipped, neutral or cancelled applicable reviewer as an approval.
 
 ### Protected Dependabot auto-merge
+
+The policy uses the changed paths returned by GitHub. An empty list selects no file-specific checks. Fetch errors propagate, and the policy still requires the independent gates and current-head reviewer approvals.
 
 The follow-up resolves the successful CI run to its open PR into `main`. It reads reviewed code from `main`, the proposed commit as data, the required status checks and the three reviewers’ current-head approvals. Signed patch/minor metadata can qualify for native auto-merge with `expectedHeadOid`. Major updates and SHA-only Action changes without a verified update type need owner review. An open alert on an updated package blocks automatic eligibility if its CVSS score exceeds 6.9 or is missing or invalid. Production promotion has separate owner authorization. [Repository configuration](../README.md)
 
