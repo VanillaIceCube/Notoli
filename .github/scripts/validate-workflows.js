@@ -214,8 +214,8 @@ function layoutProblem(file, testOwners) {
     return "keep action.yml and its implementation together in the action directory";
   }
   if (group === tests) {
-    if (parent !== tests && parent !== tests + "/integration") {
-      return "test discovery reads .github/tests and its integration directory. Put supporting data in .github/fixtures";
+    if (parent !== tests) {
+      return "test discovery reads top-level .github/tests suites. Put supporting data in .github/fixtures";
     }
     if (!name.endsWith(".test.js") || !kebab.test(name.slice(0, -8))) return "use <implementation-name>.test.js";
     if (parent === tests && !testOwners.has(name.slice(0, -8))) return "name the test after its script, action implementation or workflow";

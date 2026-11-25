@@ -163,6 +163,7 @@ test("audits the layout, referenced scripts and reachable composite actions", (t
   write(".github/actions/example/old.sh", "");
   write(".github/actions/example/action.yml", "runs: {using: composite, steps: [{run: node $GITHUB_ACTION_PATH/missing.js}]}");
   write(".github/tests/untested.js", "");
+  write(".github/tests/integration/unwired.test.js", "");
   write(".github/tests/no-owner.test.js", "");
   write(".github/old.sh", "");
   write(".github/tests/fixtures/example.json", "{}");
@@ -175,6 +176,7 @@ test("audits the layout, referenced scripts and reachable composite actions", (t
     "local uses target", "missing workflow script", "no local workflow or action calls",
     "each reusable action needs", "keep automation tests", "directly in .github/workflows",
     "directly in .github/scripts", "<implementation-name>.test.js", "test discovery",
+    ".github/tests/integration/unwired.test.js: test discovery",
     ".github/tests/no-owner.test.js: name the test after its script, action implementation or workflow",
     "composite run step needs its shell", "missing action implementation",
     "embedded Python or JavaScript", ".github/actions/loop: no local workflow",
