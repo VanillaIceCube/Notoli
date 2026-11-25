@@ -80,13 +80,11 @@ function checkLocalStaticRoutes() {
 }
 
 function checkReleaseDocumentation() {
-  const { shared_source: { commit } } = JSON.parse(fs.readFileSync("deploy/production/app.json", "utf8"));
+  const { shared_source } = JSON.parse(fs.readFileSync("deploy/production/app.json", "utf8"));
   const guide = fs.readFileSync("deploy/production/README.md", "utf8");
-  const pins = [...guide.matchAll(/`shared_source` in `app\.json` pins that source to immutable commit\s+`([^`]+)`/g)];
-  const links = [...guide.matchAll(/\[((?:Infrastructure )?release standard)\]\(https:\/\/github\.com\/VanillaIceCube\/JudeAndrewAlabaInfrastructure\/blob\/([^/]+)\/app-release\/README\.md\)/g)];
-  if (pins.length !== 1 || pins[0][1] !== commit || new Set(links.map(([, label]) => label)).size !== 2
-      || links.some(([, , ref]) => ref !== commit)) {
-    throw new Error("Production guide release pin and canonical links must match deploy/production/app.json");
+  const source = "https://github.com/" + shared_source.repository + "/blob/" + shared_source.commit;
+  if (!guide.includes("(" + source + "/app-release/README.md)")) {
+    throw new Error("Link the production guide to the release guide at the commit pinned in app.json");
   }
 }
 

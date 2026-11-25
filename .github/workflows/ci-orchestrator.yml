@@ -97,16 +97,8 @@ jobs:
     with:
       lint_result: ${{ needs.lints.result }}
       test_result: ${{ needs.tests.result }}
-      lint_frontend_status: ${{ needs.lints.outputs.lint_frontend_status }}
-      lint_frontend_log: ${{ needs.lints.outputs.lint_frontend_log }}
-      lint_backend_status: ${{ needs.lints.outputs.lint_backend_status }}
-      lint_backend_log: ${{ needs.lints.outputs.lint_backend_log }}
-      test_frontend_status: ${{ needs.tests.outputs.test_frontend_status }}
-      test_frontend_log: ${{ needs.tests.outputs.test_frontend_log }}
-      test_backend_status: ${{ needs.tests.outputs.test_backend_status }}
-      test_backend_log: ${{ needs.tests.outputs.test_backend_log }}
-      test_automation_status: ${{ needs.tests.outputs.test_automation_status }}
-      test_automation_log: ${{ needs.tests.outputs.test_automation_log }}
+      lint_evidence: ${{ toJSON(needs.lints.outputs) }}
+      test_evidence: ${{ toJSON(needs.tests.outputs) }}
 
   security-review:
     name: AI Security Review

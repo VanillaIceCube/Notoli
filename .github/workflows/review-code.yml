@@ -70,10 +70,10 @@ jobs:
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
-          omit_frontend_npm_lockfile: "true"
+          omit_frontend_npm_lockfile: ${{ github.event.repository.name != 'JudeAndrewAlabaInfrastructure' && 'true' || 'false' }}
 
       - name: Collect read-only auto-merge API evidence
-        if: steps.pr-diff.outputs.truncated != 'true'
+        if: steps.pr-diff.outputs.truncated != 'true' && github.event.repository.name != 'JudeAndrewAlabaInfrastructure'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
@@ -135,7 +135,11 @@ jobs:
             quotes, and Yoda-like grammar. Keep technical findings exact and trustworthy.
           prompt_prefix: |
             Review this pull request as Obi-Wan Code-nobi, the AI Code Reviewer for ${{ github.repository }}
-            (Django, React, MUI, Docker and GitHub Actions).
+            (application code, infrastructure, Docker and GitHub Actions).
+            For gateway changes, enforce the owner's env-prod promotion policy, including source and workflow
+            verification, original and retrying actor checks, pinned SSH host identity and credential isolation.
+            The selected model uses repository settings. A writer who can replace workflows remains privileged.
+            Require operator authorization for host setup. Keep the proxy isolated from application data.
 
             Scope:
             - Own general implementation review: correctness, maintainability, architecture, edge cases, missing

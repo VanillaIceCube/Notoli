@@ -1,7 +1,6 @@
 "use strict";
 
 const fs = require("node:fs");
-const sections = process.argv.slice(2);
 
 function input(name) {
   const value = process.env[name];
@@ -14,11 +13,13 @@ const lines = [
   `lint_result: ${input("LINT_RESULT")}`,
   `test_result: ${input("TEST_RESULT")}`,
 ];
-for (const section of sections) {
-  lines.push(`${section.toLowerCase()}_status: ${input(`${section}_STATUS`)}`);
-}
-for (const section of sections) {
-  lines.push("", `--- ${section.toLowerCase()}_log ---`, input(`${section}_LOG`));
+const sections = { ...JSON.parse(input("LINT_EVIDENCE")), ...JSON.parse(input("TEST_EVIDENCE")) };
+for (const [key, status] of Object.entries(sections)) {
+  if (!key.endsWith("_status")) continue;
+  const name = key.slice(0, -"_status".length);
+  const log = sections[name + "_log"];
+  if (typeof log !== "string") throw new Error("Missing diagnostic log for " + name);
+  lines.push(`${key}: ${status || "not-applicable"}`, "", `--- ${name}_log ---`, log);
 }
 lines.push(
   "", "=== PRIOR LINT EASTWOOD REVIEWS ===", fs.readFileSync(input("PRIOR_REVIEWS_PATH"), "utf8"),
