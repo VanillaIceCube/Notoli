@@ -18,21 +18,7 @@ runs:
     - name: Install uv
       shell: bash
       working-directory: ${{ github.workspace }}
-      run: |
-        set -euo pipefail
-        if [[ "$RUNNER_OS" != "Linux" || "$RUNNER_ARCH" != "X64" ]]; then
-          echo "setup-uv requires the reviewed Linux X64 wheel." >&2
-          exit 1
-        fi
-        requirements=$(mktemp "$RUNNER_TEMP/uv-requirements.XXXXXX")
-        trap 'rm -f "$requirements"' EXIT
-        # PyPI uv 0.13.8 manylinux x86_64 wheel; reviewed 2026-11-15.
-        # https://pypi.org/pypi/uv/0.13.8/json
-        printf '%s\n' 'uv==0.13.8 --hash=sha256:e18a57b8b352eb7c8feb317b9f6f533c8f0ad9673fd6cf34bbe3cf1a9f6a8984' > "$requirements"
-        python -m pip --isolated install --disable-pip-version-check \
-          --no-cache-dir --force-reinstall --no-deps --only-binary=:all: \
-          --require-hashes --index-url https://pypi.org/simple \
-          --requirement "$requirements"
+      run: node "$GITHUB_ACTION_PATH/setup-uv.js"
     - name: Synchronize the project environment
       if: inputs.only-dev != 'true'
       shell: bash

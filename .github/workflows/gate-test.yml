@@ -26,57 +26,6 @@ permissions:
   contents: read
   pull-requests: read
 
-env:
-  BOUNDED_LOG_PYTHON: |
-    """Bound CI reviewer context while retaining early, failing and late evidence."""
-    from pathlib import Path
-    import re
-    import sys
-    import uuid
-
-
-    def summarize(text, limit=16000):
-        lines = text.splitlines()
-        indexes = set(range(min(20, len(lines))))
-        indexes.update(range(max(0, len(lines) - 20), len(lines)))
-        failures = [i for i, line in enumerate(lines) if re.search(
-            r"not ok|FAIL(?:ED|URE)?|Traceback|AssertionError|^\s*[×✖]|Error:", line
-        )]
-        # Even many failures get bounded context; sample across the entire run.
-        if len(failures) > 12:
-            failures = [failures[round(i * (len(failures) - 1) / 11)] for i in range(12)]
-        for i in failures:
-            indexes.update(range(max(0, i - 1), min(len(lines), i + 4)))
-        # Allocate a per-line budget so a huge header cannot remove later failures.
-        budget = max(32, (limit - 1000) // max(1, len(indexes)))
-        selected = []
-        previous = -1
-        for i in sorted(indexes):
-            if i > previous + 1:
-                selected.append("... omitted lines; complete output is in the job log ...")
-            selected.append(lines[i][:budget])
-            previous = i
-        return "\n".join(selected)[:limit]
-
-
-    def main():
-        source, output = map(Path, sys.argv[1:3])
-        text = source.read_text(encoding="utf-8", errors="replace") if source.exists() else "No check output was produced."
-        content = summarize(text)
-        delimiter = "LOG_" + uuid.uuid4().hex
-        with output.open("a", encoding="utf-8") as stream:
-            stream.write(f"log<<{delimiter}\n{content}\n{delimiter}\n")
-        # Artifact size is capped; tee retains the complete original in the job log.
-        data = text.encode("utf-8")
-        cap = 512 * 1024
-        if len(data) > 2 * cap:
-            data = data[:cap] + b"\n... artifact truncated; complete output is in the job log ...\n" + data[-cap:]
-        source.with_suffix(".bounded.txt").write_bytes(data)
-
-
-    if __name__ == "__main__":
-        main()
-
 jobs:
   changes:
     name: Detect Changes
@@ -100,13 +49,15 @@ jobs:
           filters: |
             frontend:
               - 'frontend/**'
-              - '.github/actions/read-versions/**'
               - '.github/workflows/gate-test.yml'
+              - '.github/scripts/summarize-check-log.js'
+              - '.github/scripts/run-app-checks.js'
             backend:
               - 'backend/**'
               - '.github/actions/setup-uv/**'
               - '.github/workflows/gate-test.yml'
-              - '.github/actions/read-versions/**'
+              - '.github/scripts/summarize-check-log.js'
+              - '.github/scripts/run-app-checks.js'
             development:
               - 'backend/docker/Dockerfile.dockerignore'
               - 'backend/docker/Dockerfile.hotswap.dockerignore'
@@ -129,18 +80,15 @@ jobs:
 
       - name: Report path detection failure
         if: steps.filter.outcome == 'failure'
-        shell: bash
-        run: |
-          message="GitHub API path detection failed, so test scope was not evaluated. Rerun the workflow after the API limit or service error clears."
-          echo "::error title=Test path detection unavailable::$message"
-          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
-            {
-              echo "### Test path detection unavailable"
-              echo
-              echo "$message"
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-          exit 1
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          TITLE: Test path detection unavailable
+          MESSAGE: GitHub API path detection failed, so test scope was not evaluated. Rerun the workflow after the API limit or service error clears.
+        with:
+          script: |
+            core.error(process.env.MESSAGE, { title: process.env.TITLE });
+            await core.summary.addHeading(process.env.TITLE, 3).addRaw(process.env.MESSAGE).write();
+            process.exitCode = 1;
 
   frontend-tests:
     name: Frontend Tests (React)
@@ -153,15 +101,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Read versions
-        id: versions
-        uses: ./.github/actions/read-versions
-        with:
-          read_python: "false"
+      - name: Require a Node version in the frontend manifest
+        run: jq -e '.engines.node | strings | test("\\S") and (test("[\r\n]") | not)' package.json
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: ${{ steps.versions.outputs.node_version }}
+          node-version-file: frontend/package.json
           cache: "npm"
           cache-dependency-path: "frontend/package-lock.json"
 
@@ -173,27 +118,15 @@ jobs:
         continue-on-error: true
         env:
           CI: true
-        run: |
-          set -o pipefail
-          status=0
-          { npm test -- --maxWorkers=2 && npm run build; } 2>&1 | tee test_output.txt || status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+        shell: bash
+        run: node "$GITHUB_WORKSPACE/.github/scripts/run-app-checks.js" test-frontend 2>&1 | tee test_output.txt
 
       - name: Test summary
         id: test_summary
         if: always()
-        run: |
-          exit_code="${{ steps.test_run.outputs.exit_code }}"
-          if [ -z "$exit_code" ]; then
-            exit_code=1
-          fi
-          if [ "$exit_code" = "0" ]; then
-            echo "status=success" >> "$GITHUB_OUTPUT"
-          else
-            echo "status=failure" >> "$GITHUB_OUTPUT"
-          fi
-
-          python3 - test_output.txt "$GITHUB_OUTPUT" <<< "$BOUNDED_LOG_PYTHON"
+        env:
+          CHECK_EXIT_CODE: ${{ steps.test_run.outcome == 'success' && '0' || '1' }}
+        run: node "$GITHUB_WORKSPACE/.github/scripts/summarize-check-log.js" test_output.txt --exit-code "$CHECK_EXIT_CODE"
 
       - name: Retain bounded failure diagnostics
         if: always() && steps.test_summary.outputs.status != 'success'
@@ -205,7 +138,7 @@ jobs:
           retention-days: 7
 
       - name: Fail if tests failed
-        if: steps.test_run.outputs.exit_code != '0'
+        if: steps.test_run.outcome != 'success'
         run: exit 1
     outputs:
       status: ${{ steps.test_summary.outputs.status }}
@@ -228,33 +161,15 @@ jobs:
       - name: Run backend tests
         id: test_run
         continue-on-error: true
-        run: |
-          set -o pipefail
-          status=0
-          {
-            DJANGO_MCP_ENABLED=0 uv run --locked python manage.py test --verbosity=2 || status=$?
-            DJANGO_MCP_ENABLED=1 DJANGO_MCP_BASE_URL=http://localhost:8000 \
-              DJANGO_MCP_SERVER_FACTORY=apps.mcp.tools.server.create_server \
-              uv run --locked python manage.py test apps.mcp --verbosity=2 || status=$?
-            exit "$status"
-          } 2>&1 | tee test_output.txt || status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+        shell: bash
+        run: node "$GITHUB_WORKSPACE/.github/scripts/run-app-checks.js" test-backend 2>&1 | tee test_output.txt
 
       - name: Test summary
         id: test_summary
         if: always()
-        run: |
-          exit_code="${{ steps.test_run.outputs.exit_code }}"
-          if [ -z "$exit_code" ]; then
-            exit_code=1
-          fi
-          if [ "$exit_code" = "0" ]; then
-            echo "status=success" >> "$GITHUB_OUTPUT"
-          else
-            echo "status=failure" >> "$GITHUB_OUTPUT"
-          fi
-
-          python3 - test_output.txt "$GITHUB_OUTPUT" <<< "$BOUNDED_LOG_PYTHON"
+        env:
+          CHECK_EXIT_CODE: ${{ steps.test_run.outcome == 'success' && '0' || '1' }}
+        run: node "$GITHUB_WORKSPACE/.github/scripts/summarize-check-log.js" test_output.txt --exit-code "$CHECK_EXIT_CODE"
 
       - name: Retain bounded failure diagnostics
         if: always() && steps.test_summary.outputs.status != 'success'
@@ -266,7 +181,7 @@ jobs:
           retention-days: 7
 
       - name: Fail if tests failed
-        if: steps.test_run.outputs.exit_code != '0'
+        if: steps.test_run.outcome != 'success'
         run: exit 1
     outputs:
       status: ${{ steps.test_summary.outputs.status }}
@@ -282,273 +197,38 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Read versions
-        id: versions
-        uses: ./.github/actions/read-versions
-        with:
-          read_python: "false"
+      - name: Require a Node version in the automation manifest
+        run: jq -e '.engines.node | strings | test("\\S") and (test("[\r\n]") | not)' .github/package.json
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: ${{ steps.versions.outputs.node_version }}
+          node-version-file: .github/package.json
 
       - name: Set up the locked Python environment
         uses: ./.github/actions/setup-uv
         with:
           only-dev: "true"
 
+      - name: Install locked workflow dependencies
+        run: npm ci --prefix .github --ignore-scripts --no-audit --no-fund
+
       - name: Install verified workflow validator
         shell: bash
-        run: |
-          set -euo pipefail
-          archive="$RUNNER_TEMP/actionlint-1.7.12.tar.gz"
-          curl --fail --silent --show-error --location --max-time 60 \
-            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz \
-            --output "$archive"
-          printf '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  %s\n' "$archive" | sha256sum --check
-          tool_dir="$RUNNER_TEMP/infrastructure-tools"
-          mkdir -p "$tool_dir"
-          tar -xzf "$archive" -C "$tool_dir" actionlint
-          printf '%s\n' "$tool_dir" >> "$GITHUB_PATH"
+        run: node .github/scripts/install-actionlint.js
 
       - name: Run repository automation tests
         id: test_run
         continue-on-error: true
         shell: bash
-        run: |
-          set -o pipefail
-          status=0
-          (
-            python3 - <<'PY' || exit 1
-          """Non-deploying workflow, script and Compose validation using synthetic env."""
-          import ast
-          import json
-          import os
-          from pathlib import Path
-          import re
-          import subprocess
-          import tempfile
-
-          import yaml
-
-          ROOT = Path.cwd()
-
-
-          def run(*args, **kwargs):
-              subprocess.run(args, check=True, cwd=ROOT, **kwargs)
-
-
-          def check_whitespace():
-              # A clean checkout has no worktree diff. CI must check committed PR/push
-              # revisions from the platform event, while local edits are checked as well.
-              event_name = os.environ.get("GITHUB_EVENT_NAME")
-              event_path = os.environ.get("GITHUB_EVENT_PATH")
-              if event_name in {"pull_request", "push"}:
-                  if not event_path:
-                      raise ValueError("CI whitespace validation requires the platform event")
-                  event = json.loads(Path(event_path).read_text(encoding="utf-8"))
-                  if event_name == "pull_request":
-                      first = event["pull_request"]["base"]["sha"]
-                      last = event["pull_request"]["head"]["sha"]
-                  else:
-                      first, last = event["before"], event["after"]
-                  for commit in (first, last):
-                      if not isinstance(commit, str) or not re.fullmatch(r"[0-9a-fA-F]{40}", commit):
-                          raise ValueError("Invalid platform commit for whitespace validation")
-                  if first == "0" * 40:
-                      run("git", "show", "--format=", "--check", last, "--")
-                  else:
-                      run("git", "diff", "--check", first, last, "--")
-              elif os.environ.get("CI"):
-                  run("git", "show", "--format=", "--check", "HEAD", "--")
-              run("git", "diff", "--check", "HEAD", "--")
-
-
-          def check_local_policy(model, development):
-              """Reject exposed local services and loss of the exact proxy trust boundary."""
-              services = model["services"]
-              ports = [port for service in services.values() for port in service.get("ports", [])]
-              if not ports or any(port.get("host_ip") != "127.0.0.1" for port in ports):
-                  raise ValueError("Local services must publish only to IPv4 loopback")
-              backend = services["backend"]
-              databases = [mount for mount in backend.get("volumes", [])
-                           if mount.get("target") == "/backend/db.sqlite3"]
-              if (len(databases) != 1 or databases[0].get("type") != "bind"
-                      or databases[0].get("bind", {}).get("create_host_path", False) is not False):
-                  raise ValueError("Local SQLite must use an existing file; never auto-create its bind path")
-              environment = backend["environment"]
-              if development:
-                  if (environment.get("DJANGO_DEBUG") != "1"
-                          or environment.get("DJANGO_TRUSTED_PROXY_IPS") != ""
-                          or "--no-proxy-headers" not in backend.get("command", [])):
-                      raise ValueError("Direct local development must use debug mode and trust no proxy")
-                  if services["frontend"]["environment"].get("HOST") != "0.0.0.0":
-                      raise ValueError("The development frontend must listen on its container interface")
-                  return
-              proxy = services["proxy"]
-              if (backend.get("ports") or services["frontend"].get("ports")
-                      or {port["target"] for port in proxy["ports"]} != {80, 443}):
-                  raise ValueError("Standalone HTTPS must publish only its TLS/redirect proxy")
-              private = model["networks"]["backend_private"]
-              if private.get("internal") is not True:
-                  raise ValueError("The backend proxy network must remain internal")
-              if (set(backend["networks"]) != {"backend_private", "backend_egress"}
-                      or "backend_private" in services["frontend"]["networks"]
-                      or set(proxy["networks"]) != {"default", "backend_private"}):
-                  raise ValueError("Only the standalone proxy may bridge frontend and backend networks")
-              address = proxy["networks"]["backend_private"]["ipv4_address"]
-              if environment.get("DJANGO_TRUSTED_PROXY_IPS") != address:
-                  raise ValueError("Backend trust must match the exact standalone proxy address")
-              origin = proxy["environment"]["LOCAL_HTTPS_ORIGIN"]
-              if not origin.startswith("https://") or any(
-                  environment.get(name) != origin for name in (
-                      "DJANGO_FRONTEND_BASE_URL", "DJANGO_MCP_BASE_URL",
-                      "DJANGO_CORS_ALLOWED_ORIGINS", "DJANGO_CSRF_TRUSTED_ORIGINS",
-                  )
-              ):
-                  raise ValueError("Standalone browser, OAuth and trusted origins must agree")
-
-
-          def check_local_static_routes():
-              proxy = (ROOT / "deploy/nginx.conf").read_text(encoding="utf-8")
-              for prefix in ("/static/admin/", "/static/rest_framework/"):
-                  location = re.search(
-                      r"^\s*location\s+\^~\s+" + re.escape(prefix) + r"\s*\{([^{}]*)\}",
-                      proxy, re.M,
-                  )
-                  if location is None or not re.search(
-                      r"^\s*proxy_pass\s+http://backend:8000\s*;", location[1], re.M
-                  ):
-                      raise ValueError(f"Standalone HTTPS must route {prefix} to backend:8000")
-
-
-          def check_release_documentation():
-              policy = json.loads((ROOT / "deploy/production/app.json").read_text(encoding="utf-8"))
-              pin = policy["shared_source"]["commit"]
-              guide = (ROOT / "deploy/production/README.md").read_text(encoding="utf-8")
-              stated = re.findall(
-                  r"`shared_source` in `app\.json` pins that source to immutable commit\s+`([^`]+)`",
-                  guide,
-              )
-              links = re.findall(
-                  r"\[((?:Infrastructure )?release standard)\]\("
-                  r"https://github\.com/VanillaIceCube/JudeAndrewAlabaInfrastructure"
-                  r"/blob/([^/]+)/app-release/README\.md\)",
-                  guide,
-              )
-              expected_links = {("release standard", pin), ("Infrastructure release standard", pin)}
-              if stated != [pin] or set(links) != expected_links:
-                  raise ValueError(
-                      "Production guide release pin and canonical links must match deploy/production/app.json"
-                  )
-
-
-          def main():
-              run("actionlint", "-ignore", 'unknown permission scope "vulnerability-alerts"')
-              # The single compatibility exception is for GitHub's existing new scope;
-              # all other Actionlint findings retain their normal failure behavior.
-              for file in (ROOT / ".github").rglob("*.y*ml"):
-                  with file.open(encoding="utf-8") as stream:
-                      data = yaml.safe_load(stream)
-                  if not isinstance(data, dict):
-                      raise ValueError(f"{file}:1: expected a YAML mapping")
-                  if file.name in {"action.yml", "action.yaml"}:
-                      runs = data.get("runs", {})
-                      if runs.get("using") == "composite":
-                          for step in runs.get("steps", []):
-                              if "run" in step and "shell" not in step:
-                                  raise ValueError(f"{file}: composite run step requires shell")
-              tracked = subprocess.check_output(
-                  ["git", "ls-files", "--cached", "--others", "--exclude-standard"], cwd=ROOT, text=True
-              ).splitlines()
-              for name in tracked:
-                  file = ROOT / name
-                  if not file.is_file():
-                      continue
-                  if file.suffix == ".sh":
-                      run("bash", "-n", str(file))
-                  elif file.suffix == ".py" and name.startswith(("scripts/", ".github/", "deploy/")):
-                      ast.parse(file.read_text(encoding="utf-8"), filename=name)
-                  elif file.suffix == ".ps1":
-                      env = {**os.environ, "CHECK_PS_FILE": str(file)}
-                      run("pwsh", "-NoProfile", "-NonInteractive", "-Command",
-                          '$errors=$null; [void][System.Management.Automation.Language.Parser]::ParseFile($env:CHECK_PS_FILE,[ref]$null,[ref]$errors); '
-                          'if ($errors) { $errors | ForEach-Object { Write-Error ("{0}:{1}: {2}" -f $env:CHECK_PS_FILE,$_.Extent.StartLineNumber,$_.Message) }; exit 1 }', env=env)
-              with tempfile.TemporaryDirectory(prefix="local-compose-") as directory:
-                  temp = Path(directory)
-                  fixture = temp / "synthetic.env"
-                  fixture.write_text("DJANGO_SECRET_KEY=disposable-fixture-only\n", encoding="utf-8")
-                  for name in ("deploy/compose.yml", "deploy/compose.hotswap.yml", "deploy/production/compose.yml"):
-                      source = ROOT / name
-                      if not source.exists():
-                          continue
-                      print(f"Compose configuration: {source}", flush=True)
-                      text = source.read_text(encoding="utf-8")
-                      data = yaml.safe_load(text)
-                      # Preserve all service structure, replacing only private env-file
-                      # locations. No .env, database, certificate or live network is read.
-                      for service in data.get("services", {}).values():
-                          if "env_file" in service:
-                              service["env_file"] = str(fixture)
-                      rendered = temp / source.name
-                      rendered.write_text(yaml.safe_dump(data), encoding="utf-8")
-                      env = {key: value for key, value in os.environ.items() if key.upper() in {"PATH", "HOME", "SYSTEMROOT", "WINDIR", "COMSPEC", "TEMP", "TMP"}}
-                      env.update({"BACKEND_IMAGE": "example/backend@sha256:" + "a" * 64,
-                                  "FRONTEND_IMAGE": "example/frontend@sha256:" + "b" * 64,
-                                  "APP_DB_PATH": str(temp / "db.sqlite3")})
-                      for variable in re.findall(r"\$\{([A-Z][A-Z0-9_]*)(?::)?\?", text):
-                          env.setdefault(variable, str(temp / "fixture"))
-                      command = ["docker", "compose", "--project-directory", str(source.parent),
-                                 "--env-file", str(fixture), "-f", str(rendered), "config"]
-                      run(*command, "--quiet", env=env)
-                      if source.parent == ROOT / "deploy":
-                          model = json.loads(subprocess.check_output(
-                              [*command, "--format", "json", "--no-env-resolution"],
-                              cwd=ROOT, env=env, text=True,
-                          ))
-                          check_local_policy(model, source.name == "compose.hotswap.yml")
-              check_local_static_routes()
-              check_release_documentation()
-              check_whitespace()
-              print("Repository files: workflow/composite syntax, script parsers and synthetic Compose validation passed")
-
-
-          if __name__ == "__main__":
-              main()
-          PY
-            python3 deploy/production/build_bundle.py --check-parity || exit 1
-            group_status=0
-            python3 -m unittest discover -s deploy/tests -v || group_status=$?
-            shopt -s globstar nullglob dotglob
-            automation_tests=(.github/actions/**/*.test.js)
-            if [ "${#automation_tests[@]}" -eq 0 ]; then
-              echo "No GitHub action regression tests were found." >&2
-              exit 1
-            fi
-            node --test "${automation_tests[@]}" || group_status=$?
-            if compgen -G '.github/actions/get-pr-diff/test_*.py' > /dev/null; then
-              python3 -m unittest discover -s .github/actions/get-pr-diff -p 'test_*.py' -v || group_status=$?
-            fi
-            exit "$group_status"
-          ) 2>&1 | tee automation_test_output.txt || status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+        run: node "$GITHUB_WORKSPACE/.github/scripts/run-app-checks.js" test-automation 2>&1 | tee automation_test_output.txt
 
       - name: Test summary
         id: test_summary
         if: always()
         shell: bash
-        run: |
-          exit_code="${{ steps.test_run.outputs.exit_code }}"
-          if [ -z "$exit_code" ]; then
-            exit_code=1
-          fi
-          if [ "$exit_code" = "0" ]; then
-            echo "status=success" >> "$GITHUB_OUTPUT"
-          else
-            echo "status=failure" >> "$GITHUB_OUTPUT"
-          fi
-
-          python3 - automation_test_output.txt "$GITHUB_OUTPUT" <<< "$BOUNDED_LOG_PYTHON"
+        env:
+          CHECK_EXIT_CODE: ${{ steps.test_run.outcome == 'success' && '0' || '1' }}
+        run: node "$GITHUB_WORKSPACE/.github/scripts/summarize-check-log.js" automation_test_output.txt --exit-code "$CHECK_EXIT_CODE"
 
       - name: Retain bounded failure diagnostics
         if: always() && steps.test_summary.outputs.status != 'success'
@@ -560,7 +240,7 @@ jobs:
           retention-days: 7
 
       - name: Fail if tests failed
-        if: steps.test_run.outputs.exit_code != '0'
+        if: steps.test_run.outcome != 'success'
         run: exit 1
     outputs:
       status: ${{ steps.test_summary.outputs.status }}
@@ -574,10 +254,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - name: Build reviewed development images
-        run: |
-          docker build --file backend/docker/Dockerfile.hotswap --tag batch2-backend-dev backend
-          docker build --file frontend/docker/Dockerfile.hotswap --tag batch2-frontend-dev frontend
+      - name: Build the backend development image
+        run: docker build --file backend/docker/Dockerfile.hotswap --tag batch2-backend-dev backend
+      - name: Build the frontend development image
+        run: docker build --file frontend/docker/Dockerfile.hotswap --tag batch2-frontend-dev frontend
 
   test-results:
     name: Test Results
@@ -585,78 +265,48 @@ jobs:
     needs: [changes, frontend-tests, backend-tests, automation-tests, development-images]
     runs-on: ubuntu-latest
     outputs:
-      frontend_status: ${{ steps.results.outputs.frontend_status }}
-      frontend_log: ${{ steps.results.outputs.frontend_log }}
-      backend_status: ${{ steps.results.outputs.backend_status }}
-      backend_log: ${{ steps.results.outputs.backend_log }}
-      automation_status: ${{ steps.results.outputs.automation_status }}
-      automation_log: ${{ steps.results.outputs.automation_log }}
+      frontend_status: >-
+        ${{ needs.changes.outputs.frontend == 'false' && 'not-applicable' ||
+            needs.changes.outputs.frontend == 'true' && needs.frontend-tests.outputs.status == 'success' && 'success' || 'failure' }}
+      frontend_log: >-
+        ${{ needs.changes.outputs.frontend == 'false' && 'No frontend-relevant changes.' ||
+            needs.changes.outputs.frontend != 'true' && 'Unable to determine frontend scope.' ||
+            needs.frontend-tests.outputs.log }}
+      backend_status: >-
+        ${{ needs.changes.outputs.backend == 'false' && 'not-applicable' ||
+            needs.changes.outputs.backend == 'true' && needs.backend-tests.outputs.status == 'success' && 'success' || 'failure' }}
+      backend_log: >-
+        ${{ needs.changes.outputs.backend == 'false' && 'No backend-relevant changes.' ||
+            needs.changes.outputs.backend != 'true' && 'Unable to determine backend scope.' ||
+            needs.backend-tests.outputs.log }}
+      automation_status: >-
+        ${{ needs.changes.outputs.automation == 'false' && 'not-applicable' ||
+            needs.changes.outputs.automation == 'true' && needs.automation-tests.outputs.status == 'success' && 'success' || 'failure' }}
+      automation_log: >-
+        ${{ needs.changes.outputs.automation == 'false' && 'No repository-automation-relevant changes.' ||
+            needs.changes.outputs.automation != 'true' && 'Unable to determine automation scope.' ||
+            needs.automation-tests.outputs.log }}
     steps:
       - name: Require scope detection
         if: needs.changes.result != 'success'
         run: exit 1
       - name: Require applicable development image validation
-        if: needs.changes.outputs.development == 'true' && needs.development-images.result != 'success'
+        if: >-
+          (needs.changes.outputs.development != 'true' && needs.changes.outputs.development != 'false') ||
+          (needs.changes.outputs.development == 'true' && needs.development-images.result != 'success')
         run: exit 1
-      - name: Normalize test results
-        id: results
-        env:
-          FRONTEND_RELEVANT: ${{ needs.changes.outputs.frontend }}
-          FRONTEND_STATUS: ${{ needs.frontend-tests.outputs.status }}
-          FRONTEND_LOG: ${{ needs.frontend-tests.outputs.log }}
-          BACKEND_RELEVANT: ${{ needs.changes.outputs.backend }}
-          BACKEND_STATUS: ${{ needs.backend-tests.outputs.status }}
-          BACKEND_LOG: ${{ needs.backend-tests.outputs.log }}
-          AUTOMATION_RELEVANT: ${{ needs.changes.outputs.automation }}
-          AUTOMATION_STATUS: ${{ needs.automation-tests.outputs.status }}
-          AUTOMATION_LOG: ${{ needs.automation-tests.outputs.log }}
-        shell: bash
-        run: |
-          if [ "$FRONTEND_RELEVANT" = "true" ]; then
-            echo "frontend_status=${FRONTEND_STATUS:-failure}" >> "$GITHUB_OUTPUT"
-            {
-              delimiter="RESULT_$(uuidgen)"
-              echo "frontend_log<<$delimiter"
-              echo "$FRONTEND_LOG"
-              echo "$delimiter"
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "frontend_status=not-applicable" >> "$GITHUB_OUTPUT"
-            echo "frontend_log=No frontend-relevant changes." >> "$GITHUB_OUTPUT"
-          fi
-
-          if [ "$BACKEND_RELEVANT" = "true" ]; then
-            echo "backend_status=${BACKEND_STATUS:-failure}" >> "$GITHUB_OUTPUT"
-            {
-              delimiter="RESULT_$(uuidgen)"
-              echo "backend_log<<$delimiter"
-              echo "$BACKEND_LOG"
-              echo "$delimiter"
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "backend_status=not-applicable" >> "$GITHUB_OUTPUT"
-            echo "backend_log=No backend-relevant changes." >> "$GITHUB_OUTPUT"
-          fi
-
-          if [ "$AUTOMATION_RELEVANT" = "true" ]; then
-            echo "automation_status=${AUTOMATION_STATUS:-failure}" >> "$GITHUB_OUTPUT"
-            {
-              delimiter="RESULT_$(uuidgen)"
-              echo "automation_log<<$delimiter"
-              echo "$AUTOMATION_LOG"
-              echo "$delimiter"
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "automation_status=not-applicable" >> "$GITHUB_OUTPUT"
-            echo "automation_log=No repository-automation-relevant changes." >> "$GITHUB_OUTPUT"
-          fi
-
-          if [ "$FRONTEND_RELEVANT" = "true" ] && [ "${FRONTEND_STATUS:-failure}" != "success" ]; then
-            exit 1
-          fi
-          if [ "$BACKEND_RELEVANT" = "true" ] && [ "${BACKEND_STATUS:-failure}" != "success" ]; then
-            exit 1
-          fi
-          if [ "$AUTOMATION_RELEVANT" = "true" ] && [ "${AUTOMATION_STATUS:-failure}" != "success" ]; then
-            exit 1
-          fi
+      - name: Require applicable frontend test result
+        if: >-
+          always() && needs.changes.outputs.frontend != 'false' &&
+          (needs.changes.outputs.frontend != 'true' || needs.frontend-tests.outputs.status != 'success')
+        run: exit 1
+      - name: Require applicable backend test result
+        if: >-
+          always() && needs.changes.outputs.backend != 'false' &&
+          (needs.changes.outputs.backend != 'true' || needs.backend-tests.outputs.status != 'success')
+        run: exit 1
+      - name: Require applicable automation test result
+        if: >-
+          always() && needs.changes.outputs.automation != 'false' &&
+          (needs.changes.outputs.automation != 'true' || needs.automation-tests.outputs.status != 'success')
+        run: exit 1
