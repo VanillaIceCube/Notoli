@@ -84,7 +84,7 @@ def build(target, env):
 
 # The host launches from the bundle. Only CI and developers fetch shared source.
 REPOSITORY = "VanillaIceCube/JudeAndrewAlabaInfrastructure"
-SOURCE = "app-release/v1"
+SOURCE = "app-release"
 FILES = {
     "deploy/production/release.py": "release.py",
     "deploy/production/build_bundle.py": "build_bundle.py",
@@ -215,10 +215,7 @@ def main(argv=None):
                 + " was not verified"
             )
         else:
-            print(
-                "Shared release contract v1: common source, tests and workflow match "
-                + commit
-            )
+            print("Shared release source, tests and workflow match " + commit)
     else:
         if args.target is None or args.sync or args.source_root is not None:
             parser.error(

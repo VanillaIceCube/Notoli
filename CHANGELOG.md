@@ -8,6 +8,7 @@ All notable changes to this project are documented in this file.
 
 - Retire the old MCP task names, receipt translation and obsolete approval paths. Reject undeclared tool arguments and keep used request IDs reserved.
 - Serve the singular board and list routes and return 404 for retired board links. Match the shared CI workflows. Save SQLite and both existing app containers before migrations and stop both services on a failed deployment health check.
+- Verify the production launcher against Infrastructure’s shared `app-release/` directory.
 
 ### Removed
 
