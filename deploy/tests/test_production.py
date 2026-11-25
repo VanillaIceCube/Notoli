@@ -1,13 +1,9 @@
-"""Behavioral release checks: real Compose/env parsing, SQLite and fault recovery."""
+"""Behavioral release checks: real Compose and environment parsing."""
 
-import copy
 import importlib.util
-import io
 import json
 import os
 from pathlib import Path
-import shutil
-import sqlite3
 import subprocess
 import tempfile
 import unittest
@@ -258,415 +254,78 @@ class BundleTests(unittest.TestCase):
 @unittest.skipUnless(
     os.name == "posix", "Real POSIX permissions/locks and transactions run on Linux"
 )
-class TransactionTests(unittest.TestCase):
+class LaunchTests(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name) / "app"
-        self.root.mkdir(mode=0o700)
-        self.identity = builder.build(self.root / "incoming", environment())
-        self.bundle = self.root / "incoming" / self.identity
-        for name in ("releases", "recovery"):
-            (self.root / name).mkdir(mode=0o700)
-        with sqlite3.connect(self.root / "db.sqlite3") as db:
-            db.execute("CREATE TABLE items(value TEXT)")
-            db.execute("INSERT INTO items VALUES ('original')")
-        (self.root / "docker-compose.yml").write_text("legacy proxy config")
-        (self.root / ".env").write_text("ORIGINAL=private")
-        self.events = []
-        self.fail_migration = False
-        self.fail_readiness = False
-        self.frontend_ports = release.CONFIG["frontend_port_bindings"][0]
-        self.model = {
-            "name": release.APP,
-            "services": {
-                release.BACKEND: {
-                    "image": "new-backend",
-                    "networks": {},
-                    "volumes": [
-                        {
-                            "type": "bind",
-                            "source": str(self.root / "db.sqlite3"),
-                            "target": "/backend/db.sqlite3",
-                        }
-                    ],
-                },
-                release.FRONTEND: {"image": "new-frontend", "networks": {}},
-            },
-            "networks": {},
-        }
-        self.model["services"][release.FRONTEND]["ports"] = [
-            {
-                "target": int(port.split("/")[0]),
-                "protocol": port.split("/")[1],
-                "host_ip": host,
-                "published": published,
-            }
-            for port, host, published in self.frontend_ports
-        ]
-        self.patches = [
-            patch.object(release, "app_writers", return_value=[]),
-            patch.object(
-                release,
-                "stop_writers",
-                side_effect=lambda: self.events.append(("stop-writers",)),
-            ),
-            patch.object(
-                release,
-                "snapshot_writer",
-                side_effect=lambda root, destination: release.snapshot(
-                    root / "db.sqlite3", destination
-                ),
-            ),
-            patch.object(
-                release,
-                "stop_management",
-                side_effect=lambda: self.events.append(("stop-management",)),
-            ),
-            patch.object(
-                release,
-                "preflight",
-                side_effect=lambda root: self.events.append(("preflight",)),
-            ),
-            patch.object(release, "compose", side_effect=self.compose),
-            patch.object(release, "inspect", side_effect=self.inspect),
-            patch.object(
-                release,
-                "docker",
-                side_effect=lambda *args: (
-                    self.events.append(("docker",) + args) or "{}"
-                ),
-            ),
-            patch.object(release, "manage", side_effect=self.manage),
-            patch.object(release, "readiness", side_effect=self.ready),
-            patch.object(release.sys, "stderr", new_callable=io.StringIO),
-        ]
-        for item in self.patches:
-            item.start()
-            self.addCleanup(item.stop)
-        self.addCleanup(setattr, release, "CURRENT_STEP", release.CURRENT_STEP)
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        incoming = self.root / "incoming"
+        self.bundle = incoming / builder.build(incoming, environment())
+        (self.root / release.DB_FILE).write_bytes(b"existing database")
 
-    def compose(self, directory, *args):
-        self.events.append(("compose",) + args)
-        forbidden = {"proxy", "down", "--remove-orphans", "prune", "restart"}
-        self.assertFalse(forbidden.intersection(args))
-        if args[:1] == ("config",) and "--format" in args:
-            return json.dumps(copy.deepcopy(self.model))
-        return ""
-
-    def inspect(self, name):
-        suffix = name.rsplit("-", 1)[1]
-        ports = {}
-        if suffix == "frontend":
-            for port, host, published in self.frontend_ports:
-                ports.setdefault(port, []).append(
-                    {"HostIp": host, "HostPort": published}
-                )
-        return {
-            "Id": "old-" + suffix,
-            "Image": "sha256:" + ("1" if suffix == "backend" else "2") * 64,
-            "Config": {
-                "Labels": {"com.docker.compose.project": release.APP},
-                "Cmd": ["python", "server.py"],
-                "Entrypoint": None,
-                "User": "",
-                "Env": ['SECRET=original-$literal#quote"', "PATH=/bin"],
-            },
-            "HostConfig": {"PortBindings": ports},
-            "Mounts": [
-                {
-                    "Destination": "/backend/db.sqlite3",
-                    "Source": str(self.root / "db.sqlite3"),
-                }
-            ]
-            if suffix == "backend"
-            else [],
-        }
-
-    def manage(self, directory, image, *args):
-        self.events.append(("manage",) + args)
-        self.assertEqual(image, environment()["BACKEND_IMAGE"])
-        if args[0] == "migrate":
-            with sqlite3.connect(self.root / "db.sqlite3") as db:
-                db.execute("INSERT INTO items VALUES ('migration')")
-            if self.fail_migration:
-                raise release.ReleaseError("simulated migration failure")
-
-    def ready(self, directory):
-        self.assertFalse((self.root / "current.json").exists())
-        self.assertNotIn("Release: Release accepted", release.sys.stderr.getvalue())
-        self.assertNotIn("Release: Recovery accepted", release.sys.stderr.getvalue())
-        self.events.append(("ready",))
-        if self.fail_readiness:
-            raise release.ReleaseError("simulated readiness failure")
-
-    def values(self):
-        with sqlite3.connect(self.root / "db.sqlite3") as db:
-            return [row[0] for row in db.execute("SELECT value FROM items")]
-
-    def accepted_baseline(self):
-        identity = "a" * 40 + "-122-1"
-        baseline = self.root / "releases" / identity
-        shutil.copytree(self.bundle, baseline)
-        policy = copy.deepcopy(release.CONFIG)
-        policy["environment"]["fixed"]["DJANGO_MCP_ENABLED"] = "0"
-        policy["readiness"]["public"] = policy["readiness"]["public"][:2]
-        (baseline / "app.json").write_text(json.dumps(policy))
-        metadata = json.loads((baseline / "release.json").read_text()) | {
-            "id": identity
-        }
-        (baseline / "release.json").write_text(json.dumps(metadata))
-        import hashlib
-
-        (baseline / "manifest.json").write_text(
-            json.dumps(
-                {
-                    name: hashlib.sha256((baseline / name).read_bytes()).hexdigest()
-                    for name in release.PAYLOAD
-                }
-            )
-        )
-        release.write_private(baseline / ".release.env", "")
-        release.atomic_json(
-            self.root / "current.json",
-            {
-                "id": identity,
-                "directory": str(baseline),
-                "healthy": True,
-            },
-        )
-        return baseline
-
-    def recover_saved(self, restore_database, keep_database=False):
-        load = release.recovery_controller
-        probes = []
-
-        def selected(root, identity):
-            saved = load(root, identity)
-            # Use the existing host/Docker fault fixture, but execute the
-            # saved controller's actual rollback and actual old readiness.
-            for name in (
-                "app_writers",
-                "stop_writers",
-                "snapshot_writer",
-                "stop_management",
-                "inspect",
-                "docker",
-            ):
-                saved[name] = getattr(release, name)
-            saved["compose"] = lambda directory, *args, **kwargs: self.compose(
-                directory, *args
-            )
-            saved["check_response"] = lambda path, *args: probes.append(path)
-            return saved
-
-        with patch.object(release, "recovery_controller", side_effect=selected):
-            release.recover(self.root, self.identity, restore_database, keep_database)
-        return probes
-
-    def test_automatic_recovery_uses_old_readiness_and_preserves_it_for_next_deploy(
-        self,
-    ):
-        baseline = self.accepted_baseline()
-        self.fail_migration = True
-        with self.assertRaises(release.ReleaseError):
-            release.deploy(self.root, self.bundle)
-        probes = self.recover_saved(True)
-        self.assertEqual(
-            probes, [rule["path"] for rule in release.CONFIG["readiness"]["public"][:2]]
-        )
-        self.assertEqual(self.values(), ["original"])
-        self.assertFalse((self.root / "FAILED.json").exists())
-        next_recovery = self.root / "recovery" / ("a" * 40 + "-124-1")
-        release.capture_recovery(
-            self.root, self.root / "releases" / self.identity, next_recovery
-        )
-        for name in ("release.py", "app.json", "manifest.json"):
-            self.assertEqual(
-                (next_recovery / "previous-release" / name).read_bytes(),
-                (baseline / name).read_bytes(),
-            )
-        saved = release.recovery_controller(self.root, next_recovery.name)
-        self.assertEqual(
-            saved["CONFIG"]["environment"]["fixed"]["DJANGO_MCP_ENABLED"], "0"
-        )
-
-    def test_changed_saved_controller_blocks_deploy_before_writers_stop(self):
-        baseline = self.accepted_baseline()
-        (baseline / "release.py").write_text("raise RuntimeError('private')")
-        with self.assertRaisesRegex(release.ReleaseError, "checksum mismatch"):
-            release.deploy(self.root, self.bundle)
-        self.assertNotIn(("stop-writers",), self.events)
-        self.assertFalse(any(event[:1] == ("manage",) for event in self.events))
-        self.assertEqual(self.values(), ["original"])
-        self.assertFalse((self.root / "FAILED.json").exists())
-
-    def test_automatic_keep_data_recovery_retains_pre_migration_gate(self):
-        self.accepted_baseline()
-        with patch.object(
-            release, "snapshot", side_effect=release.ReleaseError("backup failed")
-        ):
-            with self.assertRaises(release.ReleaseError):
-                release.deploy(self.root, self.bundle)
-        self.recover_saved(False, True)
-        self.assertEqual(self.values(), ["original"])
-        self.assertFalse((self.root / "FAILED.json").exists())
-        release.atomic_json(
-            self.root / "FAILED.json",
-            {
-                "recovery": str(self.root / "recovery" / self.identity),
-                "stage": "migration-started",
-            },
-        )
-        events = len(self.events)
-        with self.assertRaisesRegex(release.ReleaseError, "only before migration"):
-            self.recover_saved(False, True)
-        self.assertEqual(len(self.events), events)
-
-    def test_success_full_private_recovery_and_commit_after_health(self):
-        self.assertFalse((self.root / "current.json").exists())
-        with patch.object(
-            release, "recovery_controller", wraps=release.recovery_controller
-        ) as saved_controller:
-            release.deploy(self.root, self.bundle)
-        saved_controller.assert_not_called()
-        self.assertEqual(self.values(), ["original", "migration"])
-        self.assertFalse((self.root / "FAILED.json").exists())
-        current = json.loads((self.root / "current.json").read_text())
-        self.assertTrue(current["healthy"])
-        recovery = self.root / "recovery" / self.identity
-        self.assertEqual(json.loads((recovery / "previous.json").read_text()), {})
-        self.assertFalse((recovery / "previous-release").exists())
-        self.assertTrue((recovery / "db.sqlite3").is_file())
-        self.assertFalse((recovery / "legacy-evidence").exists())
-        self.assertEqual((self.root / ".env").read_text(), "ORIGINAL=private")
-        self.assertEqual(
-            (self.root / "docker-compose.yml").read_text(), "legacy proxy config"
-        )
-        model = json.loads((recovery / "compose.yml").read_text())
-        self.assertEqual(set(model["services"]), set(release.SERVICES))
-        self.assertEqual(
-            model["services"][release.BACKEND]["image"], "sha256:" + "1" * 64
-        )
-        self.assertIn("original-$literal", (recovery / ".backend.env").read_text())
-        self.assertEqual((recovery / "runtime.json").stat().st_mode & 0o777, 0o600)
-        self.assertLess(
-            self.events.index(("stop-writers",)),
-            self.events.index(("manage", "migrate", "--noinput")),
-        )
-        log = release.sys.stderr.getvalue()
-        self.assertTrue(log.endswith("Release: Release accepted\n"))
-        for private_value in (
-            "ORIGINAL=private", "original-$literal", environment()["DJANGO_SECRET_KEY"]
-        ):
-            self.assertNotIn(private_value, log)
-
-    def test_disconnected_progress_stream_does_not_interrupt_release(self):
-        with patch.object(release.sys.stderr, "write", side_effect=BrokenPipeError):
-            release.deploy(self.root, self.bundle)
-        self.assertTrue(json.loads((self.root / "current.json").read_text())["healthy"])
-        self.assertFalse((self.root / "FAILED.json").exists())
-
-    def test_running_port_drift_prevents_accepting_release(self):
-        self.model["services"][release.FRONTEND]["ports"] = []
-        inspect = self.inspect
-
-        def inspect_after_compose(name):
-            container = inspect(name)
-            if name == release.CONFIG["containers"]["frontend"] and any(
-                event[:2] == ("compose", "up") for event in self.events
-            ):
-                container["HostConfig"]["PortBindings"] = {
-                    "80/tcp": [{"HostIp": "::", "HostPort": "3000"}]
-                }
-            return container
-
-        with (
-            patch.dict(release.CONFIG, {"frontend_port_bindings": [[]]}),
-            patch.object(release, "inspect", side_effect=inspect_after_compose),
-            self.assertRaisesRegex(
-                release.ReleaseError, "Frontend published-port boundary changed"
-            ),
-        ):
-            release.deploy(self.root, self.bundle)
-        self.assertFalse((self.root / "current.json").exists())
-        self.assertTrue((self.root / "FAILED.json").exists())
-        self.assertEqual(
-            self.events[-2:], [("compose", "stop", release.FRONTEND), ("stop-writers",)]
-        )
-        self.assertNotIn(("ready",), self.events)
-
-    def test_migration_failure_preserves_old_db_config_and_explicit_rollback(self):
-        self.fail_migration = True
-        with self.assertRaises(release.ReleaseError) as failure:
-            release.deploy(self.root, self.bundle)
-        release.report_failure(failure.exception)
-        self.assertIn(
-            "Release failed during: Applying database migrations. simulated migration failure",
-            release.sys.stderr.getvalue(),
-        )
-        self.assertFalse((self.root / "current.json").exists())
-        self.assertTrue((self.root / "FAILED.json").exists())
-        self.assertEqual(self.events[-1], ("stop-writers",))
-        with self.assertRaises(release.ReleaseError):
-            release.rollback(self.root, self.identity, False, True)
-        release.rollback(self.root, self.identity, True)
-        self.assertTrue(
-            release.sys.stderr.getvalue().endswith("Release: Recovery accepted\n")
-        )
-        self.assertEqual(self.values(), ["original"])
-        self.assertTrue(json.loads((self.root / "current.json").read_text())["healthy"])
-        self.assertFalse((self.root / "FAILED.json").exists())
-        recovery = self.root / "recovery" / self.identity
-        self.assertEqual(len(list(recovery.glob("before-rollback-*.sqlite3"))), 1)
-
-    def test_backup_failure_never_migrates_and_can_restart_without_db_restore(self):
-        with patch.object(
-            release, "snapshot", side_effect=release.ReleaseError("backup failed")
-        ):
-            with self.assertRaises(release.ReleaseError):
-                release.deploy(self.root, self.bundle)
-        self.assertFalse(any(e[:1] == ("manage",) for e in self.events))
-        self.assertEqual(self.values(), ["original"])
-        release.rollback(self.root, self.identity, False, True)
-        self.assertEqual(self.values(), ["original"])
-
-    def test_keep_database_recovery_can_retry_after_readiness_failure(self):
-        with patch.object(
-            release, "snapshot", side_effect=release.ReleaseError("backup failed")
-        ):
-            with self.assertRaises(release.ReleaseError):
-                release.deploy(self.root, self.bundle)
-        self.fail_readiness = True
-        with self.assertRaises(release.ReleaseError):
-            release.rollback(self.root, self.identity, False, True)
-        self.assertEqual(self.values(), ["original"])
-        self.fail_readiness = False
-        release.rollback(self.root, self.identity, False, True)
-        self.assertEqual(self.values(), ["original"])
-        self.assertFalse((self.root / "FAILED.json").exists())
-
-    def test_readiness_failure_is_not_a_success_and_rollback_failure_stops_writers(
-        self,
-    ):
-        self.fail_readiness = True
-        with self.assertRaises(release.ReleaseError):
-            release.deploy(self.root, self.bundle)
-        with self.assertRaises(release.ReleaseError):
-            release.rollback(self.root, self.identity, True)
-        self.assertFalse((self.root / "current.json").exists())
-        self.assertTrue((self.root / "FAILED.json").exists())
-        self.assertEqual(self.events[-1], ("stop-writers",))
-
-    def test_checksum_tamper_and_symlink_rejected_before_commands(self):
+    def test_tampered_bundle_is_rejected_before_host_changes(self):
         (self.bundle / ".backend.env").write_text("tampered")
-        with self.assertRaises(release.ReleaseError):
-            release.deploy(self.root, self.bundle)
-        self.assertEqual(self.events, [])
+        with self.assertRaisesRegex(release.ReleaseError, "checksum"):
+            release.validate_bundle(self.bundle)
         (self.bundle / ".backend.env").unlink()
-        (self.bundle / ".backend.env").symlink_to(self.root / ".env")
+        (self.bundle / ".backend.env").symlink_to(self.root / release.DB_FILE)
         with self.assertRaises(release.ReleaseError):
             release.validate_bundle(self.bundle)
+
+    def test_launch_checks_the_host_before_and_after_starting_the_services(self):
+        with (
+            patch.object(release, "check_host") as host,
+            patch.object(release, "validate_candidate_ports"),
+            patch.object(release, "compose") as compose,
+            patch.object(release, "migrate") as migrate,
+            patch.object(release, "readiness") as ready,
+        ):
+            release.deploy(self.root, self.bundle)
+        self.assertEqual(
+            [call.kwargs for call in host.call_args_list], [{"require_app": False}, {}]
+        )
+        self.assertEqual(
+            [call.args[1] for call in compose.call_args_list], ["pull", "up"]
+        )
+        migrate.assert_called_once_with(
+            self.bundle, environment()["BACKEND_IMAGE"], self.root / release.DB_FILE
+        )
+        ready.assert_called_once_with(self.bundle)
+        self.assertEqual(
+            {path.name for path in self.root.iterdir()}, {"incoming", release.DB_FILE}
+        )
+
+    def test_migration_failure_exits_before_starting_services(self):
+        with (
+            patch.object(release, "check_host"),
+            patch.object(release, "validate_candidate_ports"),
+            patch.object(release, "compose") as compose,
+            patch.object(
+                release, "migrate", side_effect=release.ReleaseError("migration failed")
+            ),
+            self.assertRaisesRegex(release.ReleaseError, "migration failed"),
+        ):
+            release.deploy(self.root, self.bundle)
+        self.assertEqual([call.args[1] for call in compose.call_args_list], ["pull"])
+        self.assertEqual(
+            (self.root / release.DB_FILE).read_bytes(), b"existing database"
+        )
+
+    def test_readiness_failure_surfaces_without_another_compose_operation(self):
+        with (
+            patch.object(release, "check_host"),
+            patch.object(release, "validate_candidate_ports"),
+            patch.object(release, "compose") as compose,
+            patch.object(release, "migrate"),
+            patch.object(
+                release, "readiness", side_effect=release.ReleaseError("unhealthy")
+            ),
+            self.assertRaisesRegex(release.ReleaseError, "unhealthy"),
+        ):
+            release.deploy(self.root, self.bundle)
+        self.assertEqual(
+            [call.args[1] for call in compose.call_args_list], ["pull", "up"]
+        )
 
     def test_stable_locks_exclude_maintenance_and_other_app_attempts(self):
         import fcntl
@@ -695,7 +354,3 @@ class TransactionTests(unittest.TestCase):
         with self.assertRaises(release.ReleaseError):
             with release.locks(directory):
                 self.fail("accepted symlink lock")
-
-
-if __name__ == "__main__":
-    unittest.main()

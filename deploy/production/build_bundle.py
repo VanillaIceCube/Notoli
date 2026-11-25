@@ -82,7 +82,7 @@ def build(target, env):
     return identity
 
 
-# Development/CI verification only; offline host recovery uses release.py.
+# The host launches from the bundle. Only CI and developers fetch shared source.
 REPOSITORY = "VanillaIceCube/JudeAndrewAlabaInfrastructure"
 SOURCE = "app-release/v1"
 FILES = {
@@ -93,8 +93,7 @@ FILES = {
         for name in (
             "test_production.py",
             "test_guards.py",
-            "test_recovery_docker.py",
-            "test_generation_docker.py",
+            "test_launch_docker.py",
             "test_contract.py",
         )
     },
@@ -111,10 +110,7 @@ def render_workflow(template, config):
         f"          {key}: {value}\n"
         for key, value in config["workflow"]["extra_env"].items()
     )
-    return (
-        template.replace("__APP__", config["app"])
-        .replace("__EXTRA_ENV__\n", extras)
-    )
+    return template.replace("__APP__", config["app"]).replace("__EXTRA_ENV__\n", extras)
 
 
 def verify(root, manifest, template):
