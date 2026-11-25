@@ -4,7 +4,6 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AppHeader from './AppHeader';
 import { renderWithProviders } from '../../test-helpers/utils';
-import { goBackToParent } from '../../utils/navigation';
 import { setNavigate } from '../../services/navigation/navigationService';
 import { fetchNotifications } from '../../services/notifications/notificationApiClient';
 const { mockNavigate, mockUseLocation, mockNavigateHook } = vi.hoisted(() => ({
@@ -16,9 +15,6 @@ vi.mock('react-router', async () => ({
   ...(await vi.importActual('react-router')),
   useLocation: mockUseLocation,
   useNavigate: mockNavigateHook,
-}));
-vi.mock('../../utils/navigation', () => ({
-  goBackToParent: vi.fn(),
 }));
 vi.mock('../../services/notifications/notificationApiClient', () => ({
   fetchNotifications: vi.fn(),
@@ -78,25 +74,25 @@ describe('AppHeader', () => {
   );
   test('when the path includes /list, it shows the back button', () => {
     mockUseLocation.mockReturnValue({
-      pathname: '/boards/1/list/2',
+      pathname: '/board/1/list/2',
     });
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
     expect(screen.getByLabelText('back button')).toBeInTheDocument();
   });
   test('when the path does not include /list, it does not show the back button', () => {
     mockUseLocation.mockReturnValue({
-      pathname: '/boards/1',
+      pathname: '/board/1',
     });
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
     expect(screen.queryByLabelText('back button')).not.toBeInTheDocument();
   });
-  test('when the back button is clicked, it calls goBackToParent', async () => {
+  test('the list back button navigates to its board', async () => {
     mockUseLocation.mockReturnValue({
-      pathname: '/boards/1/list/2',
+      pathname: '/board/1/list/2',
     });
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);
     await userEvent.click(screen.getByLabelText('back button'));
-    expect(goBackToParent).toHaveBeenCalledWith('/boards/1/list/2', mockNavigate);
+    expect(mockNavigate).toHaveBeenCalledWith('/board/1', { replace: true });
   });
   test('when the menu icon is clicked, it toggles setDrawerOpen', async () => {
     renderWithProviders(<AppHeader appBarHeader="Board" setDrawerOpen={setDrawerOpen} />);

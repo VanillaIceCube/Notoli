@@ -11,6 +11,7 @@ import AppHeader from './components/app-core/AppHeader';
 import AppSnackbar from './components/app-core/AppSnackbar';
 import BoardNavigationDrawer from './components/app/BoardNavigationDrawer';
 import NavigationBridge from './components/app-core/NavigationBridge';
+import { boardRoute, listRoute, matchBoardPath } from './utils/navigation';
 import BoardHomeRedirect from './components/app/BoardHomeRedirect';
 
 const Login = lazy(() => import('./pages/authentication/Login'));
@@ -24,10 +25,6 @@ const OAuthConsent = lazy(() =>
   import('./pages/connections/Connections').then((module) => ({ default: module.OAuthConsent })),
 );
 
-function isBoardRoute(pathname) {
-  return /^\/board\/[^/]+(?:\/list\/[^/]+)?$/.test(pathname);
-}
-
 function BoardRoutes({ setAppBarHeader }) {
   const location = useLocation();
   const currentSignature = `${location.pathname}${location.search}${location.hash}`;
@@ -37,7 +34,7 @@ function BoardRoutes({ setAppBarHeader }) {
   useEffect(() => {
     setRouteSlots((slots) => {
       const [activeSlot, pendingSlot] = slots;
-      if (!isBoardRoute(activeSlot.location.pathname) || !isBoardRoute(location.pathname)) {
+      if (!matchBoardPath(activeSlot.location.pathname) || !matchBoardPath(location.pathname)) {
         return [{ signature: currentSignature, location }];
       }
       if (
@@ -68,7 +65,7 @@ function BoardRoutes({ setAppBarHeader }) {
       <RouteContent routeKey={slot.signature} onError={() => handlePageReady(slot.signature)}>
         <Routes location={slot.location}>
           <Route
-            path="/board/:boardId"
+            {...boardRoute}
             element={
               <AuthenticatedRoute>
                 <BoardListsPage
@@ -81,7 +78,7 @@ function BoardRoutes({ setAppBarHeader }) {
           />
 
           <Route
-            path="/board/:boardId/list/:listId"
+            {...listRoute}
             element={
               <AuthenticatedRoute>
                 <ListTasksPage
@@ -92,6 +89,7 @@ function BoardRoutes({ setAppBarHeader }) {
               </AuthenticatedRoute>
             }
           />
+          <Route path="*" element={<h1>Page not found</h1>} />
         </Routes>
       </RouteContent>
     </div>
@@ -101,6 +99,7 @@ function BoardRoutes({ setAppBarHeader }) {
 function ApplicationSession({ showSnackbar }) {
   const isCurrentSession = useSessionGuard();
   const boardList = useBoardList();
+  const connectionsEnabled = import.meta.env.VITE_MCP_ENABLED === '1';
   const [appBarHeader, setAppBarHeader] = useState('');
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -133,28 +132,30 @@ function ApplicationSession({ showSnackbar }) {
           <Route path="/register" element={<Register showSnackbar={showSnackbar} />} />
           <Route path="/forgot-password" element={<ForgotPassword showSnackbar={showSnackbar} />} />
           <Route path="/reset-password" element={<ResetPassword showSnackbar={showSnackbar} />} />
-          {import.meta.env.VITE_MCP_ENABLED === '1' && (
-            <>
-              <Route
-                path="/connections/authorize"
-                element={
-                  <AuthenticatedRoute>
-                    <OAuthConsent />
-                  </AuthenticatedRoute>
-                }
-              />
-              <Route
-                path="/connections"
-                element={
-                  <AuthenticatedRoute>
-                    <ConnectedApps />
-                  </AuthenticatedRoute>
-                }
-              />
-            </>
-          )}
-
-          <Route path="/connections/*" element={<Navigate to="/" replace />} />
+          <Route
+            path="/connections/authorize"
+            element={
+              connectionsEnabled ? (
+                <AuthenticatedRoute>
+                  <OAuthConsent />
+                </AuthenticatedRoute>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route
+            path="/connections"
+            element={
+              connectionsEnabled ? (
+                <AuthenticatedRoute>
+                  <ConnectedApps />
+                </AuthenticatedRoute>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
           <Route path="*" element={<BoardRoutes setAppBarHeader={setAppBarHeader} />} />
         </Routes>
       </RouteContent>

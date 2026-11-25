@@ -81,6 +81,8 @@ deployment.
 
 ## 🗺️ Routes and behavior
 
+Board links use `/board/:boardId` and `/board/:boardId/list/:listId`. The production frontend returns HTTP 404 for unknown paths, including old plural board links. The REST collection remains `/api/boards/`.
+
 Route pages load through `React.lazy` and the shared `RouteContent` boundary.
 The application shell stays usable while a page loads. Authentication guards
 run before protected lazy pages render, and a failed import offers a full-page

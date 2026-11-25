@@ -15,7 +15,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router';
-import { goBackToParent } from '../../utils/navigation';
+import { matchBoardPath } from '../../utils/navigation';
 import { logout } from '../../services/http/requestClient';
 import NotificationsMenu from './NotificationsMenu';
 
@@ -32,26 +32,26 @@ export default function AppHeader({ appBarHeader, setDrawerOpen }) {
   const profilePrimary = profileUsername || profileEmail.split?.('@')?.[0] || 'username';
   const profileSecondary =
     profileEmail || (profilePrimary === 'username' ? 'username@gmail.com' : null);
+  const board = matchBoardPath(location.pathname)?.params;
   if (AUTH_PATHS.includes(location.pathname)) return null;
 
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar position="static">
         <Toolbar>
-          {
-            // Don't render back button on the base page
-            location.pathname.includes('/list') && (
-              <IconButton
-                size="large"
-                edge="start"
-                color="inherit"
-                aria-label="back button"
-                onClick={() => goBackToParent(location.pathname, navigate)}
-              >
-                <ChevronLeft />
-              </IconButton>
-            )
-          }
+          {board?.listId && (
+            <IconButton
+              size="large"
+              edge="start"
+              color="inherit"
+              aria-label="back button"
+              onClick={() =>
+                navigate('/board/' + encodeURIComponent(board.boardId), { replace: true })
+              }
+            >
+              <ChevronLeft />
+            </IconButton>
+          )}
           <Typography variant="h6" edge="start" component="div" noWrap sx={{ flexGrow: 1 }}>
             {appBarHeader}
           </Typography>
