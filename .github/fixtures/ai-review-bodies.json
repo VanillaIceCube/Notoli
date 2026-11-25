@@ -1,0 +1,103 @@
+[
+  {
+    "name": "Clean code-review approval",
+    "input": {
+      "personaName": "Obi-Wan Code-nobi",
+      "summary": "**Approved.** The credential boundaries hold, the tests cover the risky paths, and the earlier concern is resolved. The course looks clear from here.",
+      "evidence": [
+        "Alert permissions, credential separation, and regression coverage support the verdict."
+      ]
+    },
+    "expectedLines": [
+      "## 🧭 Obi-Wan Code-nobi",
+      "",
+      "**Approved.** The credential boundaries hold, the tests cover the risky paths, and the earlier concern is resolved. The course looks clear from here.",
+      "",
+      "## 📚 Evidence reviewed",
+      "",
+      "- Alert permissions, credential separation, and regression coverage support the verdict."
+    ]
+  },
+  {
+    "name": "Build failure with its exact diagnostic left inline",
+    "input": {
+      "personaName": "Lint Eastwood",
+      "summary": "**Changes requested.** Tests made it through, but lint caught one blocking warning in the new test code. Fix that holdout and send the build through again."
+    },
+    "expectedLines": [
+      "## 🤠 Lint Eastwood",
+      "",
+      "**Changes requested.** Tests made it through, but lint caught one blocking warning in the new test code. Fix that holdout and send the build through again."
+    ]
+  },
+  {
+    "name": "Infrastructure-only security comment",
+    "input": {
+      "personaName": "RoboCop",
+      "summary": "**COMMENT. REVIEW INCOMPLETE. SECURITY VERDICT: WITHHELD.** CODEQL NEVER REPORTED FOR DUTY. Restore scanner evidence, then rerun the security assessment, citizen.",
+      "evidence": [
+        "CodeQL analysis is unavailable.",
+        "Dependency and malware gates passed."
+      ],
+      "actions": [
+        "Rerun CodeQL after the API rate limit clears."
+      ]
+    },
+    "expectedLines": [
+      "## 🛡️ RoboCop",
+      "",
+      "**COMMENT. REVIEW INCOMPLETE. SECURITY VERDICT: WITHHELD.** CODEQL NEVER REPORTED FOR DUTY. Restore scanner evidence, then rerun the security assessment, citizen.",
+      "",
+      "## 📋 Evidence",
+      "",
+      "- CodeQL analysis is unavailable.",
+      "- Dependency and malware gates passed.",
+      "",
+      "## ▶️ Directive",
+      "",
+      "- Rerun CodeQL after the API rate limit clears."
+    ]
+  },
+  {
+    "name": "Unplaceable finding preserved in the review body",
+    "input": {
+      "personaName": "Obi-Wan Code-nobi",
+      "summary": "**Changes requested.** Most of the publishing path is sound, but one edge case can still swallow a new finding. Bring that case into the light before proceeding.",
+      "findings": [
+        {
+          "path": ".github/actions/publish-ai-review/publish-ai-review.js",
+          "line": 281,
+          "body": "Preserve this finding when duplicate inline comments are suppressed."
+        }
+      ],
+      "actions": [
+        "Add execution-level coverage for the mixed result."
+      ]
+    },
+    "expectedLines": [
+      "## 🧭 Obi-Wan Code-nobi",
+      "",
+      "**Changes requested.** Most of the publishing path is sound, but one edge case can still swallow a new finding. Bring that case into the light before proceeding.",
+      "",
+      "## 🔎 Findings",
+      "",
+      "- `.github/actions/publish-ai-review/publish-ai-review.js:281` — Preserve this finding when duplicate inline comments are suppressed.",
+      "",
+      "## ✅ Next step",
+      "",
+      "- Add execution-level coverage for the mixed result."
+    ]
+  },
+  {
+    "name": "Unchanged security approval",
+    "input": {
+      "personaName": "RoboCop",
+      "summary": "**APPROVED. THREAT LEVEL: MINIMAL. STATUS: UNCHANGED.** No new threat signature detected. MERGE AUTHORIZATION REMAINS GRANTED, CITIZEN."
+    },
+    "expectedLines": [
+      "## 🛡️ RoboCop",
+      "",
+      "**APPROVED. THREAT LEVEL: MINIMAL. STATUS: UNCHANGED.** No new threat signature detected. MERGE AUTHORIZATION REMAINS GRANTED, CITIZEN."
+    ]
+  }
+]

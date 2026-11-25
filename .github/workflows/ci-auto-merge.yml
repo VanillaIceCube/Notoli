@@ -37,28 +37,11 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
-            const { resolveRun, trusted, policyContext } = require(`${process.env.GITHUB_WORKSPACE}/.github/actions/dependabot-auto-merge/enable-auto-merge.js`);
-            const pr = await resolveRun({ github, context });
-            if (!pr) {
-              core.info('No current open main PR for this successful CI head.');
-              return;
-            }
-            const { data: check } = await github.rest.checks.create({
-              ...context.repo, name: policyContext, head_sha: pr.head.sha,
-              status: 'in_progress', external_id: String(context.payload.workflow_run.id),
-            });
-            core.setOutput('policy_id', check.id);
-            core.setOutput('base_sha', pr.base.sha);
-            core.setOutput('head_sha', pr.head.sha);
-            core.setOutput('number', pr.number);
-            core.setOutput('eligible', trusted(pr, `${context.repo.owner}/${context.repo.repo}`));
-            require('node:fs').writeFileSync(`${process.env.RUNNER_TEMP}/dependabot-pr-event.json`, JSON.stringify({ pull_request: pr }));
+            await require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/manage-dependabot-auto-merge.js`).startPolicy({ github, context, core });
 
-      - name: Set up locked Python tooling
+      - name: Install reviewed automation dependencies
         if: steps.pr.outputs.policy_id != ''
-        uses: ./.github/actions/setup-uv
-        with:
-          only-dev: "true"
+        run: npm ci --prefix .github --ignore-scripts --no-audit --no-fund
 
       - name: Compare workflow write grants using reviewed main code
         if: steps.pr.outputs.policy_id != ''
@@ -67,34 +50,34 @@ jobs:
           BASE_SHA: ${{ steps.pr.outputs.base_sha }}
           HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
           PR_NUMBER: ${{ steps.pr.outputs.number }}
-        shell: bash
+        shell: node {0}
         run: |
-          set -euo pipefail
-          [[ "$BASE_SHA" =~ ^[a-f0-9]{40}$ && "$HEAD_SHA" =~ ^[a-f0-9]{40}$ && "$PR_NUMBER" =~ ^[1-9][0-9]*$ ]]
-          # Fetch immutable Git objects from this repository. Proposed files are never checked out.
-          git -c credential.helper= -c 'credential.helper=!gh auth git-credential' fetch \
-            --no-tags --depth=1 origin "$BASE_SHA" "refs/pull/$PR_NUMBER/head"
-          unset GH_TOKEN
-          python3 .github/actions/check-workflow-security/check.py --compare-workflow-grants "$BASE_SHA" "$HEAD_SHA"
+          const { execFileSync } = require('node:child_process');
+          const { BASE_SHA, HEAD_SHA, PR_NUMBER } = process.env;
+          if (![BASE_SHA, HEAD_SHA].every(sha => /^[a-f0-9]{40}$/.test(sha)) || !/^[1-9][0-9]*$/.test(PR_NUMBER)) {
+            throw new Error('Invalid pull request or commit reference');
+          }
+          // Fetch only Git objects. Proposed files are never checked out.
+          execFileSync('git', ['-c', 'credential.helper=', '-c', 'credential.helper=!gh auth git-credential',
+            'fetch', '--no-tags', '--depth=1', 'origin', BASE_SHA, 'refs/pull/' + PR_NUMBER + '/head'], { stdio: 'inherit' });
+          delete process.env.GH_TOKEN;
+          execFileSync(process.execPath, ['.github/scripts/validate-workflows.js', '--compare-workflow-grants',
+            BASE_SHA, HEAD_SHA], { stdio: 'inherit' });
 
       - name: Validate this head and enable native protected-branch auto-merge
-        id: enable
         if: steps.pr.outputs.eligible == 'true'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           POLICY_CHECK_ID: ${{ steps.pr.outputs.policy_id }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          HEAD_SHA: ${{ steps.pr.outputs.head_sha }}
+          PR_NODE_ID: ${{ steps.pr.outputs.node_id }}
           OBI_WAN_REVIEWER_LOGIN: ${{ vars.OBI_WAN_REVIEWER_LOGIN || 'obi-wan-code-nobi-reviewer[bot]' }}
           LINT_EASTWOOD_REVIEWER_LOGIN: ${{ vars.LINT_EASTWOOD_REVIEWER_LOGIN || 'lint-eastwood-build-sheriff[bot]' }}
           ROBOCOP_REVIEWER_LOGIN: ${{ vars.ROBOCOP_REVIEWER_LOGIN || 'robocop-security-officer[bot]' }}
         with:
           script: |
-            const { enableAutoMerge } = require(`${process.env.GITHUB_WORKSPACE}/.github/actions/dependabot-auto-merge/enable-auto-merge.js`);
-            const payload = JSON.parse(require('node:fs').readFileSync(`${process.env.RUNNER_TEMP}/dependabot-pr-event.json`, 'utf8'));
-            await enableAutoMerge({ github, core, context: { repo: context.repo, eventName: 'pull_request', payload },
-              policyCheckId: Number(process.env.POLICY_CHECK_ID), reviewerLogins: [
-                process.env.OBI_WAN_REVIEWER_LOGIN, process.env.LINT_EASTWOOD_REVIEWER_LOGIN, process.env.ROBOCOP_REVIEWER_LOGIN,
-              ],
-            });
+            await require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/manage-dependabot-auto-merge.js`).checkAndEnable({ github, context, core });
 
       - name: Complete the per-head policy check
         if: always() && steps.pr.outputs.policy_id != ''
@@ -104,9 +87,4 @@ jobs:
           JOB_STATUS: ${{ job.status }}
         with:
           script: |
-            await github.rest.checks.update({ ...context.repo, check_run_id: Number(process.env.POLICY_CHECK_ID),
-              status: 'completed', conclusion: process.env.JOB_STATUS === 'success' ? 'success' : 'failure',
-              output: { title: 'Dependabot policy for this exact head', summary: process.env.JOB_STATUS === 'success'
-                ? 'Workflow write grants passed. Eligible Dependabot updates also met the auto-merge policy. GitHub enforces all branch requirements.'
-                : 'Policy validation failed; native auto-merge remains blocked by this required check.' },
-            });
+            await require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/manage-dependabot-auto-merge.js`).finishPolicy({ github, context });

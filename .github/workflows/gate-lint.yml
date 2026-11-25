@@ -46,6 +46,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: github.event_name != 'pull_request'
         with:
           fetch-depth: 0
           ref: ${{ inputs.enable_autofix && inputs.checkout_ref || '' }}
@@ -58,27 +59,29 @@ jobs:
           filters: |
             frontend:
               - 'frontend/**'
-              - '.github/actions/read-versions/**'
-              - '.github/actions/prepare-lint-commit/**'
+              - '.github/actions/setup-lint-bot/**'
+              - '.github/scripts/summarize-check-log.js'
+              - '.github/scripts/run-app-checks.js'
+              - '.github/scripts/detect-lint-fixes.js'
             backend:
               - 'backend/**'
               - '.github/actions/setup-uv/**'
-              - '.github/actions/prepare-lint-commit/**'
+              - '.github/actions/setup-lint-bot/**'
+              - '.github/scripts/summarize-check-log.js'
+              - '.github/scripts/run-app-checks.js'
+              - '.github/scripts/detect-lint-fixes.js'
 
       - name: Report path detection failure
         if: steps.filter.outcome == 'failure'
-        shell: bash
-        run: |
-          message="GitHub API path detection failed, so lint scope was not evaluated. Rerun the workflow after the API limit or service error clears."
-          echo "::error title=Lint path detection unavailable::$message"
-          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
-            {
-              echo "### Lint path detection unavailable"
-              echo
-              echo "$message"
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-          exit 1
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          TITLE: Lint path detection unavailable
+          MESSAGE: GitHub API path detection failed, so lint scope was not evaluated. Rerun the workflow after the API limit or service error clears.
+        with:
+          script: |
+            core.error(process.env.MESSAGE, { title: process.env.TITLE });
+            await core.summary.addHeading(process.env.TITLE, 3).addRaw(process.env.MESSAGE).write();
+            process.exitCode = 1;
 
   lint-frontend:
     name: Lint Frontend (ESLint + Prettier)
@@ -98,15 +101,12 @@ jobs:
           ref: ${{ inputs.enable_autofix && inputs.checkout_ref || '' }}
           persist-credentials: false
 
-      - name: Read versions
-        id: versions
-        uses: ./.github/actions/read-versions
-        with:
-          read_python: "false"
+      - name: Require a Node version in the frontend manifest
+        run: jq -e '.engines.node | strings | test("\\S") and (test("[\r\n]") | not)' package.json
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: ${{ steps.versions.outputs.node_version }}
+          node-version-file: frontend/package.json
           cache: 'npm'
           cache-dependency-path: 'frontend/package-lock.json'
 
@@ -125,18 +125,12 @@ jobs:
         id: git-changes
         env:
           AUTOFIX_ENABLED: ${{ inputs.enable_autofix }}
-        run: |
-          if [ "$AUTOFIX_ENABLED" != "true" ] || git diff --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            git diff --name-only
-          fi
+        run: node "$GITHUB_WORKSPACE/.github/scripts/detect-lint-fixes.js"
 
-      - name: Prepare Lint Eastwood commit
+      - name: Set up Lint Eastwood bot
         id: lint-eastwood-bot
         if: steps.git-changes.outputs.changed == 'true'
-        uses: ./.github/actions/prepare-lint-commit
+        uses: ./.github/actions/setup-lint-bot
         with:
           app_id: ${{ vars.LINT_EASTWOOD_APP_ID }}
           private_key: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
@@ -161,39 +155,18 @@ jobs:
       - name: Lint checks
         id: lint_checks
         continue-on-error: true
-        run: |
-          set -o pipefail
-          status=0
-          npm run format:check 2>&1 | tee lint_output.txt || status=$?
-          npm run lint:strict 2>&1 | tee -a lint_output.txt || status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+        shell: bash
+        run: node "$GITHUB_WORKSPACE/.github/scripts/run-app-checks.js" lint-frontend 2>&1 | tee lint_output.txt
 
       - name: Lint summary
         id: lint_summary
         if: always()
-        run: |
-          exit_code="${{ steps.lint_checks.outputs.exit_code }}"
-          if [ -z "$exit_code" ]; then
-            exit_code=1
-          fi
-          if [ "$exit_code" = "0" ]; then
-            echo "status=success" >> "$GITHUB_OUTPUT"
-          else
-            echo "status=failure" >> "$GITHUB_OUTPUT"
-          fi
-
-          {
-            echo 'log<<EOF'
-            if [ -f lint_output.txt ]; then
-              tail -n 200 lint_output.txt
-            else
-              echo "No lint output captured."
-            fi
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+        env:
+          CHECK_EXIT_CODE: ${{ steps.lint_checks.outcome == 'success' && '0' || '1' }}
+        run: node "$GITHUB_WORKSPACE/.github/scripts/summarize-check-log.js" lint_output.txt --exit-code "$CHECK_EXIT_CODE" --tail-lines 200
 
       - name: Fail if lint failed
-        if: steps.lint_checks.outputs.exit_code != '0'
+        if: steps.lint_checks.outcome != 'success'
         run: exit 1
     outputs:
       status: ${{ steps.lint_summary.outputs.status }}
@@ -234,18 +207,12 @@ jobs:
         id: git-changes
         env:
           AUTOFIX_ENABLED: ${{ inputs.enable_autofix }}
-        run: |
-          if [ "$AUTOFIX_ENABLED" != "true" ] || git diff --quiet; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            git diff --name-only
-          fi
+        run: node "$GITHUB_WORKSPACE/.github/scripts/detect-lint-fixes.js"
 
-      - name: Prepare Lint Eastwood commit
+      - name: Set up Lint Eastwood bot
         id: lint-eastwood-bot
         if: steps.git-changes.outputs.changed == 'true'
-        uses: ./.github/actions/prepare-lint-commit
+        uses: ./.github/actions/setup-lint-bot
         with:
           app_id: ${{ vars.LINT_EASTWOOD_APP_ID }}
           private_key: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
@@ -270,39 +237,18 @@ jobs:
       - name: Ruff checks
         id: lint_checks
         continue-on-error: true
-        run: |
-          set -o pipefail
-          status=0
-          uv run --locked --only-group dev ruff check . 2>&1 | tee lint_output.txt || status=$?
-          uv run --locked --only-group dev ruff format --check . 2>&1 | tee -a lint_output.txt || status=$?
-          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+        shell: bash
+        run: node "$GITHUB_WORKSPACE/.github/scripts/run-app-checks.js" lint-backend 2>&1 | tee lint_output.txt
 
       - name: Lint summary
         id: lint_summary
         if: always()
-        run: |
-          exit_code="${{ steps.lint_checks.outputs.exit_code }}"
-          if [ -z "$exit_code" ]; then
-            exit_code=1
-          fi
-          if [ "$exit_code" = "0" ]; then
-            echo "status=success" >> "$GITHUB_OUTPUT"
-          else
-            echo "status=failure" >> "$GITHUB_OUTPUT"
-          fi
-
-          {
-            echo 'log<<EOF'
-            if [ -f lint_output.txt ]; then
-              tail -n 200 lint_output.txt
-            else
-              echo "No lint output captured."
-            fi
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+        env:
+          CHECK_EXIT_CODE: ${{ steps.lint_checks.outcome == 'success' && '0' || '1' }}
+        run: node "$GITHUB_WORKSPACE/.github/scripts/summarize-check-log.js" lint_output.txt --exit-code "$CHECK_EXIT_CODE" --tail-lines 200
 
       - name: Fail if lint failed
-        if: steps.lint_checks.outputs.exit_code != '0'
+        if: steps.lint_checks.outcome != 'success'
         run: exit 1
     outputs:
       status: ${{ steps.lint_summary.outputs.status }}
@@ -314,49 +260,28 @@ jobs:
     needs: [changes, lint-frontend, lint-backend]
     runs-on: ubuntu-latest
     outputs:
-      frontend_status: ${{ steps.results.outputs.frontend_status }}
-      frontend_log: ${{ steps.results.outputs.frontend_log }}
-      backend_status: ${{ steps.results.outputs.backend_status }}
-      backend_log: ${{ steps.results.outputs.backend_log }}
+      frontend_status: >-
+        ${{ needs.changes.outputs.frontend == 'false' && 'not-applicable' ||
+            needs.changes.outputs.frontend == 'true' && needs.lint-frontend.outputs.status == 'success' && 'success' || 'failure' }}
+      frontend_log: >-
+        ${{ needs.changes.outputs.frontend == 'false' && 'No frontend-relevant changes.' ||
+            needs.changes.outputs.frontend != 'true' && 'Unable to determine frontend scope.' ||
+            needs.lint-frontend.outputs.log }}
+      backend_status: >-
+        ${{ needs.changes.outputs.backend == 'false' && 'not-applicable' ||
+            needs.changes.outputs.backend == 'true' && needs.lint-backend.outputs.status == 'success' && 'success' || 'failure' }}
+      backend_log: >-
+        ${{ needs.changes.outputs.backend == 'false' && 'No backend-relevant changes.' ||
+            needs.changes.outputs.backend != 'true' && 'Unable to determine backend scope.' ||
+            needs.lint-backend.outputs.log }}
     steps:
-      - name: Normalize lint results
-        id: results
-        env:
-          FRONTEND_RELEVANT: ${{ needs.changes.outputs.frontend }}
-          FRONTEND_STATUS: ${{ needs.lint-frontend.outputs.status }}
-          FRONTEND_LOG: ${{ needs.lint-frontend.outputs.log }}
-          BACKEND_RELEVANT: ${{ needs.changes.outputs.backend }}
-          BACKEND_STATUS: ${{ needs.lint-backend.outputs.status }}
-          BACKEND_LOG: ${{ needs.lint-backend.outputs.log }}
-        shell: bash
-        run: |
-          if [ "$FRONTEND_RELEVANT" = "true" ]; then
-            echo "frontend_status=${FRONTEND_STATUS:-failure}" >> "$GITHUB_OUTPUT"
-            {
-              echo 'frontend_log<<EOF'
-              echo "$FRONTEND_LOG"
-              echo 'EOF'
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "frontend_status=not-applicable" >> "$GITHUB_OUTPUT"
-            echo "frontend_log=No frontend-relevant changes." >> "$GITHUB_OUTPUT"
-          fi
-
-          if [ "$BACKEND_RELEVANT" = "true" ]; then
-            echo "backend_status=${BACKEND_STATUS:-failure}" >> "$GITHUB_OUTPUT"
-            {
-              echo 'backend_log<<EOF'
-              echo "$BACKEND_LOG"
-              echo 'EOF'
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "backend_status=not-applicable" >> "$GITHUB_OUTPUT"
-            echo "backend_log=No backend-relevant changes." >> "$GITHUB_OUTPUT"
-          fi
-
-          if [ "$FRONTEND_RELEVANT" = "true" ] && [ "${FRONTEND_STATUS:-failure}" != "success" ]; then
-            exit 1
-          fi
-          if [ "$BACKEND_RELEVANT" = "true" ] && [ "${BACKEND_STATUS:-failure}" != "success" ]; then
-            exit 1
-          fi
+      - name: Require applicable frontend lint result
+        if: >-
+          always() && needs.changes.outputs.frontend != 'false' &&
+          (needs.changes.outputs.frontend != 'true' || needs.lint-frontend.outputs.status != 'success')
+        run: exit 1
+      - name: Require applicable backend lint result
+        if: >-
+          always() && needs.changes.outputs.backend != 'false' &&
+          (needs.changes.outputs.backend != 'true' || needs.lint-backend.outputs.status != 'success')
+        run: exit 1

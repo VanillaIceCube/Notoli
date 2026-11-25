@@ -16,9 +16,6 @@ inputs:
     required: false
     default: "false"
 outputs:
-  diff_path:
-    description: Path to the generated diff file.
-    value: ${{ steps.diff.outputs.diff_path }}
   linediff_path:
     description: Path to the line-numbered diff file.
     value: ${{ steps.diff.outputs.linediff_path }}
@@ -31,9 +28,6 @@ outputs:
   truncated:
     description: Whether the diff was truncated.
     value: ${{ steps.diff.outputs.truncated }}
-  full_diff_bytes:
-    description: Full diff size before generated-lockfile filtering.
-    value: ${{ steps.diff.outputs.full_diff_bytes }}
   excluded_files:
     description: Generated lockfile omitted from AI source review, or empty.
     value: ${{ steps.diff.outputs.excluded_files }}
@@ -47,137 +41,4 @@ runs:
         HEAD_SHA: ${{ inputs.head_sha }}
         MAX_BYTES: ${{ inputs.max_bytes }}
         OMIT_FRONTEND_NPM_LOCKFILE: ${{ inputs.omit_frontend_npm_lockfile }}
-      run: |
-        set -euo pipefail
-
-        [[ "$BASE_SHA" =~ ^[a-f0-9]{40}$ && "$HEAD_SHA" =~ ^[a-f0-9]{40}$ ]]
-        [[ "$MAX_BYTES" =~ ^[1-9][0-9]*$ ]]
-        [[ "$OMIT_FRONTEND_NPM_LOCKFILE" =~ ^(true|false)$ ]]
-
-        echo "Base: $BASE_SHA"
-        echo "Head: $HEAD_SHA"
-
-        # Only this exact generated file is covered by our npm malware gate.
-        # Other lockfiles, and non-regular files at this path, remain reviewable.
-        DIFF_DIR=$(mktemp -d "$RUNNER_TEMP/pr-diff.XXXXXX")
-        git diff --no-ext-diff --no-textconv --unified=3 "$BASE_SHA" "$HEAD_SHA" > "$DIFF_DIR/pr_full.diff"
-        EXCLUDED_FILES=""
-        REGULAR_LOCKFILE=true
-        if [ "$OMIT_FRONTEND_NPM_LOCKFILE" = true ]; then
-          for REF in "$BASE_SHA" "$HEAD_SHA"; do
-            MODE=$(git ls-tree "$REF" -- frontend/package-lock.json | cut -d ' ' -f 1)
-            if [ -n "$MODE" ] && [ "$MODE" != '100644' ]; then
-              REGULAR_LOCKFILE=false
-            fi
-          done
-        fi
-        if [ "$OMIT_FRONTEND_NPM_LOCKFILE" = true ] && [ "$REGULAR_LOCKFILE" = true ]; then
-          git diff --no-ext-diff --no-textconv --unified=3 "$BASE_SHA" "$HEAD_SHA" -- . \
-            ':(exclude,top)frontend/package-lock.json' > "$DIFF_DIR/pr.diff"
-          EXCLUDED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- frontend/package-lock.json)
-        else
-          cp "$DIFF_DIR/pr_full.diff" "$DIFF_DIR/pr.diff"
-        fi
-        cd "$DIFF_DIR"
-        FULL_BYTES=$(wc -c < pr_full.diff)
-        export EXCLUDED_FILES
-
-        # Truncate if it's huge so we don't blow up token limits
-        ACTUAL_BYTES=$(wc -c < pr.diff)
-        TRUNCATED=false
-        if [ "$ACTUAL_BYTES" -gt "$MAX_BYTES" ]; then
-          head -c "$MAX_BYTES" pr.diff > pr_truncated.diff
-          echo "::warning::Diff was too large ($ACTUAL_BYTES bytes). Truncated to $MAX_BYTES bytes."
-          mv pr_truncated.diff pr.diff
-          TRUNCATED=true
-        fi
-
-        echo "Diff size:"
-        wc -c pr.diff
-
-        # Build a line-numbered diff for inline review comments
-        python3 - <<'PY'
-        import json
-        import os
-        from pathlib import Path
-        import re
-
-        diff_path = "pr.diff"
-        out_path = "pr_lines.diff"
-
-        hunk_re = re.compile(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
-        new_line = None
-
-        excluded = [os.environ["EXCLUDED_FILES"]] if os.environ["EXCLUDED_FILES"] else []
-        scope = (
-            "AI REVIEW SCOPE\n"
-            f"Full diff bytes: {Path('pr_full.diff').stat().st_size}\n"
-            f"Generated lockfile payloads excluded: {json.dumps(excluded)}\n"
-        )
-        if excluded:
-            scope += (
-                "Excluded payloads have NOT been inspected by this AI source review. "
-                "Dependency Review and npm malware review remain independent required gates.\n"
-            )
-        if not Path(diff_path).stat().st_size:
-            scope += (
-                "No source diff remains (lockfile-only or empty change). "
-                "Do not infer dependency safety from an empty source diff; "
-                "use the independent scanner evidence for dependency conclusions.\n"
-            )
-        scope += (
-            "DIFF LEGEND: A<number> is ADDED current RIGHT-side source; "
-            "R<number> is unchanged current context; "
-            "D is DELETED old source, not active code.\n\n"
-        )
-        summary = os.environ.get("GITHUB_STEP_SUMMARY")
-        if summary:
-            with open(summary, "a", encoding="utf-8") as report:
-                report.write(scope)
-
-        with open(diff_path, "r", encoding="utf-8", errors="replace") as f, open(
-            out_path, "w", encoding="utf-8"
-        ) as out:
-            out.write(scope)
-            for raw in f:
-                line = raw.rstrip("\n")
-                if line.startswith("@@ "):
-                    m = hunk_re.search(line)
-                    if m:
-                        new_line = int(m.group(1))
-                    out.write(line + "\n")
-                    continue
-
-                if line.startswith("diff --git") or line.startswith("index ") or line.startswith("--- ") or line.startswith("+++ "):
-                    out.write(line + "\n")
-                    continue
-
-                if line.startswith("+") and not line.startswith("+++"):
-                    if new_line is not None:
-                        out.write(f"A{new_line}: {line[1:]}\n")
-                        new_line += 1
-                    else:
-                        out.write(line + "\n")
-                    continue
-
-                if line.startswith(" ") and new_line is not None:
-                    out.write(f"R{new_line}: {line[1:]}\n")
-                    new_line += 1
-                    continue
-
-                if line.startswith("-") and not line.startswith("---"):
-                    out.write(f"D: {line[1:]}\n")
-                    continue
-
-                out.write(line + "\n")
-        PY
-
-        {
-          echo "diff_path=$DIFF_DIR/pr.diff"
-          echo "linediff_path=$DIFF_DIR/pr_lines.diff"
-          echo "diff_bytes=$ACTUAL_BYTES"
-          echo "full_diff_bytes=$FULL_BYTES"
-          echo "excluded_files=$EXCLUDED_FILES"
-          echo "max_bytes=$MAX_BYTES"
-          echo "truncated=$TRUNCATED"
-        } >> "$GITHUB_OUTPUT"
+      run: node "$GITHUB_ACTION_PATH/get-pr-diff.js"

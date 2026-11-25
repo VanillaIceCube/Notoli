@@ -309,7 +309,7 @@ async function publishUnavailableReview({
           "",
           "**Review unavailable.** OpenAI could not produce a usable review for this commit.",
           "",
-          "This is not an approval or a finding. Independent lint, test, CodeQL, vulnerability, and malware gates remain authoritative. Restore OpenAI access, then rerun this review.",
+          "This is not an approval or a finding. See the independent CI gates for their results. Restore OpenAI access, then rerun this review for the current commit.",
         ].join("\n"),
       });
     } else {
@@ -336,7 +336,7 @@ async function publishAiReview({
   appSlug,
   readGithub,
 }) {
-  const { probeReadEvidence } = require("./reconcile");
+  const { probeReadEvidence } = require("./reconcile-ai-review");
   if (readGithub) await probeReadEvidence({ readGithub, context, core });
   const reviewJson = String(raw || "").trim();
   if (
@@ -595,7 +595,7 @@ async function publishAiReview({
     comments: comments.length ? comments : undefined,
   });
 
-  const { reconcile } = require("./reconcile");
+  const { reconcile } = require("./reconcile-ai-review");
   await reconcile({ github, context, core, parsed, appSlug, personaName, readGithub });
 
   if (event === "REQUEST_CHANGES") {

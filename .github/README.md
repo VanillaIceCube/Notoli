@@ -5,10 +5,15 @@ Source-controlled configuration and GitHub account/repository settings are separ
 
 ## 🧭 Structure
 
-- [Workflows](workflows/README.md): triggers, required gates, security checks, releases, and diagnostics.
-- [Local actions](actions/README.md): reviewer context, feedback lifecycle, request policy, and regression tests.
-- `dependabot.yml`: dependency-update configuration.
-- `workflows/*.yml` and `actions/*/action.yml`: executable automation definitions.
+| Location | Purpose |
+| --- | --- |
+| [workflows](workflows/README.md) | Entry points, gates, reviewers, schedules and deployment. The guide includes four flow diagrams. |
+| [scripts](scripts) | Standalone automation programs that workflows or people run, and their supporting modules. |
+| [actions](actions/README.md) | Reusable composite steps, each with its own `action.yml` and implementation. |
+| [tests](tests) | One suite per tested JavaScript implementation or workflow, named after its source. |
+| [fixtures](fixtures) | Saved test inputs and expected output. Use lowercase, hyphen-separated nouns for the data and add the scenario last when variants exist (for example, `github-check-runs-passing.json`). |
+| [package.json](package.json) and [package-lock.json](package-lock.json) | JavaScript dependencies for automation and their verified install versions. |
+| [dependabot.yml](dependabot.yml) | Dependency ecosystems and update schedules. |
 
 ## 🚦 Before your first pull request
 
