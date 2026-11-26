@@ -11,7 +11,7 @@ import useBoardList from './useBoardList';
 vi.mock('../../services/boards/notoliApiClient', () => ({ fetchBoards: vi.fn() }));
 
 beforeEach(() => startSession({ access: 'access', refresh: 'refresh' }));
-afterEach(() => clearSession());
+afterAll(() => clearSession());
 
 test('merges a successful add into the first list result', async () => {
   const pending = Promise.withResolvers();
