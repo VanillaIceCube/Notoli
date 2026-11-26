@@ -23,37 +23,54 @@ function alertRefKey(refs) {
 }
 
 function domainForPath(path) {
-  const root = path.replaceAll("\\", "/").replace(/^(?:\.\/|\/)+/, "").toLowerCase().split("/")[0];
+  const normalized = path.replaceAll("\\", "/").replace(/^(?:\.\/|\/)+/, "").toLowerCase();
+  const root = normalized.split("/")[0];
   if (root === "frontend") return "Frontend";
   if (root === "backend") return "Backend";
-  if ([".github", "deploy", "gateway", "infra", "infrastructure", "terraform", "k8s"].includes(root) ||
-      /^(?:dockerfile(?:\..*)?|docker-compose.*|compose\..*|nginx\.conf)$/.test(root)) return "Cloud";
+
+  const cloudDirectories = [".github", "deploy", "gateway", "infra", "infrastructure", "terraform", "k8s"];
+  const cloudFile = /^(?:dockerfile(?:\..*)?|docker-compose.*|compose\..*|nginx\.conf)$/;
+  if (cloudDirectories.includes(root) || cloudFile.test(root)) return "Cloud";
+  return null;
+}
+
+function domainForDependency(ecosystem, path, infrastructure) {
+  if (["actions", "github-actions", "docker"].includes(ecosystem)) return "Cloud";
+  // Infrastructure uses Node and Python for tooling, so neither identifies an app component.
+  if (infrastructure) return null;
+
+  if (ecosystem === "npm" || /^package(?:-lock)?\.json$/i.test(path)) return "Frontend";
+  if (ecosystem === "pip" || ecosystem === "uv") return "Backend";
   return null;
 }
 
 function alertDomain(alerts, repo) {
   const infrastructure = repo === "JudeAndrewAlabaInfrastructure";
-  // Stable tie order also supplies the repository fallback when alerts have no location.
+  // A stable sort keeps the repository's preferred domain first when all scores tie.
   const domains = infrastructure ? ["Cloud", "Backend", "Frontend"] : ["Backend", "Frontend", "Cloud"];
-  const scores = Object.fromEntries(domains.map(domain => [domain, { paths: 0, hints: 0, severity: 0 }]));
-  const severity = { low: 1, medium: 2, high: 3, critical: 4 };
+  const scores = Object.fromEntries(domains.map(domain => [domain, { paths: 0, severity: 0, hints: 0 }]));
+  const severityRank = { low: 1, medium: 2, high: 3, critical: 4 };
+
   for (const alert of alerts) {
     const path = alert.location || alert.manifest || "";
-    let domain = domainForPath(path);
-    if (domain) {
-      scores[domain].paths++;
-    } else {
-      if (["actions", "github-actions", "docker"].includes(alert.ecosystem)) domain = "Cloud";
-      else if (infrastructure) continue;
-      else if (alert.ecosystem === "npm" || /^package(?:-lock)?\.json$/i.test(path)) domain = "Frontend";
-      else if (alert.ecosystem === "pip" || alert.ecosystem === "uv") domain = "Backend";
-      else continue;
-      scores[domain].hints++;
-    }
-    scores[domain].severity = Math.max(scores[domain].severity, severity[alert.severity] ?? 0);
+    const pathDomain = domainForPath(path);
+    const domain = pathDomain ?? domainForDependency(alert.ecosystem, path, infrastructure);
+    if (!domain) continue;
+
+    const score = scores[domain];
+    if (pathDomain) score.paths++;
+    else score.hints++;
+    score.severity = Math.max(score.severity, severityRank[alert.severity] ?? 0);
   }
-  return domains.sort((a, b) => scores[b].paths - scores[a].paths ||
-    scores[b].severity - scores[a].severity || scores[b].hints - scores[a].hints)[0];
+
+  domains.sort((left, right) => {
+    const a = scores[left];
+    const b = scores[right];
+    if (a.paths !== b.paths) return b.paths - a.paths;
+    if (a.severity !== b.severity) return b.severity - a.severity;
+    return b.hints - a.hints;
+  });
+  return domains[0];
 }
 
 function alertPriority(feed, alerts) {
