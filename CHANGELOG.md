@@ -6,7 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
-- Update the shared release source pin to the equivalent Infrastructure commit after its history rewrite.
+- Update the shared release source pin after the Infrastructure history rewrite. Both commits have the same root tree (`dc4f2eea3d0b839a396aaa2cd6a2ab43ff56d10b`). The remote parity check verified the vendored launcher, tests and rendered deployment workflow against the new pin.
 - Track security alerts through their source references and native fields, preserve issue labels, and assign a primary Domain even when alerts span components. Use the GitHub issue closure timestamp for completion.
 
 ## 2026-11-25
