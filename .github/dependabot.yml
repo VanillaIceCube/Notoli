@@ -8,6 +8,10 @@ updates:
 
   - package-ecosystem: "npm"
     directory: "/frontend"
+    ignore:
+      # ESLint needs the TypeScript 6 compiler API. Recheck at 7.1.
+      - dependency-name: "typescript"
+        versions: ["7.0.x"]
     schedule:
       interval: "daily"
       time: "00:00"
@@ -33,6 +37,10 @@ updates:
 
   - package-ecosystem: "docker"
     directory: "/backend/docker"
+    ignore:
+      # Both backend images must match the locked Python 3.12 project.
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     schedule:
       interval: "daily"
       time: "00:00"
