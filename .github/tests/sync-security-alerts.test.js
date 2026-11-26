@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const {
+  alertDomain,
   alertPriority,
   alertRefsFromBody,
   markerFor,
@@ -11,6 +12,15 @@ const {
   withLifecycleNote,
   closeManagedIssue,
 } = require("../actions/track-security-alerts/sync-security-alerts");
+
+test("alert domains follow the affected component, with mixed and unclear groups left for triage", () => {
+  assert.equal(alertDomain([{ manifest: "frontend/package-lock.json" }]), "Frontend");
+  assert.equal(alertDomain([{ location: "./backend/apps/core/views.py" }]), "Backend");
+  assert.equal(alertDomain([{ location: ".github/workflows/ci.yml" }, { manifest: "gateway/compose.yml" }]), "Cloud");
+  assert.equal(alertDomain([{ manifest: "frontend/package-lock.json" }, { location: "backend/manage.py" }]), null);
+  assert.equal(alertDomain([{ manifest: "package-lock.json" }]), null);
+  assert.equal(alertDomain([{ manifest: "frontend/package-lock.json" }, {}]), null);
+});
 
 test("critical and high alerts receive incident priority while medium/low vulnerabilities remain backlog work", () => {
   assert.equal(alertPriority("vulnerability", [{ severity: "medium" }, { severity: "critical" }]), "P0");
@@ -267,296 +277,6 @@ test("the known overlapping vulnerability tickets resolve to five canonical issu
   assertUniqueCoverage(plan, groups);
 });
 
-test("synchronization preserves canonical project fields and completes superseded items", async () => {
-  const openIssues = [issue(10, ["dependabot:1"]), issue(11, ["dependabot:2"])];
-  const issueUpdates = [];
-  const projectUpdates = [];
-  const issueGithub = {
-    paginate: async () => openIssues,
-    rest: {
-      issues: {
-        listForRepo() {},
-        get: async (input) => ({ data: openIssues.find((candidate) => candidate.number === input.issue_number) }),
-        update: async (input) => {
-          issueUpdates.push(input);
-          const original = openIssues.find(
-            (candidate) => candidate.number === input.issue_number,
-          );
-          Object.assign(original, input);
-          return {
-            data: {
-              ...original,
-              ...input,
-              number: input.issue_number,
-              node_id: original.node_id,
-            },
-          };
-        },
-        create: async () => {
-          throw new Error("No issue should be created for this merge.");
-        },
-        addLabels: async () => {},
-        addAssignees: async () => {},
-      },
-    },
-  };
-  const projectGithub = {
-    graphql: async (query, variables) => {
-      if (query.includes('fieldValues(first: 100)')) return { node: { fieldValues: { nodes: ['Status', 'Domain', 'Work type', 'Priority', 'Size', 'Estimate'].map(name => ({ field: { name } })) } } };
-      if (query.includes("fields(first: 100)")) {
-        return {
-          node: {
-            fields: {
-              nodes: [
-                {
-                  id: "STATUS",
-                  name: "Status",
-                  dataType: "SINGLE_SELECT",
-                  options: [
-                    { id: "BACKLOG", name: "Backlog" },
-                    { id: "DONE", name: "Done" },
-                  ],
-                },
-                {
-                  id: "END_DATE",
-                  name: "End date",
-                  dataType: "DATE",
-                },
-              ],
-            },
-          },
-        };
-      }
-      if (query.includes("items(first: 100")) {
-        return {
-          node: {
-            items: {
-              nodes: [
-                { id: "ITEM_10", content: { id: "ISSUE_10" } },
-                { id: "ITEM_11", content: { id: "ISSUE_11" } },
-              ],
-              pageInfo: { hasNextPage: false, endCursor: null },
-            },
-          },
-        };
-      }
-      if (query.includes("updateProjectV2ItemFieldValue")) {
-        projectUpdates.push(variables);
-        return { updateProjectV2ItemFieldValue: { projectV2Item: {} } };
-      }
-      throw new Error(`Unexpected GraphQL operation: ${query}`);
-    },
-  };
-  const messages = [];
-  const result = await synchronizeSecurityAlerts({
-    issueGithub,
-    projectGithub,
-    core: { info: (message) => messages.push(message) },
-    context: { repo: { owner: "example", repo: "repo" } },
-    projectId: "PROJECT",
-    currentDate: "2026-07-24",
-    source: {
-      feed,
-      alerts: [
-        {
-          ref: "dependabot:1",
-          url: "https://example.test/1",
-          package: "one",
-          severity: "medium",
-        },
-        {
-          ref: "dependabot:2",
-          url: "https://example.test/2",
-          package: "two",
-          severity: "medium",
-        },
-      ],
-    },
-    groups: [group(["dependabot:1", "dependabot:2"])],
-  });
-
-  assert.deepEqual(result, { created: 0, updated: 1, closed: 1 });
-  assert.equal(issueUpdates[0].issue_number, 10);
-  assert.equal(issueUpdates[0].state, undefined);
-  assert.match(
-    issueUpdates[0].body,
-    /\[dependabot:1\]\(https:\/\/example\.test\/1\)/,
-  );
-  assert.doesNotMatch(issueUpdates[0].body, /\]\(undefined\)/);
-  assert.equal(issueUpdates[1].issue_number, 11);
-  assert.equal(issueUpdates[1].state, undefined);
-  assert.equal(issueUpdates[2].state, "closed");
-  assert.equal(issueUpdates[2].state_reason, "completed");
-  assert.match(issueUpdates[1].body, /coverage moved to #10/);
-  assert.deepEqual(
-    projectUpdates.map((update) => ({
-      item: update.item,
-      field: update.field,
-      value: update.value,
-    })),
-    [
-      {
-        item: "ITEM_11",
-        field: "END_DATE",
-        value: { date: "2026-07-24" },
-      },
-      {
-        item: "ITEM_11",
-        field: "STATUS",
-        value: { singleSelectOptionId: "DONE" },
-      },
-    ],
-  );
-  assert.equal(
-    projectUpdates.some((update) => update.item === "ITEM_10"),
-    false,
-  );
-  assert.equal(messages.length, 2);
-});
-
-test("synchronization sends issue creation, labels, and assignment only through RoboCop", async () => {
-  const issueCalls = [];
-  const projectCalls = [];
-  let projectItemQueryCount = 0;
-  const createdIssue = {
-    number: 20,
-    node_id: "ISSUE_20",
-    body: "",
-  };
-  const issueGithub = {
-    paginate: async () => [],
-    rest: {
-      issues: {
-        listForRepo() {},
-        create: async (input) => {
-          issueCalls.push({ operation: "create", input });
-          return { data: createdIssue };
-        },
-        update: async (input) => {
-          issueCalls.push({ operation: "update", input });
-          return { data: { ...createdIssue, ...input } };
-        },
-        addLabels: async (input) => {
-          issueCalls.push({ operation: "addLabels", input });
-        },
-        addAssignees: async (input) => {
-          issueCalls.push({ operation: "addAssignees", input });
-        },
-      },
-    },
-  };
-  const projectGithub = {
-    graphql: async (query, variables) => {
-      if (query.includes('fieldValues(first: 100)')) return { node: { fieldValues: { nodes: [] } } };
-      projectCalls.push({ query, variables });
-      if (query.includes("fields(first: 100)")) {
-        return {
-          node: {
-            fields: {
-              nodes: [
-                {
-                  id: "STATUS",
-                  name: "Status",
-                  dataType: "SINGLE_SELECT",
-                  options: [{ id: "BACKLOG", name: "Backlog" }],
-                },
-                {
-                  id: "DOMAIN",
-                  name: "Domain",
-                  dataType: "SINGLE_SELECT",
-                  options: [{ id: "CI_CD", name: "CI/CD" }],
-                },
-                {
-                  id: "TYPE",
-                  name: "Work type",
-                  dataType: "SINGLE_SELECT",
-                  options: [{ id: "SECURITY", name: "Security" }],
-                },
-                {
-                  id: "PRIORITY",
-                  name: "Priority",
-                  dataType: "SINGLE_SELECT",
-                  options: [{ id: "P2", name: "P2" }],
-                },
-                {
-                  id: "SIZE",
-                  name: "Size",
-                  dataType: "SINGLE_SELECT",
-                  options: [{ id: "M", name: "M" }],
-                },
-                {
-                  id: "ESTIMATE",
-                  name: "Estimate",
-                  dataType: "NUMBER",
-                },
-              ],
-            },
-          },
-        };
-      }
-      if (query.includes("items(first: 100")) {
-        projectItemQueryCount += 1;
-        return {
-          node: {
-            items: {
-              nodes:
-                projectItemQueryCount >= 3
-                  ? [{ id: "ITEM_20", content: { id: "ISSUE_20" } }]
-                  : [],
-              pageInfo: { hasNextPage: false, endCursor: null },
-            },
-          },
-        };
-      }
-      if (query.includes("addProjectV2ItemById")) {
-        throw {
-          errors: [{ type: "UNPROCESSABLE", message: "Content already exists in the project." }],
-        };
-      }
-      if (query.includes("updateProjectV2ItemFieldValue")) {
-        return { updateProjectV2ItemFieldValue: { projectV2Item: {} } };
-      }
-      throw new Error(`Unexpected GraphQL operation: ${query}`);
-    },
-  };
-
-  const result = await synchronizeSecurityAlerts({
-    issueGithub,
-    projectGithub,
-    core: { info: () => {} },
-    context: { repo: { owner: "example", repo: "repo" } },
-    projectId: "PROJECT",
-    source: {
-      feed,
-      alerts: [
-        {
-          ref: "dependabot:1",
-          url: "https://example.test/1",
-          package: "one",
-          severity: "medium",
-        },
-      ],
-    },
-    groups: [group(["dependabot:1"])],
-  });
-
-  assert.deepEqual(result, { created: 1, updated: 0, closed: 0 });
-  assert.deepEqual(
-    issueCalls.map(({ operation }) => operation),
-    ["create", "addLabels", "addAssignees"],
-  );
-  assert.equal(
-    projectCalls.some(({ query }) => query.includes("addProjectV2ItemById")),
-    true,
-  );
-  assert.equal(
-    projectCalls.filter(({ query }) =>
-      query.includes("updateProjectV2ItemFieldValue"),
-    ).length,
-    6,
-  );
-});
-
 test("source refs remain parseable and lifecycle notes are replaced idempotently", () => {
   const original = issue(10, ["dependabot:2", "dependabot:1"]).body;
   const first = withLifecycleNote(original, "_Closed once._");
@@ -608,67 +328,6 @@ test('only the observed empty-error 422 with verified completion is tolerated', 
   }
 });
 
-function lifecycleFixture({ autoClose = false, missingItem = false, failDate = false, failDone = false } = {}) {
-  const saved = { ...issue(11, ['dependabot:2']), state: 'open' };
-  const calls = [];
-  let itemPresent = !missingItem;
-  const issueGithub = {
-    paginate: async () => saved.state === 'open' ? [saved] : [],
-    rest: { issues: {
-      listForRepo() {},
-      get: async () => ({ data: { ...saved } }),
-      update: async (input) => { calls.push(input.state ? 'close' : 'body'); Object.assign(saved, input); return { data: saved }; },
-      create: async () => { throw new Error('duplicate creation'); },
-    } },
-  };
-  const projectGithub = { graphql: async (query, variables) => {
-      if (query.includes('fieldValues(first: 100)')) return { node: { fieldValues: { nodes: ['Status', 'Domain', 'Work type', 'Priority', 'Size', 'Estimate'].map(name => ({ field: { name } })) } } };
-    if (query.includes('fields(first: 100)')) return { node: { fields: { nodes: [
-      { id: 'STATUS', name: 'Status', dataType: 'SINGLE_SELECT', options: [{ id: 'DONE', name: 'Done' }] },
-      { id: 'END_DATE', name: 'End date', dataType: 'DATE' },
-    ] } } };
-    if (query.includes('items(first: 100')) return { node: { items: { nodes: itemPresent ? [{ id: 'ITEM_11', content: { id: 'ISSUE_11' } }] : [], pageInfo: {} } } };
-    if (query.includes('addProjectV2ItemById')) { calls.push('add'); itemPresent = true; return { addProjectV2ItemById: { item: { id: 'ITEM_11' } } }; }
-    if (query.includes('updateProjectV2ItemFieldValue')) {
-      calls.push(variables.field);
-      if (variables.field === 'END_DATE' && failDate) { failDate = false; throw new Error('date unavailable'); }
-      if (variables.field === 'STATUS') {
-        if (failDone) { failDone = false; throw new Error('Done unavailable'); }
-        if (autoClose) { saved.state = 'closed'; saved.state_reason = 'completed'; }
-      }
-      return {};
-    }
-    throw new Error('unexpected GraphQL');
-  } };
-  const run = () => synchronizeSecurityAlerts({
-    issueGithub, projectGithub, core: { info() {} },
-    context: { repo: { owner: 'example', repo: 'repo' } },
-    projectId: 'PROJECT', currentDate: '2026-10-20', source: { feed, alerts: [] }, groups: [],
-  });
-  return { run, saved, calls };
-}
-
-test('Project auto-close sees persisted history and End date; repeated runs create no duplicates', async () => {
-  const fixture = lifecycleFixture({ autoClose: true, missingItem: true });
-  assert.deepEqual(await fixture.run(), { created: 0, updated: 0, closed: 1 });
-  assert.deepEqual(fixture.calls, ['body', 'add', 'END_DATE', 'STATUS']);
-  assert.match(fixture.saved.body, /none of its source alerts remain open/);
-  assert.deepEqual(alertRefsFromBody(fixture.saved.body), ['dependabot:2']);
-  assert.deepEqual(await fixture.run(), { created: 0, updated: 0, closed: 0 });
-});
-
-test('partial Project failures leave discoverable work and reruns preserve a single lifecycle note', async () => {
-  for (const fault of ['failDate', 'failDone']) {
-    const fixture = lifecycleFixture({ [fault]: true });
-    await assert.rejects(fixture.run(), /unavailable/);
-    assert.equal(fixture.saved.state, 'open');
-    assert.deepEqual(await fixture.run(), { created: 0, updated: 0, closed: 1 });
-    assert.equal(fixture.saved.state, 'closed');
-    assert.equal(fixture.saved.body.split('security-alert-lifecycle').length, 2);
-    assert.deepEqual(await fixture.run(), { created: 0, updated: 0, closed: 0 });
-  }
-});
-
 test("exact structured concurrent-close response requires verified state and lifecycle body", async () => {
   const observed = { resource: "Issue", code: "custom", message: "This issue was closed by another request. Reload it and try again." };
   for (const errors of [[observed], [], [observed, { resource: "Issue", code: "invalid" }], [{ ...observed, resource: "PullRequest" }], [{ ...observed, code: "invalid" }], [null], null]) {
@@ -696,140 +355,115 @@ test("omitted-alert draft recovery accounts for each source exactly once before 
   assert.deepEqual(validateGroups(source, recovered.groups).recoveredRefs, []);
   for (const groups of [draft, [group(["dependabot:1", "dependabot:1"])], [group(["dependabot:999"])], [{ ...group(["dependabot:1"]), summary: "" }]]) {
     let reads = 0;
-    await assert.rejects(synchronizeSecurityAlerts({ issueGithub: { paginate: async () => { reads++; } }, projectGithub: {}, source, groups, context: { repo: {} } }), /no issues changed/);
+    await assert.rejects(synchronizeSecurityAlerts({ issueGithub: { paginate: async () => { reads++; } }, source, groups, context: { repo: {} } }), /no issues changed/);
     assert.equal(reads, 0);
   }
   assert.throws(() => validateGroups(source, null, { recoverOmissions: true }), /Invalid/);
   assert.throws(() => validateGroups({ alerts: [...source.alerts, source.alerts[0]] }, []), /duplicate source/);
 });
 
-function recoveryFixture() {
-  const issues = [];
-  const items = new Map();
-  const fields = [
-    ["Status", ["Backlog", "In Progress", "Done"]], ["Domain", ["CI/CD"]], ["Work type", ["Security"]],
-    ["Priority", ["P0", "P1", "P2", "P3"]], ["Size", ["M"]], ["Estimate", null], ["End date", null],
-  ].map(([name, options]) => ({ name, id: name, dataType: options ? "SINGLE_SELECT" : name === "Estimate" ? "NUMBER" : "DATE", options: options?.map(name => ({ name, id: name })) }));
-  const h = { issues, items, creates: 0, adds: 0, waits: 0, fault: null, fieldFault: false, accepted: false };
-  const issueGithub = {
-    paginate: async () => issues.filter(issue => issue.state === "open"),
+function nativeFixture(initialIssues = []) {
+  const fields = { Domain: 1, Priority: 2, Size: 3, "End date": 5 };
+  const issues = new Map(initialIssues.map(initial => [initial.number, { state: "open", ...initial }]));
+  const values = new Map();
+  const events = [];
+  let nextNumber = 100;
+  let failFieldWrite = false;
+  const github = {
+    paginate: async () => [...issues.values()].filter(candidate => candidate.state === "open"),
     rest: { issues: {
-      listForRepo() {}, get: async ({ issue_number }) => ({ data: issues.find(issue => issue.number === issue_number) }),
-      create: async (input) => { h.creates++; const saved = { ...input, number: 20 + issues.length, node_id: `I${issues.length}`, state: "open" }; issues.push(saved); return { data: saved }; },
-      update: async (input) => { const saved = issues.find(issue => issue.number === input.issue_number); Object.assign(saved, input); return { data: saved }; },
-      addLabels: async () => {}, addAssignees: async () => {},
+      listForRepo() {},
+      get: async ({ issue_number }) => ({ data: issues.get(issue_number) }),
+      create: async input => {
+        const created = { ...input, number: nextNumber++, state: "open" };
+        issues.set(created.number, created);
+        events.push({ create: created.number });
+        return { data: created };
+      },
+      update: async ({ issue_number, ...input }) => {
+        const saved = issues.get(issue_number);
+        Object.assign(saved, input);
+        events.push({ issue: issue_number, ...input });
+        return { data: saved };
+      },
+      addLabels: async ({ issue_number, labels }) => { issues.get(issue_number).labels = labels; },
+      addAssignees: async ({ issue_number, assignees }) => { issues.get(issue_number).assignees = assignees; },
     } },
+    request: async (route, { issue_number, issue_field_values }) => {
+      const current = values.get(issue_number) ?? new Map();
+      if (route.startsWith("GET ")) {
+        return { data: [...current].map(([fieldId, value]) => ({ issue_field_id: fieldId, value })) };
+      }
+      assert.match(route, /^POST .*issue-field-values$/);
+      assert.ok(issue_field_values.length);
+      events.push({ fields: issue_number, values: issue_field_values });
+      if (failFieldWrite) throw new Error("Native issue-field write failed");
+      for (const { field_id, value } of issue_field_values) current.set(field_id, value);
+      values.set(issue_number, current);
+    },
   };
-  const projectGithub = { graphql: async (query, vars) => {
-    if (query.includes("fields(first: 100)")) return { node: { fields: { nodes: fields } } };
-    if (query.includes("fieldValues(first: 100)")) {
-      assert.match(query, /ProjectV2ItemFieldSingleSelectValue\s*\{\s*name\b/);
-      const nodes = [...items.get(vars.item).values].map(([name, value]) => ({
-        field: { name }, name: value.singleSelectOptionId,
-      }));
-      return { node: { fieldValues: { nodes } } };
-    }
-    if (query.includes("items(first: 100")) return { node: { items: { nodes: [...items].map(([id, item]) => ({ id, content: { id: item.content } })), pageInfo: {} } } };
-    if (query.includes("addProjectV2ItemById")) {
-      h.adds++;
-      if (!h.fault || h.accepted) items.set(vars.content, { content: vars.content, values: new Map() });
-      if (h.fault) throw h.fault;
-      return { addProjectV2ItemById: { item: { id: vars.content } } };
-    }
-    if (query.includes("updateProjectV2ItemFieldValue")) {
-      if (h.fieldFault && vars.field === "Domain") { h.fieldFault = false; throw new Error("field service unavailable"); }
-      items.get(vars.item).values.set(vars.field, vars.value);
-      return {};
-    }
-    throw new Error("Unexpected query");
-  } };
-  h.source = { feed, alerts: [1, 2].map(n => ({ ref: `dependabot:${n}`, url: `https://example.test/${n}`, package: "example", severity: "medium" })) };
-  h.groups = [group(h.source.alerts.map(alert => alert.ref))];
-  h.run = () => synchronizeSecurityAlerts({ issueGithub, projectGithub, core: { info() {} }, context: { repo: { owner: "owner", repo: "repo" } }, projectId: "P", source: h.source, groups: h.groups, sleep: async () => { h.waits++; } });
-  return h;
+  async function run(alerts, groups) {
+    return synchronizeSecurityAlerts({
+      issueGithub: github, fields, context: { repo: { owner: "repo-owner", repo: "repo" } },
+      core: { info() {} }, source: { feed, alerts }, groups, currentDate: "2026-11-25",
+    });
+  }
+  return { fields, issues, values, events, run, setFieldFailure(fail) { failFieldWrite = fail; } };
 }
 
-test("urgent alerts joining a group raise priority without resetting planning or lowering a higher priority", async () => {
-  const h = recoveryFixture();
-  await h.run();
-  const fields = h.items.get("I0").values;
-  const priority = () => fields.get("Priority").singleSelectOptionId;
-  assert.equal(priority(), "P2");
-  fields.set("Status", { singleSelectOptionId: "In Progress" });
-  fields.set("Estimate", { number: 8 });
-
-  const joined = { ...h.source.alerts[0], ref: "dependabot:3", url: "https://example.test/3", severity: "high" };
-  h.source.alerts.push(joined);
-  h.groups = [group(h.source.alerts.map(alert => alert.ref))];
-  await h.run();
-  assert.equal(priority(), "P1");
-  assert.deepEqual(alertRefsFromBody(h.issues[0].body), h.groups[0].alert_refs);
-
-  joined.severity = "unknown";
-  for (const prior of ["P2", "P3"]) {
-    fields.set("Priority", { singleSelectOptionId: prior });
-    await h.run();
-    assert.equal(priority(), "P1");
-  }
-
-  joined.severity = "critical";
-  await h.run();
-  assert.equal(priority(), "P0");
-  for (const severity of ["high", "unknown", "medium"]) {
-    joined.severity = severity;
-    await h.run();
-    assert.equal(priority(), "P0");
-  }
-  assert.equal(h.creates, 1);
-  assert.equal(h.items.size, 1);
-  assert.deepEqual(fields.get("Status"), { singleSelectOptionId: "In Progress" });
-  assert.deepEqual(fields.get("Estimate"), { number: 8 });
+test("native reconciliation preserves existing planning and raises urgent priority", async () => {
+  const { fields, issues, values, run } = nativeFixture([
+    { ...issue(10, ["dependabot:1"]), type: { name: "Chore" } },
+    issue(11, ["dependabot:2"]),
+  ]);
+  values.set(10, new Map([[fields.Priority, "P2"], [fields.Domain, "Backend"], [99, "keep"]]));
+  const merged = group(["dependabot:1", "dependabot:2"]);
+  const alerts = [
+    { ref: "dependabot:1", severity: "medium" },
+    { ref: "dependabot:2", severity: "critical" },
+  ];
+  assert.deepEqual(await run(alerts, [merged]), { created: 0, updated: 1, closed: 1 });
+  assert.deepEqual(issues.get(10).type, { name: "Chore" });
+  assert.equal(values.get(10).get(fields.Priority), "P0");
+  assert.equal(values.get(10).get(fields.Domain), "Backend");
+  assert.equal(values.get(10).get(99), "keep");
+  assert.equal(values.get(11).get(fields["End date"]), "2026-11-25");
+  assert.match(issues.get(11).body, /coverage moved to #10/);
+  assert.equal(issues.get(11).state_reason, "completed");
+  await run(alerts.map(alert => ({ ...alert, severity: "medium" })), [merged]);
+  assert.equal(values.get(10).get(fields.Priority), "P0");
 });
 
-test("initial Project priorities use the most urgent source in each group", async () => {
-  for (const [severity, expected] of [
-    ["critical", "P0"], ["high", "P1"], ["unknown", "P1"], ["medium", "P2"], ["low", "P2"],
-  ]) {
-    const h = recoveryFixture();
-    h.source.alerts[0].severity = severity;
-    await h.run();
-    assert.equal(h.items.get("I0").values.get("Priority").singleSelectOptionId, expected, severity);
-  }
+test("a failed native field write leaves one discoverable issue and reruns fill its metadata", async () => {
+  const fixture = nativeFixture();
+  const alerts = [{ ref: "dependabot:1", severity: "high" }];
+  const groups = [group(["dependabot:1"])];
+  fixture.setFieldFailure(true);
+  await assert.rejects(fixture.run(alerts, groups), /Native issue-field write failed/);
+  fixture.setFieldFailure(false);
+  assert.deepEqual(await fixture.run(alerts, groups), { created: 0, updated: 1, closed: 0 });
+  assert.equal(fixture.issues.size, 1);
+  const saved = fixture.issues.get(100);
+  assert.equal(saved.type, "Bug");
+  assert.deepEqual(saved.labels, [feed]);
+  assert.deepEqual(saved.assignees, ["repo-owner"]);
+  assert.equal(fixture.values.get(100).get(fixture.fields.Priority), "P1");
+  assert.equal(fixture.values.get(100).get(fixture.fields.Size), "M");
 });
 
-test("transient Project writes recover boundedly, including a committed write with lost response", async () => {
-  for (const accepted of [false, true]) {
-    const h = recoveryFixture(); h.fault = { status: 502 }; h.accepted = accepted;
-    if (!accepted) {
-      await assert.rejects(h.run(), /issue #20.*bounded recovery/);
-      assert.equal(h.adds, 3); assert.equal(h.waits, 2);
-      assert.equal(h.issues[0].state, "open");
-      h.fault = null;
-    }
-    await h.run();
-    assert.equal(h.creates, 1); assert.equal(h.items.size, 1);
-    assert.deepEqual(alertRefsFromBody(h.issues[0].body), ["dependabot:1", "dependabot:2"]);
-    assert.equal(h.items.get("I0").values.size, 6);
-    await h.run(); assert.equal(h.creates, 1);
-  }
-  const denied = recoveryFixture(); denied.fault = { status: 403 };
-  await assert.rejects(denied.run(), /attachment failed for issue #20/);
-  assert.equal(denied.adds, 1); assert.equal(denied.waits, 0);
-});
-
-test("partial fields resume without resetting human planning or duplicating current coverage", async () => {
-  const h = recoveryFixture(); h.fieldFault = true;
-  await assert.rejects(h.run(), /field service unavailable/);
-  h.items.get("I0").values.set("Status", { singleSelectOptionId: "In Progress" });
-  await h.run();
-  assert.equal(h.creates, 1); assert.equal(h.items.get("I0").values.size, 6);
-  assert.deepEqual(h.items.get("I0").values.get("Status"), { singleSelectOptionId: "In Progress" });
-  // Expand then merge coverage, retaining the oldest canonical issue and history.
-  h.groups = [group(["dependabot:1"]), group(["dependabot:2"])];
-  await h.run(); assert.equal(h.creates, 2);
-  h.groups = [group(["dependabot:1", "dependabot:2"])];
-  await h.run();
-  assert.equal(h.issues[0].state, "open"); assert.equal(h.issues[1].state, "closed");
-  assert.match(h.issues[1].body, /coverage moved to #20/);
-  await h.run(); assert.equal(h.creates, 2);
+test("reconciliation persists the note and native end date before closing and retries safely", async () => {
+  const fixture = nativeFixture([issue(11, ["dependabot:2"])]);
+  fixture.setFieldFailure(true);
+  await assert.rejects(fixture.run([], []), /Native issue-field write failed/);
+  assert.equal(fixture.issues.get(11).state, "open");
+  assert.match(fixture.issues.get(11).body, /none of its source alerts remain/);
+  fixture.events.length = 0;
+  fixture.setFieldFailure(false);
+  assert.deepEqual(await fixture.run([], []), { created: 0, updated: 0, closed: 1 });
+  const [history, endDate, close] = fixture.events;
+  assert.match(history.body, /none of its source alerts remain/);
+  assert.deepEqual(endDate.values, [{ field_id: fixture.fields["End date"], value: "2026-11-25" }]);
+  assert.equal(close.state, "closed");
+  assert.equal(fixture.issues.get(11).body.match(/notoli-security-alert-lifecycle/g).length, 1);
+  assert.deepEqual(await fixture.run([], []), { created: 0, updated: 0, closed: 0 });
 });

@@ -43,12 +43,10 @@ This repository is intended to be understood, maintained, and owned by humans. A
 
 ### Architectural Consistency
 
-- Understand existing conventions before introducing new patterns.
-- Prefer extending an established, sound pattern over creating another.
-- Maintain appropriate consistency across Notoli, MacroMapper, FullStackTemplate, and shared infrastructure.
-- Where functionality is genuinely shared, maintain a canonical implementation through FullStackTemplate.
-- Do not propagate unnecessary complexity in the name of parity.
-- Respect legitimate product-specific requirements.
+- Before changing shared behavior, compare the applicable entry points, callers and failure paths in Notoli, MacroMapper, FullStackTemplate and JudeAndrewAlabaInfrastructure.
+- Use FullStackTemplate as the baseline for shared app foundations. Where contracts match, adopt the simplest proven implementation, including improvements found in a product app.
+- Keep differences that serve a product, data, lifecycle or operational requirement. Record the concrete reason beside the code or configuration when it would be hard to infer.
+- JudeAndrewAlabaInfrastructure owns shared hosting, routing and release contracts. Verify a changed contract in Infrastructure and in every affected app using that app's configuration.
 
 ### Scope and Ownership
 
@@ -85,7 +83,7 @@ versioned application release engine. Each application owns its domain behavior,
 credentials, OAuth issuer, consent, permissions and MCP tools; do not introduce a
 shared authorization service, cross-application account mapping or YNAB dependency.
 
-Follow the [shared rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#-shared-engineering-ownership-and-rollout)
+Follow the [shared rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
 for reusable framework, automation, test or security changes. One canonical
 FullStackTemplate parent must inventory all four repositories as required,
 not applicable, already satisfied or explicitly deferred with reasons and evidence.
@@ -108,7 +106,7 @@ Keep this file current when its commands or constraints change, and update the
 owning README/reference when setup, routing, environment, deployment or CI changes.
 Record user-visible or operational changes in `CHANGELOG.md`.
 
-GitHub setup belongs in [.github/README.md](.github/README.md), workflow behavior
+GitHub setup belongs in [.github/_README.md](.github/_README.md), workflow behavior
 in [.github/workflows/README.md](.github/workflows/README.md), and the shared
 reviewer/action contract in [.github/actions/README.md](.github/actions/README.md).
 
@@ -194,7 +192,8 @@ npm run format:check
 npm run build
 ```
 
-Shared frontend test setup and helpers live in `frontend/src/test-helpers/`.
+Vitest loads Testing Library's DOM matchers in `frontend/vite.config.mjs`.
+Shared rendering helpers live in `frontend/src/test-helpers/`.
 App, startup and feature tests stay beside their implementation. Vitest discovers
 `*.test.js` and `*.test.jsx`.
 
@@ -212,7 +211,7 @@ review before the next ordinary promotion. Preserve both histories and newer mai
 work; never reset or force-push to manufacture parity. Intentional release lag is
 allowed while prerequisites or acceptance remain unfinished. History reconciliation
 does not authorize deployment, and an absent production branch is not a reason
-to create one. Follow the [main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#main-first-releases).
+to create one. Follow the [main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#main-first-releases).
 
 Common release code, verification, tests and workflow are owned by Infrastructure.
 Change `deploy/` in Infrastructure, then synchronize all consumers to that exact Git commit. Application repositories track
@@ -305,10 +304,10 @@ fails. Preserve CodeQL scope outputs, full default-branch coverage and RoboCop
 baseline evidence; concurrent security-alert closure requires verified final state.
 
 Secret-dependent workflows fail visibly when credentials are unavailable.
-RoboCop's short-lived App token reads alerts and authors issue mutations;
-`SECURITY_ALERTS_TOKEN` is isolated to personal GitHub Project v2 synchronization.
+RoboCop's short-lived App token reads alerts and writes repository issues and
+native issue fields.
 Keep App IDs/private keys, least-privilege permissions, trigger policy and field
-setup documented in `.github/README.md`. Security-alert variables resolve in the
+setup documented in `.github/_README.md`. Security-alert variables resolve in the
 three caller workflows, not local composite metadata; pass explicit model, effort
 and token inputs. Run `.github/tests/track-security-alerts.test.js`
 after changes; actual loading acceptance requires fresh controlled dispatches on
@@ -316,7 +315,7 @@ corrected main. Preserve applicable bounded malware review and documented
 coverage decisions. Keep the CI architecture diagrams aligned with workflow edits.
 
 Require `CodeQL / Detect CodeQL Scope` and the three `CodeQL / Analyze ...` jobs
-listed in `.github/README.md`; do not require the standalone `CodeQL` Code
+listed in `.github/_README.md`; do not require the standalone `CodeQL` Code
 Scanning results context. Skipped analyzers satisfy checks for documentation-only
 PRs; detector/analyzer failures block merging. Main also requires
 `AI Code Review / Obi-Wan Code-nobi code review`,
@@ -327,14 +326,14 @@ scanner/lint/test requirements and all other ruleset settings. See the
 checks. Run both publisher test files when changing the reviewer contract. Keep
 dependency-usage loop fixes coordinated
 with #890 and remaining branch-policy work in #656. Batch 2 controls and Python
-malware coverage remain documented in `.github/README.md` and
+malware coverage remain documented in `.github/_README.md` and
 [malware scan coverage](.github/workflows/README.md#-coverage-boundaries).
 
 Security-alert aggregation requires `ROBOCOP_OPENAI_API_KEY`,
-`ROBOCOP_PRIVATE_KEY`, `SECURITY_ALERTS_TOKEN`, `ROBOCOP_APP_ID`,
-`OPENAI_REVIEWERS_PROJECT_ID` and `SECURITY_ALERTS_PROJECT_ID`, with RoboCop
+`ROBOCOP_PRIVATE_KEY`, `ROBOCOP_APP_ID`,
+and `OPENAI_REVIEWERS_PROJECT_ID`, with RoboCop
 `Issues: write`, `Code scanning alerts: read` and `Dependabot alerts: read`.
-Preserve its fail-closed credential separation and documented field setup.
+Preserve visible credential failures and the documented native issue schema.
 
 ## 🔑 OpenAI reviewer isolation
 
@@ -343,9 +342,9 @@ Use `OBI_WAN_OPENAI_API_KEY`, `LINT_EASTWOOD_OPENAI_API_KEY`, and
 all security-alert model calls. `OPENAI_REVIEWERS_PROJECT_ID` identifies this
 repository's reviewer project. Keep credentials separate across repositories
 and application environments, preserve visible missing-key failures, and follow
-the credential ownership and cutover verification in `.github/README.md`.
+the credential ownership and cutover verification in `.github/_README.md`.
 Store the three reviewer OpenAI keys and three reviewer App private keys in both
-Actions and Dependabot. Keep production, application, SSH and Project-token
+Actions and Dependabot. Keep production, application and SSH
 secrets outside Dependabot. A human PR smoke test does not prove Dependabot access.
 
 Use `gpt-6-luna` for OpenAI code, build and security reviewers and security-alert

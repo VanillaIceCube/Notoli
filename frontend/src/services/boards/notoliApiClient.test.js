@@ -158,10 +158,10 @@ describe('notoliApiClient', () => {
     apiFetch.mockResolvedValueOnce(Response.json({ id: 2, text: 'Hello' }));
 
     await expect(createTask(7, 'Hello')).resolves.toEqual({ id: 2, text: 'Hello' });
-    expect(apiFetch).toHaveBeenCalledWith('/api/tasks/?list=7', {
+    expect(apiFetch).toHaveBeenCalledWith('/api/tasks/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: 'Hello', list: 7, description: '' }),
+      body: JSON.stringify({ text: 'Hello', list: 7 }),
     });
   });
 

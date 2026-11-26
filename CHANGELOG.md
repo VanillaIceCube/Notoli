@@ -6,12 +6,17 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Track security alerts in native GitHub Issues using RoboCop's existing installation token and repository issue fields. Create remediation tickets as Bug, assign the Domain from affected files, and record relative effort as Size.
+- Update CodeQL to 4.39.4, Dependency Review to 5.0.1 and GitHub App token creation to 3.4.0. Restore Dependabot updates for the PyYAML development pin and lock 6.0.4.
+- Adopt jest-dom 8. Refresh the Python 3.12 Bookworm image digest, keep future Docker updates on that Python line, and defer TypeScript 7.0.x for ESLint compatibility.
 - Retire the old MCP task names, receipt translation and obsolete approval paths. Reject undeclared tool arguments and keep used request IDs reserved.
 - Serve the singular board and list routes and return 404 for retired board links. Match the shared CI workflows. Save SQLite and both existing app containers before migrations and stop both services on a failed deployment health check.
 - Compare the shared launcher, tests and workflow directly with the Infrastructure commit in `deploy/production/app.json`.
+- Rename the GitHub automation guide to `.github/_README.md` so the repository homepage shows the root README.
 
 ### Removed
 
+- Remove the unused global Django filter backend and its dependency. Board and list filters are handled by the task views.
 - Remove the unused Gunicorn dependency from the backend image. Uvicorn serves both MCP profiles.
 
 ## 2026-11-24

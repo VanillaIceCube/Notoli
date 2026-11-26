@@ -118,6 +118,12 @@ All `/api/*` endpoints require:
 
 ## 🧱 Data model and access
 
+The [task page](../frontend/src/pages/boards/ListTasksPage.jsx) creates a task
+with its list ID and completes it by patching its status. The [task views](apps/tasks/views.py)
+validate the request. The [task services](apps/tasks/services.py) check board access
+and save the task and its ordered list membership in one transaction. The
+[task API tests](apps/tasks/tests/test_tasks.py) read the saved status back from SQLite.
+
 - A board contains lists and tasks.
 - A list belongs to one board and orders tasks from that board.
 - A task has `text`, an optional description, and a status. A task can appear in multiple lists.

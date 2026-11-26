@@ -186,18 +186,21 @@ describe('App', () => {
     expect(await screen.findByTestId('active-list-page')).toBeInTheDocument();
     expect(screen.queryByTestId('active-board-page')).not.toBeInTheDocument();
   });
-  test('a loaded page can report readiness without creating a render feedback loop', () => {
+  test('a loaded page can report readiness without creating a render feedback loop', async () => {
     sessionStorage.setItem('accessToken', 'token');
     globalThis.__notoliAutoReady = true;
+    const boards = Promise.withResolvers();
+    fetch.mockReturnValueOnce(boards.promise);
     renderApp('/board/1/list/2');
-    expect(screen.getByTestId('active-list-page')).toBeInTheDocument();
+    expect(await screen.findByTestId('active-list-page')).toBeInTheDocument();
     expect(globalThis.__notoliReadyCalls).toBe(1);
-    act(() => {
+    await act(async () => {
       for (let attempt = 0; attempt < 3; attempt += 1) {
         globalThis.__notoliListPageReady();
       }
     });
     expect(globalThis.__notoliReadyCalls).toBe(1);
+    await act(async () => boards.resolve(Response.json([])));
   });
   test('automatic readiness settles a navigation transition and controls stay responsive', async () => {
     sessionStorage.setItem('accessToken', 'token');

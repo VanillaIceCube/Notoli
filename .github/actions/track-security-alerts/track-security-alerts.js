@@ -3,31 +3,13 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { payload } = require("../request-ai-response/request-ai-response");
-const { readProjectFields, validateGroups, synchronizeSecurityAlerts } = require("./sync-security-alerts");
+const { loadIssuePlanning, validateGroups, synchronizeSecurityAlerts } = require("./sync-security-alerts");
 
 function validateConfiguration(env) {
   if (!["codeql", "vulnerability", "malware"].includes(env.FEED)) throw new Error("Unsupported alert feed");
   if (!env.ROBOCOP_TOKEN) throw new Error("Missing RoboCop installation token for the chosen feed and issue writes");
-  if (!env.PROJECT_TOKEN || env.PROJECT_TOKEN === env.ROBOCOP_TOKEN) throw new Error("A separate SECURITY_ALERTS_TOKEN is required for GitHub Projects");
-  if (!env.PROJECT_ID) throw new Error("Missing repository variable SECURITY_ALERTS_PROJECT_ID");
   const config = payload({ ...env, ENABLE_WEB_SEARCH: "false" }, "");
   return { model: config.model, reasoning_effort: config.reasoning.effort, max_output_tokens: config.max_output_tokens };
-}
-
-async function validateProject(github, core, projectId) {
-  const { fields, title } = await readProjectFields(github, projectId);
-  for (const [name, options] of Object.entries({
-    Status: ['Backlog', 'Done'], Domain: ['CI/CD'], 'Work type': ['Security'],
-    Priority: ['P0', 'P1', 'P2'], Size: ['M'],
-  })) {
-    const field = fields.get(name);
-    if (field?.dataType !== 'SINGLE_SELECT' || options.some(option => !field.options.some(value => value.name === option))) {
-      throw new Error(`Project field/options unavailable: ${name}`);
-    }
-  }
-  if (fields.get('Estimate')?.dataType !== 'NUMBER') throw new Error('Project numeric Estimate field unavailable.');
-  if (fields.get('End date')?.dataType !== 'DATE') throw new Error('Project End date field unavailable.');
-  core.info(`Validated Project access and schema: ${title}`);
 }
 
 async function collectAlerts(github, { owner, repo }, feed) {
@@ -72,6 +54,8 @@ async function collectAlerts(github, { owner, repo }, feed) {
 }
 
 async function writeSource({ github, context, core }) {
+  const planning = await loadIssuePlanning(github, context.repo);
+  fs.writeFileSync(path.join(process.env.RUNNER_TEMP, "security-alert-planning.json"), JSON.stringify(planning));
   const source = await collectAlerts(github, context.repo, process.env.FEED);
   fs.writeFileSync(path.join(process.env.RUNNER_TEMP, "security-alerts.json"), JSON.stringify(source));
   core.setOutput("has_alerts", String(source.alerts.length > 0));
@@ -87,10 +71,11 @@ function groupsFromDraft(source, draft, core) {
   return groups;
 }
 
-async function reconcile({ issueGithub, projectGithub, context, core }) {
+async function reconcile({ github, context, core }) {
+  const fields = JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP, "security-alert-planning.json"), "utf8"));
   const source = JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP, "security-alerts.json"), "utf8"));
   const groups = groupsFromDraft(source, process.env.LLM_OUTPUT, core);
-  await synchronizeSecurityAlerts({ issueGithub, projectGithub, core, context, projectId: process.env.PROJECT_ID, source, groups });
+  await synchronizeSecurityAlerts({ issueGithub: github, fields, core, context, source, groups });
 }
 
 if (require.main === module) {
@@ -98,4 +83,4 @@ if (require.main === module) {
   for (const [key, value] of Object.entries(config)) fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
 }
 
-module.exports = { validateConfiguration, validateProject, collectAlerts, writeSource, reconcile };
+module.exports = { validateConfiguration, collectAlerts, writeSource, reconcile };

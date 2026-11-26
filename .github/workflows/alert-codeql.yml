@@ -33,7 +33,7 @@ jobs:
 
       - name: Create RoboCop GitHub App token
         id: robocop-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         with:
           app-id: ${{ vars.ROBOCOP_APP_ID }}
           private-key: ${{ secrets.ROBOCOP_PRIVATE_KEY }}
@@ -50,7 +50,5 @@ jobs:
           reasoning-effort: ${{ vars.AI_REVIEW_REASONING_EFFORT || 'medium' }}
           max-output-tokens: ${{ vars.AI_REVIEW_MAX_OUTPUT_TOKENS || '16000' }}
           robocop-token: ${{ steps.robocop-token.outputs.token }}
-          project-token: ${{ secrets.SECURITY_ALERTS_TOKEN }}
           openai-api-key: ${{ secrets.ROBOCOP_OPENAI_API_KEY }}
           openai-project-id: ${{ vars.OPENAI_REVIEWERS_PROJECT_ID }}
-          project-id: ${{ vars.SECURITY_ALERTS_PROJECT_ID }}
