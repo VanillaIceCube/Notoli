@@ -26,6 +26,8 @@ function scopeAllowsSkip(name, files) {
     if (!Array.isArray(patterns)) throw new Error("Unsupported detector filter structure");
     return patterns.some((pattern) => {
       if (typeof pattern !== "string" || pattern.startsWith("!")) throw new Error("Unsupported detector filter");
+      const extension = /^\*\*\/\*\.([a-zA-Z0-9]+)$/.exec(pattern);
+      if (extension) return files.some((file) => file.endsWith("." + extension[1]));
       const recursive = pattern.endsWith("/**");
       const plain = recursive ? pattern.slice(0, -3) : pattern;
       if (/[*?[\]{}!]/.test(plain)) throw new Error("Unsupported detector glob; refuse to authorize a skip");

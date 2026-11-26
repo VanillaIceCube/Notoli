@@ -3,7 +3,7 @@ const crypto = require("node:crypto");
 const { identity } = require("../get-prior-ai-reviews/get-prior-ai-reviews");
 const CORE_ANALYSES = ["CodeQL / Analyze Python", "CodeQL / Analyze JavaScript/TypeScript", "CodeQL / Analyze GitHub Actions"];
 const APP_CHECKS = ["Lints / Lint Results", "Tests / Test Results", "CodeQL / Detect CodeQL Scope", "Vulnerability / Vulnerability", "Malware / Malware", ...CORE_ANALYSES];
-const INFRA_CHECKS = ["Lints / Infrastructure lint", "Tests / validate", "CodeQL / Detect CodeQL Scope", "Vulnerability / Vulnerability", "Dependency scope / Dependency scanner scope", "Secret scan / Gitleaks", ...CORE_ANALYSES];
+const INFRA_CHECKS = ["Lints / Infrastructure lint", "Tests / validate", "CodeQL / Detect CodeQL Scope", "Vulnerability / Vulnerability", "Secret scan / Gitleaks", ...CORE_ANALYSES];
 
 async function probeReadEvidence({ readGithub, context, core }) {
   const report = { checks: "unknown", statuses: "unknown", branch_rules: "unknown" };

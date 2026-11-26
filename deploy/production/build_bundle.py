@@ -10,8 +10,7 @@ import sys
 import urllib.request
 from pathlib import Path
 
-# The canonical Infrastructure module is importable for manifest maintenance;
-# only consumers have app.json. Building without app policy still fails closed.
+# Only the copy installed in an application has a production policy.
 CONFIG_PATH = Path(__file__).resolve().parent / "app.json"
 CONFIG = (
     json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
@@ -82,28 +81,17 @@ def build(target, env):
     return identity
 
 
-# Development/CI verification only; offline host recovery uses release.py.
+# The host launches from the bundle. Only CI and developers fetch shared source.
 REPOSITORY = "VanillaIceCube/JudeAndrewAlabaInfrastructure"
-SOURCE = "app-release/v1"
+SOURCE = "deploy"
 FILES = {
     "deploy/production/release.py": "release.py",
     "deploy/production/build_bundle.py": "build_bundle.py",
-    **{
-        "deploy/tests/" + name: "tests/" + name
-        for name in (
-            "test_production.py",
-            "test_guards.py",
-            "test_recovery_docker.py",
-            "test_generation_docker.py",
-            "test_contract.py",
-        )
-    },
+    "deploy/tests/test_production.py": "tests/test_production.py",
+    "deploy/tests/test_guards.py": "tests/test_guards.py",
+    "deploy/tests/test_launch_docker.py": "tests/test_launch_docker.py",
+    "deploy/tests/test_contract.py": "tests/test_contract.py",
 }
-
-
-def digest(data):
-    # Git checkouts on Windows may use CRLF; normalize only text line endings.
-    return hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()
 
 
 def render_workflow(template, config):
@@ -111,27 +99,7 @@ def render_workflow(template, config):
         f"          {key}: {value}\n"
         for key, value in config["workflow"]["extra_env"].items()
     )
-    return (
-        template.replace("__APP__", config["app"])
-        .replace("__EXTRA_ENV__\n", extras)
-    )
-
-
-def verify(root, manifest, template):
-    if manifest["contract_version"] != 1 or set(manifest["files"]) != set(FILES):
-        raise ValueError("Unsupported or incomplete shared standard manifest")
-    for name, expected in manifest["files"].items():
-        if digest((root / name).read_bytes()) != expected:
-            raise ValueError("Shared release drift: " + name)
-    config = json.loads(
-        (root / "deploy/production/app.json").read_text(encoding="utf-8")
-    )
-    if config["contract_version"] != manifest["contract_version"]:
-        raise ValueError("App configuration contract version mismatch")
-    expected = render_workflow(template, config)
-    actual = (root / ".github/workflows/ci-deploy.yml").read_text(encoding="utf-8")
-    if actual != expected:
-        raise ValueError("Deployment workflow differs from the shared stage template")
+    return template.replace("__APP__", config["app"]).replace("__EXTRA_ENV__\n", extras)
 
 
 def check_parity(root, source_root=None, sync=False):
@@ -148,40 +116,32 @@ def check_parity(root, source_root=None, sync=False):
             "Shared source requires the canonical repository and full commit SHA"
         )
 
-    def read(name):
-        if source_root is not None:
-            return (source_root / SOURCE / name).read_bytes()
-        url = f"https://raw.githubusercontent.com/{REPOSITORY}/{pin['commit']}/{SOURCE}/{name}"
-        with urllib.request.urlopen(url, timeout=30) as response:
-            data = response.read(1024 * 1024 + 1)
-        if len(data) > 1024 * 1024:
-            raise ValueError("Shared source exceeds the download limit: " + name)
-        return data
+    if sync and (root / "deploy").resolve() != root.resolve() / "deploy":
+        raise ValueError("Release source directory must not be a symlink")
 
-    manifest = json.loads(read("manifest.json"))
-    if manifest["contract_version"] != 1 or set(manifest["files"]) != set(FILES):
-        raise ValueError("Unsupported or incomplete shared standard manifest")
-    template_bytes = read("workflow.yml")
-    if digest(template_bytes) != manifest["workflow_sha256"]:
-        raise ValueError("Shared workflow template checksum mismatch")
-    template = template_bytes.decode("utf-8").replace("\r\n", "\n")
-    if sync:
-        if (root / "deploy").resolve() != root.resolve() / "deploy":
-            raise ValueError("Release source directory must not be a symlink")
-        # Validate every download before replacing any consumer files.
-        downloads = {}
-        for target, source in FILES.items():
-            data = read(source)
-            if digest(data) != manifest["files"][target]:
-                raise ValueError("Shared source checksum mismatch: " + source)
-            downloads[target] = data.replace(b"\r\n", b"\n")
-        workflow = render_workflow(template, config)
-        for target, data in downloads.items():
-            (root / target).write_bytes(data)
-        (root / ".github/workflows/ci-deploy.yml").write_text(
-            workflow, encoding="utf-8", newline="\n"
-        )
-    verify(root, manifest, template)
+    def read_source(name):
+        if source_root is not None:
+            data = (source_root / SOURCE / name).read_bytes()
+        else:
+            url = f"https://raw.githubusercontent.com/{REPOSITORY}/{pin['commit']}/{SOURCE}/{name}"
+            with urllib.request.urlopen(url, timeout=30) as response:
+                data = response.read(1024 * 1024 + 1)
+            if len(data) > 1024 * 1024:
+                raise ValueError("Shared source exceeds the download limit: " + name)
+        return data.replace(b"\r\n", b"\n")
+
+    # Read every source before writing so a failed download leaves the checkout intact.
+    expected = {target: read_source(source) for target, source in FILES.items()}
+    template = read_source("workflow.yml").decode("utf-8")
+    expected[".github/workflows/ci-deploy.yml"] = render_workflow(
+        template, config
+    ).encode("utf-8")
+    for name, contents in expected.items():
+        path = root / name
+        if sync:
+            path.write_bytes(contents)
+        elif path.read_bytes().replace(b"\r\n", b"\n") != contents:
+            raise ValueError("Shared release drift: " + name)
     return pin["commit"]
 
 
@@ -219,10 +179,7 @@ def main(argv=None):
                 + " was not verified"
             )
         else:
-            print(
-                "Shared release contract v1: common source, tests and workflow match "
-                + commit
-            )
+            print("Shared release source, tests and workflow match " + commit)
     else:
         if args.target is None or args.sync or args.source_root is not None:
             parser.error(

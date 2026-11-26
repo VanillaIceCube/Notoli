@@ -132,5 +132,5 @@ jobs:
           command_timeout: 15m
           script: |
             set -eu
-            python3 "$DEPLOY_PATH/incoming/$RELEASE_ID/release.py" deploy \
+            python3 "$DEPLOY_PATH/incoming/$RELEASE_ID/release.py" \
               --root "$DEPLOY_PATH" --bundle "$DEPLOY_PATH/incoming/$RELEASE_ID"

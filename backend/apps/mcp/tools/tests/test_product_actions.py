@@ -25,7 +25,7 @@ from apps.notifications.models import Notification
 from apps.tasks.models import Board, ListTask, Task
 from apps.tasks.models import List as TaskList
 
-from .. import operations, queries, services
+from .. import queries, services
 from ..models import Confirmation, Execution
 from ..permissions import required_scopes
 from .helpers import execute_action as execute
@@ -480,8 +480,8 @@ class ProductToolTests(TestCase):
             HTTP_AUTHORIZATION=f"Bearer {JWTToken.for_user(user or self.owner)}"
         )
 
-    def approve_action(self, prepared, decision="allow"):
-        client = self.approval_client()
+    def approve_action(self, prepared, decision="allow", *, user=None):
+        client = self.approval_client(user)
         response = client.get(
             "/auth/mcp/action-approval/",
             {"approval_id": prepared["result"]["confirmation_id"]},
@@ -499,105 +499,72 @@ class ProductToolTests(TestCase):
             token, prepared["request_id"], prepared["result"]["confirmation_id"]
         )
 
-    def test_retry_replays_receipt_created_under_legacy_task_name(self):
+    def test_retired_task_receipt_keeps_its_uuid_reserved(self):
         request_id = str(uuid4())
-        previous_args = {
+        arguments = {"list_id": self.first.pk, "text": "Already added"}
+        services.execute("owner", "add_task", request_id=request_id, **arguments)
+        old_arguments = {
             "list_id": self.first.pk,
             "note": "Already added",
             "description": "",
         }
-        existing = Task.objects.create(
-            board=self.board, created_by=self.owner, text=previous_args["note"]
-        )
-        self.first.tasks.add(existing)
-        Execution.objects.create(
-            id=request_id,
-            owner=self.owner,
-            client_id=self.app.client_id,
+        Execution.objects.filter(pk=request_id).update(
             action="add_item",
             request_digest=services._digest(
-                {"action": "add_item", "arguments": previous_args}
+                {"action": "add_item", "arguments": old_arguments}
             ),
-            state=Execution.State.COMPLETED,
-            outcome={
-                "id": existing.pk,
-                "board_id": self.board.pk,
-                "note": existing.text,
-                "execution_status": "completed",
-            },
         )
 
-        replay = services.execute(
-            "owner",
-            "add_task",
-            request_id=request_id,
-            list_id=self.first.pk,
-            text=existing.text,
-        )
-        self.assertTrue(replay["replayed"])
-        self.assertEqual(replay["text"], existing.text)
-        self.assertNotIn("note", replay)
-        self.assertEqual(Task.objects.filter(text=existing.text).count(), 1)
         with self.assertRaisesMessage(ValueError, "different action arguments"):
-            services.execute(
-                "owner",
-                "add_task",
-                request_id=request_id,
-                list_id=self.first.pk,
-                text="Changed",
-            )
-
-    def test_legacy_confirmation_keeps_its_signed_in_approval_and_exact_target(self):
-        target = self.tasks[0]
-        request_id = str(uuid4())
-        current_args = {"board_id": self.board.pk, "task_id": target.pk}
-        previous_args = {"board_id": self.board.pk, "item_id": target.pk}
-        prepared = services.execute(
-            "owner", "delete_task", request_id=request_id, **current_args
+            services.execute("owner", "add_task", request_id=request_id, **arguments)
+        self.assertTrue(
+            Execution.objects.filter(pk=request_id, state="completed").exists()
         )
-        snapshot = queries.snapshot(self.owner, "delete_task", current_args, [])
-        previous_snapshot = {
-            key: value
-            for key, value in snapshot.items()
-            if key not in {"tasks", "memberships"}
-        }
-        previous_snapshot["items"] = [
-            {("note" if key == "text" else key): value for key, value in row.items()}
-            for row in snapshot["tasks"]
-        ]
-        previous_snapshot["memberships"] = [
-            {
-                ("note_id" if key == "task_id" else key): value
-                for key, value in row.items()
-            }
-            for row in snapshot["memberships"]
-        ]
-        Execution.objects.filter(id=request_id).update(
+        self.assertEqual(Task.objects.filter(text="Already added").count(), 1)
+
+    def test_retired_task_approval_cannot_delete_a_task(self):
+        target = self.tasks[0]
+        prepared = self.prepare_action(
+            "delete_task", board_id=self.board.pk, task_id=target.pk
+        )
+        request_id = prepared["request_id"]
+        reference = prepared["result"]["confirmation_id"]
+        arguments = {"board_id": self.board.pk, "item_id": target.pk}
+        Execution.objects.filter(pk=request_id).update(
             action="delete_item",
+            state="approved",
             request_digest=services._digest(
-                {"action": "delete_item", "arguments": previous_args}
+                {"action": "delete_item", "arguments": arguments}
             ),
         )
-        Confirmation.objects.filter(id=prepared["result"]["confirmation_id"]).update(
-            action="delete_item",
-            payload=previous_args,
-            fingerprint=services._digest(previous_snapshot),
+        Confirmation.objects.filter(pk=reference).update(
+            action="delete_item", payload=arguments
         )
-
-        retried = services.execute(
-            "owner", "delete_task", request_id=request_id, **current_args
+        with self.assertRaisesMessage(
+            ValueError, "original sensitive action identifiers"
+        ):
+            self.confirm_action(prepared)
+        preview = self.approval_client().get(
+            "/auth/mcp/action-approval/", {"approval_id": reference}
         )
-        self.assertEqual(retried["action"], "delete_task")
-        self.assertEqual(retried["result"]["changes"], current_args)
-        self.assertEqual(
-            retried["result"]["confirmation_id"], prepared["result"]["confirmation_id"]
-        )
-        self.assertEqual(self.confirm_action(retried)["status"], "prepared")
+        self.assertEqual(preview.json()["approval"]["status"], "cancelled")
+        self.assertNotIn("ticket", preview.json())
         self.assertTrue(Task.objects.filter(pk=target.pk).exists())
-        self.approve_action(retried)
-        self.assertEqual(self.confirm_action(retried)["status"], "completed")
-        self.assertFalse(Task.objects.filter(pk=target.pk).exists())
-        self.assertTrue(Task.objects.filter(pk=self.tasks[1].pk).exists())
+
+    def test_old_fingerprint_cannot_approve_current_notification_deletion(self):
+        notification = self.notification(self.owner)
+        arguments = {"notification_id": notification.pk}
+        prepared = self.prepare_action("delete_notification", **arguments)
+        self.approve_action(prepared)
+        snapshot = queries.snapshot(self.owner, "delete_notification", arguments, [])
+        row = snapshot["notifications"][0]
+        row["note_id"] = row.pop("task_id")
+        row["event_type"] = "note_updated"
+        Confirmation.objects.filter(pk=prepared["result"]["confirmation_id"]).update(
+            fingerprint=services._digest(snapshot)
+        )
+        self.assertEqual(self.confirm_action(prepared)["status"], "cancelled")
+        self.assertTrue(Notification.objects.filter(pk=notification.pk).exists())
 
     def test_routine_uuid_receipt_preserves_status_and_prevents_duplicate_creation(
         self,
@@ -719,38 +686,6 @@ class ProductToolTests(TestCase):
                     **args,
                 )
 
-    def test_sharing_target_resolution_is_visible_and_cannot_retarget(self):
-        # Simulate a preparation issued under the previous all-sharing policy.
-        with patch.object(
-            operations,
-            "REMOVAL_ACTIONS",
-            operations.REMOVAL_ACTIONS | {"add_board_collaborator"},
-        ):
-            prepared = self.prepare_action(
-                "add_board_collaborator",
-                board_id=self.board.pk,
-                identifier=self.outsider.email,
-            )
-        preview = (
-            self.approval_client()
-            .get(
-                "/auth/mcp/action-approval/",
-                {"approval_id": prepared["result"]["confirmation_id"]},
-            )
-            .json()
-        )
-        self.assertEqual(
-            preview["approval"]["current"]["sharing_target"]["id"], self.outsider.pk
-        )
-        self.assertEqual(
-            preview["approval"]["current"]["sharing_target"]["email"],
-            self.outsider.email,
-        )
-        self.outsider.email = "retargeted@example.test"
-        self.outsider.save(update_fields=["email"])
-        self.assertEqual(self.confirm_action(prepared)["status"], "cancelled")
-        self.assertFalse(self.board.collaborators.filter(pk=self.outsider.pk).exists())
-
     def test_frozen_bulk_selection_and_completed_delete_replay(self):
         original = self.notification(self.owner)
         prepared = services.execute(
@@ -826,40 +761,30 @@ class ProductToolTests(TestCase):
             services.execute("member", "add_task", request_id=request_id, **args)
         self.assertEqual(Task.objects.filter(text="Member action").count(), 1)
 
-    def test_add_collaborator_executes_directly_but_old_preparations_do_not_downgrade(
+    def test_deferred_collaborator_addition_is_cancelled_before_it_can_grant_access(
         self,
     ):
         arguments = {"board_id": self.board.pk, "identifier": self.outsider.email}
-        with patch.object(
-            operations,
-            "REMOVAL_ACTIONS",
-            operations.REMOVAL_ACTIONS | {"add_board_collaborator"},
-        ):
-            pending = self.prepare_action("add_board_collaborator", **arguments)
-        recovered = services.execute(
-            "owner",
-            "add_board_collaborator",
-            request_id=pending["request_id"],
-            **arguments,
+        prepared = self.prepare_action()
+        request_id = prepared["request_id"]
+        reference = prepared["result"]["confirmation_id"]
+        Execution.objects.filter(pk=request_id).update(
+            action="add_board_collaborator",
+            request_digest=services._digest(
+                {"action": "add_board_collaborator", "arguments": arguments}
+            ),
         )
-        self.assertEqual(recovered["status"], "prepared")
+        Confirmation.objects.filter(pk=reference).update(
+            action="add_board_collaborator", payload=arguments
+        )
+        retry = services.execute(
+            "owner", "add_board_collaborator", request_id=request_id, **arguments
+        )
+        self.assertEqual(retry["status"], "cancelled")
         self.assertFalse(self.board.collaborators.filter(pk=self.outsider.pk).exists())
-        preview = self.approve_action(pending)
-        self.assertFalse(preview["approval"]["destructive"])
-        self.assertEqual(self.confirm_action(pending)["status"], "completed")
-        removal = self.prepare_action(
-            "remove_board_collaborator",
-            board_id=self.board.pk,
-            user_id=self.outsider.pk,
-        )
-        self.assertEqual(removal["status"], "prepared")
-        self.approve_action(removal)
-        self.confirm_action(removal)
         direct = self.prepare_action("add_board_collaborator", **arguments)
         self.assertEqual(direct["status"], "completed")
-        self.assertEqual(direct["result"]["action"], "added")
         self.assertTrue(self.board.collaborators.filter(pk=self.outsider.pk).exists())
-        self.assertFalse(Confirmation.objects.exists())
 
     def test_membership_additions_and_reorders_are_direct_but_omissions_prepare(self):
         args = {
@@ -896,7 +821,17 @@ class ProductToolTests(TestCase):
             list(self.first.tasks.values_list("pk", flat=True)), [self.tasks[0].pk]
         )
 
-    def test_membership_policy_reads_live_set_after_board_lock_and_preserves_old_preps(
+    def test_completed_membership_receipt_requires_current_board_access(self):
+        prepared = self.prepare_action(
+            "set_list_tasks", token="member", list_id=self.first.pk, task_ids=[]
+        )
+        self.approve_action(prepared, user=self.member)
+        self.assertEqual(self.confirm_action(prepared, "member")["status"], "completed")
+        self.board.collaborators.remove(self.member)
+        with self.assertRaises(PermissionDenied):
+            self.confirm_action(prepared, "member")
+
+    def test_membership_policy_reads_live_set_after_board_lock(
         self,
     ):
         locked_board = queries.tasks._locked_board
@@ -916,18 +851,30 @@ class ProductToolTests(TestCase):
             )
         self.assertEqual(pending["status"], "prepared")
         self.assertTrue(self.first.tasks.filter(pk=self.tasks[2].pk).exists())
-        # An older additive preparation stays gated despite today's direct policy.
-        args = {"list_id": self.second.pk, "task_ids": [task.pk for task in self.tasks]}
-        with patch.object(
-            operations,
-            "REMOVAL_ACTIONS",
-            operations.REMOVAL_ACTIONS | {"set_list_tasks"},
-        ):
-            older = self.prepare_action("set_list_tasks", **args)
-        recovered = services.execute(
-            "owner", "set_list_tasks", request_id=older["request_id"], **args
+
+    def test_pending_membership_additions_cannot_execute_as_removals(self):
+        prepared = self.prepare_action(
+            "set_list_tasks", list_id=self.first.pk, task_ids=[]
         )
-        self.assertEqual(recovered["status"], "prepared")
-        self.assertEqual(self.second.tasks.count(), 1)
-        self.approve_action(older)
-        self.assertEqual(self.confirm_action(older)["status"], "completed")
+        # Both requests cover the same list, tasks and memberships. The saved
+        # fingerprint still matches, but the old request would remove nothing.
+        members = [task.pk for task in self.tasks[:2]]
+        arguments = {"list_id": self.first.pk, "task_ids": list(reversed(members))}
+        Execution.objects.filter(pk=prepared["request_id"]).update(
+            state="approved",
+            request_digest=services._digest(
+                {"action": "set_list_tasks", "arguments": arguments}
+            ),
+        )
+        Confirmation.objects.filter(pk=prepared["result"]["confirmation_id"]).update(
+            payload=arguments
+        )
+        self.assertEqual(self.confirm_action(prepared)["status"], "cancelled")
+        self.assertEqual(
+            list(
+                self.first.task_memberships.order_by("position").values_list(
+                    "task_id", flat=True
+                )
+            ),
+            members,
+        )

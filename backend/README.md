@@ -238,7 +238,7 @@ See [Docker dependency maintenance](../deploy/README.md#development-dependency-r
 
 ## 🚀 Production
 
-Use the [production release and recovery guide](../deploy/production/README.md)
+Use the [production launch guide](../deploy/production/README.md)
 for private configuration, exact proxy trust, migrations, static files and readiness.
 Production sessions/CSRF cookies require HTTPS with debug disabled; backend ports
 remain private. Local Docker files are development tools, not production release inputs.

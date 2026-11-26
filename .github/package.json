@@ -1,6 +1,7 @@
 {
   "name": "github-automation",
   "private": true,
+  "commentMarkerPrefix": "notoli",
   "engines": {
     "node": "^24.15.0 || ^26.0.0"
   },

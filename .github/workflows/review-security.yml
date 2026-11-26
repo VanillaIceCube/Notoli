@@ -77,7 +77,7 @@ jobs:
           SECRET_SCAN_RESULT: ${{ inputs.secret_scan_result || 'unknown' }}
         with:
           script: |
-            await require(process.env.GITHUB_WORKSPACE + '/.github/scripts/get-security-evidence.js')({ github, context })
+            await require(process.env.GITHUB_WORKSPACE + '/.github/scripts/get-security-evidence.js')({ github, context, infrastructure: context.repo.repo === 'JudeAndrewAlabaInfrastructure' })
 
       - name: Get pull request diff
         id: pr-diff
@@ -85,7 +85,7 @@ jobs:
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
-          omit_frontend_npm_lockfile: "true"
+          omit_frontend_npm_lockfile: ${{ github.event.repository.name != 'JudeAndrewAlabaInfrastructure' && 'true' || 'false' }}
 
       - name: Create RoboCop GitHub App token
         id: app-token
@@ -137,6 +137,12 @@ jobs:
             CAPS, status codes, threat levels, and directives. Do not settle for bland security prose. Keep
             every security claim evidence-backed.
           prompt_prefix: |
+            For gateway changes, enforce the owner's env-prod promotion policy, including source and workflow
+            verification, original and retrying actor checks, pinned SSH host identity and credential isolation.
+            The selected model uses repository settings. A writer who can replace workflows remains privileged.
+            Require operator authorization for host setup. Keep the proxy isolated from application data.
+            Assess the checks this repository runs. Infrastructure uses Gitleaks and dependency review on PRs,
+            with a scheduled malware advisory feed. Keep credentials and private host data out of findings.
             Review this pull request as RoboCop, the AI Security Officer.
 
             Scope:

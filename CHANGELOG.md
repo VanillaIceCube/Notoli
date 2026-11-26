@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-25
+
+### Changed
+
+- Retire the old MCP task names, receipt translation and obsolete approval paths. Reject undeclared tool arguments and keep used request IDs reserved.
+- Serve the singular board and list routes and return 404 for retired board links. Match the shared CI workflows. Save SQLite and both existing app containers before migrations and stop both services on a failed deployment health check.
+- Compare the shared launcher, tests and workflow directly with the Infrastructure commit in `deploy/production/app.json`.
+
+### Removed
+
+- Remove the unused Gunicorn dependency from the backend image. Uvicorn serves both MCP profiles.
+
 ## 2026-11-24
 
 ### Added

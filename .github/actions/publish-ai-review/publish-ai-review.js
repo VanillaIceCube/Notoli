@@ -1,5 +1,7 @@
 "use strict";
 
+const { commentMarkerPrefix } = require("../../package.json");
+
 function stripCodeFences(text) {
   const trimmed = text.trim();
   if (!trimmed.startsWith("```")) return trimmed;
@@ -269,7 +271,7 @@ function addedLinesByFile(files) {
 
 function unavailableReviewMarker(personaName, headSha) {
   const persona = personaName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  return `<!-- notoli-ai-review-unavailable:${persona}:${headSha} -->`;
+  return `<!-- ${commentMarkerPrefix}-ai-review-unavailable:${persona}:${headSha} -->`;
 }
 
 async function publishUnavailableReview({

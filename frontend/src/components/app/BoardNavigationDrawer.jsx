@@ -21,7 +21,7 @@ import Edit from '@mui/icons-material/Edit';
 import MoreVert from '@mui/icons-material/MoreVert';
 import Share from '@mui/icons-material/Share';
 import Divider from '@mui/material/Divider';
-import { getBoardId } from '../../utils/navigation';
+import { matchBoardPath } from '../../utils/navigation';
 import { useLocation, useNavigate } from 'react-router';
 import Collapse from '@mui/material/Collapse';
 import ExpandLess from '@mui/icons-material/ExpandLess';
@@ -33,7 +33,7 @@ import { createBoard, deleteBoard, updateBoard } from '../../services/boards/not
 export default function BoardNavigationDrawer({ boardList, open, setDrawerOpen, showSnackbar }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const boardId = getBoardId(pathname);
+  const boardId = matchBoardPath(pathname)?.params.boardId;
   const { accessToken: token, username: currentUsername, email: currentEmail } = useSession();
   const isCurrentSession = useSessionGuard();
 

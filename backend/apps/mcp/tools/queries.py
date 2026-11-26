@@ -1,7 +1,6 @@
 """Read-only Notoli queries and authoritative actor-scoped lookups."""
 
 from django.core.exceptions import PermissionDenied
-from rest_framework.exceptions import APIException
 
 from apps.notifications import services as notifications
 from apps.tasks import services as tasks
@@ -153,7 +152,6 @@ def snapshot(user, action, args, selected_ids):
     board = tasks._locked_board(user, board_id)
     if action in {
         "delete_board",
-        "add_board_collaborator",
         "remove_board_collaborator",
     }:
         tasks.require_owner(user, board)
@@ -172,6 +170,8 @@ def snapshot(user, action, args, selected_ids):
         memberships = memberships.filter(list_id=args["list_id"])
         task_ids = list(memberships.values_list("task_id", flat=True)[:201])
         if action == "set_list_tasks":
+            if not set(task_ids).difference(args["task_ids"]):
+                raise ValueError("There are no membership removals to approve.")
             if len(args["task_ids"]) > 200:
                 raise ValueError("Use Notoli for more than 200 replacement tasks.")
             if board_tasks.filter(pk__in=args["task_ids"]).count() != len(
@@ -190,25 +190,7 @@ def snapshot(user, action, args, selected_ids):
         tasks=selected_rows(board_tasks.values()),
         memberships=selected_rows(memberships.values()),
     )
-    if action == "add_board_collaborator":
-        try:
-            target = tasks.find_collaborator(args["identifier"])
-        except APIException:
-            from .operations import OperationError
-
-            raise OperationError(
-                "That username or email matches multiple accounts. Use an unambiguous username or email."
-            ) from None
-        if target is None:
-            raise ValueError("No user found for that username or email.")
-        target = type(target).objects.select_for_update().get(pk=target.pk)
-        if (
-            target.pk == board.owner_id
-            or board.collaborators.filter(pk=target.pk).exists()
-        ):
-            raise ValueError("That account already has board access.")
-        current["sharing_target"] = _profile(target)
-    elif action == "remove_board_collaborator":
+    if action == "remove_board_collaborator":
         target = (
             board.collaborators.select_for_update().filter(pk=args["user_id"]).first()
         )

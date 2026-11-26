@@ -1,14 +1,12 @@
 """Boundary and transient-failure regressions for app-independent releases."""
 
 import copy
-import hashlib
 import io
 import json
 import os
 from pathlib import Path
 import subprocess
 import tempfile
-from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 import urllib.error
@@ -30,39 +28,43 @@ class ReleaseMessagesTests(unittest.TestCase):
         for secret in ("private stdout", "private stderr", "private argument"):
             self.assertNotIn(secret, str(failure.exception))
 
-    def test_failure_names_step_and_private_records_without_exception_values(self):
+    def test_failure_names_step_without_exposing_private_values(self):
         for error in (ValueError("private value"), KeyError("private key")):
             with (
                 self.subTest(error=type(error).__name__),
                 patch.object(release, "CURRENT_STEP", "Applying database migrations"),
-                patch.object(release, "REPORT_ROOT", Path("/opt/apps/fixture")),
                 patch.object(release.sys, "stderr", new_callable=io.StringIO) as log,
             ):
                 release.report_failure(error)
                 message = log.getvalue()
-            self.assertIn("Release failed during: Applying database migrations", message)
+            self.assertIn(
+                "Release failed during: Applying database migrations", message
+            )
             self.assertIn(type(error).__name__, message)
-            self.assertIn(str(Path("/opt/apps/fixture/FAILED.json")), message)
-            self.assertIn(str(Path("/opt/apps/fixture/recovery")), message)
-            self.assertIn("may be incomplete", message)
             self.assertNotIn(str(error), message)
 
 
 class ReadinessTests(unittest.TestCase):
     def test_timeout_names_backend_or_public_probe_without_response_details(self):
         for backend_fails, expected in (
-            (True, "direct backend API"), (False, "public routes")
+            (True, "direct backend API"),
+            (False, "public routes"),
         ):
             with (
                 self.subTest(probe=expected),
                 patch.object(
-                    release, "compose", side_effect=(
+                    release,
+                    "compose",
+                    side_effect=(
                         release.ReleaseError("private backend output")
-                        if backend_fails else None
-                    )
+                        if backend_fails
+                        else None
+                    ),
                 ),
                 patch.object(
-                    release, "check_response", side_effect=ValueError("private response")
+                    release,
+                    "check_response",
+                    side_effect=ValueError("private response"),
                 ),
                 patch.object(release.time, "monotonic", side_effect=[0, 91]),
                 self.assertRaises(release.ReleaseError) as failure,
@@ -163,90 +165,6 @@ class CandidatePortTests(unittest.TestCase):
 
 @unittest.skipUnless(os.name == "posix", "Host preflight requires Linux")
 class PreflightTests(unittest.TestCase):
-    def test_recovered_release_requires_its_saved_port_policy_without_guessing(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            identity = "a" * 40 + "-100-1"
-            recovery = root / "recovery" / identity
-            recovery.parent.mkdir(mode=0o700)
-            recovery.mkdir(mode=0o700)
-            (root / "current.json").write_text(
-                json.dumps(
-                    {
-                        "id": "recovered-" + identity,
-                        "directory": str(recovery),
-                        "healthy": True,
-                    }
-                )
-            )
-            with patch.dict(release.CONFIG, {"frontend_port_bindings": [[]]}):
-                # Neither a missing directory nor a missing app.json may use
-                # the incoming candidate's otherwise valid no-port policy.
-                with self.assertRaises(release.ReleaseError):
-                    release.current_frontend_port_policy(root)
-                previous = recovery / "previous-release"
-                previous.mkdir(mode=0o700)
-                with self.assertRaises(release.ReleaseError):
-                    release.current_frontend_port_policy(root)
-                ports = [[("80/tcp", "127.0.0.1", "3000")]]
-                policy = release.CONFIG | {"frontend_port_bindings": ports}
-                app = previous / "app.json"
-                app.write_text(json.dumps(policy))
-                (previous / "manifest.json").write_text(
-                    json.dumps(
-                        {
-                            "app.json": hashlib.sha256(app.read_bytes()).hexdigest(),
-                        }
-                    )
-                )
-                self.assertEqual(
-                    release.current_frontend_port_policy(root),
-                    json.loads(json.dumps(ports)),
-                )
-                app.write_text(json.dumps(release.CONFIG))
-                with self.assertRaisesRegex(release.ReleaseError, "checksum mismatch"):
-                    release.current_frontend_port_policy(root)
-
-    def test_preflight_port_policy_comes_from_the_accepted_release(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            identity = "a" * 40 + "-100-1"
-            accepted = root / "releases" / identity
-            accepted.parent.mkdir(mode=0o700)
-            accepted.mkdir(mode=0o700)
-            old_ports = {("80/tcp", "0.0.0.0", "3000"), ("80/tcp", "::", "3000")}
-            policy = {**release.CONFIG, "frontend_port_bindings": [sorted(old_ports)]}
-            app = accepted / "app.json"
-            app.write_text(json.dumps(policy))
-            (accepted / "manifest.json").write_text(
-                json.dumps({"app.json": hashlib.sha256(app.read_bytes()).hexdigest()})
-            )
-            (root / "current.json").write_text(
-                json.dumps(
-                    {"id": identity, "directory": str(accepted), "healthy": True}
-                )
-            )
-            with patch.dict(release.CONFIG, {"frontend_port_bindings": [[]]}):
-                allowed = release.current_frontend_port_policy(root)
-                release.require_frontend_ports(old_ports, allowed)
-                with self.assertRaisesRegex(
-                    release.ReleaseError, "published-port boundary"
-                ):
-                    release.require_frontend_ports(
-                        old_ports | {("80/tcp", "::", "8080")}, allowed
-                    )
-                with self.assertRaisesRegex(
-                    release.ReleaseError, "published-port boundary"
-                ):
-                    release.require_frontend_ports(
-                        old_ports, release.CONFIG["frontend_port_bindings"]
-                    )
-                app.write_text(json.dumps({**policy, "frontend_port_bindings": [[]]}))
-                with self.assertRaisesRegex(
-                    release.ReleaseError, "policy checksum mismatch"
-                ):
-                    release.current_frontend_port_policy(root)
-
     def test_companion_absence_allowed_but_own_or_trust_drift_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -314,16 +232,8 @@ class PreflightTests(unittest.TestCase):
                     "docker",
                     side_effect=lambda *args: json.dumps([networks[args[-1]]]),
                 ),
-                patch.object(
-                    release.shutil,
-                    "disk_usage",
-                    return_value=SimpleNamespace(total=10000000000, free=8000000000),
-                ),
-                patch.object(
-                    Path, "read_text", return_value="MemAvailable: 1048576 kB"
-                ),
             ):
-                release.preflight(root)
+                release.check_host(root)
                 # Independent release: unavailable companion does not block us.
                 for network in networks.values():
                     network["Containers"] = {
@@ -331,7 +241,7 @@ class PreflightTests(unittest.TestCase):
                         for n, v in network["Containers"].items()
                         if n == gateway_name or n in own
                     }
-                release.preflight(root)
+                release.check_host(root)
                 original = copy.deepcopy(networks)
                 for missing in (
                     backend_name,
@@ -341,19 +251,21 @@ class PreflightTests(unittest.TestCase):
                     for network in networks.values():
                         network["Containers"].pop(missing, None)
                     with self.assertRaises(release.ReleaseError):
-                        release.preflight(root)
+                        release.check_host(root)
+                    if missing in own:
+                        release.check_host(root, require_app=False)
                     networks = copy.deepcopy(original)
                 networks[next(iter(networks))]["Containers"]["unknown"] = {
                     "Name": "unknown"
                 }
                 with self.assertRaises(release.ReleaseError):
-                    release.preflight(root)
+                    release.check_host(root)
                 networks = copy.deepcopy(original)
                 containers[frontend_name]["HostConfig"]["PortBindings"] = {
                     "80/tcp": [{"HostIp": "0.0.0.0", "HostPort": "8080"}]
                 }
                 with self.assertRaises(release.ReleaseError):
-                    release.preflight(root)
+                    release.check_host(root)
                 containers[frontend_name]["HostConfig"]["PortBindings"] = copy.deepcopy(
                     original_ports
                 )
@@ -361,19 +273,19 @@ class PreflightTests(unittest.TestCase):
                 original_backend = copy.deepcopy(own_backend)
                 own_backend["NetworkSettings"]["Networks"]["unexpected-network"] = {}
                 with self.assertRaises(release.ReleaseError):
-                    release.preflight(root)
+                    release.check_host(root)
                 containers[backend_name] = copy.deepcopy(original_backend)
                 if config["backend_required_env"]:
                     containers[backend_name]["Config"]["Env"] = []
                     with self.assertRaises(release.ReleaseError):
-                        release.preflight(root)
+                        release.check_host(root)
                     containers[backend_name] = copy.deepcopy(original_backend)
                 for network in config["backend_addresses"]:
                     containers[backend_name]["NetworkSettings"]["Networks"][network][
                         "IPAddress"
                     ] = "192.0.2.99"
                     with self.assertRaises(release.ReleaseError):
-                        release.preflight(root)
+                        release.check_host(root)
                     containers[backend_name] = copy.deepcopy(original_backend)
                 for network in policy["addresses"]:
                     previous = gateway["NetworkSettings"]["Networks"][network][
@@ -383,21 +295,21 @@ class PreflightTests(unittest.TestCase):
                         "192.0.2.99"
                     )
                     with self.assertRaises(release.ReleaseError):
-                        release.preflight(root)
+                        release.check_host(root)
                     gateway["NetworkSettings"]["Networks"][network]["IPAddress"] = (
                         previous
                     )
                 gateway["NetworkSettings"]["Networks"]["unexpected-network"] = {}
                 with self.assertRaisesRegex(release.ReleaseError, "network boundary"):
-                    release.preflight(root)
+                    release.check_host(root)
                 del gateway["NetworkSettings"]["Networks"]["unexpected-network"]
                 for companion in set(policy.get("allowed_networks", ())) - set(
                     policy["networks"]
                 ):
                     gateway["NetworkSettings"]["Networks"][companion] = {}
-                release.preflight(root)
+                release.check_host(root)
                 route = next(iter(policy["networks"]))
                 endpoint = gateway["NetworkSettings"]["Networks"].pop(route)
                 with self.assertRaisesRegex(release.ReleaseError, "network boundary"):
-                    release.preflight(root)
+                    release.check_host(root)
                 gateway["NetworkSettings"]["Networks"][route] = endpoint

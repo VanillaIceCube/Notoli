@@ -127,7 +127,7 @@ local application setup and reviewer configuration.
 - [Workflow behavior and maintenance](workflows/README.md).
 - [Shared action and reviewer contracts](actions/README.md).
 - [CI/CD architecture](workflows/README.md#-architecture-and-trust-boundaries).
-- [Application production setup and recovery](../deploy/production/README.md).
+- [Application production setup and launches](../deploy/production/README.md).
 
 ## 🤝 Shared engineering ownership and rollout
 

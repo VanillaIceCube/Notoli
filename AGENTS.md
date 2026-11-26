@@ -1,5 +1,82 @@
 # AGENTS.md
 
+## Human-First Engineering
+
+This repository is intended to be understood, maintained, and owned by humans. AI-assisted development must not come at the expense of human comprehension.
+
+### Simplicity and Readability
+
+- Prefer simple, explicit, conventional implementations over clever or unnecessarily flexible solutions.
+- Follow KISS, YAGNI, and separation of concerns without applying them dogmatically.
+- Every abstraction, dependency, helper, and layer of indirection must justify its existence.
+- Keep related functionality together. Minimize the number of files a developer must navigate to understand an operation.
+- Prefer native framework and standard library functionality over custom implementations.
+- Do not introduce abstractions for hypothetical future requirements.
+- Prioritize readability over minimizing lines of code.
+- Comments should explain why something exists, not restate what the code does.
+
+### Deletion and Consolidation
+
+- Prefer removing unnecessary complexity over introducing additional code to manage it.
+- Remove unused imports, functions, files, dependencies, configuration, and obsolete implementation paths when verified safe.
+- Maintain a single source of truth for business logic.
+- Do not introduce parallel implementations, transitional wrappers, or compatibility layers without a demonstrated requirement.
+- Leave modified code simpler or equally understandable whenever reasonably possible.
+
+### Validation and Error Handling
+
+- Address root causes rather than masking symptoms.
+- Establish invariants and validate inputs at the appropriate upstream boundaries.
+- Do not repeatedly validate conditions that are already guaranteed.
+- Avoid speculative defensive checks, unnecessary fallbacks, broad exception handling, and silent failures.
+- Unexpected internal failures should surface clearly.
+- Preserve necessary security, authorization, data integrity, concurrency, external input validation, and legitimate recovery mechanisms.
+
+### Testing
+
+- Test meaningful, observable behavior rather than implementation details.
+- Prefer straightforward tests with realistic inputs and minimal mocking.
+- Do not create redundant tests solely to increase coverage.
+- Do not weaken meaningful test coverage to make an implementation pass.
+- Keep test infrastructure proportional to the complexity of the application.
+- Follow established testing conventions.
+
+### Architectural Consistency
+
+- Understand existing conventions before introducing new patterns.
+- Prefer extending an established, sound pattern over creating another.
+- Maintain appropriate consistency across Notoli, MacroMapper, FullStackTemplate, and shared infrastructure.
+- Where functionality is genuinely shared, maintain a canonical implementation through FullStackTemplate.
+- Do not propagate unnecessary complexity in the name of parity.
+- Respect legitimate product-specific requirements.
+
+### Scope and Ownership
+
+- Implement what was requested, not what might eventually be requested.
+- Avoid unrelated refactoring and speculative improvements.
+- Do not introduce new dependencies, architectural layers, or infrastructure without clear justification.
+- Preserve existing behavior unless a behavioral change is explicitly intended.
+- Flag consequential architectural decisions and uncertain deletions for human review.
+- Verify changes using relevant tests, linting, type checks, and builds.
+
+### Final Self-Review
+
+Before completing any change, ask:
+
+- Can this implementation be simpler?
+- Is every new abstraction necessary?
+- Can a human easily trace the execution flow?
+- Am I solving a real problem or a hypothetical one?
+- Am I addressing the root cause or masking it?
+- Have I introduced unnecessary maintenance overhead?
+- Would a human developer reasonably choose this implementation without AI assistance?
+
+If a simpler, equally correct implementation exists, prefer it.
+
+
+
+Complexity must be earned. Code is a liability as well as an asset. The objective is not to maximize output, but to deliver reliable functionality with the lowest reasonable maintenance burden.
+
 ## 🧭 Ownership and shared rollout
 
 FullStackTemplate owns reusable application engineering and the canonical MCP
@@ -51,10 +128,15 @@ history and valid UTF-8 text when editing or merging entries.
 
 ## 💻 Local development
 
-Use manual setup; do not assume Django or Node dependencies are installed.
-Use uv 0.13.8 to manage Python 3.12 and the backend environment, and the Node
-version range in `frontend/package.json`. Follow the backend README for uv setup.
-Uvicorn serves REST and MCP; Django `runserver` serves REST/auth only.
+Use the locked Python 3.12 environment and the Node version declared in
+`frontend/package.json`. The [backend guide](backend/README.md) covers uv,
+migrations and startup. The [frontend guide](frontend/README.md) covers `npm ci`
+and Vite. Use Uvicorn for MCP. Django’s development server serves REST and authentication.
+
+Follow the [local Docker guide](deploy/README.md) for hot reload, HTTPS and
+dependency changes. Build from the `backend/` and `frontend/` contexts with
+their matching Dockerfile ignore files. Create missing local environment and
+SQLite files only. Production uses the [app release guide](deploy/production/README.md).
 
 ### Codex cloud environment
 
@@ -81,67 +163,11 @@ npm ci
 
 Use the same script as the Codex maintenance script so cached containers refresh backend and frontend dependencies after checkout.
 
-### uv setup
-
-1) Install uv 0.13.8 following its official installation guide, then run
-   `uv sync --locked --project backend` from the repository root.
-2) Optional backend `.env` for local non-Docker runs:
-   - `backend/.env` is auto-loaded by Django settings (`python-dotenv`).
-   - Add `DJANGO_*` keys there if you don't want to set shell vars manually.
-3) Run backend migrations: `uv run --locked --project backend python backend/manage.py migrate`
-4) Start backend including MCP: `cd backend` then `uv run --locked uvicorn config.asgi:application --port 8000 --reload --no-proxy-headers` (Django `runserver` serves only REST/auth, not `/mcp`). Return to the repo root for the frontend steps.
-5) Frontend setup:
-   - `cd frontend`
-   - `npm install`
-   - Optional: set `VITE_API_BASE_URL` (default: `http://localhost:8000`)
-     - For production builds, leave this blank/unset for relative `/api/...` calls on `https://notoli.judeandrewalaba.com`
-   - `npm start`
-
-### Docker setup
-
-Backend image definitions live in `backend/docker/`; keep `backend/` as the
-Docker build context. Frontend image definitions and Nginx configuration live in
-`frontend/docker/`; keep `frontend/` as the Docker build context.
-Both Docker folders contain `Dockerfile.dockerignore` and
-`Dockerfile.hotswap.dockerignore`; their patterns are relative to the corresponding
-backend/frontend context. Preserve Nginx configuration and development entrypoint
-inputs when adjusting exclusions.
-
-Use the [local Docker guide](deploy/README.md) for hot reload at
-`notoli.localhost` and optional standalone HTTPS. Initialize only missing local
-env/database files; never truncate an existing SQLite file. Development Compose
-mounts backend/frontend source, binds ports to loopback and runs Uvicorn/Vite
-reload. After dependency changes, run `npm ci` explicitly in the frontend
-container, then restart it; follow the commands in the local Docker guide. Keep
-the reviewed development base-image digest and lockfile in sync.
-
-`deploy/compose.yml` and `deploy/nginx.conf` are local/legacy-only.
-Do not use them on the shared production host. The
-[production guide](deploy/production/README.md) is the sole app release/recovery
-procedure; Infrastructure owns gateway, certificates and host routing.
-
 ## ⚙️ Configuration
 
-Optional backend variables (defaults are used if unset):
-
-- `DJANGO_SECRET_KEY` (required when `DJANGO_DEBUG=0`; debug runs generate a temporary random key if unset/blank, so set a stable local key to retain sessions across restarts)
-- `DJANGO_DEBUG` (default: `1`)
-- `DJANGO_SQLITE_PATH` (default: `backend/db.sqlite3`)
-- `DJANGO_ALLOWED_HOSTS` (comma-separated)
-- `DJANGO_CORS_ALLOWED_ORIGINS` (comma-separated)
-- `DJANGO_CSRF_TRUSTED_ORIGINS` (comma-separated)
-- `DJANGO_FRONTEND_BASE_URL` (default: `http://localhost:3000`; used in password-reset email links)
-- `DJANGO_MCP_ENABLED` (only `1` enables MCP; bare settings and the local Docker example default off; the production policy explicitly sets `1`)
-- `DJANGO_MCP_BASE_URL` (origin only, no path; defaults to `http://localhost:8000`; production policy explicitly sets `https://notoli.judeandrewalaba.com`; OAuth issuer and MCP resource base)
-- `DJANGO_TRUSTED_PROXY_IPS` (individual proxy IPs only; default empty; production Compose sets Nginx's private address `172.30.88.2`; never use wildcards or CIDRs)
-- `DJANGO_EMAIL_BACKEND` (default: `django.core.mail.backends.console.EmailBackend`)
-- `DJANGO_EMAIL_HOST` (default: `smtp.resend.com`)
-- `DJANGO_EMAIL_PORT` (default: `587`)
-- `DJANGO_EMAIL_USE_TLS` (default: `1`)
-- `DJANGO_EMAIL_HOST_USER` (default: `resend`)
-- `DJANGO_EMAIL_HOST_KEY` (Resend API key)
-- `DJANGO_EMAIL_TIMEOUT` (default: `10`)
-- `DJANGO_DEFAULT_FROM_EMAIL` (default: `notoli@example.com`)
+Use the [backend configuration guide](backend/README.md) for Django settings
+and the [frontend configuration guide](frontend/README.md) for Vite build inputs.
+Keep credentials in the backend environment. Frontend build inputs are public.
 
 ## 🧪 Checks
 
@@ -180,7 +206,7 @@ daemon, plus all applicable consumer suites. Never test against production.
 
 Ordinary changes merge through reviewed `main` before promoting an exact reviewed
 source tree through the repository's existing `env-prod` process. Preserve all
-required CI, reviews, owner authorization and recovery gates. Explicitly
+required CI, reviews, owner authorization and readiness checks. Explicitly
 owner-authorized deployment experiments must return promptly to `main` through
 review before the next ordinary promotion. Preserve both histories and newer main
 work; never reset or force-push to manufacture parity. Intentional release lag is
@@ -189,26 +215,25 @@ does not authorize deployment, and an absent production branch is not a reason
 to create one. Follow the [main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#main-first-releases).
 
 Common release code, verification, tests and workflow are owned by Infrastructure.
-Change `app-release/v1` at the source, regenerate its manifest, then synchronize
-all consumers to the same immutable source commit. Application repositories track
+Change `deploy/` in Infrastructure, then synchronize all consumers to that exact Git commit. Application repositories track
 that source in `shared_source` in `deploy/production/app.json`; never edit only a vendored copy.
 Preserve app-specific Compose, network/readiness policy, immutable image digests,
-SQLite capture/recovery and explicit rollback. Keep shared ingress/certificates
+SQLite writer integrity and private pre-migration copies of the database and app
+containers. A failed deployment health check takes both app services offline. Keep shared ingress/certificates
 and host operations within their separately authorized Infrastructure scope.
 
-Use the [app-only release/recovery guide](deploy/production/README.md).
+Use the [app-only launch guide](deploy/production/README.md).
 `deploy/production/app.json` owns the app's intentional network/readiness policy.
-Review Infrastructure gateway/vhosts, Cloudflare DNS/proxy/Redirect/WAF/Caching
+Review Infrastructure `gateway/nginx/vhosts/`, Cloudflare DNS/proxy/Redirect/WAF/Caching
 settings and allowlist/base-URL variables when domains or routes change.
-Retain prior release images and matched private recovery data; no host-wide Docker
-pruning. Cleanup requires the host operator to review disk usage and select unused
+Keep the active launch bundle private. Avoid host-wide Docker pruning. Cleanup requires the host operator to review disk usage and select unused
 app images explicitly. Releases manage only the app's backend/frontend; local
 `deploy/compose.yml` and `deploy/nginx.conf` are local/legacy-only.
 
 Preserve branch ownership recorded in
 [FullStackTemplate #262](https://github.com/VanillaIceCube/FullStackTemplate/issues/262)
 and [Notoli #975](https://github.com/VanillaIceCube/Notoli/issues/975).
-Production uses only the app release/recovery procedure; Infrastructure owns
+Production uses only the app launch procedure; Infrastructure owns
 Cloudflare, certificates, gateway and host routing under its separately approved
 operator plan.
 
@@ -347,7 +372,7 @@ Follow the [app MCP contract](backend/apps/mcp/README.md#framework) and
 - MCP review regressions: Connected Apps must include the current user's unexpired grants before token exchange, exclude expired/foreign grants, and deduplicate apps across grants/tokens. Read consent must explicitly disclose owner/collaborator IDs, usernames, and emails. The shared REST/MCP collaborator resolver must reject multiple matching identities before membership or notification writes; never choose a recipient with `.first()`.
 - MCP deployment: keep the reviewed `DJANGO_MCP_ENABLED=1` production policy, sync locked production dependencies, apply Django OAuth Toolkit's supplied migrations with `migrate`, and run `python manage.py check --deploy` under production settings. Serve `config.asgi:application` using Uvicorn with `--no-proxy-headers` (one worker for SQLite); WSGI does not serve MCP. Production publishes no frontend or backend host port. The gateway reaches the frontend through `notoli_default`. Only Nginx shares `backend_private` with the backend (`172.30.88.0/29`, Nginx `172.30.88.2`, backend `172.30.88.3`); `backend_egress` is backend-only for outbound email. ASGI accepts forwarded scheme/client only from the configured exact proxy IP, strips all other forwarded metadata, and Django ignores forwarded host/proto headers. If changing the subnet, update IPAM, both fixed IPs, and trusted IP together, then recreate services.
 - With `DJANGO_MCP_ENABLED=1` in the process environment, apply OAuth migrations and register the predefined public ChatGPT OAuth client once: `python manage.py createapplication public authorization-code --client-id notoli-chatgpt --name "Notoli for ChatGPT" --redirect-uris "<exact ChatGPT callback URI>"`. Copy the callback from ChatGPT's management page; use S256 PKCE and token auth method `none`. No client secret, password grant, dynamic registration, or unverified OIDC email claims are exposed. Keep consent enabled (omit `--skip-authorization`), ignore the generated public-client secret, and verify the success message/admin record because toolkit validation errors can exit zero. Existing registrations must be edited explicitly in Django admin.
-- MCP product coverage: 32 explicit tools use Board, List, and Task names plus `confirm_change`. Preserve the existing scope, server identity, and ability to replay receipts or complete approvals prepared under legacy tool names. Reads are direct. Routine additions, text/status/read-flag edits, additive attachments and complete-set reorders execute directly with a caller-generated request UUID and durable atomic receipt. Adding collaborators executes directly for the board owner with share scope. Only deletions and collaborator removals prepare an exact action; `set_list_tasks` prepares only when it omits an existing membership (the check holds the board lock through dispatch); only the matching app user's JWT decision through the existing Connections approval page may approve it. MCP bearers, cookies and caller booleans cannot approve. Preserve separate read/write/share/organize/notifications/delete scopes and recheck the stored action's actual scopes at confirmation/replay. Bind full target/content/cascade/membership/recipient snapshots, token/client/owner, five-minute expiry, cancellation and one-use consumption; freeze bulk deletion IDs and preserve new arrivals. Keep at most ten pending actions per actor; purge expired private payloads while retaining terminal UUIDs. Replays require fresh grants, original owner/client and current shared-board access for routine domain data; completed deletion receipts survive target removal. Older prepared additions/membership changes retain their original approval flow and cannot be silently downgraded. No ownership transfer, implicit sharing through edits, raw HTTP, directory or credential/admin tools. Reordering accepts the complete current set, up to 1000 IDs; approval snapshots accept at most 200 entries per collection with no truncation. The `integrations` label is unchanged; its additive `0001_initial` migration creates ActorLock, Confirmation and Execution without changing historical domain migrations. Full contract: `backend/apps/mcp/README.md`.
+- MCP product coverage: 32 explicit tools use Board, List, and Task names plus `confirm_change`. Keep the current scopes and server identity. Reject retired names and undeclared arguments. Old request UUIDs stay reserved. Reads are direct. Routine additions, text/status/read-flag edits, additive attachments and complete-set reorders execute directly with a caller-generated request UUID and durable atomic receipt. Adding collaborators executes directly for the board owner with share scope. Only deletions and collaborator removals prepare an exact action; `set_list_tasks` prepares only when it omits an existing membership (the check holds the board lock through dispatch); only the matching app user's JWT decision through the existing Connections approval page may approve it. MCP bearers, cookies and caller booleans cannot approve. Preserve separate read/write/share/organize/notifications/delete scopes and recheck the stored action's actual scopes at confirmation/replay. Bind full target/content/cascade/membership/recipient snapshots, token/client/owner, five-minute expiry, cancellation and one-use consumption; freeze bulk deletion IDs and preserve new arrivals. Keep at most ten pending actions per actor; purge expired private payloads while retaining terminal UUIDs. Replays require fresh grants, original owner/client and current shared-board access for routine domain data; completed deletion receipts survive target removal. Cancel obsolete approvals before any write. No ownership transfer, implicit sharing through edits, raw HTTP, directory or credential/admin tools. Reordering accepts the complete current set, up to 1000 IDs; approval snapshots accept at most 200 entries per collection with no truncation. The `integrations` label is unchanged; its additive `0001_initial` migration creates ActorLock, Confirmation and Execution without changing historical domain migrations. Full contract: `backend/apps/mcp/README.md`.
 - Browser `GET /auth/mcp/authorize/` redirects to React `/connections/authorize` using `DJANGO_FRONTEND_BASE_URL` and the original query. React reuses the existing JWT login (no second Django session). JSON GET consent and POST ticket/decision require a verified JWT header; signed tickets bind the displayed request to the account for 10 minutes. Allow/Cancel returns Django's validated callback URL. React `/connections` calls JWT-only `GET/POST /auth/mcp/connections/` to list/revoke the current user's tokens and pending grants. Cookies and posted user IDs cannot authorize these endpoints. Keep JWTs out of URLs and retain PKCE/resource/scope checks in Django. Schedule token cleanup only through the approved production maintenance plan; keep access/refresh tokens, consent tickets, and authorization codes out of logs.
 - When changing MCP routes or the issuer, review Cloudflare Redirect/WAF/Caching rules for `/mcp`, `/.well-known/*`, and `/auth/mcp/*`: no interactive challenges or path rewriting for MCP/discovery, no caching of authenticated responses, and rate limits for login/token endpoints. Existing DNS and Full (strict) TLS are reused. Details and connection steps: `deploy/production/README.md` and `backend/apps/mcp/README.md`.
 - MCP HTTP protocol tests use the directly pinned `httpx2` client in `backend/pyproject.toml`; keep its pin compatible with the MCP SDK and update `backend/uv.lock` with uv.

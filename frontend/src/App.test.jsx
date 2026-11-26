@@ -148,6 +148,14 @@ describe('App', () => {
     );
     expect(await screen.findByTestId('snackbar')).toHaveTextContent('login ok');
   });
+  test.each(['/boards/1', '/boards/1/list/2', '/connections/missing'])(
+    'shows a missing page without redirecting %s',
+    (path) => {
+      renderApp(path);
+      expect(screen.getByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
+      expect(screen.queryByText('BoardHomeRedirect')).not.toBeInTheDocument();
+    },
+  );
   test('when a protected route is visited without a token, it redirects to login', () => {
     renderApp('/board/1');
     expect(document.body.textContent).toContain('LoginRedirect');

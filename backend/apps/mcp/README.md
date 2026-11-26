@@ -71,10 +71,9 @@ checks; `framework/oauth.py` retains the OAuth lifecycle.
 
 MCP is off by default in FullStackTemplate. Derived applications own their
 enablement and tool registries; see the [backend guide](../../README.md#-mcp-integration)
-for this application's profile. Disabled applications keep
-their existing Gunicorn/REST behavior, install no OAuth Django app, and expose no
-backend MCP/discovery/OAuth routes. Dependencies are installed so enabling the
-profile does not require changing the image's Python packages.
+for this application's profile. Notoli runs Uvicorn in both profiles. The enabled
+profile adds the OAuth Django app and the MCP, discovery and OAuth routes. Both
+profiles use the same image.
 
 For an isolated development database:
 
@@ -165,7 +164,7 @@ tokens, codes, tickets, private configuration and credentials out of logs/result
 An operator may schedule toolkit token cleanup separately; this change schedules
 no production maintenance. No OIDC login or automatic account linking is added.
 
-### 🌐 Hosting, readiness and rollback
+### 🌐 Hosting and readiness
 
 Production requires an HTTPS origin in `DJANGO_MCP_BASE_URL`, correct frontend,
 host/CORS/CSRF origins, a strong independent Django secret and
@@ -182,7 +181,7 @@ The generic framework supplies no production subnet or ingress attachment.
 Each application retains its reviewed exact proxy addresses and network policy;
 consult its deployment guide rather than inferring addresses from the framework.
 
-Infrastructure owns gateway routing; each file under `nginx/vhosts/` shows its
+Infrastructure owns gateway routing; each file under `gateway/nginx/vhosts/` shows its
 MCP and discovery locations directly. Coordinate exact `/mcp`, discovery,
 `/auth/mcp/` forwarding, no caching or interactive edge challenges, HTTP/1.1,
 buffering off and the 120-second upstream idle timeout. JSON mode does not require
@@ -198,12 +197,7 @@ readiness. Do not add a live vhost, network or production client before reviewed
 onboarding and operator authorization. Review Cloudflare route/cache/challenge
 policy when activating a new app; this extraction changes no domain or edge rule.
 
-Use the existing app-only immutable release/recovery guide and maintenance lock.
-Retain previous images and private recovery evidence. Roll back the affected
-component explicitly; never recreate shared networks, restore a historical
-database casually, prune images globally or replay the initial cutover. Disabling
-a newly adopted profile hides routes/UI; retain OAuth tables/data for deliberate
-operator cleanup rather than reversing migrations or silently revoking grants.
+Use the app’s production launch guide and maintenance lock. Coordinate any deliberate profile change, preserve OAuth tables and grants, and run the matching readiness checks.
 Moving framework documentation changes no application issuer, scopes, consent
 salt, client IDs, database tables, credentials, domain tools or readiness policy.
 
@@ -511,9 +505,7 @@ These seven tools and `add_board_collaborator` retain an `ExecutionResult` envel
 `request_id`, `action`, `status`, `applied`, `replayed` and `result`.
 For direct completion, `result` contains the original sharing or ordering fields.
 For preparation, `applied` is false and `result` contains an opaque `confirmation_id`,
-`approval_url`, exact changes and expiry. Older prepared additions or membership
-changes remain approval-gated for their original UUIDs; a policy change never silently
-executes them. Newly requested additions execute directly without an app approval.
+`approval_url`, exact changes and expiry. Task tools accept the arguments in their current schemas. Retired item names, unknown fields and caller-supplied confirmation flags fail. A UUID recorded under a retired operation stays reserved. Obsolete preparations and older snapshot formats cannot authorize a write. Inspect the current records before requesting a new change.
 The URL contains no bearer credential. Open it in Notoli and explicitly approve or cancel.
 The matching signed-in app JWT, a signed exact-preview ticket and unchanged current state
 are required; MCP bearer tokens, session cookies and `confirm: true` cannot approve.

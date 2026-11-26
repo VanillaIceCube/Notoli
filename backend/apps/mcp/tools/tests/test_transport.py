@@ -200,7 +200,7 @@ class MCPToolTransportTests(TransactionTestCase):
                         rejected = await invoke(tool_name, arguments)
                         self.assertTrue(rejected.get("isError"), rejected)
                         self.assertIn(
-                            "Use the current task arguments",
+                            "Use only the arguments listed by this tool",
                             rejected["content"][0]["text"],
                         )
 
@@ -346,10 +346,7 @@ class MCPToolTransportTests(TransactionTestCase):
                             "delete_board",
                             {"board_id": new_board_id, "confirm": legacy},
                         )
-                        self.assertEqual(
-                            legacy_result["structuredContent"]["status"], "prepared"
-                        )
-                        self.assertFalse(legacy_result["structuredContent"]["applied"])
+                        self.assertTrue(legacy_result.get("isError"), legacy_result)
                     pending = await invoke("delete_board", {"board_id": new_board_id})
                     self.assertEqual(pending["structuredContent"]["status"], "prepared")
                     invalid = await invoke(
