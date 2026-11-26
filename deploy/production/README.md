@@ -1,6 +1,6 @@
 # Production launches
 
-Notoli serves `https://notoli.judeandrewalaba.com`. The backend trusts only the gateway at `172.30.88.2` on its private network. Application settings and readiness checks live in [app.json](app.json). The [Compose file](compose.yml) defines the two services. The [shared release guide](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/57ef0cbbf606129b70b8e83b3036da0528c8b95d/deploy/README.md) describes the Infrastructure-owned launcher. For local development, see the [deployment README](../README.md).
+Notoli serves `https://notoli.judeandrewalaba.com`. The backend trusts only the gateway at `172.30.88.2` on its private network. Application settings and readiness checks live in [app.json](app.json). The [Compose file](compose.yml) defines the two services. The [shared release guide](https://github.com/VanillaIceCube/JudeAndrewAlabaInfrastructure/blob/c56a65a5531db007d5c8e9fe56b468f76b27a928/deploy/README.md) describes the Infrastructure-owned launcher. For local development, see the [deployment README](../README.md).
 
 ## Release sequence
 
@@ -31,7 +31,7 @@ The gateway section describes this app's route networks and trusted peers.
 `gateway.allowed_networks`, when present, lists all approved gateway attachments;
 otherwise only this app's route networks are allowed. Unknown attachments and
 missing app routes fail preflight; approved companion routes may be absent.
-Infrastructure's `gateway/check_host.py` retains detailed full-host topology checks.
+Infrastructure's `gateway/scripts/check_host.py` retains detailed full-host topology checks.
 `workflow.extra_env` adds only app-specific Actions inputs;
 all frontend builds use `VITE_API_BASE_URL=` for same-origin API requests.
 The `shared_source` field pins the reviewed Infrastructure commit. The release workflow checks its code, tests and rendered workflow against that revision.

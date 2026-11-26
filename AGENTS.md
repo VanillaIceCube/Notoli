@@ -215,8 +215,7 @@ does not authorize deployment, and an absent production branch is not a reason
 to create one. Follow the [main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#main-first-releases).
 
 Common release code, verification, tests and workflow are owned by Infrastructure.
-Change `deploy/` in the Infrastructure repository, regenerate its manifest, then synchronize
-all consumers to the same immutable source commit. Application repositories track
+Change `deploy/` in Infrastructure, then synchronize all consumers to that exact Git commit. Application repositories track
 that source in `shared_source` in `deploy/production/app.json`; never edit only a vendored copy.
 Preserve app-specific Compose, network/readiness policy, immutable image digests,
 SQLite writer integrity and private pre-migration copies of the database and app
@@ -225,7 +224,7 @@ and host operations within their separately authorized Infrastructure scope.
 
 Use the [app-only launch guide](deploy/production/README.md).
 `deploy/production/app.json` owns the app's intentional network/readiness policy.
-Review Infrastructure gateway/vhosts, Cloudflare DNS/proxy/Redirect/WAF/Caching
+Review Infrastructure `gateway/nginx/vhosts/`, Cloudflare DNS/proxy/Redirect/WAF/Caching
 settings and allowlist/base-URL variables when domains or routes change.
 Keep the active launch bundle private. Avoid host-wide Docker pruning. Cleanup requires the host operator to review disk usage and select unused
 app images explicitly. Releases manage only the app's backend/frontend; local

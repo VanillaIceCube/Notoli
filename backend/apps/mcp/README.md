@@ -181,7 +181,7 @@ The generic framework supplies no production subnet or ingress attachment.
 Each application retains its reviewed exact proxy addresses and network policy;
 consult its deployment guide rather than inferring addresses from the framework.
 
-Infrastructure owns gateway routing; each file under `gateway/vhosts/` shows its
+Infrastructure owns gateway routing; each file under `gateway/nginx/vhosts/` shows its
 MCP and discovery locations directly. Coordinate exact `/mcp`, discovery,
 `/auth/mcp/` forwarding, no caching or interactive edge challenges, HTTP/1.1,
 buffering off and the 120-second upstream idle timeout. JSON mode does not require
