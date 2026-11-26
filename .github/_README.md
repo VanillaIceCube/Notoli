@@ -24,7 +24,7 @@ The frontend skips TypeScript 7.0.x because the ESLint parser requires a TypeScr
 1. Configure Actions, dependency alerts, advanced CodeQL, and available secret scanning/push protection using this repository's settings below.
 2. Install the three reviewer GitHub Apps and set their App ID variables.
 3. Store each persona's OpenAI key and App private key in both Actions and Dependabot secrets: six reviewer secrets in each store.
-4. Configure this repository's reviewer project, security-alert Project, and separate Project token.
+4. Configure this repository's OpenAI reviewer project and native issue fields.
 5. Verify fresh same-repository human and Dependabot PR results before activating or changing required checks.
 6. Configure deployment separately through the app or gateway production guide.
 
@@ -34,7 +34,9 @@ owner's approved process. Never weaken checks to make setup pass.
 
 ## ⚙️ Repository setup
 
+Use the repository's Issues tab and the owner's [native issue schema](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#1-configure-repository-issue-tracking). Backfill and verify existing managed tickets before switching alert workflows. After merging, run all three alert workflows on main and verify native field retention before removing the old Project credentials or closing the board. Record results in [FullStackTemplate #386](https://github.com/VanillaIceCube/FullStackTemplate/issues/386).
 
+**Native issue cutover verification, November 25, 2026.** Project 8 contained 354 issues. The read-back matched native field values and issue types on 354 issues, including all 140 security-alert tickets (2 open). Issue numbers, state, closure reasons, and closure dates were preserved. Examples include [#544](https://github.com/VanillaIceCube/Notoli/issues/544), [#554](https://github.com/VanillaIceCube/Notoli/issues/554).
 
 ## 🔑 Credential ownership
 
@@ -70,9 +72,7 @@ stores as well (six review secrets total).
    separate secret settings too where specified above.
 3. In **Actions → Variables**, set `OPENAI_REVIEWERS_PROJECT_ID` to that same OpenAI
    project's actual `proj_...` ID. All three keys and the project header must
-   match. This is an OpenAI project ID; `SECURITY_ALERTS_PROJECT_ID` is a separate
-   GitHub Project node ID and stays unchanged. App identity variables/private
-   keys and deployment credentials also stay unchanged.
+   match. This variable identifies the OpenAI project for the reviewers.
 4. Run a same-repository PR smoke test for all three reviewers. Where supported,
    also verify a Dependabot PR using its separate secret store. After an
    approved merge, manually run CodeQL Alert, Vulnerability Alert, and Malware

@@ -8,9 +8,9 @@ const path = require("node:path");
 const test = require("node:test");
 const YAML = require("yaml");
 const {
-  validateProject,
   validateConfiguration,
   collectAlerts,
+  writeSource,
 } = require("../actions/track-security-alerts/track-security-alerts");
 
 const root = path.resolve(__dirname, '../..');
@@ -68,66 +68,63 @@ function configuration(dir, inputs = {}) {
   const output = path.join(dir, 'configuration');
   const result = spawnSync(process.execPath, [entryPoint('track-security-alerts', step.run)], {
     cwd: dir, encoding: 'utf8',
-    env: { ...process.env, ...inputEnvironment(step, inputs), FEED: 'codeql', PROJECT_ID: 'PROJECT_FIXTURE',
-      ROBOCOP_TOKEN: 'synthetic-issue-token', PROJECT_TOKEN: 'synthetic-project-token', GITHUB_OUTPUT: output },
+    env: { ...process.env, ...inputEnvironment(step, inputs), FEED: 'codeql',
+      ROBOCOP_TOKEN: 'synthetic-issue-token', GITHUB_OUTPUT: output },
   });
   if (result.status !== 0) throw new Error(result.stderr || result.stdout || 'Configuration failed');
   return Object.fromEntries(fs.readFileSync(output, 'utf8').trim().split('\n').map(line => line.split('=')));
 }
 
-const fields = Object.entries({ Status: ['Backlog', 'Done'], Domain: ['CI/CD'], 'Work type': ['Security'], Priority: ['P0', 'P1', 'P2'], Size: ['M'] }).map(([name, names]) => ({ name, id: name, dataType: 'SINGLE_SELECT', options: names.map(name => ({ name, id: name })) }));
-
-fields.push({ name: 'Estimate', id: 'Estimate', dataType: 'NUMBER' }, { name: 'End date', id: 'End date', dataType: 'DATE' });
-
+const fields = [
+  { name: 'Domain', fullDatabaseId: 1, dataType: 'SINGLE_SELECT', options: ['Frontend', 'Backend', 'Cloud'].map(name => ({ name })) },
+  { name: 'Priority', fullDatabaseId: 2, dataType: 'SINGLE_SELECT', options: ['P0', 'P1', 'P2'].map(name => ({ name })) },
+  { name: 'Size', fullDatabaseId: 3, dataType: 'SINGLE_SELECT', options: [{ name: 'M' }] },
+  { name: 'End date', fullDatabaseId: 5, dataType: 'DATE' },
+];
+const issueTypes = { nodes: [{ name: 'Bug' }] };
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
-test('Project schema validation checks access, urgency options and closure fields before consuming alerts', async () => {
-  const steps = manifest.runs.steps;
-  const index = steps.findIndex(step => step.name.startsWith('Validate Project access'));
-  assert.ok(index >= 0 && index < steps.findIndex(step => step.id === 'alerts'));
-  assert.equal(steps[index].with['github-token'], '${{ inputs.project-token }}');
-  const run = node => validateProject({ graphql: async query => {
-    assert.match(query, /^query/);
-    return { node };
-  } }, { info() {} }, "PROJECT_FIXTURE");
-  await assert.rejects(run(null), /credential cannot read/);
-  for (const name of ['Priority', 'End date']) {
-    const nodes = fields.map(field => field.name !== name ? field : {
-      ...field, options: field.options?.filter(option => option.name !== 'P0'), dataType: name === 'End date' ? 'TEXT' : field.dataType,
-    });
-    await assert.rejects(run({ fields: { nodes } }), new RegExp(name));
+test('native schema validation fails before reading any alert feed', async () => {
+  for (const name of ['Bug', 'Priority', 'End date']) {
+    const repository = {
+      issueTypes: name === 'Bug' ? { nodes: [] } : issueTypes,
+      issueFields: { nodes: fields.filter(field => field.name !== name) },
+    };
+    const github = {
+      graphql: async () => ({ repository }),
+      paginate: () => assert.fail('must validate fields before reading alerts'),
+    };
+    await assert.rejects(writeSource({ github, context: { repo: {} } }), new RegExp(name));
   }
 });
 
 async function pipeline(dir, feed, config, nonempty, severity = 'medium') {
-  const messages = [], outputs = {}, issues = [], cards = new Map();
-  let fetches = 0, providerCalls = 0, mutations = 0, projectWrites = 0;
+  const messages = [], outputs = {}, issues = [], fieldWrites = [];
+  let fetches = 0, providerCalls = 0, mutations = 0;
   const core = { info: v => messages.push(v), warning: v => messages.push(v), setOutput: (k, v) => { outputs[k] = v; }, setFailed: message => { throw new Error(message); } };
   const sourceAlert = feed === 'codeql'
-    ? { number: 1, html_url: 'https://example.test/alert/1', rule: { id: 'fixture', severity: 'warning' }, most_recent_instance: { location: { path: 'synthetic.py' } } }
-    : { number: 1, html_url: 'https://example.test/alert/1', security_advisory: { ghsa_id: 'GHSA-fixture', severity, summary: 'Synthetic fixture only' }, dependency: { package: { name: 'fixture', ecosystem: 'npm' }, manifest_path: 'synthetic.json' } };
-  const projectGithub = { graphql: async (query, values) => {
-    if (query.includes('fields(first: 100)')) return { node: { title: 'Fixture Project', fields: { nodes: fields } } };
-    if (query.includes('items(first: 100')) return { node: { items: { nodes: [...cards].map(([content, id]) => ({ id, content: { id: content } })), pageInfo: {} } } };
-    if (query.includes('fieldValues(first: 100)')) return { node: { fieldValues: { nodes: fields.map(field => ({ field: { name: field.name } })) } } };
-    if (query.includes('addProjectV2ItemById')) { projectWrites++; cards.set(values.content, 'CARD_1'); return { addProjectV2ItemById: { item: { id: 'CARD_1' } } }; }
-    if (query.includes('updateProjectV2ItemFieldValue')) { projectWrites++; return { updateProjectV2ItemFieldValue: { projectV2Item: { id: 'CARD_1' } } }; }
-    throw new Error('Unexpected mocked Project operation');
-  } };
-  const github = { rest: { codeScanning: { listAlertsForRepo() {} }, dependabot: { listAlertsForRepo() {} }, issues: {
+    ? { number: 1, html_url: 'https://example.test/alert/1', rule: { id: 'fixture', severity: 'warning' }, most_recent_instance: { location: { path: 'backend/synthetic.py' } } }
+    : { number: 1, html_url: 'https://example.test/alert/1', security_advisory: { ghsa_id: 'GHSA-fixture', severity, summary: 'Synthetic fixture only' }, dependency: { package: { name: 'fixture', ecosystem: 'npm' }, manifest_path: 'frontend/synthetic.json' } };
+  const github = {
+    graphql: async () => ({ repository: { issueFields: { nodes: fields }, issueTypes } }),
+    rest: { codeScanning: { listAlertsForRepo() {} }, dependabot: { listAlertsForRepo() {} }, issues: {
     listForRepo() {}, create: async request => { mutations++; const issue = { ...request, labels: request.labels.map(name => ({ name })), assignees: request.assignees.map(login => ({ login })), number: 1, node_id: 'ISSUE_1' }; issues.push(issue); return { data: issue }; },
     update: async request => { mutations++; Object.assign(issues[0], request); return { data: issues[0] }; },
     addLabels: async () => { mutations++; }, addAssignees: async () => { mutations++; },
   } }, paginate: async method => {
     if (method === github.rest.issues.listForRepo) return issues;
     assert.ok([github.rest.codeScanning.listAlertsForRepo, github.rest.dependabot.listAlertsForRepo].includes(method)); fetches++; return nonempty ? [sourceAlert] : [];
-  }, request: async (route, args) => { assert.equal(route, 'GET /advisories/{ghsa_id}'); return { data: { ghsa_id: args.ghsa_id, type: 'malware' } }; } };
+  }, request: async (route, args) => {
+    if (route === 'GET /advisories/{ghsa_id}') return { data: { ghsa_id: args.ghsa_id, type: 'malware' } };
+    if (route.startsWith('GET ') && route.endsWith('issue-field-values')) return { data: [] };
+    assert.match(route, /^POST .*issue-field-values$/);
+    fieldWrites.push(...args.issue_field_values);
+    return { data: [] };
+  } };
   const saved = { ...process.env };
   try {
-    Object.assign(process.env, { FEED: feed, PROJECT_ID: 'PROJECT_FIXTURE', RUNNER_TEMP: dir, GITHUB_WORKSPACE: root });
-    const execute = async step => new AsyncFunction('github', 'context', 'core', 'require', 'getOctokit', step.with.script)(github, { repo: { owner: 'fixture', repo: 'fixture' } }, core, require, token => { assert.equal(token, 'synthetic-project-token'); return projectGithub; });
-    const preflight = manifest.runs.steps.find(step => step.name.startsWith('Validate Project access'));
-    await new AsyncFunction('github', 'core', 'require', preflight.with.script)(projectGithub, core, require);
+    Object.assign(process.env, { FEED: feed, RUNNER_TEMP: dir, GITHUB_WORKSPACE: root });
+    const execute = async step => new AsyncFunction('github', 'context', 'core', 'require', step.with.script)(github, { repo: { owner: 'fixture', repo: 'fixture' } }, core, require);
     await execute(manifest.runs.steps.find(step => step.id === 'alerts'));
     if (outputs.has_alerts === 'true') {
       const nested = manifest.runs.steps.find(step => step.id === 'openai');
@@ -154,11 +151,16 @@ async function pipeline(dir, feed, config, nonempty, severity = 'medium') {
     } else {
       delete process.env.LLM_OUTPUT;
     }
-    process.env.PROJECT_TOKEN = 'synthetic-project-token';
     await execute(manifest.runs.steps.find(step => step.name === 'Reconcile grouped issues'));
     assert.equal(fetches, 1);
-    assert.equal(issues.length, nonempty ? 1 : 0); assert.equal(cards.size, nonempty ? 1 : 0);
-    assert.equal(mutations, nonempty ? 1 : 0, 'RoboCop repairs labels and assignees only when the issue response lacks them'); assert.equal(projectWrites > 0, nonempty);
+    assert.equal(issues.length, nonempty ? 1 : 0);
+    assert.equal(mutations, nonempty ? 1 : 0, 'RoboCop repairs labels and assignees only when the issue response lacks them');
+    assert.equal(fieldWrites.length, nonempty ? 3 : 0);
+    if (nonempty) {
+      const domain = fieldWrites.find(write => write.field_id === 1);
+      assert.equal(domain.value, feed === 'codeql' ? 'Backend' : 'Frontend');
+    }
+    if (nonempty) assert.equal(issues[0].type, 'Bug');
     assert.equal(providerCalls, nonempty ? 1 : 0);
     assert.match(messages.join('\n'), nonempty ? /Created issue #1/ : /No open .* alerts or managed issues to reconcile/);
   } finally {
@@ -175,24 +177,22 @@ test('all local composite manifests avoid unsupported vars context, including th
   assert.throws(() => noCompositeVars(broken), /vars must be resolved/);
 });
 
-test('composite inputs, validated nested forwarding and all three workflow callers preserve defaults and token separation', () => {
+test('composite inputs, validated nested forwarding and all three workflow callers preserve defaults and scoped authentication', () => {
   for (const [key, value] of Object.entries(defaults)) assert.equal(manifest.inputs[key].default, value);
   assert.ok(manifest.runs.steps.findIndex(step => step.id === 'ai-config') < manifest.runs.steps.findIndex(step => step.id === 'alerts'));
   for (const caller of callers) {
     const step = caller.workflow.jobs.aggregate.steps.find(step => step.uses === './.github/actions/track-security-alerts');
     assert.equal(step.with.feed, caller.feed);
-    assert.equal(step.with['project-token'], '${{ secrets.SECURITY_ALERTS_TOKEN }}');
     assert.equal(step.with['robocop-token'], '${{ steps.robocop-token.outputs.token }}');
-    assert.equal(step.with['project-id'], '${{ vars.SECURITY_ALERTS_PROJECT_ID }}');
     assert.deepEqual(explicitCallerConfiguration(caller), defaults);
     assert.deepEqual(explicitCallerConfiguration(caller, Object.fromEntries(Object.values(variables).map(key => [key, '']))), defaults);
   }
 });
 
-test('missing or shared credentials and unsupported feeds fail configuration before any reads or writes', () => {
-  const valid = { FEED: 'codeql', PROJECT_ID: 'project', ROBOCOP_TOKEN: 'issues', PROJECT_TOKEN: 'planning', MODEL: 'gpt-6-luna', MAX_OUTPUT_TOKENS: '16000' };
+test('missing credentials and unsupported feeds fail configuration before any reads or writes', () => {
+  const valid = { FEED: 'codeql', ROBOCOP_TOKEN: 'issues', MODEL: 'gpt-6-luna', MAX_OUTPUT_TOKENS: '16000' };
   assert.equal(validateConfiguration(valid).model, 'gpt-6-luna');
-  for (const changed of [{ FEED: 'other' }, { PROJECT_ID: '' }, { ROBOCOP_TOKEN: '' }, { PROJECT_TOKEN: '' }, { PROJECT_TOKEN: 'issues' }]) {
+  for (const changed of [{ FEED: 'other' }, { ROBOCOP_TOKEN: '' }]) {
     assert.throws(() => validateConfiguration({ ...valid, ...changed }));
   }
 });
@@ -210,7 +210,7 @@ test('invalid model, effort and token limits fail before source reads, provider 
 });
 
 for (const severity of ['high', 'critical']) {
-  test(`vulnerability: ${severity} source reaches grouped issue and Project synchronization`, () =>
+  test(`vulnerability: ${severity} source reaches native issue reconciliation`, () =>
     fixture(dir => pipeline(dir, 'vulnerability', configuration(dir), true, severity)));
 }
 
@@ -277,7 +277,7 @@ test("Dependabot alert compaction preserves the source URL used in issue links",
   assert.equal(alerts[0].ref, "dependabot:7");
 });
 
-test("alert workflows scope RoboCop to alert and issue APIs while reserving the personal token for Projects", () => {
+test("alert workflows scope RoboCop to alert and issue APIs", () => {
   const repositoryRoot = path.resolve(__dirname, "../..");
   const workflowNames = [
     "alert-codeql.yml",
@@ -301,14 +301,7 @@ test("alert workflows scope RoboCop to alert and issue APIs while reserving the 
       workflow,
       /robocop-token: \$\{\{ steps\.robocop-token\.outputs\.token \}\}/,
     );
-    assert.match(
-      workflow,
-      /project-token: \$\{\{ secrets\.SECURITY_ALERTS_TOKEN \}\}/,
-    );
-    assert.doesNotMatch(
-      workflow,
-      /robocop-token: \$\{\{ secrets\.SECURITY_ALERTS_TOKEN \}\}/,
-    );
+    assert.doesNotMatch(workflow, /SECURITY_ALERTS_(PROJECT_ID|TOKEN)/);
     if (workflowName === "alert-codeql.yml") {
       assert.doesNotMatch(workflow, /permission-vulnerability-alerts: read/);
     } else {
@@ -327,7 +320,7 @@ test("alert workflows scope RoboCop to alert and issue APIs while reserving the 
     "utf8",
   );
   assert.match(action, /github-token: \$\{\{ inputs\.robocop-token \}\}/);
-  assert.match(action, /issueGithub: github, projectGithub: getOctokit\(process.env.PROJECT_TOKEN\)/);
+  assert.doesNotMatch(action, /PROJECT_TOKEN|PROJECT_ID:|getOctokit/);
 });
 
 test("malware fetch inspects only unique repository source advisories and fails before writes on uncertain classification", async () => {
