@@ -32,6 +32,8 @@ owner's approved process. Never weaken checks to make setup pass.
 
 Use the repository's Issues tab and the owner's [native issue schema](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#1-configure-repository-issue-tracking). Backfill and verify existing managed tickets before switching alert workflows. After merging, run all three alert workflows on main and verify native field retention before removing the old Project credentials or closing the board. Record results in [FullStackTemplate #386](https://github.com/VanillaIceCube/FullStackTemplate/issues/386).
 
+**Native issue cutover verification, November 25, 2026.** Project 8 contained 354 issues. The read-back matched native field values and issue types on 354 issues, including all 140 security-alert tickets (2 open). Issue numbers, state, closure reasons, and closure dates were preserved. Examples include [#544](https://github.com/VanillaIceCube/Notoli/issues/544), [#554](https://github.com/VanillaIceCube/Notoli/issues/554).
+
 ## 🔑 Credential ownership
 
 The four existing repositories already use the accepted persona-specific
