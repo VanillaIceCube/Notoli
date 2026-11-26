@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Update the shared release source pin to the equivalent Infrastructure commit after its history rewrite.
 - Track security alerts through their source references and native fields, preserve issue labels, and assign a primary Domain even when alerts span components. Use the GitHub issue closure timestamp for completion.
 
 ## 2026-11-25
