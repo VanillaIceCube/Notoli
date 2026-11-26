@@ -353,7 +353,7 @@ test("omitted-alert draft recovery accounts for each source exactly once before 
 });
 
 function nativeFixture(initialIssues = []) {
-  const fields = { Domain: 1, Priority: 2, Size: 3, Estimate: 4, "End date": 5 };
+  const fields = { Domain: 1, Priority: 2, Size: 3, "End date": 5 };
   const issues = new Map(initialIssues.map(initial => [initial.number, { state: "open", ...initial }]));
   const values = new Map();
   const events = [];
@@ -406,7 +406,7 @@ test("native reconciliation preserves existing planning and raises urgent priori
     { ...issue(10, ["dependabot:1"]), type: { name: "Bug" } },
     issue(11, ["dependabot:2"]),
   ]);
-  values.set(10, new Map([[fields.Priority, "P2"], [fields.Estimate, 12], [fields.Domain, "Backend"], [99, "keep"]]));
+  values.set(10, new Map([[fields.Priority, "P2"], [fields.Domain, "Backend"], [99, "keep"]]));
   const merged = group(["dependabot:1", "dependabot:2"]);
   const alerts = [
     { ref: "dependabot:1", severity: "medium" },
@@ -415,7 +415,6 @@ test("native reconciliation preserves existing planning and raises urgent priori
   assert.deepEqual(await run(alerts, [merged]), { created: 0, updated: 1, closed: 1 });
   assert.deepEqual(issues.get(10).type, { name: "Bug" });
   assert.equal(values.get(10).get(fields.Priority), "P0");
-  assert.equal(values.get(10).get(fields.Estimate), 12);
   assert.equal(values.get(10).get(fields.Domain), "Backend");
   assert.equal(values.get(10).get(99), "keep");
   assert.equal(values.get(11).get(fields["End date"]), "2026-11-25");
@@ -439,7 +438,7 @@ test("a failed native field write leaves one discoverable issue and reruns fill 
   assert.deepEqual(saved.labels, [feed]);
   assert.deepEqual(saved.assignees, ["repo-owner"]);
   assert.equal(fixture.values.get(100).get(fixture.fields.Priority), "P1");
-  assert.equal(fixture.values.get(100).get(fixture.fields.Estimate), 3);
+  assert.equal(fixture.values.get(100).get(fixture.fields.Size), "M");
 });
 
 test("reconciliation persists the note and native end date before closing and retries safely", async () => {

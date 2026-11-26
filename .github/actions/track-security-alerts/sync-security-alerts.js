@@ -249,7 +249,6 @@ async function loadIssuePlanning(github, { owner, repo }) {
     Domain: ["CI/CD"],
     Priority: ["P0", "P1", "P2"],
     Size: ["M"],
-    Estimate: "NUMBER",
     "End date": "DATE",
   };
   const fields = {};
@@ -395,7 +394,7 @@ async function synchronizeSecurityAlerts({
     }
     const alerts = group.alert_refs.map(ref => alertByRef.get(ref));
     const defaults = {
-      Domain: "CI/CD", Priority: alertPriority(source.feed, alerts), Size: "M", Estimate: 3,
+      Domain: "CI/CD", Priority: alertPriority(source.feed, alerts), Size: "M",
     };
     const urgent = alerts.some(alert => ["critical", "high", "unknown"].includes(alert.severity));
     const values = await issueFieldsToUpdate(issueGithub, issueParameters, fields, defaults, urgent);

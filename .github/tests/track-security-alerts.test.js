@@ -79,7 +79,6 @@ const fields = [
   { name: 'Domain', fullDatabaseId: 1, dataType: 'SINGLE_SELECT', options: [{ name: 'CI/CD' }] },
   { name: 'Priority', fullDatabaseId: 2, dataType: 'SINGLE_SELECT', options: ['P0', 'P1', 'P2'].map(name => ({ name })) },
   { name: 'Size', fullDatabaseId: 3, dataType: 'SINGLE_SELECT', options: [{ name: 'M' }] },
-  { name: 'Estimate', fullDatabaseId: 4, dataType: 'NUMBER' },
   { name: 'End date', fullDatabaseId: 5, dataType: 'DATE' },
 ];
 const issueTypes = { nodes: [{ name: 'Security' }] };
@@ -156,7 +155,7 @@ async function pipeline(dir, feed, config, nonempty, severity = 'medium') {
     assert.equal(fetches, 1);
     assert.equal(issues.length, nonempty ? 1 : 0);
     assert.equal(mutations, nonempty ? 1 : 0, 'RoboCop repairs labels and assignees only when the issue response lacks them');
-    assert.equal(fieldWrites.length, nonempty ? 4 : 0);
+    assert.equal(fieldWrites.length, nonempty ? 3 : 0);
     if (nonempty) assert.equal(issues[0].type, 'Security');
     assert.equal(providerCalls, nonempty ? 1 : 0);
     assert.match(messages.join('\n'), nonempty ? /Created issue #1/ : /No open .* alerts or managed issues to reconcile/);
