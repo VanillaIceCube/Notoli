@@ -31,7 +31,7 @@ Start with [ci-orchestrator.yml](ci-orchestrator.yml) for a pull request. The ot
 
 ### Main branch required checks
 
-Frontend jobs read their Node range from `frontend/package.json`. The automation test job reads its range from `.github/package.json`. The app publishes the named lint, test, CodeQL, dependency, secret and reviewer checks. `Auto Merge` is the existing CI job that checks access to branch rules and GitHub’s expected-head API. The separate `Dependabot Policy` follow-up owns auto-merge eligibility. For the configured required contexts and the read-only audit, see the repository’s [branch protection guide](../README.md#-branch-protection). A failed path detector cannot excuse a skipped suite. Fork PRs run the independent gates without reviewer credentials. Applicable same-repository reviewers need a usable current-head verdict.
+Frontend jobs read their Node range from `frontend/package.json`. The automation test job reads its range from `.github/package.json`. The app publishes the named lint, test, CodeQL, dependency, secret and reviewer checks. `Auto Merge` is the existing CI job that checks access to branch rules and GitHub’s expected-head API. The separate `Dependabot Policy` follow-up owns auto-merge eligibility. For the configured required contexts and the read-only audit, see the repository’s [branch protection guide](../_README.md#-branch-protection). A failed path detector cannot excuse a skipped suite. Fork PRs run the independent gates without reviewer credentials. Applicable same-repository reviewers need a usable current-head verdict.
 
 | Gate | Required contexts |
 | --- | --- |
@@ -47,13 +47,13 @@ The read-only verifier accepts a ruleset and a current-head check-run response s
 
 The policy uses the changed paths returned by GitHub. An empty list selects no file-specific checks. Fetch errors propagate, and the policy still requires the independent gates and current-head reviewer approvals.
 
-The follow-up resolves the successful CI run to its open PR into `main`. It reads reviewed code from `main`, the proposed commit as data, the required status checks and the three reviewers’ current-head approvals. Signed patch/minor metadata can qualify for native auto-merge with `expectedHeadOid`. Major updates and SHA-only Action changes without a verified update type need owner review. An open alert on an updated package blocks automatic eligibility if its CVSS score exceeds 6.9 or is missing or invalid. Production promotion has separate owner authorization. [Repository configuration](../README.md)
+The follow-up resolves the successful CI run to its open PR into `main`. It reads reviewed code from `main`, the proposed commit as data, the required status checks and the three reviewers’ current-head approvals. Signed patch/minor metadata can qualify for native auto-merge with `expectedHeadOid`. Major updates and SHA-only Action changes without a verified update type need owner review. An open alert on an updated package blocks automatic eligibility if its CVSS score exceeds 6.9 or is missing or invalid. Production promotion has separate owner authorization. [Repository configuration](../_README.md)
 
 ### Security-alert configuration contract
 
 The daily schedules use `America/Los_Angeles` and follow daylight-saving time. Each feed also accepts manual dispatch. The three callers resolve the `AI_REVIEW_*` variables and pass them into the shared action. RoboCop’s App token reads that feed and writes its issues. The personal Project token supplies Project access. The action validates credentials and field schema before reading alerts or updating issues.
 
-A grouped ticket records each source alert once. High alerts raise a group to P1 and critical alerts to P0. Unknown severity also warrants P1. Existing higher priorities and other planning fields are preserved. If synchronization fails partway, rerun the same feed. The action reads the saved issue and Project state before retrying and confirms closure before reporting success. [Alert implementation](../actions/track-security-alerts/action.yml) · [Project setup and credentials](../README.md)
+A grouped ticket records each source alert once. High alerts raise a group to P1 and critical alerts to P0. Unknown severity also warrants P1. Existing higher priorities and other planning fields are preserved. If synchronization fails partway, rerun the same feed. The action reads the saved issue and Project state before retrying and confirms closure before reporting success. [Alert implementation](../actions/track-security-alerts/action.yml) · [Project setup and credentials](../_README.md)
 
 ## 🗺️ Architecture and trust boundaries
 

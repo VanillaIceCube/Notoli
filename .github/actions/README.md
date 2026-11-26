@@ -27,7 +27,7 @@ A local action is a reusable step called with `uses: ./.github/actions/<name>`. 
 
 ## 🔐 Reviewer contract
 
-Each persona has its own GitHub App and OpenAI credentials. The App token publishes that persona’s reviews. The workflow token reads evidence about checks, statuses and branch rules. PR text, prior discussion and scanner output are untrusted inputs. Forks receive the independent gates. The three review workflows have credentials only on eligible same-repository PRs. [Credential setup](../README.md)
+Each persona has its own GitHub App and OpenAI credentials. The App token publishes that persona’s reviews. The workflow token reads evidence about checks, statuses and branch rules. PR text, prior discussion and scanner output are untrusted inputs. Forks receive the independent gates. The three review workflows have credentials only on eligible same-repository PRs. [Credential setup](../_README.md)
 
 **Inputs and budgets.** All three reviewers accept a complete source diff up to 2,000,000 bytes. A larger diff gets an incomplete-review notice and a failing check. Only a regular, non-executable `frontend/package-lock.json` covered by the dependency gates is omitted. Other lockfiles and changes to that path’s file type remain in review. The prior-discussion collector limits pages, entries and UTF-8 bytes and identifies truncated or unavailable history. The code-review context also bounds changed-file content.
 

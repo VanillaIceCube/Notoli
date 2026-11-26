@@ -43,7 +43,7 @@ Anyways, it's deployed and works! And Diana and I use it today! Check it out!
 - [Backend](backend/README.md) — setup, APIs, authentication, email, and MCP.
 - [Frontend](frontend/README.md) — setup, pages, components, and tests.
 - [Deployment](deploy/README.md) — local Docker, configuration, and live-server guides.
-- [GitHub setup and workflows](.github/README.md) — first-PR setup and automation.
+- [GitHub setup and workflows](.github/_README.md) — first-PR setup and automation.
 - [Changelog](CHANGELOG.md) — project updates.
 
 ## 📜 License

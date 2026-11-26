@@ -110,7 +110,7 @@ not authorize merging, branch promotion, production deployment, or key rotation.
 
 ### Exact settings and verification
 
-- [Reviewer keys, App identities, and deferred migration](README.md#-credential-ownership).
+- [Reviewer keys, App identities, and deferred migration](_README.md#-credential-ownership).
 - [Required main-branch checks](workflows/README.md#main-branch-required-checks).
 - [Dependabot isolation and auto-merge policy](workflows/README.md#protected-dependabot-auto-merge).
 - [Security-alert credential and input contract](workflows/README.md#security-alert-configuration-contract).
@@ -131,9 +131,9 @@ local application setup and reviewer configuration.
 
 ## 🤝 Shared engineering ownership and rollout
 
-Follow FullStackTemplate's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#-shared-engineering-ownership-and-rollout)
+Follow FullStackTemplate's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
 for repository applicability, canonical source ownership, downstream acceptance and
-[main-first releases](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/README.md#main-first-releases).
+[main-first releases](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#main-first-releases).
 Preserve app-specific profiles and Infrastructure's separate owner authorization,
 Required CI and host operations. A shared parent closes only after required downstream
 adoptions are merged and verified or explicitly deferred with owner/tracking/acceptance.
