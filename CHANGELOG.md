@@ -13,6 +13,7 @@ All notable changes to this project are documented in this file.
 
 ### Removed
 
+- Remove the unused global Django filter backend and its dependency. Board and list filters are handled by the task views.
 - Remove the unused Gunicorn dependency from the backend image. Uvicorn serves both MCP profiles.
 
 ## 2026-11-24
