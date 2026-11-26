@@ -15,6 +15,10 @@ Source-controlled configuration and GitHub account/repository settings are separ
 | [package.json](package.json) and [package-lock.json](package-lock.json) | JavaScript dependencies for automation and their verified install versions. |
 | [dependabot.yml](dependabot.yml) | Dependency ecosystems and update schedules. |
 
+Keep the exact `pyyaml` development pin lowercase so Dependabot's uv updater can match it.
+The backend Docker updater accepts Python 3.12 patches and digest refreshes. Review the image constraint alongside `requires-python` when changing Python versions.
+The frontend skips TypeScript 7.0.x because the ESLint parser requires a TypeScript version below 6.1. Recheck its supported peer range when a later minor release is available.
+
 ## 🚦 Before your first pull request
 
 1. Configure Actions, dependency alerts, advanced CodeQL, and available secret scanning/push protection using this repository's settings below.
