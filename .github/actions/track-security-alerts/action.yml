@@ -7,17 +7,11 @@ inputs:
   robocop-token:
     description: RoboCop installation token with issue write access and read access to the selected alert feed.
     required: true
-  project-token:
-    description: Token used only for GitHub Project v2 reads and writes.
-    required: true
   openai-api-key:
     description: OpenAI API key.
     required: true
   openai-project-id:
     description: OpenAI project ID.
-    required: true
-  project-id:
-    description: GitHub Project v2 node ID.
     required: true
   model:
     description: Accepted AI model, resolved from repository variables by the caller.
@@ -39,24 +33,13 @@ runs:
       shell: bash
       env:
         FEED: ${{ inputs.feed }}
-        PROJECT_ID: ${{ inputs.project-id }}
         ROBOCOP_TOKEN: ${{ inputs.robocop-token }}
-        PROJECT_TOKEN: ${{ inputs.project-token }}
         MODEL: ${{ inputs.model || 'gpt-6-luna' }}
         REASONING_EFFORT: ${{ inputs.reasoning-effort || 'medium' }}
         MAX_OUTPUT_TOKENS: ${{ inputs.max-output-tokens || '16000' }}
       run: node "$GITHUB_ACTION_PATH/track-security-alerts.js"
 
-    - name: Validate Project access and schema before issue changes
-      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-      env:
-        PROJECT_ID: ${{ inputs.project-id }}
-      with:
-        github-token: ${{ inputs.project-token }}
-        script: |
-          await require(`${process.env.GITHUB_WORKSPACE}/.github/actions/track-security-alerts/track-security-alerts.js`).validateProject(github, core, process.env.PROJECT_ID);
-
-    - name: Fetch open structured alerts
+    - name: Validate native issue fields and fetch open alerts
       id: alerts
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       env:
@@ -90,12 +73,8 @@ runs:
     - name: Reconcile grouped issues
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       env:
-        PROJECT_ID: ${{ inputs.project-id }}
-        PROJECT_TOKEN: ${{ inputs.project-token }}
         LLM_OUTPUT: ${{ steps.openai.outputs.content }}
       with:
         github-token: ${{ inputs.robocop-token }}
         script: |
-          await require(`${process.env.GITHUB_WORKSPACE}/.github/actions/track-security-alerts/track-security-alerts.js`).reconcile({
-            issueGithub: github, projectGithub: getOctokit(process.env.PROJECT_TOKEN), context, core,
-          });
+          await require(`${process.env.GITHUB_WORKSPACE}/.github/actions/track-security-alerts/track-security-alerts.js`).reconcile({ github, context, core });

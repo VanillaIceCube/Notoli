@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- Track security alerts in native GitHub Issues using RoboCop's existing installation token and repository issue fields.
 - Retire the old MCP task names, receipt translation and obsolete approval paths. Reject undeclared tool arguments and keep used request IDs reserved.
 - Serve the singular board and list routes and return 404 for retired board links. Match the shared CI workflows. Save SQLite and both existing app containers before migrations and stop both services on a failed deployment health check.
 - Compare the shared launcher, tests and workflow directly with the Infrastructure commit in `deploy/production/app.json`.

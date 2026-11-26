@@ -226,147 +226,67 @@ function withLifecycleNote(body, note) {
   return `${base}\n\n---\n\n${LIFECYCLE_MARKER}\n${note}`;
 }
 
-async function readProjectFields(github, projectId) {
-  const { node } = await github.graphql(`query($id: ID!) {
-    node(id: $id) { ... on ProjectV2 {
-      title fields(first: 100) { nodes {
-        ... on ProjectV2Field { id name dataType }
-        ... on ProjectV2SingleSelectField { id name dataType options { id name } }
-      } }
-    } }
-  }`, { id: projectId });
-  if (!Array.isArray(node?.fields?.nodes)) throw new Error("Project credential cannot read the configured Project.");
-  return { title: node.title, fields: new Map(node.fields.nodes.map(field => [field.name, field])) };
-}
+const issueApiHeaders = { "X-GitHub-Api-Version": "2026-03-10" };
+const issueFieldRoute = "/repos/{owner}/{repo}/issues/{issue_number}/issue-field-values";
 
-async function* projectItems(github, projectId) {
-  let after = null;
-  do {
-    const { node } = await github.graphql(`query($project: ID!, $after: String) {
-      node(id: $project) { ... on ProjectV2 {
-        items(first: 100, after: $after) { nodes { id content { ... on Issue { id } } } pageInfo { hasNextPage endCursor } }
-      } }
-    }`, { project: projectId, after });
-    if (!Array.isArray(node?.items?.nodes)) throw new Error("Could not read items from the configured GitHub Project.");
-    yield* node.items.nodes;
-    after = node.items.pageInfo?.hasNextPage ? node.items.pageInfo.endCursor : null;
-  } while (after);
-}
-
-async function loadProjectState(github, projectId) {
-  const { fields } = await readProjectFields(github, projectId);
-  const itemsByContentId = new Map();
-  for await (const item of projectItems(github, projectId)) {
-    if (item.content?.id) itemsByContentId.set(item.content.id, item.id);
-  }
-  return { fields, itemsByContentId };
-}
-
-async function findProjectItemId(github, projectId, contentId) {
-  for await (const item of projectItems(github, projectId)) {
-    if (item.content?.id === contentId) return item.id;
-  }
-  return null;
-}
-
-const projectItemRetryDelays = [0, 250, 500, 1000, 2000, 4000];
-
-function isProjectItemAlreadyExistsError(error) {
-  return error?.errors?.some((entry) => {
-    const message = String(entry.message ?? "").trim();
-    const typeMatches = !entry.type || entry.type === "UNPROCESSABLE";
-    return (
-      typeMatches &&
-      /^Content already exists in (?:this|the) project\.?$/i.test(message)
-    );
-  });
-}
-
-async function findProjectItemIdEventually(github, projectId, contentId) {
-  for (const delay of projectItemRetryDelays) {
-    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
-    const itemId = await findProjectItemId(github, projectId, contentId);
-    if (itemId) return itemId;
-  }
-  return null;
-}
-
-async function ensureProjectItem(github, projectId, projectState, issue, sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))) {
-  const existingItemId = projectState.itemsByContentId.get(issue.node_id);
-  if (existingItemId) return existingItemId;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const data = await github.graphql(
-        "mutation($project: ID!, $content: ID!) { addProjectV2ItemById(input: { projectId: $project, contentId: $content }) { item { id } } }",
-        { project: projectId, content: issue.node_id },
-      );
-      const itemId = data.addProjectV2ItemById.item.id;
-      projectState.itemsByContentId.set(issue.node_id, itemId);
-      return itemId;
-    } catch (error) {
-      const duplicate = isProjectItemAlreadyExistsError(error);
-      const transient = [429, 500, 502, 503, 504].includes(error?.status) ||
-        ["ETIMEDOUT", "ECONNRESET", "EAI_AGAIN"].includes(error?.code);
-      if (!duplicate && !transient) throw new Error(`Project attachment failed for issue #${issue.number}; rerun reuses its saved source refs.`, { cause: error });
-      const itemId = await (duplicate ? findProjectItemIdEventually : findProjectItemId)(github, projectId, issue.node_id);
-      if (itemId) {
-        projectState.itemsByContentId.set(issue.node_id, itemId);
-        return itemId;
+async function loadIssuePlanning(github, { owner, repo }) {
+  const { repository } = await github.graphql(
+    `query($owner: String!, $repo: String!) {
+      repository(owner: $owner, name: $repo) {
+        issueTypes(first: 25) { nodes { name } }
+        issueFields(first: 25) { nodes {
+          ... on IssueFieldCommon { name dataType fullDatabaseId }
+          ... on IssueFieldSingleSelect { options { name } }
+        } }
       }
-      if (duplicate || attempt === 2) throw new Error(`Project attachment unresolved for issue #${issue.number} after bounded recovery; rerun reuses its saved source refs.`, { cause: error });
-      await sleep(attempt === 0 ? 250 : 1000);
-    }
+    }`,
+    { owner, repo },
+  );
+  if (!repository?.issueTypes?.nodes?.some(type => type?.name === "Security")) {
+    throw new Error("Native Security issue type unavailable.");
   }
+  const requirements = {
+    Domain: ["CI/CD"],
+    Priority: ["P0", "P1", "P2"],
+    Size: ["M"],
+    Estimate: "NUMBER",
+    "End date": "DATE",
+  };
+  const fields = {};
+  for (const [name, required] of Object.entries(requirements)) {
+    const field = repository.issueFields?.nodes?.find(node => node?.name === name);
+    const isSelect = Array.isArray(required);
+    const id = Number(field?.fullDatabaseId);
+    if (!Number.isSafeInteger(id) || id <= 0 ||
+        field.dataType !== (isSelect ? "SINGLE_SELECT" : required) ||
+        (isSelect && !required.every(option => field.options?.some(value => value.name === option)))) {
+      throw new Error(`Native issue field or required options unavailable: ${name}`);
+    }
+    fields[name] = id;
+  }
+  return fields;
 }
 
-async function projectValuesToUpdate(github, itemId, defaults, urgent) {
-  const data = await github.graphql(
-    "query($item: ID!) { node(id: $item) { ... on ProjectV2Item { fieldValues(first: 100) { nodes { ... on ProjectV2ItemFieldSingleSelectValue { name field { ... on ProjectV2SingleSelectField { name } } } ... on ProjectV2ItemFieldNumberValue { field { ... on ProjectV2Field { name } } } } } } } }",
-    { item: itemId },
-  );
-  const nodes = data.node?.fieldValues?.nodes;
-  if (!Array.isArray(nodes)) throw new Error("Cannot verify existing Project fields; rerun to resume without overwriting planning.");
-  const current = new Map(nodes.map(node => [node.field?.name, node.name]));
-  const values = Object.fromEntries(Object.entries(defaults).filter(([name]) => !current.has(name)));
-  const priority = current.get("Priority");
-  // P0 is the most urgent option. Keep higher and unrecognized human priorities.
+async function issueFieldsToUpdate(github, issue, fields, defaults, urgent) {
+  const { data } = await github.request(`GET ${issueFieldRoute}`, { ...issue, headers: issueApiHeaders });
+  const current = new Map(data.map(field => [field.issue_field_id, field.single_select_option?.name ?? field.value]));
+  const values = Object.fromEntries(Object.entries(defaults).filter(([name]) => !current.has(fields[name])));
+  const priority = current.get(fields.Priority);
+  // Keep higher and unrecognized manual priorities.
   if (urgent && /^P[0-3]$/.test(priority) && priority > defaults.Priority) {
     values.Priority = defaults.Priority;
   }
   return values;
 }
 
-function projectFieldValue(field, value) {
-  if (typeof value === "number") return { number: value };
-  if (field.dataType === "DATE") return { date: value };
-  const option = field.options?.find((candidate) => candidate.name === value);
-  if (!option) {
-    throw new Error(`Project field ${field.name} is missing option ${value}.`);
-  }
-  return { singleSelectOptionId: option.id };
-}
-
-async function setProjectValues(
-  github,
-  projectId,
-  projectState,
-  itemId,
-  values,
-) {
-  for (const [name, value] of Object.entries(values)) {
-    const field = projectState.fields.get(name);
-    if (!field) {
-      throw new Error(`Project field ${name} is required but was not found.`);
-    }
-    await github.graphql(
-      "mutation($project: ID!, $item: ID!, $field: ID!, $value: ProjectV2FieldValue!) { updateProjectV2ItemFieldValue(input: { projectId: $project, itemId: $item, fieldId: $field, value: $value }) { projectV2Item { id } } }",
-      {
-        project: projectId,
-        item: itemId,
-        field: field.id,
-        value: projectFieldValue(field, value),
-      },
-    );
+async function addIssueFields(github, issue, fields, values) {
+  const issueFieldValues = Object.entries(values).map(([name, value]) => ({ field_id: fields[name], value }));
+  if (issueFieldValues.length) {
+    await github.request(`POST ${issueFieldRoute}`, {
+      ...issue,
+      headers: issueApiHeaders,
+      issue_field_values: issueFieldValues,
+    });
   }
 }
 
@@ -401,20 +321,13 @@ async function closeManagedIssue(issueGithub, parameters, expectedBody) {
 
 async function synchronizeSecurityAlerts({
   issueGithub,
-  projectGithub,
+  fields,
   core,
   context,
-  projectId,
   source,
   groups,
-  sleep,
   currentDate = new Date().toISOString().slice(0, 10),
 }) {
-  if (!issueGithub || !projectGithub) {
-    throw new Error(
-      "Separate RoboCop issue and Project v2 GitHub clients are required.",
-    );
-  }
   const { owner, repo } = context.repo;
   if (!["codeql", "vulnerability", "malware"].includes(source.feed)) throw new Error(`Unsupported alert feed: ${source.feed}`);
   validateGroups(source, groups);
@@ -426,6 +339,7 @@ async function synchronizeSecurityAlerts({
       repo,
       state: "open",
       per_page: 100,
+      headers: issueApiHeaders,
     },
   );
   const plan = planReconciliation({
@@ -438,7 +352,6 @@ async function synchronizeSecurityAlerts({
     return { created: 0, updated: 0, closed: 0 };
   }
 
-  const projectState = await loadProjectState(projectGithub, projectId);
   const alertByRef = new Map(source.alerts.map((alert) => [alert.ref, alert]));
   const canonicalByRef = new Map();
   let created = 0;
@@ -455,6 +368,8 @@ async function synchronizeSecurityAlerts({
         issue_number: existingIssue.number,
         title: group.title,
         body,
+        headers: issueApiHeaders,
+        ...(existingIssue.type ? {} : { type: "Security" }),
       }));
       updated += 1;
     } else {
@@ -465,6 +380,8 @@ async function synchronizeSecurityAlerts({
         body,
         labels: [source.feed],
         assignees: [owner],
+        headers: issueApiHeaders,
+        type: "Security",
       }));
       created += 1;
     }
@@ -476,29 +393,13 @@ async function synchronizeSecurityAlerts({
     if (!issue.assignees?.some(user => (user.login ?? user) === owner)) {
       await issueGithub.rest.issues.addAssignees({ ...issueParameters, assignees: [owner] });
     }
-    const itemId = await ensureProjectItem(
-      projectGithub,
-      projectId,
-      projectState,
-      issue,
-      sleep,
-    );
     const alerts = group.alert_refs.map(ref => alertByRef.get(ref));
     const defaults = {
-      Status: "Backlog", Domain: "CI/CD", "Work type": "Security",
-      Priority: alertPriority(source.feed, alerts), Size: "M", Estimate: 3,
+      Domain: "CI/CD", Priority: alertPriority(source.feed, alerts), Size: "M", Estimate: 3,
     };
     const urgent = alerts.some(alert => ["critical", "high", "unknown"].includes(alert.severity));
-    const values = await projectValuesToUpdate(projectGithub, itemId, defaults, urgent);
-    if (Object.keys(values).length) {
-      await setProjectValues(
-        projectGithub,
-        projectId,
-        projectState,
-        itemId,
-        values,
-      );
-    }
+    const values = await issueFieldsToUpdate(issueGithub, issueParameters, fields, defaults, urgent);
+    await addIssueFields(issueGithub, issueParameters, fields, values);
     for (const ref of group.alert_refs) canonicalByRef.set(ref, issue);
     core.info(
       `${existingIssue ? "Updated" : "Created"} issue #${issue.number} for ${group.alert_refs.length} alert(s).`,
@@ -525,17 +426,9 @@ async function synchronizeSecurityAlerts({
 
     const parameters = { owner, repo, issue_number: staleIssue.number };
     const body = withLifecycleNote(staleIssue.body, lifecycleNote);
-    // Persist history before any operation which can trigger Project auto-close.
+    // Save history and the end date while the issue is still discoverable on reruns.
     await issueGithub.rest.issues.update({ ...parameters, body });
-    const itemId = await ensureProjectItem(
-      projectGithub, projectId, projectState, staleIssue,
-    );
-    // End date first: a partial failure leaves an open issue discoverable on rerun.
-    // Done is last because the Project workflow may immediately close the issue.
-    await setProjectValues(projectGithub, projectId, projectState, itemId, {
-      "End date": currentDate,
-      Status: "Done",
-    });
+    await addIssueFields(issueGithub, parameters, fields, { "End date": currentDate });
     await closeManagedIssue(issueGithub, parameters, body);
     closed += 1;
     core.info(
@@ -547,7 +440,7 @@ async function synchronizeSecurityAlerts({
 }
 
 module.exports = {
-  readProjectFields,
+  loadIssuePlanning,
   validateGroups,
   closeManagedIssue,
   alertPriority,

@@ -10,7 +10,7 @@ A local action is a reusable step called with `uses: ./.github/actions/<name>`. 
 | [get-prior-ai-reviews](get-prior-ai-reviews/action.yml) | Verifies the reviewer's bot identity and collects bounded, attributed PR discussion for that reviewer. |
 | [request-ai-response](request-ai-response/action.yml) | Validates the model, effort and token limit, calls the Responses API and records aggregate usage. |
 | [publish-ai-review](publish-ai-review/action.yml) | Publishes the reviewer’s verdict on the current PR head and reconciles eligible threads owned by that reviewer. |
-| [track-security-alerts](track-security-alerts/action.yml) | Validates configuration and Project access, fetches one feed, groups open findings and reconciles the tracking issues. |
+| [track-security-alerts](track-security-alerts/action.yml) | Validates the native issue schema, fetches one feed, groups open findings and reconciles the tracking issues. |
 | [setup-uv](setup-uv/action.yml) | Installs the reviewed uv wheel and exposes the locked Python environment to subsequent steps. |
 | [setup-lint-bot](setup-lint-bot/action.yml) | Looks up the lint bot’s identity and prepares its Git credentials for an eligible lint fix. |
 
@@ -35,7 +35,7 @@ Each persona has its own GitHub App and OpenAI credentials. The App token publis
 
 **Verdicts and threads.** `REQUEST_CHANGES` fails the check even when the same finding appeared earlier. Valid `APPROVE` and `COMMENT` results pass. Missing credentials, malformed output, incomplete major-upgrade evidence or an outdated head prevent an approval. To resolve one of its own threads, the [publisher](publish-ai-review/reconcile-ai-review.js) verifies the current head, original author, complete conversation, exact source replacement, approval and successful independent checks. Threads with another participant or insufficient evidence stay open. It checks the result after mutation and handles head changes without treating stale feedback as resolved. Writers for the same persona and PR are serialized.
 
-**Alert tracking.** The [alert action](track-security-alerts/action.yml) keeps RoboCop’s issue credentials separate from personal Project credentials. It accounts for every source alert before closing superseded issues. Empty feeds still reconcile existing tickets. For field setup, priorities and recovery, see [the workflow guide](../workflows/README.md#security-alert-configuration-contract).
+**Alert tracking.** The [alert action](track-security-alerts/action.yml) uses RoboCop’s installation token to read security alerts and update native issues and fields. It accounts for every source alert before closing superseded issues. Empty feeds still reconcile existing tickets. For field setup, priorities and recovery, see [the workflow guide](../workflows/README.md#security-alert-configuration-contract).
 
 ## 🧪 Checks
 
