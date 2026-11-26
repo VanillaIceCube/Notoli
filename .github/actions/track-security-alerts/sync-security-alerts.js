@@ -22,17 +22,59 @@ function alertRefKey(refs) {
   return normalizeAlertRefs(refs).join("|");
 }
 
-function alertDomain(alerts) {
-  const domains = new Set(alerts.map(alert => {
-    const path = (alert.location ?? alert.manifest ?? "").replaceAll("\\", "/").replace(/^(?:\.\/|\/)+/, "");
-    const root = path.toLowerCase().split("/")[0];
-    if (root === "frontend") return "Frontend";
-    if (root === "backend") return "Backend";
-    if ([".github", "deploy", "gateway", "infra", "infrastructure", "terraform", "k8s"].includes(root) ||
-        /^(?:dockerfile(?:\..*)?|docker-compose.*|compose\..*|nginx\.conf)$/.test(root)) return "Cloud";
-    return null;
-  }));
-  return domains.size === 1 ? domains.values().next().value : null;
+function domainForPath(path) {
+  const normalized = path.replaceAll("\\", "/").replace(/^(?:\.\/|\/)+/, "").toLowerCase();
+  const root = normalized.split("/")[0];
+  if (root === "frontend") return "Frontend";
+  if (root === "backend") return "Backend";
+
+  const cloudDirectories = [".github", "deploy", "gateway", "infra", "infrastructure", "terraform", "k8s"];
+  const cloudFile = /^(?:dockerfile(?:\..*)?|docker-compose.*|compose\..*|nginx\.conf)$/;
+  if (cloudDirectories.includes(root) || cloudFile.test(root)) return "Cloud";
+  return null;
+}
+
+function domainForDependency(ecosystem, path, infrastructure) {
+  if (["actions", "github-actions", "docker"].includes(ecosystem)) return "Cloud";
+  // Infrastructure uses Node and Python for tooling, so neither identifies an app component.
+  if (infrastructure) return null;
+
+  if (ecosystem === "npm" || /^package(?:-lock)?\.json$/i.test(path)) return "Frontend";
+  if (ecosystem === "pip" || ecosystem === "uv") return "Backend";
+  return null;
+}
+
+function alertDomain(alerts, repo) {
+  const infrastructure = repo === "JudeAndrewAlabaInfrastructure";
+  // A stable sort keeps the repository's preferred domain first when all scores tie.
+  const domains = infrastructure ? ["Cloud", "Backend", "Frontend"] : ["Backend", "Frontend", "Cloud"];
+  const scores = Object.fromEntries(domains.map(domain => [domain, { paths: 0, severity: 0, hints: 0 }]));
+  // CodeQL supplies a rule level when a security severity is unavailable.
+  const severityRank = {
+    low: 1, medium: 2, high: 3, critical: 4,
+    note: 1, warning: 2, error: 3,
+  };
+
+  for (const alert of alerts) {
+    const path = alert.location || alert.manifest || "";
+    const pathDomain = domainForPath(path);
+    const domain = pathDomain ?? domainForDependency(alert.ecosystem, path, infrastructure);
+    if (!domain) continue;
+
+    const score = scores[domain];
+    if (pathDomain) score.paths++;
+    else score.hints++;
+    score.severity = Math.max(score.severity, severityRank[alert.severity] ?? 0);
+  }
+
+  domains.sort((left, right) => {
+    const a = scores[left];
+    const b = scores[right];
+    if (a.paths !== b.paths) return b.paths - a.paths;
+    if (a.severity !== b.severity) return b.severity - a.severity;
+    return b.hints - a.hints;
+  });
+  return domains[0];
 }
 
 function alertPriority(feed, alerts) {
@@ -263,16 +305,14 @@ async function loadIssuePlanning(github, { owner, repo }) {
     Domain: ["Frontend", "Backend", "Cloud"],
     Priority: ["P0", "P1", "P2"],
     Size: ["M"],
-    "End date": "DATE",
   };
   const fields = {};
   for (const [name, required] of Object.entries(requirements)) {
     const field = repository.issueFields?.nodes?.find(node => node?.name === name);
-    const isSelect = Array.isArray(required);
     const id = Number(field?.fullDatabaseId);
     if (!Number.isSafeInteger(id) || id <= 0 ||
-        field.dataType !== (isSelect ? "SINGLE_SELECT" : required) ||
-        (isSelect && !required.every(option => field.options?.some(value => value.name === option)))) {
+        field.dataType !== "SINGLE_SELECT" ||
+        !required.every(option => field.options?.some(value => value.name === option))) {
       throw new Error(`Native issue field or required options unavailable: ${name}`);
     }
     fields[name] = id;
@@ -339,7 +379,6 @@ async function synchronizeSecurityAlerts({
   context,
   source,
   groups,
-  currentDate = new Date().toISOString().slice(0, 10),
 }) {
   const { owner, repo } = context.repo;
   if (!["codeql", "vulnerability", "malware"].includes(source.feed)) throw new Error(`Unsupported alert feed: ${source.feed}`);
@@ -391,7 +430,6 @@ async function synchronizeSecurityAlerts({
         repo,
         title: group.title,
         body,
-        labels: [source.feed],
         assignees: [owner],
         headers: issueApiHeaders,
         type: alertIssueType,
@@ -400,16 +438,12 @@ async function synchronizeSecurityAlerts({
     }
 
     const issueParameters = { owner, repo, issue_number: issue.number };
-    if (!issue.labels?.some(label => (label.name ?? label) === source.feed)) {
-      await issueGithub.rest.issues.addLabels({ ...issueParameters, labels: [source.feed] });
-    }
     if (!issue.assignees?.some(user => (user.login ?? user) === owner)) {
       await issueGithub.rest.issues.addAssignees({ ...issueParameters, assignees: [owner] });
     }
     const alerts = group.alert_refs.map(ref => alertByRef.get(ref));
-    const domain = alertDomain(alerts);
     const defaults = {
-      ...(domain ? { Domain: domain } : {}),
+      Domain: alertDomain(alerts, repo),
       Priority: alertPriority(source.feed, alerts),
       Size: "M",
     };
@@ -442,9 +476,8 @@ async function synchronizeSecurityAlerts({
 
     const parameters = { owner, repo, issue_number: staleIssue.number };
     const body = withLifecycleNote(staleIssue.body, lifecycleNote);
-    // Save history and the end date while the issue is still discoverable on reruns.
+    // Save history while the issue is still discoverable on reruns.
     await issueGithub.rest.issues.update({ ...parameters, body });
-    await addIssueFields(issueGithub, parameters, fields, { "End date": currentDate });
     await closeManagedIssue(issueGithub, parameters, body);
     closed += 1;
     core.info(

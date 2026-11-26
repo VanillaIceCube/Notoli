@@ -13,13 +13,35 @@ const {
   closeManagedIssue,
 } = require("../actions/track-security-alerts/sync-security-alerts");
 
-test("alert domains follow the affected component, with mixed and unclear groups left for triage", () => {
-  assert.equal(alertDomain([{ manifest: "frontend/package-lock.json" }]), "Frontend");
-  assert.equal(alertDomain([{ location: "./backend/apps/core/views.py" }]), "Backend");
+test("alert domains favor the most affected paths and break ties by severity", () => {
+  const frontend = { manifest: "frontend/package-lock.json", severity: "critical" };
+  const backend = { location: "./backend/apps/core/views.py", severity: "medium" };
+  assert.equal(alertDomain([backend, frontend, backend]), "Backend");
+  assert.equal(alertDomain([backend, frontend]), "Frontend");
+  assert.equal(alertDomain([frontend, backend]), "Frontend");
+  assert.equal(alertDomain([{}, frontend]), "Frontend");
   assert.equal(alertDomain([{ location: ".github/workflows/ci.yml" }, { manifest: "gateway/compose.yml" }]), "Cloud");
-  assert.equal(alertDomain([{ manifest: "frontend/package-lock.json" }, { location: "backend/manage.py" }]), null);
-  assert.equal(alertDomain([{ manifest: "package-lock.json" }]), null);
-  assert.equal(alertDomain([{ manifest: "frontend/package-lock.json" }, {}]), null);
+});
+
+test("CodeQL rule levels break a domain tie regardless of alert order", () => {
+  for (const [higher, lower] of [["error", "warning"], ["warning", "note"]]) {
+    const frontend = { location: "frontend/form.ts", severity: higher };
+    const backend = { location: "backend/views.py", severity: lower };
+    assert.equal(alertDomain([frontend, backend], "MacroMapper"), "Frontend");
+    assert.equal(alertDomain([backend, frontend], "MacroMapper"), "Frontend");
+  }
+});
+
+test("unknown paths use ecosystem evidence or a stable repository fallback", () => {
+  assert.equal(alertDomain([{ manifest: "package-lock.json" }], "Notoli"), "Frontend");
+  assert.equal(alertDomain([{ ecosystem: "pip" }], "MacroMapper"), "Backend");
+  assert.equal(alertDomain([{ ecosystem: "github-actions" }], "FullStackTemplate"), "Cloud");
+  assert.equal(alertDomain([{}], "Notoli"), "Backend");
+  assert.equal(alertDomain([{ ecosystem: "npm" }], "JudeAndrewAlabaInfrastructure"), "Cloud");
+  const frontend = { location: "frontend/page.ts" };
+  const backend = { location: "backend/views.py" };
+  assert.equal(alertDomain([frontend, backend], "Notoli"), "Backend");
+  assert.equal(alertDomain([backend, frontend], "Notoli"), "Backend");
 });
 
 test("critical and high alerts receive incident priority while medium/low vulnerabilities remain backlog work", () => {
@@ -363,7 +385,7 @@ test("omitted-alert draft recovery accounts for each source exactly once before 
 });
 
 function nativeFixture(initialIssues = []) {
-  const fields = { Domain: 1, Priority: 2, Size: 3, "End date": 5 };
+  const fields = { Domain: 1, Priority: 2, Size: 3 };
   const issues = new Map(initialIssues.map(initial => [initial.number, { state: "open", ...initial }]));
   const values = new Map();
   const events = [];
@@ -386,7 +408,6 @@ function nativeFixture(initialIssues = []) {
         events.push({ issue: issue_number, ...input });
         return { data: saved };
       },
-      addLabels: async ({ issue_number, labels }) => { issues.get(issue_number).labels = labels; },
       addAssignees: async ({ issue_number, assignees }) => { issues.get(issue_number).assignees = assignees; },
     } },
     request: async (route, { issue_number, issue_field_values }) => {
@@ -405,7 +426,7 @@ function nativeFixture(initialIssues = []) {
   async function run(alerts, groups) {
     return synchronizeSecurityAlerts({
       issueGithub: github, fields, context: { repo: { owner: "repo-owner", repo: "repo" } },
-      core: { info() {} }, source: { feed, alerts }, groups, currentDate: "2026-11-25",
+      core: { info() {} }, source: { feed, alerts }, groups,
     });
   }
   return { fields, issues, values, events, run, setFieldFailure(fail) { failFieldWrite = fail; } };
@@ -413,7 +434,7 @@ function nativeFixture(initialIssues = []) {
 
 test("native reconciliation preserves existing planning and raises urgent priority", async () => {
   const { fields, issues, values, run } = nativeFixture([
-    { ...issue(10, ["dependabot:1"]), type: { name: "Chore" } },
+    { ...issue(10, ["dependabot:1"]), type: { name: "Chore" }, labels: ["triaged"] },
     issue(11, ["dependabot:2"]),
   ]);
   values.set(10, new Map([[fields.Priority, "P2"], [fields.Domain, "Backend"], [99, "keep"]]));
@@ -424,10 +445,11 @@ test("native reconciliation preserves existing planning and raises urgent priori
   ];
   assert.deepEqual(await run(alerts, [merged]), { created: 0, updated: 1, closed: 1 });
   assert.deepEqual(issues.get(10).type, { name: "Chore" });
+  assert.deepEqual(issues.get(10).labels, ["triaged"]);
   assert.equal(values.get(10).get(fields.Priority), "P0");
   assert.equal(values.get(10).get(fields.Domain), "Backend");
   assert.equal(values.get(10).get(99), "keep");
-  assert.equal(values.get(11).get(fields["End date"]), "2026-11-25");
+  assert.equal(values.has(11), false);
   assert.match(issues.get(11).body, /coverage moved to #10/);
   assert.equal(issues.get(11).state_reason, "completed");
   await run(alerts.map(alert => ({ ...alert, severity: "medium" })), [merged]);
@@ -445,24 +467,19 @@ test("a failed native field write leaves one discoverable issue and reruns fill 
   assert.equal(fixture.issues.size, 1);
   const saved = fixture.issues.get(100);
   assert.equal(saved.type, "Bug");
-  assert.deepEqual(saved.labels, [feed]);
+  assert.equal(Object.hasOwn(saved, "labels"), false);
   assert.deepEqual(saved.assignees, ["repo-owner"]);
+  assert.equal(fixture.values.get(100).get(fixture.fields.Domain), "Backend");
   assert.equal(fixture.values.get(100).get(fixture.fields.Priority), "P1");
   assert.equal(fixture.values.get(100).get(fixture.fields.Size), "M");
 });
 
-test("reconciliation persists the note and native end date before closing and retries safely", async () => {
+test("reconciliation saves the lifecycle note before closing without writing fields", async () => {
   const fixture = nativeFixture([issue(11, ["dependabot:2"])]);
   fixture.setFieldFailure(true);
-  await assert.rejects(fixture.run([], []), /Native issue-field write failed/);
-  assert.equal(fixture.issues.get(11).state, "open");
-  assert.match(fixture.issues.get(11).body, /none of its source alerts remain/);
-  fixture.events.length = 0;
-  fixture.setFieldFailure(false);
   assert.deepEqual(await fixture.run([], []), { created: 0, updated: 0, closed: 1 });
-  const [history, endDate, close] = fixture.events;
+  const [history, close] = fixture.events;
   assert.match(history.body, /none of its source alerts remain/);
-  assert.deepEqual(endDate.values, [{ field_id: fixture.fields["End date"], value: "2026-11-25" }]);
   assert.equal(close.state, "closed");
   assert.equal(fixture.issues.get(11).body.match(/notoli-security-alert-lifecycle/g).length, 1);
   assert.deepEqual(await fixture.run([], []), { created: 0, updated: 0, closed: 0 });
