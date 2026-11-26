@@ -79,10 +79,7 @@ export const reorderLists = (boardId, orderedIds) =>
 export const fetchTasks = (listId) => requestData(`/api/tasks/?list=${listId}`);
 
 export const createTask = (listId, text) =>
-  requestData(
-    `/api/tasks/?list=${listId}`,
-    jsonRequest('POST', { text, list: listId, description: '' }),
-  );
+  requestData('/api/tasks/', jsonRequest('POST', { text, list: listId }));
 
 export const updateTask = (taskId, { text, status }) =>
   requestData(`/api/tasks/${taskId}/`, jsonRequest('PATCH', { text, status }));
