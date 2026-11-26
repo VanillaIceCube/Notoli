@@ -76,7 +76,7 @@ function configuration(dir, inputs = {}) {
 }
 
 const fields = [
-  { name: 'Domain', fullDatabaseId: 1, dataType: 'SINGLE_SELECT', options: [{ name: 'CI/CD' }] },
+  { name: 'Domain', fullDatabaseId: 1, dataType: 'SINGLE_SELECT', options: ['Frontend', 'Backend', 'Cloud'].map(name => ({ name })) },
   { name: 'Priority', fullDatabaseId: 2, dataType: 'SINGLE_SELECT', options: ['P0', 'P1', 'P2'].map(name => ({ name })) },
   { name: 'Size', fullDatabaseId: 3, dataType: 'SINGLE_SELECT', options: [{ name: 'M' }] },
   { name: 'End date', fullDatabaseId: 5, dataType: 'DATE' },
@@ -103,8 +103,8 @@ async function pipeline(dir, feed, config, nonempty, severity = 'medium') {
   let fetches = 0, providerCalls = 0, mutations = 0;
   const core = { info: v => messages.push(v), warning: v => messages.push(v), setOutput: (k, v) => { outputs[k] = v; }, setFailed: message => { throw new Error(message); } };
   const sourceAlert = feed === 'codeql'
-    ? { number: 1, html_url: 'https://example.test/alert/1', rule: { id: 'fixture', severity: 'warning' }, most_recent_instance: { location: { path: 'synthetic.py' } } }
-    : { number: 1, html_url: 'https://example.test/alert/1', security_advisory: { ghsa_id: 'GHSA-fixture', severity, summary: 'Synthetic fixture only' }, dependency: { package: { name: 'fixture', ecosystem: 'npm' }, manifest_path: 'synthetic.json' } };
+    ? { number: 1, html_url: 'https://example.test/alert/1', rule: { id: 'fixture', severity: 'warning' }, most_recent_instance: { location: { path: 'backend/synthetic.py' } } }
+    : { number: 1, html_url: 'https://example.test/alert/1', security_advisory: { ghsa_id: 'GHSA-fixture', severity, summary: 'Synthetic fixture only' }, dependency: { package: { name: 'fixture', ecosystem: 'npm' }, manifest_path: 'frontend/synthetic.json' } };
   const github = {
     graphql: async () => ({ repository: { issueFields: { nodes: fields }, issueTypes } }),
     rest: { codeScanning: { listAlertsForRepo() {} }, dependabot: { listAlertsForRepo() {} }, issues: {
@@ -156,6 +156,10 @@ async function pipeline(dir, feed, config, nonempty, severity = 'medium') {
     assert.equal(issues.length, nonempty ? 1 : 0);
     assert.equal(mutations, nonempty ? 1 : 0, 'RoboCop repairs labels and assignees only when the issue response lacks them');
     assert.equal(fieldWrites.length, nonempty ? 3 : 0);
+    if (nonempty) {
+      const domain = fieldWrites.find(write => write.field_id === 1);
+      assert.equal(domain.value, feed === 'codeql' ? 'Backend' : 'Frontend');
+    }
     if (nonempty) assert.equal(issues[0].type, 'Bug');
     assert.equal(providerCalls, nonempty ? 1 : 0);
     assert.match(messages.join('\n'), nonempty ? /Created issue #1/ : /No open .* alerts or managed issues to reconcile/);

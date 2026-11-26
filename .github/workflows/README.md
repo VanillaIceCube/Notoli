@@ -53,7 +53,7 @@ The follow-up resolves the successful CI run to its open PR into `main`. It read
 
 The daily schedules use `America/Los_Angeles` and follow daylight-saving time. Each feed also accepts manual dispatch. The three callers resolve the `AI_REVIEW_*` variables and pass them into the shared action. RoboCop’s App token reads the feed and writes its issues and native fields. The action validates credentials and the issue schema before reading alerts or updating issues.
 
-A grouped ticket records each source alert once. High alerts raise a group to P1 and critical alerts to P0. Unknown severity also warrants P1. Existing higher priorities and other planning fields are preserved. If synchronization fails partway, rerun the same feed. The action reads saved issue metadata and persists the lifecycle note and End date before closing the issue. [Alert implementation](../actions/track-security-alerts/action.yml) · [Native issue setup and credentials](../_README.md)
+A grouped ticket records each source alert once. Set Domain from the affected paths when they agree on Frontend, Backend, or Cloud. Leave mixed or unclear groups for triage and preserve an existing Domain. High alerts raise a group to P1 and critical alerts to P0. Unknown severity also warrants P1. Existing higher priorities and other planning fields are preserved. If synchronization fails partway, rerun the same feed. The action reads saved issue metadata and persists the lifecycle note and End date before closing the issue. [Alert implementation](../actions/track-security-alerts/action.yml) · [Native issue setup and credentials](../_README.md)
 
 ## 🗺️ Architecture and trust boundaries
 

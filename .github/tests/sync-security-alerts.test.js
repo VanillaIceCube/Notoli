@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const {
+  alertDomain,
   alertPriority,
   alertRefsFromBody,
   markerFor,
@@ -11,6 +12,15 @@ const {
   withLifecycleNote,
   closeManagedIssue,
 } = require("../actions/track-security-alerts/sync-security-alerts");
+
+test("alert domains follow the affected component, with mixed and unclear groups left for triage", () => {
+  assert.equal(alertDomain([{ manifest: "frontend/package-lock.json" }]), "Frontend");
+  assert.equal(alertDomain([{ location: "./backend/apps/core/views.py" }]), "Backend");
+  assert.equal(alertDomain([{ location: ".github/workflows/ci.yml" }, { manifest: "gateway/compose.yml" }]), "Cloud");
+  assert.equal(alertDomain([{ manifest: "frontend/package-lock.json" }, { location: "backend/manage.py" }]), null);
+  assert.equal(alertDomain([{ manifest: "package-lock.json" }]), null);
+  assert.equal(alertDomain([{ manifest: "frontend/package-lock.json" }, {}]), null);
+});
 
 test("critical and high alerts receive incident priority while medium/low vulnerabilities remain backlog work", () => {
   assert.equal(alertPriority("vulnerability", [{ severity: "medium" }, { severity: "critical" }]), "P0");

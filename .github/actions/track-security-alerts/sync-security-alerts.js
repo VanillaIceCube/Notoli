@@ -22,6 +22,19 @@ function alertRefKey(refs) {
   return normalizeAlertRefs(refs).join("|");
 }
 
+function alertDomain(alerts) {
+  const domains = new Set(alerts.map(alert => {
+    const path = (alert.location ?? alert.manifest ?? "").replaceAll("\\", "/").replace(/^(?:\.\/|\/)+/, "");
+    const root = path.toLowerCase().split("/")[0];
+    if (root === "frontend") return "Frontend";
+    if (root === "backend") return "Backend";
+    if ([".github", "deploy", "gateway", "infra", "infrastructure", "terraform", "k8s"].includes(root) ||
+        /^(?:dockerfile(?:\..*)?|docker-compose.*|compose\..*|nginx\.conf)$/.test(root)) return "Cloud";
+    return null;
+  }));
+  return domains.size === 1 ? domains.values().next().value : null;
+}
+
 function alertPriority(feed, alerts) {
   const severities = new Set(alerts.map(alert => alert.severity));
   if (severities.has("critical")) return "P0";
@@ -247,7 +260,7 @@ async function loadIssuePlanning(github, { owner, repo }) {
     throw new Error(`Native ${alertIssueType} issue type unavailable.`);
   }
   const requirements = {
-    Domain: ["CI/CD"],
+    Domain: ["Frontend", "Backend", "Cloud"],
     Priority: ["P0", "P1", "P2"],
     Size: ["M"],
     "End date": "DATE",
@@ -394,8 +407,11 @@ async function synchronizeSecurityAlerts({
       await issueGithub.rest.issues.addAssignees({ ...issueParameters, assignees: [owner] });
     }
     const alerts = group.alert_refs.map(ref => alertByRef.get(ref));
+    const domain = alertDomain(alerts);
     const defaults = {
-      Domain: "CI/CD", Priority: alertPriority(source.feed, alerts), Size: "M",
+      ...(domain ? { Domain: domain } : {}),
+      Priority: alertPriority(source.feed, alerts),
+      Size: "M",
     };
     const urgent = alerts.some(alert => ["critical", "high", "unknown"].includes(alert.severity));
     const values = await issueFieldsToUpdate(issueGithub, issueParameters, fields, defaults, urgent);
@@ -443,6 +459,7 @@ module.exports = {
   loadIssuePlanning,
   validateGroups,
   closeManagedIssue,
+  alertDomain,
   alertPriority,
   alertRefKey,
   alertRefsFromBody,
