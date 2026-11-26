@@ -391,13 +391,22 @@ function nativeFixture(initialIssues = []) {
   const events = [];
   let nextNumber = 100;
   let failFieldWrite = false;
+  const parents = new Map();
+  const peers = [];
   const github = {
+    graphql: async (query, args) => {
+      if (query.includes("addRelatesTo")) peers.push([args.issueId, args.relatedIssueId]);
+      else if (query.includes("addSubIssue")) parents.set(args.child, args.parent);
+      else if (query.includes("resource(url:")) return { resource: { id: "ISSUE_80" } };
+      else if (query.includes("parent { id }")) return { node: { parent: parents.get(args.id) } };
+      else assert.fail(query);
+    },
     paginate: async () => [...issues.values()].filter(candidate => candidate.state === "open"),
     rest: { issues: {
       listForRepo() {},
       get: async ({ issue_number }) => ({ data: issues.get(issue_number) }),
       create: async input => {
-        const created = { ...input, number: nextNumber++, state: "open" };
+        const created = { ...input, node_id: `ISSUE_${nextNumber}`, number: nextNumber++, state: "open" };
         issues.set(created.number, created);
         events.push({ create: created.number });
         return { data: created };
@@ -423,17 +432,17 @@ function nativeFixture(initialIssues = []) {
       values.set(issue_number, current);
     },
   };
-  async function run(alerts, groups) {
+  async function run(alerts, groups, parentNumber, sourceFeed = feed) {
     return synchronizeSecurityAlerts({
-      issueGithub: github, fields, context: { repo: { owner: "repo-owner", repo: "repo" } },
-      core: { info() {} }, source: { feed, alerts }, groups,
+      issueGithub: github, fields, parentNumber, context: { repo: { owner: "repo-owner", repo: "repo" } },
+      core: { info() {} }, source: { feed: sourceFeed, alerts }, groups,
     });
   }
-  return { fields, issues, values, events, run, setFieldFailure(fail) { failFieldWrite = fail; } };
+  return { fields, issues, values, events, parents, peers, run, setFieldFailure(fail) { failFieldWrite = fail; } };
 }
 
 test("native reconciliation preserves existing planning and raises urgent priority", async () => {
-  const { fields, issues, values, run } = nativeFixture([
+  const { fields, issues, values, peers, run } = nativeFixture([
     { ...issue(10, ["dependabot:1"]), type: { name: "Chore" }, labels: ["triaged"] },
     issue(11, ["dependabot:2"]),
   ]);
@@ -452,6 +461,7 @@ test("native reconciliation preserves existing planning and raises urgent priori
   assert.equal(values.has(11), false);
   assert.match(issues.get(11).body, /coverage moved to #10/);
   assert.equal(issues.get(11).state_reason, "completed");
+  assert.deepEqual(peers, [["ISSUE_11", "ISSUE_10"]]);
   await run(alerts.map(alert => ({ ...alert, severity: "medium" })), [merged]);
   assert.equal(values.get(10).get(fields.Priority), "P0");
 });
@@ -483,4 +493,33 @@ test("reconciliation saves the lifecycle note before closing without writing fie
   assert.equal(close.state, "closed");
   assert.equal(fixture.issues.get(11).body.match(/notoli-security-alert-lifecycle/g).length, 1);
   assert.deepEqual(await fixture.run([], []), { created: 0, updated: 0, closed: 0 });
+});
+
+test("a cross-feed peer and existing manual parent survive reconciliation", async () => {
+  const fixture = nativeFixture([
+    { number: 90, node_id: "PARENT", body: "Security remediation" },
+    issue(40, ["dependabot:1"], "malware"),
+    issue(41, ["dependabot:2"], "malware"),
+  ]);
+  const alert = { ref: "dependabot:1", severity: "medium" };
+  const groups = [group([alert.ref])];
+  await fixture.run([alert], groups, "90");
+  assert.equal(fixture.parents.get("ISSUE_100"), "PARENT");
+  assert.deepEqual(fixture.peers, [["ISSUE_100", "ISSUE_40"]]);
+
+  fixture.parents.set("ISSUE_100", "MANUAL_PARENT");
+  await fixture.run([alert], groups, "90");
+  assert.equal(fixture.parents.get("ISSUE_100"), "MANUAL_PARENT");
+});
+
+test("CodeQL relates the remediation ticket to the issue tracking its source alert", async () => {
+  const fixture = nativeFixture();
+  const alert = {
+    ref: "code-scanning:1", severity: "medium", rule: "test-rule",
+    url: "https://github.com/example/repo/security/code-scanning/1",
+    trackingIssues: ["https://github.com/example/repo/issues/80"],
+  };
+  await fixture.run([alert], [group([alert.ref])], undefined, "codeql");
+  assert.deepEqual(fixture.peers, [["ISSUE_100", "ISSUE_80"]]);
+  assert.ok(fixture.issues.get(100).body.includes(alert.url));
 });

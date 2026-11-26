@@ -372,6 +372,49 @@ async function closeManagedIssue(issueGithub, parameters, expectedBody) {
   }
 }
 
+async function relateIssues(github, issueId, relatedIssueId) {
+  if (issueId === relatedIssueId) return;
+  // Adding an existing peer link is idempotent, including from the other endpoint.
+  await github.graphql(
+    `mutation($issueId: ID!, $relatedIssueId: ID!) {
+      addRelatesTo(input: {issueId: $issueId, relatedIssueId: $relatedIssueId}) { issue { id } }
+    }`, { issueId, relatedIssueId },
+  );
+}
+
+async function syncIssueRelationships(github, issue, parentId, otherFeedIssues, alerts) {
+  if (parentId) {
+    const { node } = await github.graphql(
+      `query($id: ID!) { node(id: $id) { ... on Issue { parent { id } } } }`, { id: issue.node_id },
+    );
+    if (!node.parent) {
+      await github.graphql(
+        `mutation($parent: ID!, $child: ID!) {
+          addSubIssue(input: {issueId: $parent, subIssueId: $child}) { subIssue { id } }
+        }`, { parent: parentId, child: issue.node_id },
+      );
+    }
+  }
+
+  const alertRefs = alerts.map(alert => alert.ref);
+  const relatedIds = new Set();
+  for (const other of otherFeedIssues) {
+    if (overlapCount(alertRefsFromBody(other.body), alertRefs)) {
+      relatedIds.add(other.node_id);
+    }
+  }
+  // GitHub reports existing CodeQL tracking links independently of the issue body.
+  for (const url of new Set(alerts.flatMap(alert => alert.trackingIssues ?? []))) {
+    if (url === issue.html_url) continue;
+    const { resource } = await github.graphql(
+      `query($url: URI!) { resource(url: $url) { ... on Issue { id } } }`, { url },
+    );
+    if (!resource?.id) throw new Error(`Cannot read the issue tracking this CodeQL alert: ${url}`);
+    relatedIds.add(resource.id);
+  }
+  for (const id of relatedIds) await relateIssues(github, issue.node_id, id);
+}
+
 async function synchronizeSecurityAlerts({
   issueGithub,
   fields,
@@ -379,6 +422,7 @@ async function synchronizeSecurityAlerts({
   context,
   source,
   groups,
+  parentNumber,
 }) {
   const { owner, repo } = context.repo;
   if (!["codeql", "vulnerability", "malware"].includes(source.feed)) throw new Error(`Unsupported alert feed: ${source.feed}`);
@@ -404,7 +448,21 @@ async function synchronizeSecurityAlerts({
     return { created: 0, updated: 0, closed: 0 };
   }
 
+  let parentId;
+  if (parentNumber && plan.assignments.length) {
+    if (!/^[1-9]\d*$/.test(parentNumber)) throw new Error("Expected a positive RoboCop parent issue number.");
+    const { data: parent } = await issueGithub.rest.issues.get({ owner, repo, issue_number: Number(parentNumber) });
+    if (parent.pull_request || managedFeedFromBody(parent.body)) {
+      throw new Error("The configured RoboCop parent must be a separate tracking issue.");
+    }
+    parentId = parent.node_id;
+  }
+
   const alertByRef = new Map(source.alerts.map((alert) => [alert.ref, alert]));
+  const otherFeedIssues = openIssues.filter(issue => {
+    const feed = managedFeedFromBody(issue.body);
+    return !issue.pull_request && feed && feed !== source.feed;
+  });
   const canonicalByRef = new Map();
   let created = 0;
   let updated = 0;
@@ -450,6 +508,7 @@ async function synchronizeSecurityAlerts({
     const urgent = alerts.some(alert => ["critical", "high", "unknown"].includes(alert.severity));
     const values = await issueFieldsToUpdate(issueGithub, issueParameters, fields, defaults, urgent);
     await addIssueFields(issueGithub, issueParameters, fields, values);
+    await syncIssueRelationships(issueGithub, issue, parentId, otherFeedIssues, alerts);
     for (const ref of group.alert_refs) canonicalByRef.set(ref, issue);
     core.info(
       `${existingIssue ? "Updated" : "Created"} issue #${issue.number} for ${group.alert_refs.length} alert(s).`,
@@ -458,13 +517,11 @@ async function synchronizeSecurityAlerts({
 
   let closed = 0;
   for (const staleIssue of plan.staleIssues) {
-    const replacementNumbers = [
-      ...new Set(
-        staleIssue.alert_refs
-          .map((ref) => canonicalByRef.get(ref)?.number)
-          .filter(Boolean),
-      ),
-    ].sort((left, right) => left - right);
+    const replacements = new Set(staleIssue.alert_refs.map(ref => canonicalByRef.get(ref)).filter(Boolean));
+    for (const replacement of replacements) {
+      await relateIssues(issueGithub, staleIssue.node_id, replacement.node_id);
+    }
+    const replacementNumbers = [...replacements].map(issue => issue.number).sort((a, b) => a - b);
     const lifecycleNote =
       replacementNumbers.length > 0
         ? `_Closed automatically because current alert coverage moved to ${replacementNumbers
