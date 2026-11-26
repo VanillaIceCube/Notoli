@@ -79,13 +79,12 @@ const fields = [
   { name: 'Domain', fullDatabaseId: 1, dataType: 'SINGLE_SELECT', options: ['Frontend', 'Backend', 'Cloud'].map(name => ({ name })) },
   { name: 'Priority', fullDatabaseId: 2, dataType: 'SINGLE_SELECT', options: ['P0', 'P1', 'P2'].map(name => ({ name })) },
   { name: 'Size', fullDatabaseId: 3, dataType: 'SINGLE_SELECT', options: [{ name: 'M' }] },
-  { name: 'End date', fullDatabaseId: 5, dataType: 'DATE' },
 ];
 const issueTypes = { nodes: [{ name: 'Bug' }] };
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
 test('native schema validation fails before reading any alert feed', async () => {
-  for (const name of ['Bug', 'Priority', 'End date']) {
+  for (const name of ['Bug', 'Domain', 'Priority', 'Size']) {
     const repository = {
       issueTypes: name === 'Bug' ? { nodes: [] } : issueTypes,
       issueFields: { nodes: fields.filter(field => field.name !== name) },
@@ -108,9 +107,16 @@ async function pipeline(dir, feed, config, nonempty, severity = 'medium') {
   const github = {
     graphql: async () => ({ repository: { issueFields: { nodes: fields }, issueTypes } }),
     rest: { codeScanning: { listAlertsForRepo() {} }, dependabot: { listAlertsForRepo() {} }, issues: {
-    listForRepo() {}, create: async request => { mutations++; const issue = { ...request, labels: request.labels.map(name => ({ name })), assignees: request.assignees.map(login => ({ login })), number: 1, node_id: 'ISSUE_1' }; issues.push(issue); return { data: issue }; },
+    listForRepo() {},
+    create: async request => {
+      mutations++;
+      assert.equal(Object.hasOwn(request, 'labels'), false);
+      const issue = { ...request, labels: [], assignees: request.assignees.map(login => ({ login })), number: 1, node_id: 'ISSUE_1' };
+      issues.push(issue);
+      return { data: issue };
+    },
     update: async request => { mutations++; Object.assign(issues[0], request); return { data: issues[0] }; },
-    addLabels: async () => { mutations++; }, addAssignees: async () => { mutations++; },
+    addAssignees: async () => { mutations++; },
   } }, paginate: async method => {
     if (method === github.rest.issues.listForRepo) return issues;
     assert.ok([github.rest.codeScanning.listAlertsForRepo, github.rest.dependabot.listAlertsForRepo].includes(method)); fetches++; return nonempty ? [sourceAlert] : [];
@@ -154,7 +160,7 @@ async function pipeline(dir, feed, config, nonempty, severity = 'medium') {
     await execute(manifest.runs.steps.find(step => step.name === 'Reconcile grouped issues'));
     assert.equal(fetches, 1);
     assert.equal(issues.length, nonempty ? 1 : 0);
-    assert.equal(mutations, nonempty ? 1 : 0, 'RoboCop repairs labels and assignees only when the issue response lacks them');
+    assert.equal(mutations, nonempty ? 1 : 0, 'an assigned issue needs only the creation request');
     assert.equal(fieldWrites.length, nonempty ? 3 : 0);
     if (nonempty) {
       const domain = fieldWrites.find(write => write.field_id === 1);
