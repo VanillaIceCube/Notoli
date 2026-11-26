@@ -49,7 +49,11 @@ function alertDomain(alerts, repo) {
   // A stable sort keeps the repository's preferred domain first when all scores tie.
   const domains = infrastructure ? ["Cloud", "Backend", "Frontend"] : ["Backend", "Frontend", "Cloud"];
   const scores = Object.fromEntries(domains.map(domain => [domain, { paths: 0, severity: 0, hints: 0 }]));
-  const severityRank = { low: 1, medium: 2, high: 3, critical: 4 };
+  // CodeQL supplies a rule level when a security severity is unavailable.
+  const severityRank = {
+    low: 1, medium: 2, high: 3, critical: 4,
+    note: 1, warning: 2, error: 3,
+  };
 
   for (const alert of alerts) {
     const path = alert.location || alert.manifest || "";

@@ -23,6 +23,15 @@ test("alert domains favor the most affected paths and break ties by severity", (
   assert.equal(alertDomain([{ location: ".github/workflows/ci.yml" }, { manifest: "gateway/compose.yml" }]), "Cloud");
 });
 
+test("CodeQL rule levels break a domain tie regardless of alert order", () => {
+  for (const [higher, lower] of [["error", "warning"], ["warning", "note"]]) {
+    const frontend = { location: "frontend/form.ts", severity: higher };
+    const backend = { location: "backend/views.py", severity: lower };
+    assert.equal(alertDomain([frontend, backend], "MacroMapper"), "Frontend");
+    assert.equal(alertDomain([backend, frontend], "MacroMapper"), "Frontend");
+  }
+});
+
 test("unknown paths use ecosystem evidence or a stable repository fallback", () => {
   assert.equal(alertDomain([{ manifest: "package-lock.json" }], "Notoli"), "Frontend");
   assert.equal(alertDomain([{ ecosystem: "pip" }], "MacroMapper"), "Backend");
