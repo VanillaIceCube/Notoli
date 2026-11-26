@@ -4,6 +4,9 @@ inputs:
   feed:
     description: Alert feed to aggregate.
     required: true
+  parent-issue:
+    description: Optional number of the repository issue that owns alert remediation.
+    required: false
   robocop-token:
     description: RoboCop installation token with issue write access and read access to the selected alert feed.
     required: true
@@ -73,6 +76,7 @@ runs:
     - name: Reconcile grouped issues
       uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
       env:
+        ROBOCOP_PARENT_ISSUE: ${{ inputs.parent-issue }}
         LLM_OUTPUT: ${{ steps.openai.outputs.content }}
       with:
         github-token: ${{ inputs.robocop-token }}
