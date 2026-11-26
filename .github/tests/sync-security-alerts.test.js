@@ -403,7 +403,7 @@ function nativeFixture(initialIssues = []) {
 
 test("native reconciliation preserves existing planning and raises urgent priority", async () => {
   const { fields, issues, values, run } = nativeFixture([
-    { ...issue(10, ["dependabot:1"]), type: { name: "Bug" } },
+    { ...issue(10, ["dependabot:1"]), type: { name: "Chore" } },
     issue(11, ["dependabot:2"]),
   ]);
   values.set(10, new Map([[fields.Priority, "P2"], [fields.Domain, "Backend"], [99, "keep"]]));
@@ -413,7 +413,7 @@ test("native reconciliation preserves existing planning and raises urgent priori
     { ref: "dependabot:2", severity: "critical" },
   ];
   assert.deepEqual(await run(alerts, [merged]), { created: 0, updated: 1, closed: 1 });
-  assert.deepEqual(issues.get(10).type, { name: "Bug" });
+  assert.deepEqual(issues.get(10).type, { name: "Chore" });
   assert.equal(values.get(10).get(fields.Priority), "P0");
   assert.equal(values.get(10).get(fields.Domain), "Backend");
   assert.equal(values.get(10).get(99), "keep");
@@ -434,7 +434,7 @@ test("a failed native field write leaves one discoverable issue and reruns fill 
   assert.deepEqual(await fixture.run(alerts, groups), { created: 0, updated: 1, closed: 0 });
   assert.equal(fixture.issues.size, 1);
   const saved = fixture.issues.get(100);
-  assert.equal(saved.type, "Security");
+  assert.equal(saved.type, "Bug");
   assert.deepEqual(saved.labels, [feed]);
   assert.deepEqual(saved.assignees, ["repo-owner"]);
   assert.equal(fixture.values.get(100).get(fixture.fields.Priority), "P1");

@@ -81,13 +81,13 @@ const fields = [
   { name: 'Size', fullDatabaseId: 3, dataType: 'SINGLE_SELECT', options: [{ name: 'M' }] },
   { name: 'End date', fullDatabaseId: 5, dataType: 'DATE' },
 ];
-const issueTypes = { nodes: [{ name: 'Security' }] };
+const issueTypes = { nodes: [{ name: 'Bug' }] };
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
 test('native schema validation fails before reading any alert feed', async () => {
-  for (const name of ['Security', 'Priority', 'End date']) {
+  for (const name of ['Bug', 'Priority', 'End date']) {
     const repository = {
-      issueTypes: name === 'Security' ? { nodes: [] } : issueTypes,
+      issueTypes: name === 'Bug' ? { nodes: [] } : issueTypes,
       issueFields: { nodes: fields.filter(field => field.name !== name) },
     };
     const github = {
@@ -156,7 +156,7 @@ async function pipeline(dir, feed, config, nonempty, severity = 'medium') {
     assert.equal(issues.length, nonempty ? 1 : 0);
     assert.equal(mutations, nonempty ? 1 : 0, 'RoboCop repairs labels and assignees only when the issue response lacks them');
     assert.equal(fieldWrites.length, nonempty ? 3 : 0);
-    if (nonempty) assert.equal(issues[0].type, 'Security');
+    if (nonempty) assert.equal(issues[0].type, 'Bug');
     assert.equal(providerCalls, nonempty ? 1 : 0);
     assert.match(messages.join('\n'), nonempty ? /Created issue #1/ : /No open .* alerts or managed issues to reconcile/);
   } finally {

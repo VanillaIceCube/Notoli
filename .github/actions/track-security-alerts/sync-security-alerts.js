@@ -227,6 +227,7 @@ function withLifecycleNote(body, note) {
 }
 
 const issueApiHeaders = { "X-GitHub-Api-Version": "2026-03-10" };
+const alertIssueType = "Bug";
 const issueFieldRoute = "/repos/{owner}/{repo}/issues/{issue_number}/issue-field-values";
 
 async function loadIssuePlanning(github, { owner, repo }) {
@@ -242,8 +243,8 @@ async function loadIssuePlanning(github, { owner, repo }) {
     }`,
     { owner, repo },
   );
-  if (!repository?.issueTypes?.nodes?.some(type => type?.name === "Security")) {
-    throw new Error("Native Security issue type unavailable.");
+  if (!repository?.issueTypes?.nodes?.some(type => type?.name === alertIssueType)) {
+    throw new Error(`Native ${alertIssueType} issue type unavailable.`);
   }
   const requirements = {
     Domain: ["CI/CD"],
@@ -368,7 +369,7 @@ async function synchronizeSecurityAlerts({
         title: group.title,
         body,
         headers: issueApiHeaders,
-        ...(existingIssue.type ? {} : { type: "Security" }),
+        ...(existingIssue.type ? {} : { type: alertIssueType }),
       }));
       updated += 1;
     } else {
@@ -380,7 +381,7 @@ async function synchronizeSecurityAlerts({
         labels: [source.feed],
         assignees: [owner],
         headers: issueApiHeaders,
-        type: "Security",
+        type: alertIssueType,
       }));
       created += 1;
     }
