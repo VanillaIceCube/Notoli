@@ -11,6 +11,7 @@ import AppHeader from './components/app-core/AppHeader';
 import AppSnackbar from './components/app-core/AppSnackbar';
 import BoardNavigationDrawer from './components/app/BoardNavigationDrawer';
 import NavigationBridge from './components/app-core/NavigationBridge';
+import { boardRoute, listRoute, matchBoardPath } from './utils/navigation';
 import BoardHomeRedirect from './components/app/BoardHomeRedirect';
 
 const Login = lazy(() => import('./pages/authentication/Login'));
@@ -24,41 +25,25 @@ const OAuthConsent = lazy(() =>
   import('./pages/connections/Connections').then((module) => ({ default: module.OAuthConsent })),
 );
 
-function getLocationSignature(location) {
-  return `${location.pathname}${location.search}${location.hash}`;
-}
-
-function isBoardRoute(pathname) {
-  return /^\/board\/[^/]+(?:\/list\/[^/]+)?$/.test(pathname);
-}
-
 function BoardRoutes({ setAppBarHeader }) {
   const location = useLocation();
-  const currentSignature = getLocationSignature(location);
-  const [routeSlots, setRouteSlots] = useState([
-    { signature: currentSignature, location, active: true },
-  ]);
+  const currentSignature = `${location.pathname}${location.search}${location.hash}`;
+  // The first page stays visible while the next board or list loads behind it.
+  const [routeSlots, setRouteSlots] = useState([{ signature: currentSignature, location }]);
 
   useEffect(() => {
     setRouteSlots((slots) => {
-      const activeSlot = slots.find((slot) => slot.active) ?? slots[0];
-      const activeIsBoardRoute = activeSlot && isBoardRoute(activeSlot.location.pathname);
-      const currentIsBoardRoute = isBoardRoute(location.pathname);
-
-      if (!activeSlot || !activeIsBoardRoute || !currentIsBoardRoute) {
-        return [{ signature: currentSignature, location, active: true }];
+      const [activeSlot, pendingSlot] = slots;
+      if (!matchBoardPath(activeSlot.location.pathname) || !matchBoardPath(location.pathname)) {
+        return [{ signature: currentSignature, location }];
       }
-
-      if (activeSlot.signature === currentSignature) {
+      if (
+        activeSlot.signature === currentSignature ||
+        pendingSlot?.signature === currentSignature
+      ) {
         return slots;
       }
-
-      const pendingSlot = slots.find((slot) => slot.signature === currentSignature);
-      if (pendingSlot) {
-        return slots;
-      }
-
-      return [activeSlot, { signature: currentSignature, location, active: false }];
+      return [activeSlot, { signature: currentSignature, location }];
     });
   }, [currentSignature, location]);
 
@@ -68,30 +53,23 @@ function BoardRoutes({ setAppBarHeader }) {
 
       setRouteSlots((slots) => {
         const readySlot = slots.find((slot) => slot.signature === readySignature);
-        if (!readySlot) return slots;
-        // Loaded pages may report readiness again after a parent render. Keep
-        // the settled state referentially stable so the page effect cannot
-        // feed another route update back into itself.
-        if (slots.length === 1 && readySlot.active) return slots;
-
-        return slots
-          .map((slot) => ({ ...slot, active: slot.signature === readySignature }))
-          .filter((slot) => slot.signature === readySignature);
+        if (!readySlot || slots.length === 1) return slots;
+        return [readySlot];
       });
     },
     [currentSignature],
   );
 
-  return routeSlots.map((slot) => (
-    <div key={slot.signature} hidden={!slot.active}>
+  return routeSlots.map((slot, index) => (
+    <div key={slot.signature} hidden={index !== 0}>
       <RouteContent routeKey={slot.signature} onError={() => handlePageReady(slot.signature)}>
         <Routes location={slot.location}>
           <Route
-            path="/board/:boardId"
+            {...boardRoute}
             element={
               <AuthenticatedRoute>
                 <BoardListsPage
-                  active={slot.active}
+                  active={index === 0}
                   onPageReady={() => handlePageReady(slot.signature)}
                   setAppBarHeader={setAppBarHeader}
                 />
@@ -100,17 +78,18 @@ function BoardRoutes({ setAppBarHeader }) {
           />
 
           <Route
-            path="/board/:boardId/list/:listId"
+            {...listRoute}
             element={
               <AuthenticatedRoute>
                 <ListTasksPage
-                  active={slot.active}
+                  active={index === 0}
                   onPageReady={() => handlePageReady(slot.signature)}
                   setAppBarHeader={setAppBarHeader}
                 />
               </AuthenticatedRoute>
             }
           />
+          <Route path="*" element={<h1>Page not found</h1>} />
         </Routes>
       </RouteContent>
     </div>
@@ -120,10 +99,9 @@ function BoardRoutes({ setAppBarHeader }) {
 function ApplicationSession({ showSnackbar }) {
   const isCurrentSession = useSessionGuard();
   const boardList = useBoardList();
-  // App Bar
+  const connectionsEnabled = import.meta.env.VITE_MCP_ENABLED === '1';
   const [appBarHeader, setAppBarHeader] = useState('');
 
-  // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const showSessionSnackbar = (severity, message) => {
@@ -154,28 +132,30 @@ function ApplicationSession({ showSnackbar }) {
           <Route path="/register" element={<Register showSnackbar={showSnackbar} />} />
           <Route path="/forgot-password" element={<ForgotPassword showSnackbar={showSnackbar} />} />
           <Route path="/reset-password" element={<ResetPassword showSnackbar={showSnackbar} />} />
-          {import.meta.env.VITE_MCP_ENABLED === '1' && (
-            <>
-              <Route
-                path="/connections/authorize"
-                element={
-                  <AuthenticatedRoute>
-                    <OAuthConsent />
-                  </AuthenticatedRoute>
-                }
-              />
-              <Route
-                path="/connections"
-                element={
-                  <AuthenticatedRoute>
-                    <ConnectedApps />
-                  </AuthenticatedRoute>
-                }
-              />
-            </>
-          )}
-
-          <Route path="/connections/*" element={<Navigate to="/" replace />} />
+          <Route
+            path="/connections/authorize"
+            element={
+              connectionsEnabled ? (
+                <AuthenticatedRoute>
+                  <OAuthConsent />
+                </AuthenticatedRoute>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route
+            path="/connections"
+            element={
+              connectionsEnabled ? (
+                <AuthenticatedRoute>
+                  <ConnectedApps />
+                </AuthenticatedRoute>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
           <Route path="*" element={<BoardRoutes setAppBarHeader={setAppBarHeader} />} />
         </Routes>
       </RouteContent>

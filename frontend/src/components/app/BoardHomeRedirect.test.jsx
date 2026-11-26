@@ -1,7 +1,6 @@
 import useBoardList from '../../hooks/boards/useBoardList';
 import useSession from '../../hooks/authentication/useSession';
 import { startSession } from '../../services/authentication/sessionState';
-import { createElement } from 'react';
 import { act, waitFor } from '@testing-library/react';
 import { createDeferred, renderWithProviders } from '../../test-helpers/utils';
 import BoardHomeRedirect from './BoardHomeRedirect';
@@ -16,11 +15,11 @@ vi.mock('../../services/boards/notoliApiClient', () => ({
 }));
 function RedirectWithBoards(props) {
   const boardList = useBoardList();
-  return createElement(BoardHomeRedirect, { ...props, boardList });
+  return <BoardHomeRedirect {...props} boardList={boardList} />;
 }
 function SessionRedirect(props) {
   const { version } = useSession();
-  return createElement(RedirectWithBoards, { ...props, key: version });
+  return <RedirectWithBoards key={version} {...props} />;
 }
 describe('BoardHomeRedirect', () => {
   const mockNavigate = vi.fn();
@@ -47,7 +46,7 @@ describe('BoardHomeRedirect', () => {
         id: 12,
       },
     ]);
-    renderWithProviders(createElement(SessionRedirect, { showSnackbar: vi.fn() }));
+    renderWithProviders(<SessionRedirect showSnackbar={vi.fn()} />);
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/board/12', {
         replace: true,
@@ -69,7 +68,7 @@ describe('BoardHomeRedirect', () => {
         id: 3,
       },
     ]);
-    renderWithProviders(createElement(SessionRedirect, { showSnackbar: vi.fn() }));
+    renderWithProviders(<SessionRedirect showSnackbar={vi.fn()} />);
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/board/3', {
         replace: true,
@@ -80,7 +79,7 @@ describe('BoardHomeRedirect', () => {
     const pending = createDeferred();
     fetchBoards.mockReturnValueOnce(pending.promise);
     const showSnackbar = vi.fn();
-    renderWithProviders(createElement(SessionRedirect, { showSnackbar }));
+    renderWithProviders(<SessionRedirect showSnackbar={showSnackbar} />);
     await act(async () => pending.resolve([]));
 
     expect(fetchBoards).toHaveBeenCalledOnce();
@@ -94,7 +93,7 @@ describe('BoardHomeRedirect', () => {
   ])('stays home and reports a failed lookup %s', async (error, message) => {
     fetchBoards.mockRejectedValueOnce(error);
     const showSnackbar = vi.fn();
-    renderWithProviders(createElement(SessionRedirect, { showSnackbar }));
+    renderWithProviders(<SessionRedirect showSnackbar={showSnackbar} />);
 
     await waitFor(() => expect(showSnackbar).toHaveBeenCalledWith('error', message));
     expect(mockNavigate).not.toHaveBeenCalled();
@@ -103,9 +102,7 @@ describe('BoardHomeRedirect', () => {
   test('leaving home cancels the pending board redirect', async () => {
     const pending = createDeferred();
     fetchBoards.mockReturnValueOnce(pending.promise);
-    const { unmount } = renderWithProviders(
-      createElement(SessionRedirect, { showSnackbar: vi.fn() }),
-    );
+    const { unmount } = renderWithProviders(<SessionRedirect showSnackbar={vi.fn()} />);
     unmount();
 
     await act(async () => pending.resolve([{ id: 3 }]));
@@ -126,7 +123,7 @@ test('ignores a previous account board lookup when selecting the new account hom
       }),
     )
     .mockResolvedValue([{ id: 12 }]);
-  renderWithProviders(createElement(SessionRedirect, { showSnackbar: vi.fn() }));
+  renderWithProviders(<SessionRedirect showSnackbar={vi.fn()} />);
   act(() => startSession({ access: 'new', refresh: 'new-r' }));
   await waitFor(() => expect(navigate).toHaveBeenCalledWith('/board/12', { replace: true }));
   await act(async () => {

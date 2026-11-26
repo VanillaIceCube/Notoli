@@ -1,7 +1,7 @@
 # 🐳 Notoli deployment
 
 Production uses the shared Infrastructure gateway and the
-[app-only release/recovery procedure](production/README.md). Root Compose and
+[app-only launch procedure](production/README.md). Root Compose and
 Nginx files operate local development stacks only.
 
 ## 🧭 Structure
@@ -13,7 +13,7 @@ Nginx files operate local development stacks only.
 | `compose.yml` | Standalone local HTTPS using checkout-built images |
 | `nginx.conf` | Proxy template expanded by official Nginx startup |
 | `production/` | Pinned shared release engine and app-owned production policy |
-| `tests/` | Release, configuration and recovery checks |
+| `tests/` | Launch, configuration and database integrity checks |
 
 Use `compose.hotswap.yml` while coding: mounted source reloads automatically.
 Use `compose.yml` to run built images behind local HTTPS; rebuild after source
@@ -135,7 +135,7 @@ Production ingress, Cloudflare, certificates and trust remain Infrastructure-own
 Both profiles persist SQLite at `deploy/db.sqlite3`. Never replace existing data
 with an empty file. If Docker previously created a directory there, stop the
 stack and inspect/back up its contents before correcting the bind. Production
-uses the approved application database path and private recovery procedure;
+uses the approved application database bind and writer checks;
 review managed-database adoption before adding backend replicas.
 
 ```powershell
@@ -226,7 +226,7 @@ See [workflow checks and validation](../.github/workflows/README.md#-checks-and-
 
 ## 📚 Reference
 
-- [Live-server releases and recovery](production/README.md).
+- [Production launches](production/README.md).
 - [Backend configuration](../backend/README.md).
 - [Frontend development](../frontend/README.md).
 

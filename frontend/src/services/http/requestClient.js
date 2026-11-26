@@ -162,32 +162,11 @@ export function normalizeHeaders(headers) {
   return result;
 }
 
-function hasAuthorizationHeader(headers) {
-  return Object.entries(headers).some(
-    ([key, value]) => key.toLowerCase() === 'authorization' && Boolean(value),
-  );
-}
-
-function getStoredAccessToken() {
-  return getSessionSnapshot().accessToken;
-}
-
-function removeAuthorizationHeaders(headers) {
-  Object.keys(headers).forEach((key) => {
-    if (key.toLowerCase() === 'authorization') {
-      delete headers[key];
-    }
-  });
-}
-
-function withAccessToken(options, accessToken) {
-  const headers = normalizeHeaders(options.headers);
-  removeAuthorizationHeaders(headers);
+function setAccessToken(headers, accessToken) {
+  for (const key of Object.keys(headers)) {
+    if (key.toLowerCase() === 'authorization') delete headers[key];
+  }
   headers.Authorization = `Bearer ${accessToken}`;
-  return {
-    ...options,
-    headers,
-  };
 }
 
 export async function apiFetch(path, options = {}) {
@@ -195,16 +174,14 @@ export async function apiFetch(path, options = {}) {
   const url = `${API_BASE_URL}${path}`;
   const headers = normalizeHeaders(fetchOptions.headers);
 
-  const sessionVersion = getSessionVersion();
-  const storedToken = getStoredAccessToken();
+  const { version: sessionVersion, accessToken: storedToken } = getSessionSnapshot();
   const explicitAuthorization = Object.entries(headers).find(
     ([key, value]) => key.toLowerCase() === 'authorization' && Boolean(value),
   )?.[1];
   const ownsAuthorization =
     !explicitAuthorization || explicitAuthorization === `Bearer ${storedToken}`;
-  if (storedToken && !hasAuthorizationHeader(headers) && shouldRedirectToLogin(path)) {
-    removeAuthorizationHeaders(headers);
-    headers.Authorization = `Bearer ${storedToken}`;
+  if (storedToken && !explicitAuthorization && shouldRedirectToLogin(path)) {
+    setAccessToken(headers, storedToken);
   }
 
   const mergedOptions = { ...fetchOptions };
@@ -223,18 +200,20 @@ export async function apiFetch(path, options = {}) {
     getSessionVersion() === sessionVersion
   ) {
     // Another request may already have rotated this session's access token.
-    const currentToken = getStoredAccessToken();
+    const currentToken = getSessionSnapshot().accessToken;
     const refreshResult =
       currentToken && currentToken !== storedToken
         ? { status: 'refreshed', accessToken: currentToken }
         : await refreshAccessToken(sessionVersion);
     if (getSessionVersion() !== sessionVersion) return response;
     if (refreshResult.status === 'refreshed') {
-      const retried = await fetch(url, withAccessToken(mergedOptions, refreshResult.accessToken));
+      const retryHeaders = { ...headers };
+      setAccessToken(retryHeaders, refreshResult.accessToken);
+      const retried = await fetch(url, { ...mergedOptions, headers: retryHeaders });
       if (
         retried?.status === 401 &&
         getSessionVersion() === sessionVersion &&
-        getStoredAccessToken() === refreshResult.accessToken
+        getSessionSnapshot().accessToken === refreshResult.accessToken
       ) {
         handleUnauthorized(authReturnTo);
       }

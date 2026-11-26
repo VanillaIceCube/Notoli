@@ -19,7 +19,7 @@ module.exports = async function getSecurityEvidence({ github, context, infrastru
     per_page: 100,
   });
   const sensitivePaths = infrastructure
-    ? /(^app-release\/|^scripts\/|^nginx\/|compose\.ya?ml$|^\.github\/|pyproject\.toml|uv\.lock|requirements|package|Dockerfile|auth|token|secret|password)/i
+    ? /(^deploy\/|^scripts\/|^gateway\/|compose\.ya?ml$|^\.github\/|pyproject\.toml|uv\.lock|requirements|package|Dockerfile|auth|token|secret|password)/i
     : /(^backend\/authentication\/|\/permissions?\.py$|\/settings\.py$|\/urls\.py$|(?:requirements\.txt|pyproject\.toml|uv\.lock)$|package-lock\.json$|package\.json$|^\.github\/(?:workflows|actions|scripts|tests)\/|^deploy\/|Dockerfile|nginx|auth|csrf|cors|token|secret|password)/i;
   const securitySensitiveFiles = files
     .map((file) => file.filename)
@@ -104,13 +104,13 @@ module.exports = async function getSecurityEvidence({ github, context, infrastru
     upstream_gates: {
       codeql: process.env.CODEQL_RESULT,
       dependency_vulnerability: process.env.DEPENDENCY_VULNERABILITY_RESULT,
-      ...(process.env.DEPENDENCY_MALWARE_RESULT !== undefined && { dependency_malware: process.env.DEPENDENCY_MALWARE_RESULT }),
+      ...(!infrastructure && process.env.DEPENDENCY_MALWARE_RESULT !== undefined && { dependency_malware: process.env.DEPENDENCY_MALWARE_RESULT }),
       secret_scan: process.env.SECRET_SCAN_RESULT,
     },
     codeql_interpretation: codeqlInterpretation,
     gate_reports: {
       dependency_vulnerability: process.env.DEPENDENCY_VULNERABILITY_REPORT || '',
-      ...(process.env.DEPENDENCY_MALWARE_RESULT !== undefined && { dependency_malware: process.env.DEPENDENCY_MALWARE_REPORT || '' }),
+      ...(!infrastructure && process.env.DEPENDENCY_MALWARE_RESULT !== undefined && { dependency_malware: process.env.DEPENDENCY_MALWARE_REPORT || '' }),
     },
     security_sensitive_files: securitySensitiveFiles,
     security_checks: securityChecks,

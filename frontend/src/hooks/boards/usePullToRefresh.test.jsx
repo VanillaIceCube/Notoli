@@ -1,4 +1,3 @@
-import { createElement } from 'react';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { usePullToRefresh } from './usePullToRefresh';
 function setTouchViewport({ width = 375, maxTouchPoints = 1, scrollY = 0 } = {}) {
@@ -45,14 +44,16 @@ function PullHarness({ enabled = true, active = true, onRefresh = vi.fn() }) {
     active,
     onRefresh,
   });
-  return createElement(
-    'div',
-    null,
-    createElement('span', { 'data-testid': 'distance' }, pullDistance),
-    createElement('span', { 'data-testid': 'ready' }, refreshReady ? 'ready' : 'idle'),
-    createElement('span', { 'data-testid': 'refreshing' }, isRefreshing ? 'refreshing' : 'idle'),
-    createElement('input', { 'aria-label': 'name' }),
-    createElement('button', { type: 'button', 'data-pull-refresh-start': 'true' }, 'Open item'),
+  return (
+    <div>
+      <span data-testid="distance">{pullDistance}</span>
+      <span data-testid="ready">{refreshReady ? 'ready' : 'idle'}</span>
+      <span data-testid="refreshing">{isRefreshing ? 'refreshing' : 'idle'}</span>
+      <input aria-label="name" />
+      <button type="button" data-pull-refresh-start="true">
+        Open item
+      </button>
+    </div>
   );
 }
 describe('usePullToRefresh', () => {
@@ -68,7 +69,7 @@ describe('usePullToRefresh', () => {
 
   test('cancelled gestures never refresh and restore the indicator', () => {
     const onRefresh = vi.fn();
-    render(createElement(PullHarness, { onRefresh }));
+    render(<PullHarness onRefresh={onRefresh} />);
     act(() => pull('touchcancel'));
     expect(onRefresh).not.toHaveBeenCalled();
     expect(screen.getByTestId('distance')).toHaveTextContent('0');
@@ -81,7 +82,7 @@ describe('usePullToRefresh', () => {
         if (failure === 'throw') throw new Error('fixture');
         return Promise.reject(new Error('fixture'));
       });
-      render(createElement(PullHarness, { onRefresh }));
+      render(<PullHarness onRefresh={onRefresh} />);
       await act(async () => pull());
       expect(screen.getByTestId('refreshing')).toHaveTextContent('idle');
       await act(async () => pull());
@@ -97,7 +98,7 @@ describe('usePullToRefresh', () => {
           resolve = done;
         }),
     );
-    render(createElement(PullHarness, { onRefresh }));
+    render(<PullHarness onRefresh={onRefresh} />);
     act(() => {
       pull();
       pull();
@@ -116,9 +117,9 @@ describe('usePullToRefresh', () => {
         }),
     );
     const previous = document.documentElement.style.overscrollBehaviorY;
-    const view = render(createElement(PullHarness, { onRefresh }));
+    const view = render(<PullHarness onRefresh={onRefresh} />);
     act(() => pull());
-    view.rerender(createElement(PullHarness, { enabled: false, onRefresh }));
+    view.rerender(<PullHarness enabled={false} onRefresh={onRefresh} />);
     expect(document.documentElement.style.overscrollBehaviorY).toBe('none');
     await act(async () => resolve());
     expect(document.documentElement.style.overscrollBehaviorY).toBe(previous);
@@ -133,9 +134,9 @@ describe('usePullToRefresh', () => {
         }),
     );
     const previous = document.documentElement.style.overscrollBehaviorY;
-    const view = render(createElement(PullHarness, { onRefresh }));
+    const view = render(<PullHarness onRefresh={onRefresh} />);
     act(() => pull());
-    view.rerender(createElement(PullHarness, { active: false, onRefresh }));
+    view.rerender(<PullHarness active={false} onRefresh={onRefresh} />);
     expect(document.documentElement.style.overscrollBehaviorY).toBe(previous);
     act(() => pull());
     expect(onRefresh).toHaveBeenCalledTimes(1);
@@ -144,7 +145,7 @@ describe('usePullToRefresh', () => {
 
   test('leaves regular scrolling in a nested scroller alone', () => {
     const onRefresh = vi.fn();
-    render(createElement(PullHarness, { onRefresh }));
+    render(<PullHarness onRefresh={onRefresh} />);
     const target = screen.getByTestId('distance');
     target.scrollTop = 10;
     const move = touchEvent('touchmove', { target, y: 90 });
@@ -160,13 +161,13 @@ describe('usePullToRefresh', () => {
   test('disabling mid-gesture cancels it and restores native overscroll policy', () => {
     const onRefresh = vi.fn();
     const previous = document.documentElement.style.overscrollBehaviorY;
-    const view = render(createElement(PullHarness, { onRefresh }));
+    const view = render(<PullHarness onRefresh={onRefresh} />);
     expect(document.documentElement.style.overscrollBehaviorY).toBe('none');
     act(() => {
       window.dispatchEvent(touchEvent('touchstart'));
       window.dispatchEvent(touchEvent('touchmove', { y: 90 }));
     });
-    view.rerender(createElement(PullHarness, { enabled: false, onRefresh }));
+    view.rerender(<PullHarness enabled={false} onRefresh={onRefresh} />);
     act(() => window.dispatchEvent(touchEvent('touchend')));
     expect(onRefresh).not.toHaveBeenCalled();
     expect(screen.getByTestId('distance')).toHaveTextContent('0');
@@ -180,7 +181,7 @@ describe('usePullToRefresh', () => {
           resolveRefresh = resolve;
         }),
     );
-    render(createElement(PullHarness, { onRefresh }));
+    render(<PullHarness onRefresh={onRefresh} />);
     act(() => {
       window.dispatchEvent(
         touchEvent('touchstart', {
@@ -206,7 +207,7 @@ describe('usePullToRefresh', () => {
   });
   test('does not refresh below the threshold', () => {
     const onRefresh = vi.fn();
-    render(createElement(PullHarness, { onRefresh }));
+    render(<PullHarness onRefresh={onRefresh} />);
     act(() => {
       window.dispatchEvent(
         touchEvent('touchstart', {
@@ -224,7 +225,7 @@ describe('usePullToRefresh', () => {
   });
   test('ignores gestures from interactive controls', () => {
     const onRefresh = vi.fn();
-    render(createElement(PullHarness, { onRefresh }));
+    render(<PullHarness onRefresh={onRefresh} />);
     const input = screen.getByLabelText('name');
     act(() => {
       input.dispatchEvent(
@@ -244,7 +245,7 @@ describe('usePullToRefresh', () => {
   });
   test('allows gestures from controls that opt into pull refresh starts', async () => {
     const onRefresh = vi.fn();
-    render(createElement(PullHarness, { onRefresh }));
+    render(<PullHarness onRefresh={onRefresh} />);
     const refreshStartButton = screen.getByRole('button', {
       name: /open item/i,
     });

@@ -9,35 +9,11 @@ on:
       test_result:
         required: false
         type: string
-      lint_frontend_status:
-        required: false
+      lint_evidence:
+        description: Status and bounded log outputs from the lint gate.
         type: string
-      lint_frontend_log:
-        required: false
-        type: string
-      lint_backend_status:
-        required: false
-        type: string
-      lint_backend_log:
-        required: false
-        type: string
-      test_frontend_status:
-        required: false
-        type: string
-      test_frontend_log:
-        required: false
-        type: string
-      test_backend_status:
-        required: false
-        type: string
-      test_backend_log:
-        required: false
-        type: string
-      test_automation_status:
-        required: false
-        type: string
-      test_automation_log:
-        required: false
+      test_evidence:
+        description: Status and bounded log outputs from the test gate.
         type: string
     secrets:
       LINT_EASTWOOD_OPENAI_API_KEY:
@@ -91,7 +67,7 @@ jobs:
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
-          omit_frontend_npm_lockfile: "true"
+          omit_frontend_npm_lockfile: ${{ github.event.repository.name != 'JudeAndrewAlabaInfrastructure' && 'true' || 'false' }}
 
       - name: Write build review context
         if: steps.pr-diff.outputs.truncated != 'true'
@@ -102,17 +78,9 @@ jobs:
           PRIOR_REVIEWS_PATH: ${{ runner.temp }}/build-prior-reviews.json
           LINT_RESULT: ${{ inputs.lint_result || 'unknown' }}
           TEST_RESULT: ${{ inputs.test_result || 'unknown' }}
-          LINT_FRONTEND_STATUS: ${{ inputs.lint_frontend_status || 'not-applicable' }}
-          LINT_FRONTEND_LOG: ${{ inputs.lint_frontend_log }}
-          LINT_BACKEND_STATUS: ${{ inputs.lint_backend_status || 'not-applicable' }}
-          LINT_BACKEND_LOG: ${{ inputs.lint_backend_log }}
-          TEST_FRONTEND_STATUS: ${{ inputs.test_frontend_status || 'not-applicable' }}
-          TEST_FRONTEND_LOG: ${{ inputs.test_frontend_log }}
-          TEST_BACKEND_STATUS: ${{ inputs.test_backend_status || 'not-applicable' }}
-          TEST_BACKEND_LOG: ${{ inputs.test_backend_log }}
-          TEST_AUTOMATION_STATUS: ${{ inputs.test_automation_status || 'not-applicable' }}
-          TEST_AUTOMATION_LOG: ${{ inputs.test_automation_log }}
-        run: node .github/scripts/write-build-review-context.js LINT_FRONTEND LINT_BACKEND TEST_FRONTEND TEST_BACKEND TEST_AUTOMATION
+          LINT_EVIDENCE: ${{ inputs.lint_evidence || '{}' }}
+          TEST_EVIDENCE: ${{ inputs.test_evidence || '{}' }}
+        run: node .github/scripts/write-build-review-context.js
 
       - name: Call Lint Eastwood
         if: steps.pr-diff.outputs.truncated != 'true'

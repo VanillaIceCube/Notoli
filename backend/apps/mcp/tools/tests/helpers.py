@@ -121,12 +121,12 @@ def execute_action(raw, operation, **arguments):
 
     from django.test import Client
 
-    from .. import operations, queries, services
+    from .. import queries, services
 
     if operation not in queries.READ_OPERATIONS:
         arguments.setdefault("request_id", str(uuid4()))
     output = services.execute(raw, operation, **arguments)
-    if operation in operations.PREPARABLE and output.get("status") == "prepared":
+    if output.get("status") == "prepared":
         token = AccessToken.objects.get(token=raw)
         client = Client(
             HTTP_AUTHORIZATION=f"Bearer {JWTRefreshToken.for_user(token.user).access_token}"
@@ -140,8 +140,4 @@ def execute_action(raw, operation, **arguments):
         )
         assert decision.status_code == 200, decision.content
         return services.confirm_change(raw, output["request_id"], reference)["result"]
-    return (
-        output["result"]
-        if operation in operations.PREPARABLE and output.get("status") == "completed"
-        else output
-    )
+    return output["result"] if output.get("status") == "completed" else output
