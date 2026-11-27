@@ -71,12 +71,12 @@ test('Responses action validates requests and handles unavailable output without
   assert.equal(step.run.trim(), 'node "$GITHUB_ACTION_PATH/request-ai-response.js"');
   const { run } = require("../actions/request-ai-response/request-ai-response");
   const dir = temporaryDirectory(t);
-  const diff = path.join(dir, 'diff.txt');
+  const diff = path.join(dir, 'code-review-context.txt');
   fs.writeFileSync(diff, 'quoted "change"\nsecond line');
   const base = {
     OPENAI_API_KEY: 'synthetic-key', OPENAI_PROJECT_ID: 'synthetic-project', PROMPT_PREFIX: 'prefix\n',
     SYSTEM_PROMPT: 'system', MODEL: 'gpt-6-luna', MAX_OUTPUT_TOKENS: '100', ENABLE_WEB_SEARCH: 'true',
-    DIFF_PATH: diff, GITHUB_OUTPUT: path.join(dir, 'output'), GITHUB_STEP_SUMMARY: path.join(dir, 'summary'),
+    RUNNER_TEMP: dir, DIFF_PATH: diff, GITHUB_OUTPUT: path.join(dir, 'output'), GITHUB_STEP_SUMMARY: path.join(dir, 'summary'),
   };
   async function invoke(overrides, send) {
     fs.writeFileSync(base.GITHUB_OUTPUT, '');
@@ -86,6 +86,15 @@ test('Responses action validates requests and handles unavailable output without
       output: fs.readFileSync(base.GITHUB_OUTPUT, 'utf8'),
       summary: fs.readFileSync(base.GITHUB_STEP_SUMMARY, 'utf8'),
     };
+  }
+  await assert.rejects(invoke({ DIFF_PATH: base.GITHUB_OUTPUT }, assert.fail), /Unexpected reviewer context path/);
+  const linked = path.join(dir, 'build-review-context.txt');
+  fs.linkSync(base.GITHUB_OUTPUT, linked);
+  await assert.rejects(invoke({ DIFF_PATH: linked }, assert.fail), /single-link/);
+  if (process.platform === 'linux') {
+    const symlink = path.join(dir, 'security-review-context.txt');
+    fs.symlinkSync(base.GITHUB_OUTPUT, symlink);
+    await assert.rejects(invoke({ DIFF_PATH: symlink }, assert.fail), { code: 'ELOOP' });
   }
   let request;
   const https = require('node:https');

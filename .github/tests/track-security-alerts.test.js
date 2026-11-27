@@ -144,7 +144,7 @@ async function pipeline(dir, feed, config, nonempty, severity = 'medium') {
         MODEL: config.model, REASONING_EFFORT: config.reasoning_effort, MAX_OUTPUT_TOKENS: config.max_output_tokens,
         ENABLE_WEB_SEARCH: 'false', OPENAI_API_KEY: 'synthetic-api-key', OPENAI_PROJECT_ID: 'synthetic-ai-project',
         PROMPT_PREFIX: nested.with.prompt_prefix, SYSTEM_PROMPT: nested.with.system_prompt,
-        DIFF_PATH: path.join(dir, 'security-alerts.json'), GITHUB_OUTPUT: output,
+        RUNNER_TEMP: dir, DIFF_PATH: path.join(dir, 'security-alerts.json'), GITHUB_OUTPUT: output,
       }, async body => {
         providerCalls++;
         request = body;

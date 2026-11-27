@@ -37,6 +37,8 @@ Each persona has its own GitHub App and OpenAI credentials. The App token publis
 
 **Alert tracking.** The [alert action](track-security-alerts/action.yml) uses RoboCop’s installation token to read security alerts and update native issues and fields. It accounts for every source alert before closing superseded issues. Empty feeds still reconcile existing tickets. For field setup, priorities and recovery, see [the workflow guide](../workflows/README.md#security-alert-configuration-contract).
 
+The request action accepts four files directly under `RUNNER_TEMP`, named `code-review-context.txt`, `build-review-context.txt`, `security-review-context.txt`, and `security-alerts.json`. Each must be a regular file with a single hard link. The action rejects symbolic links.
+
 ## 🧪 Checks
 
 The [tests directory](../tests) contains mocked provider requests, registry and GitHub responses, real temporary Git histories, exact byte-budget cases, credential boundaries and reviewer failure paths. The [publisher examples](../fixtures/ai-review-bodies.json) are expected test output. Live acceptance requires a current-head GitHub run with the corresponding credential store.

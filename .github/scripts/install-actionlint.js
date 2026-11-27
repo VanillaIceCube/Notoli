@@ -17,11 +17,10 @@ async function install() {
     throw new Error("Actionlint archive failed SHA-256 verification");
   }
 
-  const archivePath = path.join(process.env.RUNNER_TEMP, `actionlint-${version}.tar.gz`);
-  const toolDir = path.join(process.env.RUNNER_TEMP, "actionlint");
-  fs.writeFileSync(archivePath, archive);
-  fs.mkdirSync(toolDir, { recursive: true });
-  execFileSync("tar", ["-xzf", archivePath, "-C", toolDir, "actionlint"], { stdio: "inherit" });
+  const toolDir = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP, "actionlint-"));
+  execFileSync("tar", ["-xzf", "-", "-C", toolDir, "actionlint"], {
+    input: archive, stdio: ["pipe", "inherit", "inherit"],
+  });
   fs.appendFileSync(process.env.GITHUB_PATH, `${toolDir}\n`);
 }
 
