@@ -130,7 +130,7 @@ async function pipeline(dir, feed, config, nonempty, severity = 'medium') {
   const saved = { ...process.env };
   try {
     Object.assign(process.env, { FEED: feed, RUNNER_TEMP: dir, GITHUB_WORKSPACE: root });
-    const execute = async step => new AsyncFunction('github', 'context', 'core', 'require', step.with.script)(github, { repo: { owner: 'fixture', repo: 'fixture' }, payload: { repository: { id: 1 } } }, core, require);
+    const execute = async step => new AsyncFunction('github', 'context', 'core', 'require', step.with.script)(github, { repo: { owner: 'fixture', repo: 'fixture' } }, core, require);
     await execute(manifest.runs.steps.find(step => step.id === 'alerts'));
     if (outputs.has_alerts === 'true') {
       const nested = manifest.runs.steps.find(step => step.id === 'openai');

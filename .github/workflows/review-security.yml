@@ -77,7 +77,7 @@ jobs:
           SECRET_SCAN_RESULT: ${{ inputs.secret_scan_result || 'unknown' }}
         with:
           script: |
-            await require(process.env.GITHUB_WORKSPACE + '/.github/scripts/get-security-evidence.js')({ github, context, infrastructure: context.payload.repository.id === 1414122449 })
+            await require(process.env.GITHUB_WORKSPACE + '/.github/scripts/get-security-evidence.js')({ github, context, infrastructure: context.repo.repo === 'infrastructure' })
 
       - name: Get pull request diff
         id: pr-diff
@@ -85,7 +85,7 @@ jobs:
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
-          omit_frontend_npm_lockfile: ${{ github.repository_id != '1414122449' && 'true' || 'false' }}
+          omit_frontend_npm_lockfile: ${{ github.event.repository.name != 'infrastructure' && 'true' || 'false' }}
 
       - name: Create RoboCop GitHub App token
         id: app-token

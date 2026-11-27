@@ -6,7 +6,7 @@ const { reconcile, probeReadEvidence, APP_CHECKS } = require("../actions/publish
 
 const bot = { id: 123, login: 'fixture[bot]', type: 'Bot' };
 
-const context = { repo: { owner: 'owner', repo: 'repo' }, payload: { repository: { id: 1 }, pull_request: { number: 1, head: { sha: 'new', repo: { full_name: 'owner/repo' } } } } };
+const context = { repo: { owner: 'owner', repo: 'repo' }, payload: { pull_request: { number: 1, head: { sha: 'new', repo: { full_name: 'owner/repo' } } } } };
 
 const core = { warning() {}, info() {} };
 
@@ -151,10 +151,10 @@ test('read evidence and App mutation clients stay separate without broader App p
 
 test('actual read-evidence probe exposes permission outcomes without raw errors or writes', async () => {
   const h = lifecycle(); const reports = [];
-  const result = await probeReadEvidence({ readGithub: h.github, context: { ...context, payload: { repository: { id: 1 }, pull_request: { ...context.payload.pull_request, base: { ref: 'main' } } } }, core: { info: text => reports.push(text), warning() {} } });
+  const result = await probeReadEvidence({ readGithub: h.github, context: { ...context, payload: { pull_request: { ...context.payload.pull_request, base: { ref: 'main' } } } }, core: { info: text => reports.push(text), warning() {} } });
   assert.deepEqual(result, { checks: 'readable', statuses: 'readable', branch_rules: 'readable' });
   h.github.rest.repos.getBranchRules = async () => { throw Object.assign(new Error('private-token'), { status: 403 }); };
-  const denied = await probeReadEvidence({ readGithub: h.github, context: { ...context, payload: { repository: { id: 1 }, pull_request: { ...context.payload.pull_request, base: { ref: 'main' } } } }, core: { info: text => reports.push(text), warning() {} } });
+  const denied = await probeReadEvidence({ readGithub: h.github, context: { ...context, payload: { pull_request: { ...context.payload.pull_request, base: { ref: 'main' } } } }, core: { info: text => reports.push(text), warning() {} } });
   assert.equal(denied.branch_rules, 'unavailable_http_403');
   assert.equal(h.resolutions.length, 0); assert.doesNotMatch(reports.join(' '), /private-token/);
 });

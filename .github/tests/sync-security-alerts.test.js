@@ -27,21 +27,21 @@ test("CodeQL rule levels break a domain tie regardless of alert order", () => {
   for (const [higher, lower] of [["error", "warning"], ["warning", "note"]]) {
     const frontend = { location: "frontend/form.ts", severity: higher };
     const backend = { location: "backend/views.py", severity: lower };
-    assert.equal(alertDomain([frontend, backend]), "Frontend");
-    assert.equal(alertDomain([backend, frontend]), "Frontend");
+    assert.equal(alertDomain([frontend, backend], "macromapper"), "Frontend");
+    assert.equal(alertDomain([backend, frontend], "macromapper"), "Frontend");
   }
 });
 
 test("unknown paths use ecosystem evidence or a stable repository fallback", () => {
-  assert.equal(alertDomain([{ manifest: "package-lock.json" }]), "Frontend");
-  assert.equal(alertDomain([{ ecosystem: "pip" }]), "Backend");
-  assert.equal(alertDomain([{ ecosystem: "github-actions" }]), "Cloud");
-  assert.equal(alertDomain([{}]), "Backend");
-  assert.equal(alertDomain([{ ecosystem: "npm" }], true), "Cloud");
+  assert.equal(alertDomain([{ manifest: "package-lock.json" }], "notoli"), "Frontend");
+  assert.equal(alertDomain([{ ecosystem: "pip" }], "macromapper"), "Backend");
+  assert.equal(alertDomain([{ ecosystem: "github-actions" }], "fullstack-template"), "Cloud");
+  assert.equal(alertDomain([{}], "notoli"), "Backend");
+  assert.equal(alertDomain([{ ecosystem: "npm" }], "infrastructure"), "Cloud");
   const frontend = { location: "frontend/page.ts" };
   const backend = { location: "backend/views.py" };
-  assert.equal(alertDomain([frontend, backend]), "Backend");
-  assert.equal(alertDomain([backend, frontend]), "Backend");
+  assert.equal(alertDomain([frontend, backend], "notoli"), "Backend");
+  assert.equal(alertDomain([backend, frontend], "notoli"), "Backend");
 });
 
 test("critical and high alerts receive incident priority while medium/low vulnerabilities remain backlog work", () => {
@@ -434,7 +434,7 @@ function nativeFixture(initialIssues = []) {
   };
   async function run(alerts, groups, parentNumber, sourceFeed = feed) {
     return synchronizeSecurityAlerts({
-      issueGithub: github, fields, parentNumber, context: { repo: { owner: "repo-owner", repo: "repo" }, payload: { repository: { id: 1 } } },
+      issueGithub: github, fields, parentNumber, context: { repo: { owner: "repo-owner", repo: "repo" } },
       core: { info() {} }, source: { feed: sourceFeed, alerts }, groups,
     });
   }

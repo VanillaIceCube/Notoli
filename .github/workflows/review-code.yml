@@ -70,10 +70,10 @@ jobs:
         with:
           base_sha: ${{ github.event.pull_request.base.sha }}
           head_sha: ${{ github.event.pull_request.head.sha }}
-          omit_frontend_npm_lockfile: ${{ github.repository_id != '1414122449' && 'true' || 'false' }}
+          omit_frontend_npm_lockfile: ${{ github.event.repository.name != 'infrastructure' && 'true' || 'false' }}
 
       - name: Collect read-only auto-merge API evidence
-        if: steps.pr-diff.outputs.truncated != 'true' && github.repository_id != '1414122449'
+        if: steps.pr-diff.outputs.truncated != 'true' && github.event.repository.name != 'infrastructure'
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |

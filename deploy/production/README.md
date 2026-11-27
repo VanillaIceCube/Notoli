@@ -1,6 +1,6 @@
 # Production launches
 
-Notoli serves `https://notoli.judeandrewalaba.com`. The backend trusts only the gateway at `172.30.88.2` on its private network. Application settings and readiness checks live in [app.json](app.json). The [Compose file](compose.yml) defines the two services. The [shared release guide](https://github.com/VanillaIceCube/infrastructure/blob/39791ac9067c99cfd4dc693a19080024f80de759/deploy/README.md) describes the Infrastructure-owned launcher. For local development, see the [deployment README](../README.md).
+Notoli serves `https://notoli.judeandrewalaba.com`. The backend trusts only the gateway at `172.30.88.2` on its private network. Application settings and readiness checks live in [app.json](app.json). The [Compose file](compose.yml) defines the two services. The [shared release guide](https://github.com/VanillaIceCube/infrastructure/blob/740128544ae749dc78369be4f8ecdde7e67b4473/deploy/README.md) describes the Infrastructure-owned launcher. For local development, see the [deployment README](../README.md).
 
 ## Release sequence
 
@@ -36,7 +36,7 @@ Infrastructure's `gateway/scripts/check_host.py` retains detailed full-host topo
 all frontend builds use `VITE_API_BASE_URL=` for same-origin API requests.
 The `shared_source` field pins the reviewed Infrastructure commit. The release workflow checks its code, tests and rendered workflow against that revision.
 
-For a pin changed by a history rewrite, compare the root tree IDs returned by GitHub for both Infrastructure commits. Equal tree IDs cover every tracked file and file mode. For the November 26 history rewrite, Notoli CI also fetched the shared source and matched its launcher, tests and rendered application workflow. [Previous tree](https://api.github.com/repos/VanillaIceCube/JudeAndrewAlabaInfrastructure/git/commits/c56a65a5531db007d5c8e9fe56b468f76b27a928) | [Replacement tree](https://api.github.com/repos/VanillaIceCube/JudeAndrewAlabaInfrastructure/git/commits/c30bfcb8a87bb257544fb2badb5a061605dfcd3f) | [CI parity result](https://github.com/VanillaIceCube/Notoli/actions/runs/45898797352/job/140179265950)
+For a pin changed by a history rewrite, compare the root tree IDs returned by GitHub for both Infrastructure commits. Equal tree IDs cover every tracked file and file mode. For this pin, Notoli CI also fetched the shared source and matched its launcher, tests and rendered application workflow. [Previous tree](https://api.github.com/repos/VanillaIceCube/JudeAndrewAlabaInfrastructure/git/commits/c56a65a5531db007d5c8e9fe56b468f76b27a928) | [Replacement tree](https://api.github.com/repos/VanillaIceCube/JudeAndrewAlabaInfrastructure/git/commits/c30bfcb8a87bb257544fb2badb5a061605dfcd3f) | [CI parity result](https://github.com/VanillaIceCube/Notoli/actions/runs/45898797352/job/140179265950)
 
 The app builder reads Infrastructure's `deploy/` directory. Gateway promotion uses Infrastructure's separate `env-prod` workflow. Operators authorize initial host setup. Repository workflow writers remain privileged. [Bundle source list](build_bundle.py) | [Promoted gateway workflow](https://github.com/VanillaIceCube/infrastructure/blob/300791242127f7e9d96db70450d587a088ceca12/.github/workflows/deploy-gateway.yml)
 

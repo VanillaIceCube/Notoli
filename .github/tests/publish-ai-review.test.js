@@ -651,7 +651,7 @@ test("reviewer identities explain truncated reviews before their checks fail", (
       "utf8",
     );
     assert.doesNotMatch(workflow, /^\s+max_bytes:/m);
-    assert.ok(workflow.includes("omit_frontend_npm_lockfile: ${{ github.repository_id != '1414122449' && 'true' || 'false' }}"));
+    assert.ok(workflow.includes("omit_frontend_npm_lockfile: ${{ github.event.repository.name != 'infrastructure' && 'true' || 'false' }}"));
     assert.match(workflow, /steps\.pr-diff\.outputs\.max_bytes/);
     const publishIndex = workflow.indexOf("Publish incomplete");
     const failIndex = workflow.indexOf("Fail incomplete");
