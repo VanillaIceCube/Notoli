@@ -17,6 +17,7 @@ async function collectAlerts(github, { owner, repo }, feed) {
   const compactCodeqlAlert = (alert) => ({
     ref: `code-scanning:${alert.number}`,
     url: alert.html_url,
+    trackingIssues: (alert.linked_issues ?? []).map(issue => issue.html_url),
     rule: alert.rule?.id ?? 'unknown-rule',
     severity: alert.rule?.security_severity_level ?? alert.rule?.severity ?? 'unknown',
     description: alert.rule?.description ?? alert.rule?.name ?? 'No description supplied.',
@@ -75,7 +76,7 @@ async function reconcile({ github, context, core }) {
   const fields = JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP, "security-alert-planning.json"), "utf8"));
   const source = JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP, "security-alerts.json"), "utf8"));
   const groups = groupsFromDraft(source, process.env.LLM_OUTPUT, core);
-  await synchronizeSecurityAlerts({ issueGithub: github, fields, core, context, source, groups });
+  await synchronizeSecurityAlerts({ issueGithub: github, fields, core, context, source, groups, parentNumber: process.env.ROBOCOP_PARENT_ISSUE });
 }
 
 if (require.main === module) {

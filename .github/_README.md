@@ -24,7 +24,7 @@ The frontend skips TypeScript 7.0.x because the ESLint parser requires a TypeScr
 1. Configure Actions, dependency alerts, advanced CodeQL, and available secret scanning/push protection using this repository's settings below.
 2. Install the three reviewer GitHub Apps and set their App ID variables.
 3. Store each persona's OpenAI key and App private key in both Actions and Dependabot secrets: six reviewer secrets in each store.
-4. Configure this repository's OpenAI reviewer project and native issue fields.
+4. Configure this repository's OpenAI reviewer project and native issue fields. To group alert tickets under an existing tracking issue, set the optional repository Actions variable `ROBOCOP_PARENT_ISSUE` to its issue number.
 5. Verify fresh same-repository human and Dependabot PR results before activating or changing required checks.
 6. Configure deployment separately through the app or gateway production guide.
 
