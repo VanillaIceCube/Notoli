@@ -284,7 +284,7 @@ class ContractTests(unittest.TestCase):
                 (
                     {
                         "shared_source": {
-                            "repository": builder.repository,
+                            "repository": builder.REPOSITORY,
                             "commit": "main",
                         }
                     },
@@ -324,7 +324,7 @@ class ContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root, source_root = self.parity_fixture(directory)
             pin = builder.CONFIG["shared_source"]
-            prefix = f"https://raw.githubusercontent.com/{builder.repository}/{pin['commit']}/{builder.SOURCE}/"
+            prefix = f"https://raw.githubusercontent.com/{builder.REPOSITORY}/{pin['commit']}/{builder.SOURCE}/"
 
             def response(url, timeout):
                 self.assertTrue(url.startswith(prefix))
