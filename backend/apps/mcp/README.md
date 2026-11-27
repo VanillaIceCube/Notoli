@@ -22,7 +22,7 @@ The installed `mcp` SDK remains a separate third-party package.
 
 `backend/apps/mcp/framework` provides shared OAuth consent, discovery, token verification,
 Streamable HTTP transport and ASGI lifecycle. Application registries own their
-models, permissions and tools. FullStackTemplate is the canonical source.
+models, permissions and tools. fullstack-template is the canonical source.
 Shared framework changes are reviewed there first, then synchronized to each
 consumer. Keep the shared runtime implementation aligned while preserving each
 application's own tools, branding and permissions. Record reviewed source commits

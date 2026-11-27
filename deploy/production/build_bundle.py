@@ -82,7 +82,7 @@ def build(target, env):
 
 
 # The host launches from the bundle. Only CI and developers fetch shared source.
-REPOSITORY = "VanillaIceCube/infrastructure"
+repository = "VanillaIceCube/infrastructure"
 SOURCE = "deploy"
 FILES = {
     "deploy/production/release.py": "release.py",
@@ -109,7 +109,7 @@ def check_parity(root, source_root=None, sync=False):
     pin = config["shared_source"]
     if config["contract_version"] != 1:
         raise ValueError("Unsupported release contract version")
-    if pin["repository"] != REPOSITORY or not re.fullmatch(
+    if pin["repository"] != repository or not re.fullmatch(
         r"[0-9a-f]{40}", pin["commit"]
     ):
         raise ValueError(
@@ -123,7 +123,7 @@ def check_parity(root, source_root=None, sync=False):
         if source_root is not None:
             data = (source_root / SOURCE / name).read_bytes()
         else:
-            url = f"https://raw.githubusercontent.com/{REPOSITORY}/{pin['commit']}/{SOURCE}/{name}"
+            url = f"https://raw.githubusercontent.com/{repository}/{pin['commit']}/{SOURCE}/{name}"
             with urllib.request.urlopen(url, timeout=30) as response:
                 data = response.read(1024 * 1024 + 1)
             if len(data) > 1024 * 1024:

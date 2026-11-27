@@ -1,6 +1,6 @@
 # ⚙️ GitHub automation
 
-GitHub Actions, repository setup, dependency updates, and AI reviews for Notoli.
+GitHub Actions, repository setup, dependency updates, and AI reviews for notoli.
 Source-controlled configuration and GitHub account/repository settings are separate.
 
 ## 🧭 Structure
@@ -135,7 +135,7 @@ local application setup and reviewer configuration.
 
 ## 🤝 Shared engineering ownership and rollout
 
-Follow FullStackTemplate's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
+Follow fullstack-template's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
 for repository applicability, canonical source ownership, downstream acceptance and
 [main-first releases](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#main-first-releases).
 Preserve app-specific profiles and Infrastructure's separate owner authorization,
