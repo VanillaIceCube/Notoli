@@ -1,6 +1,6 @@
 # ⚙️ GitHub automation
 
-GitHub Actions, repository setup, dependency updates, and AI reviews for Notoli.
+GitHub Actions, repository setup, dependency updates, and AI reviews for notoli.
 Source-controlled configuration and GitHub account/repository settings are separate.
 
 ## 🧭 Structure
@@ -34,7 +34,7 @@ owner's approved process. Never weaken checks to make setup pass.
 
 ## ⚙️ Repository setup
 
-Use the repository's Issues tab and the owner's [native issue schema](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#1-configure-repository-issue-tracking). Backfill and verify existing managed tickets before switching alert workflows. After merging, run all three alert workflows on main and verify native field retention before removing the old Project credentials or closing the board. Record results in [FullStackTemplate #386](https://github.com/VanillaIceCube/FullStackTemplate/issues/386).
+Use the repository's Issues tab and the owner's [native issue schema](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#1-configure-repository-issue-tracking). Backfill and verify existing managed tickets before switching alert workflows. After merging, run all three alert workflows on main and verify native field retention before removing the old Project credentials or closing the board. Record results in [FullStackTemplate #386](https://github.com/VanillaIceCube/FullStackTemplate/issues/386).
 
 **Native issue cutover verification, November 25, 2026.** Project 8 contained 354 issues. The read-back matched native field values and issue types on 354 issues, including all 140 security-alert tickets (2 open). Issue numbers, state, closure reasons, and closure dates were preserved. Examples include [#544](https://github.com/VanillaIceCube/Notoli/issues/544), [#554](https://github.com/VanillaIceCube/Notoli/issues/554).
 
@@ -135,9 +135,9 @@ local application setup and reviewer configuration.
 
 ## 🤝 Shared engineering ownership and rollout
 
-Follow FullStackTemplate's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
+Follow fullstack-template's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
 for repository applicability, canonical source ownership, downstream acceptance and
-[main-first releases](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#main-first-releases).
+[main-first releases](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#main-first-releases).
 Preserve app-specific profiles and Infrastructure's separate owner authorization,
 Required CI and host operations. A shared parent closes only after required downstream
 adoptions are merged and verified or explicitly deferred with owner/tracking/acceptance.

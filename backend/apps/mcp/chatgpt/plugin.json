@@ -8,7 +8,7 @@
     "url": "https://github.com/VanillaIceCube"
   },
   "homepage": "https://notoli.judeandrewalaba.com",
-  "repository": "https://github.com/VanillaIceCube/Notoli",
+  "repository": "https://github.com/VanillaIceCube/notoli",
   "keywords": ["productivity", "todo", "lists"],
   "extensions": {
     "com.openai": {
@@ -20,7 +20,7 @@
         "category": "Productivity",
         "capabilities": ["Read", "Write"],
         "websiteURL": "https://notoli.judeandrewalaba.com",
-        "supportURL": "https://github.com/VanillaIceCube/Notoli/issues",
+        "supportURL": "https://github.com/VanillaIceCube/notoli/issues",
         "composerIcon": "./assets/notoli-mark.svg",
         "logo": "./assets/notoli-mark.svg",
         "defaultPrompt": [
