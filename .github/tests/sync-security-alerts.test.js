@@ -27,21 +27,21 @@ test("CodeQL rule levels break a domain tie regardless of alert order", () => {
   for (const [higher, lower] of [["error", "warning"], ["warning", "note"]]) {
     const frontend = { location: "frontend/form.ts", severity: higher };
     const backend = { location: "backend/views.py", severity: lower };
-    assert.equal(alertDomain([frontend, backend], "MacroMapper"), "Frontend");
-    assert.equal(alertDomain([backend, frontend], "MacroMapper"), "Frontend");
+    assert.equal(alertDomain([frontend, backend], "macromapper"), "Frontend");
+    assert.equal(alertDomain([backend, frontend], "macromapper"), "Frontend");
   }
 });
 
 test("unknown paths use ecosystem evidence or a stable repository fallback", () => {
-  assert.equal(alertDomain([{ manifest: "package-lock.json" }], "Notoli"), "Frontend");
-  assert.equal(alertDomain([{ ecosystem: "pip" }], "MacroMapper"), "Backend");
-  assert.equal(alertDomain([{ ecosystem: "github-actions" }], "FullStackTemplate"), "Cloud");
-  assert.equal(alertDomain([{}], "Notoli"), "Backend");
-  assert.equal(alertDomain([{ ecosystem: "npm" }], "JudeAndrewAlabaInfrastructure"), "Cloud");
+  assert.equal(alertDomain([{ manifest: "package-lock.json" }], "notoli"), "Frontend");
+  assert.equal(alertDomain([{ ecosystem: "pip" }], "macromapper"), "Backend");
+  assert.equal(alertDomain([{ ecosystem: "github-actions" }], "fullstack-template"), "Cloud");
+  assert.equal(alertDomain([{}], "notoli"), "Backend");
+  assert.equal(alertDomain([{ ecosystem: "npm" }], "infrastructure"), "Cloud");
   const frontend = { location: "frontend/page.ts" };
   const backend = { location: "backend/views.py" };
-  assert.equal(alertDomain([frontend, backend], "Notoli"), "Backend");
-  assert.equal(alertDomain([backend, frontend], "Notoli"), "Backend");
+  assert.equal(alertDomain([frontend, backend], "notoli"), "Backend");
+  assert.equal(alertDomain([backend, frontend], "notoli"), "Backend");
 });
 
 test("critical and high alerts receive incident priority while medium/low vulnerabilities remain backlog work", () => {

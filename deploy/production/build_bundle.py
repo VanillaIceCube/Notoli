@@ -82,7 +82,7 @@ def build(target, env):
 
 
 # The host launches from the bundle. Only CI and developers fetch shared source.
-REPOSITORY = "VanillaIceCube/JudeAndrewAlabaInfrastructure"
+REPOSITORY = "VanillaIceCube/infrastructure"
 SOURCE = "deploy"
 FILES = {
     "deploy/production/release.py": "release.py",

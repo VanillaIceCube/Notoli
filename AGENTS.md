@@ -43,10 +43,10 @@ This repository is intended to be understood, maintained, and owned by humans. A
 
 ### Architectural Consistency
 
-- Before changing shared behavior, compare the applicable entry points, callers and failure paths in Notoli, MacroMapper, FullStackTemplate and JudeAndrewAlabaInfrastructure.
-- Use FullStackTemplate as the baseline for shared app foundations. Where contracts match, adopt the simplest proven implementation, including improvements found in a product app.
+- Before changing shared behavior, compare the applicable entry points, callers and failure paths in notoli, macromapper, fullstack-template and infrastructure.
+- Use fullstack-template as the baseline for shared app foundations. Where contracts match, adopt the simplest proven implementation, including improvements found in a product app.
 - Keep differences that serve a product, data, lifecycle or operational requirement. Record the concrete reason beside the code or configuration when it would be hard to infer.
-- JudeAndrewAlabaInfrastructure owns shared hosting, routing and release contracts. Verify a changed contract in Infrastructure and in every affected app using that app's configuration.
+- infrastructure owns shared hosting, routing and release contracts. Verify a changed contract in Infrastructure and in every affected app using that app's configuration.
 
 ### Scope and Ownership
 
@@ -77,15 +77,15 @@ Complexity must be earned. Code is a liability as well as an asset. The objectiv
 
 ## 🧭 Ownership and shared rollout
 
-FullStackTemplate owns reusable application engineering and the canonical MCP
+fullstack-template owns reusable application engineering and the canonical MCP
 Python framework. Infrastructure owns shared ingress, host operations and the
 versioned application release engine. Each application owns its domain behavior,
 credentials, OAuth issuer, consent, permissions and MCP tools; do not introduce a
 shared authorization service, cross-application account mapping or YNAB dependency.
 
-Follow the [shared rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
+Follow the [shared rollout policy](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
 for reusable framework, automation, test or security changes. One canonical
-FullStackTemplate parent must inventory all four repositories as required,
+fullstack-template parent must inventory all four repositories as required,
 not applicable, already satisfied or explicitly deferred with reasons and evidence.
 Infrastructure-owned deployment/host changes use an Infrastructure parent with
 linked downstream work; do not relocate source ownership.
@@ -150,7 +150,7 @@ Use this setup script in Codex cloud environments:
 ```bash
 set -euo pipefail
 
-cd /board/Notoli
+cd /board/notoli
 
 python -m pip install uv==0.13.8
 uv sync --locked --project backend
@@ -211,7 +211,7 @@ review before the next ordinary promotion. Preserve both histories and newer mai
 work; never reset or force-push to manufacture parity. Intentional release lag is
 allowed while prerequisites or acceptance remain unfinished. History reconciliation
 does not authorize deployment, and an absent production branch is not a reason
-to create one. Follow the [main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#main-first-releases).
+to create one. Follow the [main-first release policy](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#main-first-releases).
 
 Common release code, verification, tests and workflow are owned by Infrastructure.
 Change `deploy/` in Infrastructure, then synchronize all consumers to that exact Git commit. Application repositories track
@@ -353,7 +353,7 @@ gates. Application AI model selection remains app-owned.
 
 ## 🔌 MCP integration
 
-Shared MCP framework changes originate in FullStackTemplate's canonical Python
+Shared MCP framework changes originate in fullstack-template's canonical Python
 package; synchronize reviewed runtime changes across consumers and record source
 commits in the coordinated tracking issue. Derived applications own enablement,
 registries, scopes and business tools. Infrastructure supplies ordinary gateway

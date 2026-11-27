@@ -45,7 +45,7 @@ function domainForDependency(ecosystem, path, infrastructure) {
 }
 
 function alertDomain(alerts, repo) {
-  const infrastructure = repo === "JudeAndrewAlabaInfrastructure";
+  const infrastructure = repo === "infrastructure";
   // A stable sort keeps the repository's preferred domain first when all scores tie.
   const domains = infrastructure ? ["Cloud", "Backend", "Frontend"] : ["Backend", "Frontend", "Cloud"];
   const scores = Object.fromEntries(domains.map(domain => [domain, { paths: 0, severity: 0, hints: 0 }]));

@@ -22,7 +22,7 @@ The installed `mcp` SDK remains a separate third-party package.
 
 `backend/apps/mcp/framework` provides shared OAuth consent, discovery, token verification,
 Streamable HTTP transport and ASGI lifecycle. Application registries own their
-models, permissions and tools. FullStackTemplate is the canonical source.
+models, permissions and tools. fullstack-template is the canonical source.
 Shared framework changes are reviewed there first, then synchronized to each
 consumer. Keep the shared runtime implementation aligned while preserving each
 application's own tools, branding and permissions. Record reviewed source commits
@@ -322,7 +322,7 @@ The canonical branding source is now
 | Developer | Jude Andrew Alaba; also root `author.name` |
 | Category | Productivity |
 | Website | https://notoli.judeandrewalaba.com |
-| Support | https://github.com/VanillaIceCube/Notoli/issues |
+| Support | https://github.com/VanillaIceCube/notoli/issues |
 | Short description | Manage tasks and shared lists |
 | Full description | Supported tasks, chosen OAuth permissions, board-wide sharing, owner-only sharing management, confirmation for deletions, and account-administration limitations |
 | Icon / logo | [`assets/notoli-mark.svg`](chatgpt/assets/notoli-mark.svg), copied from the existing frontend mark |

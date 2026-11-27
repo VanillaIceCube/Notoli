@@ -147,7 +147,7 @@ async function reconcileOnce({ github, context, core, parsed, appSlug, readGithu
         const selfDependent = ["Required CI", "Auto Merge"];
         const nonReview = checks.check_runs.filter(c => ![...ownChecks, ...selfDependent].includes(c.name));
         if (!nonReview.length || checks.total_count > 100 || nonReview.some(c => c.status !== "completed" || !["success", "neutral", "skipped"].includes(c.conclusion))) { report.skipped++; continue; }
-        const expectedChecks = context.repo.repo === "JudeAndrewAlabaInfrastructure" ? INFRA_CHECKS : APP_CHECKS;
+        const expectedChecks = context.repo.repo === "infrastructure" ? INFRA_CHECKS : APP_CHECKS;
         if (expectedChecks.some(name => !checks.check_runs.some(c => c.name === name && c.app?.slug === "github-actions" && c.status === "completed" && c.conclusion === "success"))) { report.skipped++; continue; }
         const independentReviewers = Object.entries(personaChecks).filter(([name]) => name !== personaName);
         if (independentReviewers.some(([, names]) => !checks.check_runs.some(c => names.includes(c.name) && c.status === "completed" && c.conclusion === "success"))) { report.skipped++; continue; }
