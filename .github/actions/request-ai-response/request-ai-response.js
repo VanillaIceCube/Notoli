@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("node:fs");
+const path = require("node:path");
 const https = require("node:https");
 const { randomUUID } = require("node:crypto");
 
@@ -99,13 +100,29 @@ function writeContent(content, env, unavailable) {
   }
 }
 
+async function readReviewContext(env) {
+  const names = ["code-review-context.txt", "build-review-context.txt", "security-review-context.txt", "security-alerts.json"];
+  const contextPath = names.map(name => path.join(env.RUNNER_TEMP, name)).find(file => file === env.DIFF_PATH);
+  if (!contextPath) throw new Error("Unexpected reviewer context path");
+
+  const { O_RDONLY, O_NOFOLLOW, O_NONBLOCK } = fs.constants;
+  const file = await fs.promises.open(contextPath, O_RDONLY | O_NOFOLLOW | O_NONBLOCK);
+  try {
+    const stat = await file.stat();
+    if (!stat.isFile() || stat.nlink !== 1) throw new Error("Expected a regular, single-link reviewer context file");
+    return await file.readFile("utf8");
+  } finally {
+    await file.close();
+  }
+}
+
 async function run(env, send = requestResponse) {
   const missing = ["OPENAI_API_KEY", "OPENAI_PROJECT_ID"].filter(key => !env[key]);
   if (missing.length) {
     writeContent(`Missing secret(s): ${missing.join(" ")}.`, env, true);
     return;
   }
-  const prompt = env.PROMPT_PREFIX + fs.readFileSync(env.DIFF_PATH, "utf8");
+  const prompt = env.PROMPT_PREFIX + await readReviewContext(env);
   const body = payload(env, prompt);
   const start = Date.now();
   let result;

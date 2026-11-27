@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## 2026-11-27
+
+### Fixed
+
+- Restrict AI review requests to the generated review context and security-alert files.
+- Extract the verified Actionlint binary into a fresh runner directory on each install.
+
 ## 2026-11-26
 
 ### Changed

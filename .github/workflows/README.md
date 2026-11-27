@@ -117,7 +117,7 @@ flowchart LR
 
 ## 🧪 Checks and diagnostics
 
-Run from the repository root with Git, Bash, Node and the locked Python environment. The full app validator also needs Docker Compose and PowerShell. The lint workflow installs the pinned Actionlint release and verifies its checksum.
+Run from the repository root with Git, Bash, Node and the locked Python environment. The full app validator also needs Docker Compose and PowerShell. The Actionlint installer verifies the archive's pinned SHA-256 checksum, then extracts only the `actionlint` binary into a fresh directory under `RUNNER_TEMP`.
 
 ```sh
 npm ci --prefix .github --ignore-scripts --no-audit --no-fund
