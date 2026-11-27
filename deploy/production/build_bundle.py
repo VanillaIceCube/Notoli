@@ -82,7 +82,8 @@ def build(target, env):
 
 
 # The host launches from the bundle. Only CI and developers fetch shared source.
-REPOSITORY = "VanillaIceCube/JudeAndrewAlabaInfrastructure"
+REPOSITORY = "VanillaIceCube/infrastructure"
+REPOSITORY_ID = 1414122449
 SOURCE = "deploy"
 FILES = {
     "deploy/production/release.py": "release.py",
@@ -109,7 +110,9 @@ def check_parity(root, source_root=None, sync=False):
     pin = config["shared_source"]
     if config["contract_version"] != 1:
         raise ValueError("Unsupported release contract version")
-    if pin["repository"] != REPOSITORY or not re.fullmatch(
+    # Older pinned app fixtures still identify this repository by its former name.
+    known_names = {REPOSITORY, "VanillaIceCube/JudeAndrewAlabaInfrastructure"}
+    if pin["repository"] not in known_names or not re.fullmatch(
         r"[0-9a-f]{40}", pin["commit"]
     ):
         raise ValueError(
@@ -119,11 +122,19 @@ def check_parity(root, source_root=None, sync=False):
     if sync and (root / "deploy").resolve() != root.resolve() / "deploy":
         raise ValueError("Release source directory must not be a symlink")
 
+    if source_root is None:
+        with urllib.request.urlopen(
+            f"https://api.github.com/repositories/{REPOSITORY_ID}", timeout=30
+        ) as response:
+            source_repository = json.load(response)["full_name"]
+        if source_repository not in known_names:
+            raise ValueError("Unexpected shared release repository")
+
     def read_source(name):
         if source_root is not None:
             data = (source_root / SOURCE / name).read_bytes()
         else:
-            url = f"https://raw.githubusercontent.com/{REPOSITORY}/{pin['commit']}/{SOURCE}/{name}"
+            url = f"https://raw.githubusercontent.com/{source_repository}/{pin['commit']}/{SOURCE}/{name}"
             with urllib.request.urlopen(url, timeout=30) as response:
                 data = response.read(1024 * 1024 + 1)
             if len(data) > 1024 * 1024:

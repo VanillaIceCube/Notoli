@@ -83,7 +83,7 @@ versioned application release engine. Each application owns its domain behavior,
 credentials, OAuth issuer, consent, permissions and MCP tools; do not introduce a
 shared authorization service, cross-application account mapping or YNAB dependency.
 
-Follow the [shared rollout policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
+Follow the [shared rollout policy](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
 for reusable framework, automation, test or security changes. One canonical
 FullStackTemplate parent must inventory all four repositories as required,
 not applicable, already satisfied or explicitly deferred with reasons and evidence.
@@ -150,7 +150,7 @@ Use this setup script in Codex cloud environments:
 ```bash
 set -euo pipefail
 
-cd /board/Notoli
+cd /board/notoli
 
 python -m pip install uv==0.13.8
 uv sync --locked --project backend
@@ -211,7 +211,7 @@ review before the next ordinary promotion. Preserve both histories and newer mai
 work; never reset or force-push to manufacture parity. Intentional release lag is
 allowed while prerequisites or acceptance remain unfinished. History reconciliation
 does not authorize deployment, and an absent production branch is not a reason
-to create one. Follow the [main-first release policy](https://github.com/VanillaIceCube/FullStackTemplate/blob/main/.github/_README.md#main-first-releases).
+to create one. Follow the [main-first release policy](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#main-first-releases).
 
 Common release code, verification, tests and workflow are owned by Infrastructure.
 Change `deploy/` in Infrastructure, then synchronize all consumers to that exact Git commit. Application repositories track

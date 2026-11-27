@@ -322,7 +322,7 @@ The canonical branding source is now
 | Developer | Jude Andrew Alaba; also root `author.name` |
 | Category | Productivity |
 | Website | https://notoli.judeandrewalaba.com |
-| Support | https://github.com/VanillaIceCube/Notoli/issues |
+| Support | https://github.com/VanillaIceCube/notoli/issues |
 | Short description | Manage tasks and shared lists |
 | Full description | Supported tasks, chosen OAuth permissions, board-wide sharing, owner-only sharing management, confirmation for deletions, and account-administration limitations |
 | Icon / logo | [`assets/notoli-mark.svg`](chatgpt/assets/notoli-mark.svg), copied from the existing frontend mark |

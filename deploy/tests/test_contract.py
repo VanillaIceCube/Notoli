@@ -326,7 +326,14 @@ class ContractTests(unittest.TestCase):
             pin = builder.CONFIG["shared_source"]
             prefix = f"https://raw.githubusercontent.com/{builder.REPOSITORY}/{pin['commit']}/{builder.SOURCE}/"
 
+            metadata_url = (
+                f"https://api.github.com/repositories/{builder.REPOSITORY_ID}"
+            )
+            metadata = json.dumps({"full_name": builder.REPOSITORY}).encode()
+
             def response(url, timeout):
+                if url == metadata_url:
+                    return BytesIO(metadata)
                 self.assertTrue(url.startswith(prefix))
                 self.assertEqual(timeout, 30)
 
@@ -336,6 +343,15 @@ class ContractTests(unittest.TestCase):
                     ).read_bytes()
                 )
 
+            with patch.object(
+                builder.urllib.request,
+                "urlopen",
+                return_value=BytesIO(b'{"full_name": "other/infrastructure"}'),
+            ):
+                with self.assertRaisesRegex(
+                    ValueError, "Unexpected shared release repository"
+                ):
+                    builder.check_parity(root)
             with patch.object(builder.urllib.request, "urlopen", side_effect=response):
                 self.assertEqual(builder.check_parity(root), pin["commit"])
                 (source_root / builder.SOURCE / "release.py").write_bytes(b"changed")
@@ -354,7 +370,7 @@ class ContractTests(unittest.TestCase):
                 patch.object(
                     builder.urllib.request,
                     "urlopen",
-                    return_value=BytesIO(b"x" * (1024 * 1024 + 1)),
+                    side_effect=[BytesIO(metadata), BytesIO(b"x" * (1024 * 1024 + 1))],
                 ),
                 self.assertRaisesRegex(ValueError, "download limit"),
             ):

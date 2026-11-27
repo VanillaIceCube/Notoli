@@ -44,8 +44,7 @@ function domainForDependency(ecosystem, path, infrastructure) {
   return null;
 }
 
-function alertDomain(alerts, repo) {
-  const infrastructure = repo === "JudeAndrewAlabaInfrastructure";
+function alertDomain(alerts, infrastructure = false) {
   // A stable sort keeps the repository's preferred domain first when all scores tie.
   const domains = infrastructure ? ["Cloud", "Backend", "Frontend"] : ["Backend", "Frontend", "Cloud"];
   const scores = Object.fromEntries(domains.map(domain => [domain, { paths: 0, severity: 0, hints: 0 }]));
@@ -501,7 +500,7 @@ async function synchronizeSecurityAlerts({
     }
     const alerts = group.alert_refs.map(ref => alertByRef.get(ref));
     const defaults = {
-      Domain: alertDomain(alerts, repo),
+      Domain: alertDomain(alerts, context.payload.repository.id === 1414122449),
       Priority: alertPriority(source.feed, alerts),
       Size: "M",
     };
