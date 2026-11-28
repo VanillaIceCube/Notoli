@@ -17,7 +17,7 @@ jobs:
   scan:
     name: Full CodeQL scan
     if: github.event_name == 'schedule' || inputs.scan_only
-    uses: VanillaIceCube/infrastructure/.github/workflows/alert-codeql.yml@88123d60db9743b50af6779f532a37c5f81ae4a0 # Infrastructure, 2026-11-27
+    uses: VanillaIceCube/infrastructure/.github/workflows/alert-codeql.yml@51a48938ab24c11c4fe14a6e8d1becfce9936595 # Infrastructure, 2026-11-27
     with:
       scan_only: true
     permissions:
@@ -28,12 +28,10 @@ jobs:
 
   aggregate:
     if: github.event_name == 'schedule' || !inputs.scan_only
-    concurrency:
-      group: security-alerts-codeql
-      cancel-in-progress: false
+    concurrency: security-alerts-codeql
     permissions:
       contents: read
-    uses: VanillaIceCube/agent-hub/.github/workflows/triage-security.yml@1df9af3fc79df45fa938982b3692952af1db5ad8 # AgentHub, 2026-11-27
+    uses: VanillaIceCube/agent-hub/.github/workflows/triage-security.yml@13e83c67970ac9dcde3c5688dedd60384abeba3e # AgentHub, 2026-11-27
     with:
       feed: codeql
       publish: true
