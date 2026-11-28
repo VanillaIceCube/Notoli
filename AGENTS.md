@@ -78,17 +78,18 @@ Complexity must be earned. Code is a liability as well as an asset. The objectiv
 ## 🧭 Ownership and shared rollout
 
 fullstack-template owns reusable application engineering and the canonical MCP
-Python framework. Infrastructure owns shared ingress, host operations and the
-versioned application release engine. Each application owns its domain behavior,
-credentials, OAuth issuer, consent, permissions and MCP tools; do not introduce a
+Python framework. Infrastructure owns shared CI, scanners, ingress, host operations
+and the versioned release engine. AgentHub owns reviewer behavior, prompts and alert
+triage. Each application owns its domain behavior, credentials, OAuth issuer, consent,
+permissions and MCP tools; do not introduce a
 shared authorization service, cross-application account mapping or YNAB dependency.
 
 Follow the [shared rollout policy](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
-for reusable framework, automation, test or security changes. One canonical
+for reusable application framework changes and their tests. One canonical
 fullstack-template parent must inventory all four repositories as required,
 not applicable, already satisfied or explicitly deferred with reasons and evidence.
-Infrastructure-owned deployment/host changes use an Infrastructure parent with
-linked downstream work; do not relocate source ownership.
+For shared CI, release or reviewer migrations, track downstream adoption from the owning
+repository. The current work is tracked in [Infrastructure #191](https://github.com/VanillaIceCube/infrastructure/issues/191).
 The parent is complete only after required downstream adoptions are merged and
 verified, or explicitly deferred with an owner, tracking issue and acceptance.
 Record final-head/main checks and exact PR/commit/evidence links; template-only
@@ -108,7 +109,7 @@ Record user-visible or operational changes in `CHANGELOG.md`.
 
 GitHub setup belongs in [.github/_README.md](.github/_README.md), workflow behavior
 in [.github/workflows/README.md](.github/workflows/README.md), and the shared
-reviewer/action contract in [.github/actions/README.md](.github/actions/README.md).
+reviewer/action contract in [AgentHub’s action guide](https://github.com/VanillaIceCube/agent-hub/tree/main/.github/actions).
 
 Application setup/API/authentication belongs in [backend/README.md](backend/README.md),
 frontend routing/configuration/style in [frontend/README.md](frontend/README.md),
@@ -280,6 +281,8 @@ and Django static assets use `/static/`.
 
 ## 🤖 GitHub automation
 
+Update the PR caller to a reviewed provider commit when adopting shared automation. Compare the published reviewer in preview with the currently deployed revision before switching the caller.
+
 Preserve existing required checks, scanner/lint/test gates and reviewer budgets.
 Eligible same-repository human and Dependabot PRs retain their reviewers; forks
 remain excluded from secret-bearing reviews. Keep reviewer identities and
@@ -292,7 +295,7 @@ unchanged verdicts; valid `APPROVE`/`COMMENT` pass and unavailable/invalid outpu
 fails. Missing credentials, incomplete required major-upgrade briefs and oversized
 diffs must fail visibly. The shared diff budget is 2 MB (2,000,000 bytes). Obi-Wan's semver-major
 Dependabot brief uses complete primary-source evidence; web search remains limited
-to that review path. Run the repository's publisher regression tests and
+to that review path. Run AgentHub’s publisher regression tests and
 Actionlint when changing this contract. Where used, the read-only `validate-reviewer-gates.js` audit requires actual
 successful reviewer results, including after cancelled or skipped runs.
 
@@ -308,8 +311,8 @@ RoboCop's short-lived App token reads alerts and writes repository issues and
 native issue fields.
 Keep App IDs/private keys, least-privilege permissions, trigger policy and field
 setup documented in `.github/_README.md`. Security-alert variables resolve in the
-three caller workflows, not local composite metadata; pass explicit model, effort
-and token inputs. Run `.github/tests/track-security-alerts.test.js`
+shared AgentHub triage workflow. Pass the caller’s explicit model, effort
+and token settings. Run AgentHub’s `.github/tests/integration/track-security-alerts.test.js`
 after changes; actual loading acceptance requires fresh controlled dispatches on
 corrected main. Preserve applicable bounded malware review and documented
 coverage decisions. Keep the CI architecture diagrams aligned with workflow edits.

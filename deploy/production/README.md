@@ -1,6 +1,6 @@
 # Production launches
 
-Notoli serves `https://notoli.judeandrewalaba.com`. The backend trusts only the gateway at `172.30.88.2` on its private network. Application settings and readiness checks live in [app.json](app.json). The [Compose file](compose.yml) defines the two services. The [shared release guide](https://github.com/VanillaIceCube/infrastructure/blob/aa3e5a03f67ed0e65b137ad45cfee62f83ebe738/deploy/README.md) describes the Infrastructure-owned launcher. For local development, see the [deployment README](../README.md).
+Notoli serves `https://notoli.judeandrewalaba.com`. The backend trusts only the gateway at `172.30.88.2` on its private network. Application settings and readiness checks live in [app.json](app.json). The [Compose file](compose.yml) defines the two services. The [shared release guide](https://github.com/VanillaIceCube/infrastructure/blob/51a48938ab24c11c4fe14a6e8d1becfce9936595/deploy/README.md) describes the Infrastructure-owned launcher. For local development, see the [deployment README](../README.md).
 
 ## Release sequence
 

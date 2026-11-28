@@ -87,10 +87,18 @@ SOURCE = "deploy"
 FILES = {
     "deploy/production/release.py": "release.py",
     "deploy/production/build_bundle.py": "build_bundle.py",
-    "deploy/tests/test_production.py": "tests/test_production.py",
-    "deploy/tests/test_guards.py": "tests/test_guards.py",
-    "deploy/tests/test_launch_docker.py": "tests/test_launch_docker.py",
-    "deploy/tests/test_contract.py": "tests/test_contract.py",
+    **{
+        f"deploy/tests/{name}": f"tests/{name}"
+        for name in (
+            "unit/__init__.py",
+            "unit/test_guards.py",
+            "integration/__init__.py",
+            "integration/test_contract.py",
+            "integration/test_launch_docker.py",
+            "integration/test_preflight.py",
+            "integration/test_production.py",
+        )
+    },
 }
 
 
@@ -136,9 +144,14 @@ def check_parity(root, source_root=None, sync=False):
     expected[".github/workflows/ci-deploy.yml"] = render_workflow(
         template, config
     ).encode("utf-8")
+    if sync:
+        for name in expected:
+            if (root / name).resolve() != root.resolve() / name:
+                raise ValueError("Release source target must not be a symlink: " + name)
     for name, contents in expected.items():
         path = root / name
         if sync:
+            path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(contents)
         elif path.read_bytes().replace(b"\r\n", b"\n") != contents:
             raise ValueError("Shared release drift: " + name)

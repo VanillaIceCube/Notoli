@@ -13,7 +13,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from test_production import ROOT, builder, environment, release
+from deploy.production import build_bundle as builder
+from deploy.production import release
+from deploy.tests.integration.test_production import environment
+
+ROOT = Path(builder.__file__).resolve().parents[2]
 
 
 class ContractTests(unittest.TestCase):
@@ -303,7 +307,7 @@ class ContractTests(unittest.TestCase):
             source = source_root / builder.SOURCE
             target = root / "deploy/production/release.py"
             target.write_text("consumer drift", encoding="utf-8")
-            (source / "tests/test_contract.py").unlink()
+            (source / "tests/integration/test_contract.py").unlink()
             with self.assertRaises(FileNotFoundError):
                 builder.check_parity(root, source_root, sync=True)
             self.assertEqual(target.read_text(encoding="utf-8"), "consumer drift")
