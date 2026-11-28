@@ -7,12 +7,7 @@ Source-controlled configuration and GitHub account/repository settings are separ
 
 | Location | Purpose |
 | --- | --- |
-| [workflows](workflows/README.md) | Entry points, gates, reviewers, schedules and deployment. The guide includes four flow diagrams. |
-| [scripts](scripts) | Standalone automation programs that workflows or people run, and their supporting modules. |
-| [actions](actions/README.md) | Reusable composite steps, each with its own `action.yml` and implementation. |
-| [tests](tests) | One suite per tested JavaScript implementation or workflow, named after its source. |
-| [fixtures](fixtures) | Saved test inputs and expected output. Use lowercase, hyphen-separated nouns for the data and add the scenario last when variants exist (for example, `github-check-runs-passing.json`). |
-| [package.json](package.json) and [package-lock.json](package-lock.json) | JavaScript dependencies for automation and their verified install versions. |
+| [workflows](workflows/README.md) | Entry points, gates, reviewers, schedules and deployment. |
 | [dependabot.yml](dependabot.yml) | Dependency ecosystems and update schedules. |
 
 Keep the exact `pyyaml` development pin lowercase so Dependabot's uv updater can match it.
@@ -98,7 +93,7 @@ Preserve the existing main ruleset, including all independent scanner/lint/test 
 
 ## 🧪 Checks
 
-The [test workflow](workflows/gate-test.yml) validates workflow and script syntax,
+The [test workflow](workflows/ci-orchestrator.yml) validates workflow and script syntax,
 checks Docker Compose configuration with test settings, and limits logs sent to
 the build reviewer. See the [workflow checks](workflows/README.md#-checks-and-diagnostics)
 for local dependencies and commands.
@@ -118,7 +113,7 @@ not authorize merging, branch promotion, production deployment, or key rotation.
 - [Required main-branch checks](workflows/README.md#main-branch-required-checks).
 - [Dependabot isolation and auto-merge policy](workflows/README.md#protected-dependabot-auto-merge).
 - [Security-alert credential and input contract](workflows/README.md#security-alert-configuration-contract).
-- [Reviewer feedback and recovery](actions/README.md).
+- [Reviewer feedback and recovery](https://github.com/VanillaIceCube/agent-hub/tree/main/.github/actions).
 
 Deployment credentials and production client registration belong to the
 [production guide](../deploy/production/README.md). They are separate from
@@ -129,11 +124,15 @@ local application setup and reviewer configuration.
 ## 📚 Reference
 
 - [Workflow behavior and maintenance](workflows/README.md).
-- [Shared action and reviewer contracts](actions/README.md).
+- [Shared action and reviewer contracts](https://github.com/VanillaIceCube/agent-hub/tree/main/.github/actions).
 - [CI/CD architecture](workflows/README.md#-architecture-and-trust-boundaries).
 - [Application production setup and launches](../deploy/production/README.md).
 
 ## 🤝 Shared engineering ownership and rollout
+
+Shared CI and releases are maintained in Infrastructure. AgentHub maintains the
+reviewers and alert triage. This repository owns its triggers, credentials and
+required checks. [Migration tracker](https://github.com/VanillaIceCube/infrastructure/issues/191)
 
 Follow fullstack-template's [canonical shared ownership and rollout policy](https://github.com/VanillaIceCube/fullstack-template/blob/main/.github/_README.md#-shared-engineering-ownership-and-rollout)
 for repository applicability, canonical source ownership, downstream acceptance and

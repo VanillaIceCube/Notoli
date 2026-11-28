@@ -12,7 +12,7 @@ from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
 
-from test_production import release
+from deploy.production import release
 
 
 def values(database):
