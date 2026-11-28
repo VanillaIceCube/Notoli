@@ -1,12 +1,6 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/.github"
-    schedule:
-      interval: "daily"
-      time: "00:00"
-
-  - package-ecosystem: "npm"
     directory: "/frontend"
     ignore:
       # ESLint needs the TypeScript 6 compiler API. Recheck at 7.1.
@@ -28,12 +22,10 @@ updates:
       interval: "daily"
       time: "00:00"
     groups:
-      codeql:
-        applies-to: version-updates
-        patterns: ["github/codeql-action", "github/codeql-action/*"]
-      codeql-security:
-        applies-to: security-updates
-        patterns: ["github/codeql-action", "github/codeql-action/*"]
+      infrastructure:
+        patterns: ["VanillaIceCube/infrastructure", "VanillaIceCube/infrastructure/*"]
+      agent-hub:
+        patterns: ["VanillaIceCube/agent-hub", "VanillaIceCube/agent-hub/*"]
 
   - package-ecosystem: "docker"
     directory: "/backend/docker"

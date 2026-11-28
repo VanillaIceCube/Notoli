@@ -1,6 +1,5 @@
 """Behavioral release checks: real Compose and environment parsing."""
 
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -9,20 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-ROOT = Path(__file__).resolve().parents[2]
-
-
-def module(name):
-    spec = importlib.util.spec_from_file_location(
-        name, ROOT / "deploy/production" / (name + ".py")
-    )
-    value = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(value)
-    return value
-
-
-release = module("release")
-builder = module("build_bundle")
+from deploy.production import build_bundle as builder
+from deploy.production import release
 
 
 def environment():

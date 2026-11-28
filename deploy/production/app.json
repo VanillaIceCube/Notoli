@@ -2,7 +2,7 @@
   "contract_version": 1,
   "shared_source": {
     "repository": "VanillaIceCube/infrastructure",
-    "commit": "aa3e5a03f67ed0e65b137ad45cfee62f83ebe738"
+    "commit": "51a48938ab24c11c4fe14a6e8d1becfce9936595"
   },
   "app": "notoli",
   "domain": "notoli.judeandrewalaba.com",

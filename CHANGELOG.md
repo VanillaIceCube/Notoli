@@ -9,6 +9,11 @@ All notable changes to this project are documented in this file.
 - Restrict AI review requests to the generated review context and security-alert files.
 - Extract the verified Actionlint binary into a fresh runner directory on each install.
 
+### Changed
+
+- Call Infrastructure for deterministic CI and Dependabot policy, and AgentHub for reviews and alert triage. Keep the application triggers, production release and test suites here.
+- Schedule CodeQL ticket updates at midnight Pacific alongside vulnerability and malware ticket updates. The default-branch CodeQL scan runs independently.
+
 ## 2026-11-26
 
 ### Changed
