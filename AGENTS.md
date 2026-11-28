@@ -281,14 +281,15 @@ and Django static assets use `/static/`.
 
 ## 🤖 GitHub automation
 
-Update the PR caller to a reviewed provider commit when adopting shared automation. Compare the published reviewer in preview with the currently deployed revision before switching the caller.
+Compare reviewer changes on the same PR head with publication disabled before merging them into AgentHub’s `main`.
 
 Preserve existing required checks, scanner/lint/test gates and reviewer budgets.
 Eligible same-repository human and Dependabot PRs retain their reviewers; forks
 remain excluded from secret-bearing reviews. Keep reviewer identities and
 serialized writers separate, validated optional `AI_REVIEW_*` settings aligned,
-and Dependabot lint auto-fixes disabled. External GitHub Actions use immutable
-commit SHAs with version comments. Workflow updates do not authorize deployment.
+and Dependabot lint auto-fixes disabled. Cross-repository calls to Infrastructure
+and AgentHub use reusable workflows at `@main`. Pin third-party actions and workflows
+to full commit SHAs with version comments. Workflow updates do not authorize deployment.
 
 The shared publisher fails after every `REQUEST_CHANGES`, including repeated or
 unchanged verdicts; valid `APPROVE`/`COMMENT` pass and unavailable/invalid output
