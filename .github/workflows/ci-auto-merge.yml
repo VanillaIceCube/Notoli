@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   dependabot-auto-merge:
-    uses: VanillaIceCube/infrastructure/.github/workflows/ci-auto-merge.yml@51a48938ab24c11c4fe14a6e8d1becfce9936595 # Infrastructure, 2026-11-27
+    uses: VanillaIceCube/infrastructure/.github/workflows/ci-auto-merge.yml@main
     permissions:
       actions: read
       checks: write

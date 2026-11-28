@@ -16,7 +16,7 @@ permissions:
 jobs:
   lints:
     name: Lints
-    uses: VanillaIceCube/infrastructure/.github/workflows/gate-lint.yml@51a48938ab24c11c4fe14a6e8d1becfce9936595 # Infrastructure, 2026-11-27
+    uses: VanillaIceCube/infrastructure/.github/workflows/gate-lint.yml@main
     permissions:
       contents: read
       pull-requests: read
@@ -33,7 +33,7 @@ jobs:
 
   tests:
     name: Tests
-    uses: VanillaIceCube/infrastructure/.github/workflows/gate-test.yml@51a48938ab24c11c4fe14a6e8d1becfce9936595 # Infrastructure, 2026-11-27
+    uses: VanillaIceCube/infrastructure/.github/workflows/gate-test.yml@main
     with:
       application: true
     permissions:
@@ -42,7 +42,7 @@ jobs:
 
   codeql:
     name: CodeQL
-    uses: VanillaIceCube/infrastructure/.github/workflows/alert-codeql.yml@51a48938ab24c11c4fe14a6e8d1becfce9936595 # Infrastructure, 2026-11-27
+    uses: VanillaIceCube/infrastructure/.github/workflows/alert-codeql.yml@main
     with:
       scan_only: true
     permissions:
@@ -53,21 +53,21 @@ jobs:
 
   dependency-vulnerability:
     name: Vulnerability
-    uses: VanillaIceCube/infrastructure/.github/workflows/gate-vulnerability.yml@51a48938ab24c11c4fe14a6e8d1becfce9936595 # Infrastructure, 2026-11-27
+    uses: VanillaIceCube/infrastructure/.github/workflows/gate-vulnerability.yml@main
     permissions:
       contents: read
       pull-requests: read
 
   dependency-malware:
     name: Malware
-    uses: VanillaIceCube/infrastructure/.github/workflows/gate-malware.yml@51a48938ab24c11c4fe14a6e8d1becfce9936595 # Infrastructure, 2026-11-27
+    uses: VanillaIceCube/infrastructure/.github/workflows/gate-malware.yml@main
     permissions:
       contents: read
       pull-requests: read
 
   secrets:
     name: Secret scan
-    uses: VanillaIceCube/infrastructure/.github/workflows/gate-secrets.yml@51a48938ab24c11c4fe14a6e8d1becfce9936595 # Infrastructure, 2026-11-27
+    uses: VanillaIceCube/infrastructure/.github/workflows/gate-secrets.yml@main
 
   code-review:
     permissions:
@@ -78,7 +78,7 @@ jobs:
     name: AI Code Review
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository
-    uses: VanillaIceCube/agent-hub/.github/workflows/review-code.yml@13e83c67970ac9dcde3c5688dedd60384abeba3e # AgentHub, 2026-11-27
+    uses: VanillaIceCube/agent-hub/.github/workflows/review-code.yml@main
     with:
       publish: true
     secrets:
@@ -92,7 +92,7 @@ jobs:
       always() &&
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository
-    uses: VanillaIceCube/agent-hub/.github/workflows/review-build.yml@13e83c67970ac9dcde3c5688dedd60384abeba3e # AgentHub, 2026-11-27
+    uses: VanillaIceCube/agent-hub/.github/workflows/review-build.yml@main
     secrets:
       LINT_EASTWOOD_OPENAI_API_KEY: ${{ secrets.LINT_EASTWOOD_OPENAI_API_KEY }}
       LINT_EASTWOOD_PRIVATE_KEY: ${{ secrets.LINT_EASTWOOD_PRIVATE_KEY }}
@@ -115,7 +115,7 @@ jobs:
       always() &&
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository
-    uses: VanillaIceCube/agent-hub/.github/workflows/review-security.yml@13e83c67970ac9dcde3c5688dedd60384abeba3e # AgentHub, 2026-11-27
+    uses: VanillaIceCube/agent-hub/.github/workflows/review-security.yml@main
     secrets:
       ROBOCOP_OPENAI_API_KEY: ${{ secrets.ROBOCOP_OPENAI_API_KEY }}
       ROBOCOP_PRIVATE_KEY: ${{ secrets.ROBOCOP_PRIVATE_KEY }}
@@ -139,14 +139,22 @@ jobs:
       dependency_malware_report: ${{ needs.dependency-malware.outputs.malware_report }}
       secret_scan_result: ${{ needs.secrets.result }}
 
-  auto-merge:
-    name: Auto Merge
+  branch-rules:
     needs: [lints, tests, codeql, dependency-vulnerability, dependency-malware, secrets, code-review, build-review, security-review]
     if: always()
-    runs-on: ubuntu-latest
+    uses: VanillaIceCube/infrastructure/.github/workflows/gate-branch-rules.yml@main
     permissions:
       contents: read
+
+  # Branch protection requires this exact check name.
+  auto-merge:
+    name: Auto Merge
+    needs: branch-rules
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
     steps:
-      - name: Verify branch rules are readable with the workflow token
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        uses: VanillaIceCube/infrastructure/.github/actions/verify-branch-rules@51a48938ab24c11c4fe14a6e8d1becfce9936595 # Infrastructure, 2026-11-27
+      - name: Require branch rule verification
+        env:
+          RESULT: ${{ needs.branch-rules.result }}
+        run: test "$RESULT" = success

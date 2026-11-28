@@ -17,7 +17,7 @@ jobs:
   scan:
     name: Full CodeQL scan
     if: github.event_name == 'schedule' || inputs.scan_only
-    uses: VanillaIceCube/infrastructure/.github/workflows/alert-codeql.yml@51a48938ab24c11c4fe14a6e8d1becfce9936595 # Infrastructure, 2026-11-27
+    uses: VanillaIceCube/infrastructure/.github/workflows/alert-codeql.yml@main
     with:
       scan_only: true
     permissions:
@@ -31,7 +31,7 @@ jobs:
     concurrency: security-alerts-codeql
     permissions:
       contents: read
-    uses: VanillaIceCube/agent-hub/.github/workflows/triage-security.yml@13e83c67970ac9dcde3c5688dedd60384abeba3e # AgentHub, 2026-11-27
+    uses: VanillaIceCube/agent-hub/.github/workflows/triage-security.yml@main
     with:
       feed: codeql
       publish: true
